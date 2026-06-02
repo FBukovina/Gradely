@@ -85,7 +85,7 @@ struct KeychainClient {
 
     let service: String
 
-    static func live(service: String = Bundle.main.bundleIdentifier ?? "BakalariMarks") -> KeychainClient {
+    static func live(service: String = Bundle.main.bundleIdentifier ?? "Gradely") -> KeychainClient {
         KeychainClient(service: service)
     }
 

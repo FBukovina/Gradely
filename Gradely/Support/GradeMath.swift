@@ -55,7 +55,7 @@ enum GradeMath {
 
     /// Study average across subjects: the mean of each subject's average, ignoring subjects without one.
     static func overallAverage(for subjects: [Subject]) -> Double? {
-        let averages = subjects.compactMap(subjectAverage)
+        let averages = subjects.compactMap { subjectAverage($0) }
         guard !averages.isEmpty else { return nil }
         return averages.reduce(0, +) / Double(averages.count)
     }

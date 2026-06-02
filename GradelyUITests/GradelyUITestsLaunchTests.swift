@@ -1,13 +1,13 @@
 //
-//  BakalariMarksUITestsLaunchTests.swift
-//  BakalariMarksUITests
+//  GradelyUITestsLaunchTests.swift
+//  GradelyUITests
 //
 //  Created by Filip Bukovina on 01.06.2026.
 //
 
 import XCTest
 
-final class BakalariMarksUITestsLaunchTests: XCTestCase {
+final class GradelyUITestsLaunchTests: XCTestCase {
 
     override class var runsForEachTargetApplicationUIConfiguration: Bool {
         true

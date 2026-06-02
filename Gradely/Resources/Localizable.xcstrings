@@ -86,13 +86,13 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Bakaláři Známky"
+            "value" : "Gradely"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Bakaláři Marks"
+            "value" : "Gradely"
           }
         }
       }

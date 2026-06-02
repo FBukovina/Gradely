@@ -12,37 +12,37 @@
 			containerPortal = 81EE6C992FCDDC4A009D28DE /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = 81EE6CA02FCDDC4A009D28DE;
-			remoteInfo = BakalariMarks;
+			remoteInfo = Gradely;
 		};
 		81EE6CB92FCDDC4B009D28DE /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 81EE6C992FCDDC4A009D28DE /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = 81EE6CA02FCDDC4A009D28DE;
-			remoteInfo = BakalariMarks;
+			remoteInfo = Gradely;
 		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		81EE6CA12FCDDC4A009D28DE /* BakalariMarks.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BakalariMarks.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		81EE6CAE2FCDDC4B009D28DE /* BakalariMarksTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BakalariMarksTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		81EE6CB82FCDDC4B009D28DE /* BakalariMarksUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BakalariMarksUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		81EE6CA12FCDDC4A009D28DE /* Gradely.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Gradely.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		81EE6CAE2FCDDC4B009D28DE /* GradelyTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = GradelyTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		81EE6CB82FCDDC4B009D28DE /* GradelyUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = GradelyUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		81EE6CA32FCDDC4A009D28DE /* BakalariMarks */ = {
+		81EE6CA32FCDDC4A009D28DE /* Gradely */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = BakalariMarks;
+			path = Gradely;
 			sourceTree = "<group>";
 		};
-		81EE6CB12FCDDC4B009D28DE /* BakalariMarksTests */ = {
+		81EE6CB12FCDDC4B009D28DE /* GradelyTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = BakalariMarksTests;
+			path = GradelyTests;
 			sourceTree = "<group>";
 		};
-		81EE6CBB2FCDDC4B009D28DE /* BakalariMarksUITests */ = {
+		81EE6CBB2FCDDC4B009D28DE /* GradelyUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = BakalariMarksUITests;
+			path = GradelyUITests;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -75,9 +75,9 @@
 		81EE6C982FCDDC4A009D28DE = {
 			isa = PBXGroup;
 			children = (
-				81EE6CA32FCDDC4A009D28DE /* BakalariMarks */,
-				81EE6CB12FCDDC4B009D28DE /* BakalariMarksTests */,
-				81EE6CBB2FCDDC4B009D28DE /* BakalariMarksUITests */,
+				81EE6CA32FCDDC4A009D28DE /* Gradely */,
+				81EE6CB12FCDDC4B009D28DE /* GradelyTests */,
+				81EE6CBB2FCDDC4B009D28DE /* GradelyUITests */,
 				81EE6CA22FCDDC4A009D28DE /* Products */,
 			);
 			sourceTree = "<group>";
@@ -85,9 +85,9 @@
 		81EE6CA22FCDDC4A009D28DE /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				81EE6CA12FCDDC4A009D28DE /* BakalariMarks.app */,
-				81EE6CAE2FCDDC4B009D28DE /* BakalariMarksTests.xctest */,
-				81EE6CB82FCDDC4B009D28DE /* BakalariMarksUITests.xctest */,
+				81EE6CA12FCDDC4A009D28DE /* Gradely.app */,
+				81EE6CAE2FCDDC4B009D28DE /* GradelyTests.xctest */,
+				81EE6CB82FCDDC4B009D28DE /* GradelyUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -95,9 +95,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		81EE6CA02FCDDC4A009D28DE /* BakalariMarks */ = {
+		81EE6CA02FCDDC4A009D28DE /* Gradely */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 81EE6CC22FCDDC4B009D28DE /* Build configuration list for PBXNativeTarget "BakalariMarks" */;
+			buildConfigurationList = 81EE6CC22FCDDC4B009D28DE /* Build configuration list for PBXNativeTarget "Gradely" */;
 			buildPhases = (
 				81EE6C9D2FCDDC4A009D28DE /* Sources */,
 				81EE6C9E2FCDDC4A009D28DE /* Frameworks */,
@@ -108,18 +108,18 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				81EE6CA32FCDDC4A009D28DE /* BakalariMarks */,
+				81EE6CA32FCDDC4A009D28DE /* Gradely */,
 			);
-			name = BakalariMarks;
+			name = Gradely;
 			packageProductDependencies = (
 			);
-			productName = BakalariMarks;
-			productReference = 81EE6CA12FCDDC4A009D28DE /* BakalariMarks.app */;
+			productName = Gradely;
+			productReference = 81EE6CA12FCDDC4A009D28DE /* Gradely.app */;
 			productType = "com.apple.product-type.application";
 		};
-		81EE6CAD2FCDDC4B009D28DE /* BakalariMarksTests */ = {
+		81EE6CAD2FCDDC4B009D28DE /* GradelyTests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 81EE6CC52FCDDC4B009D28DE /* Build configuration list for PBXNativeTarget "BakalariMarksTests" */;
+			buildConfigurationList = 81EE6CC52FCDDC4B009D28DE /* Build configuration list for PBXNativeTarget "GradelyTests" */;
 			buildPhases = (
 				81EE6CAA2FCDDC4B009D28DE /* Sources */,
 				81EE6CAB2FCDDC4B009D28DE /* Frameworks */,
@@ -131,18 +131,18 @@
 				81EE6CB02FCDDC4B009D28DE /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
-				81EE6CB12FCDDC4B009D28DE /* BakalariMarksTests */,
+				81EE6CB12FCDDC4B009D28DE /* GradelyTests */,
 			);
-			name = BakalariMarksTests;
+			name = GradelyTests;
 			packageProductDependencies = (
 			);
-			productName = BakalariMarksTests;
-			productReference = 81EE6CAE2FCDDC4B009D28DE /* BakalariMarksTests.xctest */;
+			productName = GradelyTests;
+			productReference = 81EE6CAE2FCDDC4B009D28DE /* GradelyTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
-		81EE6CB72FCDDC4B009D28DE /* BakalariMarksUITests */ = {
+		81EE6CB72FCDDC4B009D28DE /* GradelyUITests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 81EE6CC82FCDDC4B009D28DE /* Build configuration list for PBXNativeTarget "BakalariMarksUITests" */;
+			buildConfigurationList = 81EE6CC82FCDDC4B009D28DE /* Build configuration list for PBXNativeTarget "GradelyUITests" */;
 			buildPhases = (
 				81EE6CB42FCDDC4B009D28DE /* Sources */,
 				81EE6CB52FCDDC4B009D28DE /* Frameworks */,
@@ -154,13 +154,13 @@
 				81EE6CBA2FCDDC4B009D28DE /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
-				81EE6CBB2FCDDC4B009D28DE /* BakalariMarksUITests */,
+				81EE6CBB2FCDDC4B009D28DE /* GradelyUITests */,
 			);
-			name = BakalariMarksUITests;
+			name = GradelyUITests;
 			packageProductDependencies = (
 			);
-			productName = BakalariMarksUITests;
-			productReference = 81EE6CB82FCDDC4B009D28DE /* BakalariMarksUITests.xctest */;
+			productName = GradelyUITests;
+			productReference = 81EE6CB82FCDDC4B009D28DE /* GradelyUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
 /* End PBXNativeTarget section */
@@ -186,7 +186,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 81EE6C9C2FCDDC4A009D28DE /* Build configuration list for PBXProject "BakalariMarks" */;
+			buildConfigurationList = 81EE6C9C2FCDDC4A009D28DE /* Build configuration list for PBXProject "Gradely" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -200,9 +200,9 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				81EE6CA02FCDDC4A009D28DE /* BakalariMarks */,
-				81EE6CAD2FCDDC4B009D28DE /* BakalariMarksTests */,
-				81EE6CB72FCDDC4B009D28DE /* BakalariMarksUITests */,
+				81EE6CA02FCDDC4A009D28DE /* Gradely */,
+				81EE6CAD2FCDDC4B009D28DE /* GradelyTests */,
+				81EE6CB72FCDDC4B009D28DE /* GradelyUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -258,12 +258,12 @@
 /* Begin PBXTargetDependency section */
 		81EE6CB02FCDDC4B009D28DE /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 81EE6CA02FCDDC4A009D28DE /* BakalariMarks */;
+			target = 81EE6CA02FCDDC4A009D28DE /* Gradely */;
 			targetProxy = 81EE6CAF2FCDDC4B009D28DE /* PBXContainerItemProxy */;
 		};
 		81EE6CBA2FCDDC4B009D28DE /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 81EE6CA02FCDDC4A009D28DE /* BakalariMarks */;
+			target = 81EE6CA02FCDDC4A009D28DE /* Gradely */;
 			targetProxy = 81EE6CB92FCDDC4B009D28DE /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
@@ -400,7 +400,7 @@
 				DEVELOPMENT_TEAM = C2U9S337H8;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = "Bakalář";
+				INFOPLIST_KEY_CFBundleDisplayName = "Gradely";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -411,7 +411,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 0.1;
-				PRODUCT_BUNDLE_IDENTIFIER = com.bukovinafilip.BakalariMarks;
+				PRODUCT_BUNDLE_IDENTIFIER = com.bukovinafilip.Gradely;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -433,7 +433,7 @@
 				DEVELOPMENT_TEAM = C2U9S337H8;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = "Bakalář";
+				INFOPLIST_KEY_CFBundleDisplayName = "Gradely";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -444,7 +444,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 0.1;
-				PRODUCT_BUNDLE_IDENTIFIER = com.bukovinafilip.BakalariMarks;
+				PRODUCT_BUNDLE_IDENTIFIER = com.bukovinafilip.Gradely;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -466,7 +466,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.5;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.bukovinafilip.BakalariMarksTests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.bukovinafilip.GradelyTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -474,7 +474,7 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/BakalariMarks.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/BakalariMarks";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Gradely.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Gradely";
 			};
 			name = Debug;
 		};
@@ -488,7 +488,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.5;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.bukovinafilip.BakalariMarksTests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.bukovinafilip.GradelyTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -496,7 +496,7 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/BakalariMarks.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/BakalariMarks";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Gradely.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Gradely";
 			};
 			name = Release;
 		};
@@ -508,7 +508,7 @@
 				DEVELOPMENT_TEAM = C2U9S337H8;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.bukovinafilip.BakalariMarksUITests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.bukovinafilip.GradelyUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -516,7 +516,7 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_TARGET_NAME = BakalariMarks;
+				TEST_TARGET_NAME = Gradely;
 			};
 			name = Debug;
 		};
@@ -528,7 +528,7 @@
 				DEVELOPMENT_TEAM = C2U9S337H8;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.bukovinafilip.BakalariMarksUITests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.bukovinafilip.GradelyUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -536,14 +536,14 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_TARGET_NAME = BakalariMarks;
+				TEST_TARGET_NAME = Gradely;
 			};
 			name = Release;
 		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		81EE6C9C2FCDDC4A009D28DE /* Build configuration list for PBXProject "BakalariMarks" */ = {
+		81EE6C9C2FCDDC4A009D28DE /* Build configuration list for PBXProject "Gradely" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				81EE6CC02FCDDC4B009D28DE /* Debug */,
@@ -552,7 +552,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		81EE6CC22FCDDC4B009D28DE /* Build configuration list for PBXNativeTarget "BakalariMarks" */ = {
+		81EE6CC22FCDDC4B009D28DE /* Build configuration list for PBXNativeTarget "Gradely" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				81EE6CC32FCDDC4B009D28DE /* Debug */,
@@ -561,7 +561,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		81EE6CC52FCDDC4B009D28DE /* Build configuration list for PBXNativeTarget "BakalariMarksTests" */ = {
+		81EE6CC52FCDDC4B009D28DE /* Build configuration list for PBXNativeTarget "GradelyTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				81EE6CC62FCDDC4B009D28DE /* Debug */,
@@ -570,7 +570,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		81EE6CC82FCDDC4B009D28DE /* Build configuration list for PBXNativeTarget "BakalariMarksUITests" */ = {
+		81EE6CC82FCDDC4B009D28DE /* Build configuration list for PBXNativeTarget "GradelyUITests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				81EE6CC92FCDDC4B009D28DE /* Debug */,

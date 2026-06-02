@@ -1,9 +1,9 @@
 import Foundation
 import Testing
-@testable import BakalariMarks
+@testable import Gradely
 
 @MainActor
-struct BakalariMarksTests {
+struct GradelyTests {
     @Test func decodesMarksResponseFixture() throws {
         let json = """
         {

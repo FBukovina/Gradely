@@ -1,6 +1,6 @@
 import XCTest
 
-final class BakalariMarksUITests: XCTestCase {
+final class GradelyUITests: XCTestCase {
     override func setUpWithError() throws {
         continueAfterFailure = false
     }

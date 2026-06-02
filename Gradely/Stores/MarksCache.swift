@@ -23,7 +23,7 @@ final class MarksCache: MarksCaching {
             appropriateFor: nil,
             create: true
         )
-        .appending(path: "BakalariMarks", directoryHint: .isDirectory)
+        .appending(path: "Gradely", directoryHint: .isDirectory)
 
         try fileManager.createDirectory(at: directory, withIntermediateDirectories: true)
 

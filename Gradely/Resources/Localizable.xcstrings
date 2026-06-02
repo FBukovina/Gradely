@@ -513,6 +513,102 @@
         }
       }
     },
+    "schoolURL.manual.example" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Příklad: https://demo.bakalari.cz"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Example: https://demo.bakalari.cz"
+          }
+        }
+      }
+    },
+    "schoolURL.manual.step1" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Otevřete v prohlížeči přihlašovací stránku Bakaláři vaší školy."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open your school's Bakalari login page in a browser."
+          }
+        }
+      }
+    },
+    "schoolURL.manual.step2" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zkopírujte hlavní adresu školy, ne celé přesměrování po přihlášení."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copy the school's main address, not the full redirected page after sign-in."
+          }
+        }
+      }
+    },
+    "schoolURL.manual.step3" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vložte ji do pole URL školy. Gradely přijme i adresu bez https:// a zabezpečenou část doplní."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Paste it into School URL. Gradely also accepts the address without https:// and adds the secure part."
+          }
+        }
+      }
+    },
+    "schoolURL.manual.step4" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pokud zkopírovaný odkaz končí /login nebo /next/login, tuto část smažte."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "If the copied link ends with /login or /next/login, remove that part."
+          }
+        }
+      }
+    },
+    "schoolURL.manual.title" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jak nastavit URL školy"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "How to set the school URL"
+          }
+        }
+      }
+    },
     "login.showPassword" : {
       "localizations" : {
         "cs" : {

@@ -44,6 +44,40 @@ xcodebuild -project Gradely.xcodeproj -scheme Gradely -destination 'platform=iOS
 xcodebuild -project Gradely.xcodeproj -scheme Gradely -destination 'platform=iOS Simulator,name=iPhone 17' test
 ```
 
+## School URL Setup
+
+Use the same Bakalari web address where you normally sign in to your school account.
+
+1. Open your school's Bakalari login page in a browser.
+2. Copy the school's main address, not the full redirected page after sign-in.
+3. Paste it into the **School URL** field in Gradely.
+4. If the copied link ends with `/login` or `/next/login`, remove that part.
+
+Example:
+
+```text
+https://demo.bakalari.cz
+```
+
+Gradely also accepts the address without `https://`, for example `demo.bakalari.cz`, and adds the secure HTTPS part automatically.
+
+## Nastavení URL školy
+
+Použijte stejnou webovou adresu Bakaláři, na které se běžně přihlašujete ke školnímu účtu.
+
+1. Otevřete v prohlížeči přihlašovací stránku Bakaláři vaší školy.
+2. Zkopírujte hlavní adresu školy, ne celé přesměrování po přihlášení.
+3. Vložte ji v Gradely do pole **URL školy**.
+4. Pokud zkopírovaný odkaz končí `/login` nebo `/next/login`, tuto část smažte.
+
+Příklad:
+
+```text
+https://demo.bakalari.cz
+```
+
+Gradely přijme i adresu bez `https://`, například `demo.bakalari.cz`, a zabezpečenou část HTTPS doplní automaticky.
+
 ## Project Structure
 
 ```text

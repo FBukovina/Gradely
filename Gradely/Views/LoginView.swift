@@ -74,6 +74,8 @@ struct LoginView: View {
                     .brandField()
                     .accessibilityIdentifier("schoolURLField")
 
+                schoolURLManual
+
                 TextField(String(localized: "login.username"), text: $viewModel.username)
                     .textContentType(.username)
                     .textInputAutocapitalization(.never)
@@ -110,6 +112,34 @@ struct LoginView: View {
                 .accessibilityIdentifier("loginButton")
             }
         }
+    }
+
+    private var schoolURLManual: some View {
+        DisclosureGroup {
+            VStack(alignment: .leading, spacing: Spacing.sm) {
+                ManualStep(number: 1, text: String(localized: "schoolURL.manual.step1"))
+                ManualStep(number: 2, text: String(localized: "schoolURL.manual.step2"))
+                ManualStep(number: 3, text: String(localized: "schoolURL.manual.step3"))
+                ManualStep(number: 4, text: String(localized: "schoolURL.manual.step4"))
+
+                Text("schoolURL.manual.example")
+                    .font(.caption.monospaced())
+                    .foregroundStyle(Brand.primary)
+                    .padding(.top, Spacing.xs)
+            }
+            .padding(.top, Spacing.sm)
+        } label: {
+            Label(String(localized: "schoolURL.manual.title"), systemImage: "questionmark.circle")
+                .font(.subheadline.weight(.semibold))
+        }
+        .tint(Brand.primary)
+        .padding(.horizontal, Spacing.md)
+        .padding(.vertical, Spacing.md)
+        .background(
+            RoundedRectangle(cornerRadius: Radius.sm, style: .continuous)
+                .fill(Color(.tertiarySystemFill))
+        )
+        .accessibilityIdentifier("schoolURLManual")
     }
 
     private var githubLink: some View {
@@ -156,6 +186,25 @@ struct LoginView: View {
                 }
             }
         )
+    }
+}
+
+private struct ManualStep: View {
+    let number: Int
+    let text: String
+
+    var body: some View {
+        HStack(alignment: .top, spacing: Spacing.sm) {
+            Text("\(number).")
+                .font(.caption.weight(.bold).monospacedDigit())
+                .foregroundStyle(Brand.primary)
+                .frame(width: 22, alignment: .trailing)
+
+            Text(text)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
     }
 }
 

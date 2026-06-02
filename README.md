@@ -2,6 +2,8 @@
 
 Gradely is a SwiftUI iOS app for checking school marks from the Bakalari API. It gives students a cleaner, faster view of subjects, weighted averages, recent marks, absences, and what-if grade calculations.
 
+Gradely will be available on the App Store. Source code lives at [FBukovina/Gradely](https://github.com/FBukovina/Gradely).
+
 ## Features
 
 - Sign in with a school Bakalari URL, username, and password.

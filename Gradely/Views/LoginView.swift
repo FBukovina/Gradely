@@ -17,6 +17,7 @@ struct LoginView: View {
                 VStack(alignment: .leading, spacing: Spacing.xl) {
                     hero
                     form
+                    githubLink
                 }
                 .padding(.horizontal, Spacing.xl)
                 .padding(.top, Spacing.xxl)
@@ -109,6 +110,16 @@ struct LoginView: View {
                 .accessibilityIdentifier("loginButton")
             }
         }
+    }
+
+    private var githubLink: some View {
+        Link(destination: AppLinks.githubRepositoryURL) {
+            Label(String(localized: "github.repository"), systemImage: "chevron.left.forwardslash.chevron.right")
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(Brand.primary)
+        }
+        .frame(maxWidth: .infinity)
+        .accessibilityIdentifier("githubRepositoryLink")
     }
 
     private var passwordField: some View {

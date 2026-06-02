@@ -417,6 +417,22 @@
         }
       }
     },
+    "github.repository" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GitHub repozitář"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GitHub repository"
+          }
+        }
+      }
+    },
     "login.button" : {
       "localizations" : {
         "cs" : {

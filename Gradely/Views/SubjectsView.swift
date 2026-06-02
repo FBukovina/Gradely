@@ -128,6 +128,11 @@ struct SubjectsView: View {
                 }
             }
 
+            Link(destination: AppLinks.githubRepositoryURL) {
+                Label(String(localized: "github.repository"), systemImage: "chevron.left.forwardslash.chevron.right")
+            }
+            .accessibilityIdentifier("githubRepositoryLink")
+
             Button(role: .destructive) {
                 onSignedOut()
             } label: {

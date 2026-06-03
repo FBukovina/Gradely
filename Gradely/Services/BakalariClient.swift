@@ -142,6 +142,62 @@ private struct LoginErrorResponse: Decodable {
     }
 }
 
+enum DemoAccount {
+    static let schoolURL = "demo.gradely.app"
+    static let username = "apple-review"
+    static let password = "GradelyDemo2026!"
+
+    static let accessToken = "demo-access"
+    static let refreshToken = "demo-refresh"
+
+    private static let acceptedHosts = [
+        "demo",
+        schoolURL
+    ]
+
+    static let loginResponse = LoginResponse(
+        accessToken: accessToken,
+        refreshToken: refreshToken,
+        tokenType: "Bearer",
+        expiresIn: 86_400,
+        apiVersion: nil,
+        appVersion: nil,
+        userID: "demo-user"
+    )
+
+    static func isDemoBaseURL(_ baseURL: URL) -> Bool {
+        guard let host = URLComponents(url: baseURL, resolvingAgainstBaseURL: false)?
+            .host?
+            .lowercased()
+        else {
+            return false
+        }
+
+        return acceptedHosts.contains(host)
+    }
+
+    static func matches(baseURL: URL, username: String, password: String) -> Bool {
+        isDemoBaseURL(baseURL)
+            && username.trimmingCharacters(in: .whitespacesAndNewlines).caseInsensitiveCompare(Self.username) == .orderedSame
+            && password == Self.password
+    }
+
+    static func isDemoToken(_ token: String) -> Bool {
+        token == accessToken || token == refreshToken
+    }
+}
+
+enum DemoAccountError: LocalizedError, Equatable {
+    case invalidCredentials
+
+    var errorDescription: String? {
+        switch self {
+        case .invalidCredentials:
+            return String(localized: "error.demo.invalidCredentials")
+        }
+    }
+}
+
 struct MockBakalariClient: BakalariClient {
     var loginResult: LoginResponse
     var refreshedResult: LoginResponse?
@@ -200,5 +256,65 @@ struct MockBakalariClient: BakalariClient {
             return userResult
         }
         throw BakalariAPIError.httpStatus(404, nil)
+    }
+}
+
+struct DemoAwareBakalariClient: BakalariClient {
+    private let liveClient: any BakalariClient
+    private let demoClient: any BakalariClient
+
+    init(
+        liveClient: any BakalariClient,
+        demoClient: any BakalariClient = MockBakalariClient(
+            loginResult: DemoAccount.loginResponse,
+            refreshedResult: DemoAccount.loginResponse
+        )
+    ) {
+        self.liveClient = liveClient
+        self.demoClient = demoClient
+    }
+
+    func login(baseURL: URL, username: String, password: String) async throws -> LoginResponse {
+        guard DemoAccount.isDemoBaseURL(baseURL) else {
+            return try await liveClient.login(baseURL: baseURL, username: username, password: password)
+        }
+
+        guard DemoAccount.matches(baseURL: baseURL, username: username, password: password) else {
+            throw DemoAccountError.invalidCredentials
+        }
+
+        return try await demoClient.login(baseURL: baseURL, username: username, password: password)
+    }
+
+    func refreshToken(baseURL: URL, refreshToken: String) async throws -> LoginResponse {
+        if DemoAccount.isDemoBaseURL(baseURL) || DemoAccount.isDemoToken(refreshToken) {
+            return try await demoClient.refreshToken(baseURL: baseURL, refreshToken: refreshToken)
+        }
+
+        return try await liveClient.refreshToken(baseURL: baseURL, refreshToken: refreshToken)
+    }
+
+    func fetchMarks(baseURL: URL, accessToken: String) async throws -> MarksResponse {
+        if DemoAccount.isDemoBaseURL(baseURL) || DemoAccount.isDemoToken(accessToken) {
+            return try await demoClient.fetchMarks(baseURL: baseURL, accessToken: accessToken)
+        }
+
+        return try await liveClient.fetchMarks(baseURL: baseURL, accessToken: accessToken)
+    }
+
+    func fetchAbsences(baseURL: URL, accessToken: String) async throws -> AbsenceResponse {
+        if DemoAccount.isDemoBaseURL(baseURL) || DemoAccount.isDemoToken(accessToken) {
+            return try await demoClient.fetchAbsences(baseURL: baseURL, accessToken: accessToken)
+        }
+
+        return try await liveClient.fetchAbsences(baseURL: baseURL, accessToken: accessToken)
+    }
+
+    func fetchUser(baseURL: URL, accessToken: String) async throws -> UserResponse {
+        if DemoAccount.isDemoBaseURL(baseURL) || DemoAccount.isDemoToken(accessToken) {
+            return try await demoClient.fetchUser(baseURL: baseURL, accessToken: accessToken)
+        }
+
+        return try await liveClient.fetchUser(baseURL: baseURL, accessToken: accessToken)
     }
 }

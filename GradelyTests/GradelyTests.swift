@@ -130,4 +130,44 @@ struct GradelyTests {
         #expect(store.session?.baseURL.absoluteString == "https://demo.bakalari.cz/")
         #expect(viewModel.password.isEmpty)
     }
+
+    @Test func demoAccountLoadsMockDashboardData() async throws {
+        let store = InMemorySessionStore()
+        let repository = BakalariRepository(
+            client: DemoAwareBakalariClient(liveClient: MockBakalariClient(marksError: BakalariAPIError.httpStatus(418, nil))),
+            sessionStore: store,
+            marksCache: InMemoryMarksCache()
+        )
+
+        let session = try await repository.login(
+            schoolURL: DemoAccount.schoolURL,
+            username: DemoAccount.username,
+            password: DemoAccount.password
+        )
+        let dashboard = try await repository.loadDashboard()
+
+        #expect(session.accessToken == DemoAccount.accessToken)
+        #expect(store.session?.baseURL.absoluteString == "https://demo.gradely.app/")
+        #expect(dashboard.marksResponse.subjects == PreviewData.subjects)
+        #expect(dashboard.user?.fullName == PreviewData.userResponse.fullName)
+    }
+
+    @Test func demoAccountRejectsWrongCredentials() async {
+        let repository = BakalariRepository(
+            client: DemoAwareBakalariClient(liveClient: MockBakalariClient()),
+            sessionStore: InMemorySessionStore(),
+            marksCache: InMemoryMarksCache()
+        )
+
+        do {
+            _ = try await repository.login(
+                schoolURL: DemoAccount.schoolURL,
+                username: DemoAccount.username,
+                password: "wrong-password"
+            )
+            #expect(Bool(false), "Expected demo account login to reject wrong credentials.")
+        } catch {
+            #expect((error as? DemoAccountError) == .invalidCredentials)
+        }
+    }
 }

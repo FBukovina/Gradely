@@ -40,6 +40,13 @@ final class LoginViewModel {
         errorMessage = nil
     }
 
+    func fillDemoAccount() {
+        schoolURL = DemoAccount.schoolURL
+        username = DemoAccount.username
+        password = DemoAccount.password
+        errorMessage = nil
+    }
+
     private func userFacingMessage(for error: Error) -> String {
         if let localizedError = error as? LocalizedError, let message = localizedError.errorDescription {
             return message

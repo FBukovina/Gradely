@@ -87,6 +87,17 @@ struct LoginView: View {
                 passwordField
 
                 Button {
+                    viewModel.fillDemoAccount()
+                } label: {
+                    Label(String(localized: "login.demoAccount"), systemImage: "person.badge.key.fill")
+                        .font(.footnote.weight(.semibold))
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(Brand.primary)
+                .accessibilityIdentifier("demoAccountButton")
+
+                Button {
                     Task {
                         if await viewModel.login() {
                             onSignedIn()

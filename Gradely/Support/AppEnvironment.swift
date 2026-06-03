@@ -12,7 +12,7 @@ struct AppEnvironment {
         }
         return AppEnvironment(
             repository: BakalariRepository(
-                client: URLSessionBakalariClient(),
+                client: DemoAwareBakalariClient(liveClient: URLSessionBakalariClient()),
                 sessionStore: SessionStore(),
                 marksCache: cache
             )

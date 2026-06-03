@@ -91,6 +91,21 @@ struct StatusChip: View {
     }
 }
 
+// MARK: - GitHub mark
+
+struct GitHubIcon: View {
+    var size: CGFloat = 16
+
+    var body: some View {
+        Image("GitHubMark")
+            .renderingMode(.template)
+            .resizable()
+            .scaledToFit()
+            .frame(width: size, height: size)
+            .accessibilityHidden(true)
+    }
+}
+
 // MARK: - Stat tile
 
 /// Compact label/value pair used in the overview hero, rendered on the brand gradient.

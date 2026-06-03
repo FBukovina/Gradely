@@ -155,9 +155,13 @@ struct LoginView: View {
 
     private var githubLink: some View {
         Link(destination: AppLinks.githubRepositoryURL) {
-            Label(String(localized: "github.repository"), systemImage: "chevron.left.forwardslash.chevron.right")
-                .font(.footnote.weight(.semibold))
-                .foregroundStyle(Brand.primary)
+            Label {
+                Text("github.repository")
+            } icon: {
+                GitHubIcon(size: 16)
+            }
+            .font(.footnote.weight(.semibold))
+            .foregroundStyle(Brand.primary)
         }
         .frame(maxWidth: .infinity)
         .accessibilityIdentifier("githubRepositoryLink")

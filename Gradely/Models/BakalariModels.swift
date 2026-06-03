@@ -33,10 +33,52 @@ struct UserResponse: Codable, Equatable {
         case userUID = "UserUID"
         case fullName = "FullName"
         case userClass = "Class"
-        case schoolName = "SchoolOrganizationName"
+        case schoolOrganizationName = "SchoolOrganizationName"
+        case schoolName = "SchoolName"
         case userType = "UserType"
         case userTypeText = "UserTypeText"
         case studyYear = "StudyYear"
+    }
+
+    init(
+        userUID: String,
+        fullName: String,
+        userClass: ClassInfo?,
+        schoolName: String?,
+        userType: String,
+        userTypeText: String,
+        studyYear: Int?
+    ) {
+        self.userUID = userUID
+        self.fullName = fullName
+        self.userClass = userClass
+        self.schoolName = schoolName
+        self.userType = userType
+        self.userTypeText = userTypeText
+        self.studyYear = studyYear
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        userUID = try container.decode(String.self, forKey: .userUID)
+        fullName = try container.decode(String.self, forKey: .fullName)
+        userClass = try container.decodeIfPresent(ClassInfo.self, forKey: .userClass)
+        schoolName = try container.decodeIfPresent(String.self, forKey: .schoolOrganizationName)
+            ?? container.decodeIfPresent(String.self, forKey: .schoolName)
+        userType = try container.decode(String.self, forKey: .userType)
+        userTypeText = try container.decode(String.self, forKey: .userTypeText)
+        studyYear = try container.decodeIfPresent(Int.self, forKey: .studyYear)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(userUID, forKey: .userUID)
+        try container.encode(fullName, forKey: .fullName)
+        try container.encodeIfPresent(userClass, forKey: .userClass)
+        try container.encodeIfPresent(schoolName, forKey: .schoolOrganizationName)
+        try container.encode(userType, forKey: .userType)
+        try container.encode(userTypeText, forKey: .userTypeText)
+        try container.encodeIfPresent(studyYear, forKey: .studyYear)
     }
 }
 

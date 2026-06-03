@@ -31,6 +31,15 @@ final class SubjectsViewModel {
         subjects.reduce(0) { $0 + $1.marks.count }
     }
 
+    var schoolName: String? {
+        guard let schoolName = user?.schoolName?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !schoolName.isEmpty
+        else {
+            return nil
+        }
+        return schoolName
+    }
+
     /// Subject with the best (lowest) average — `1` is best in the Czech scale.
     var bestSubject: Subject? {
         subjects

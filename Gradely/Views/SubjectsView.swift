@@ -129,7 +129,11 @@ struct SubjectsView: View {
             }
 
             Link(destination: AppLinks.githubRepositoryURL) {
-                Label(String(localized: "github.repository"), systemImage: "chevron.left.forwardslash.chevron.right")
+                Label {
+                    Text("github.repository")
+                } icon: {
+                    GitHubIcon()
+                }
             }
             .accessibilityIdentifier("githubRepositoryLink")
 
@@ -157,6 +161,19 @@ private struct OverviewHeader: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.lg) {
+            if let schoolName = viewModel.schoolName {
+                Label {
+                    Text(schoolName)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.8)
+                } icon: {
+                    Image(systemName: "building.columns.fill")
+                }
+                .font(.caption.weight(.bold))
+                .foregroundStyle(Brand.onAccent.opacity(0.72))
+                .accessibilityLabel(String(format: String(localized: "overview.school.accessibility"), schoolName))
+            }
+
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: Spacing.xs) {
                     Text("overview.overall.title")

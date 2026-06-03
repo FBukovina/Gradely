@@ -51,6 +51,23 @@ struct GradelyTests {
         }
     }
 
+    @Test func decodesSchoolNameFallbacks() throws {
+        let json = """
+        {
+          "UserUID": "student-1",
+          "FullName": "Student One",
+          "SchoolName": "Fallback Gymnázium",
+          "UserType": "student",
+          "UserTypeText": "Student"
+        }
+        """
+
+        let data = try #require(json.data(using: .utf8))
+        let user = try JSONDecoder().decode(UserResponse.self, from: data)
+
+        #expect(user.schoolName == "Fallback Gymnázium")
+    }
+
     @Test func preservesAndroidGradeMathMapping() {
         #expect(GradeMath.parseMarkValue("1+") == 1.3)
         #expect(GradeMath.parseMarkValue("1-") == 1.7)

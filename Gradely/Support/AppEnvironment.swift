@@ -4,17 +4,14 @@ struct AppEnvironment {
     let repository: BakalariRepository
 
     static func live() -> AppEnvironment {
-        let cache: any MarksCaching
-        if let liveCache = try? MarksCache() {
-            cache = liveCache
-        } else {
-            cache = InMemoryMarksCache()
-        }
+        let marksCache: any MarksCaching = (try? MarksCache()) ?? InMemoryMarksCache()
+        let timetableCache: any TimetableCaching = (try? TimetableCache()) ?? InMemoryTimetableCache()
         return AppEnvironment(
             repository: BakalariRepository(
                 client: DemoAwareBakalariClient(liveClient: URLSessionBakalariClient()),
                 sessionStore: SessionStore(),
-                marksCache: cache
+                marksCache: marksCache,
+                timetableCache: timetableCache
             )
         )
     }

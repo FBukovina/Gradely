@@ -106,6 +106,54 @@ struct GitHubIcon: View {
     }
 }
 
+// MARK: - Account menu
+
+/// Toolbar menu showing the signed-in user plus the repository link and logout action.
+/// Shared by the Marks and Timetable tabs.
+struct AccountMenu: View {
+    let user: UserResponse?
+    let onSignedOut: () -> Void
+
+    var body: some View {
+        Menu {
+            if let user {
+                Section {
+                    Text(user.fullName)
+                    if let schoolName = user.schoolName {
+                        Text(schoolName)
+                    }
+                    if let className = user.userClass?.abbrev {
+                        Text(className)
+                    }
+                }
+            }
+
+            Link(destination: AppLinks.githubRepositoryURL) {
+                Label {
+                    Text("github.repository")
+                } icon: {
+                    GitHubIcon()
+                }
+            }
+            .accessibilityIdentifier("githubRepositoryLink")
+
+            Button(role: .destructive) {
+                onSignedOut()
+            } label: {
+                Label(String(localized: "action.logout"), systemImage: "rectangle.portrait.and.arrow.right")
+            }
+            .accessibilityIdentifier("logoutButton")
+        } label: {
+            Image(systemName: "person.fill")
+                .font(.footnote.weight(.bold))
+                .foregroundStyle(Brand.primary)
+                .frame(width: 30, height: 30)
+                .background(Brand.primary.opacity(0.15), in: Circle())
+        }
+        .accessibilityLabel(String(localized: "account.menu"))
+    }
+}
+
 // MARK: - Stat tile
 
 /// Compact label/value pair used in the overview hero, rendered on the brand gradient.

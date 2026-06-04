@@ -58,7 +58,7 @@ struct SubjectsView: View {
                 }
 
                 ToolbarItem(placement: .topBarTrailing) {
-                    accountMenu
+                    AccountMenu(user: viewModel.user, onSignedOut: onSignedOut)
                 }
             }
             .task {
@@ -114,44 +114,6 @@ struct SubjectsView: View {
         .accessibilityIdentifier("subjectsList")
     }
 
-    private var accountMenu: some View {
-        Menu {
-            if let user = viewModel.user {
-                Section {
-                    Text(user.fullName)
-                    if let schoolName = user.schoolName {
-                        Text(schoolName)
-                    }
-                    if let className = user.userClass?.abbrev {
-                        Text(className)
-                    }
-                }
-            }
-
-            Link(destination: AppLinks.githubRepositoryURL) {
-                Label {
-                    Text("github.repository")
-                } icon: {
-                    GitHubIcon()
-                }
-            }
-            .accessibilityIdentifier("githubRepositoryLink")
-
-            Button(role: .destructive) {
-                onSignedOut()
-            } label: {
-                Label(String(localized: "action.logout"), systemImage: "rectangle.portrait.and.arrow.right")
-            }
-            .accessibilityIdentifier("logoutButton")
-        } label: {
-            Image(systemName: "person.fill")
-                .font(.footnote.weight(.bold))
-                .foregroundStyle(Brand.primary)
-                .frame(width: 30, height: 30)
-                .background(Brand.primary.opacity(0.15), in: Circle())
-        }
-        .accessibilityLabel(String(localized: "account.menu"))
-    }
 }
 
 // MARK: - Overview hero

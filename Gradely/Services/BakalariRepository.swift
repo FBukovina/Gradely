@@ -27,15 +27,18 @@ final class BakalariRepository {
     private let client: any BakalariClient
     private let sessionStore: any SessionStoring
     private let marksCache: any MarksCaching
+    private let timetableCache: any TimetableCaching
 
     init(
         client: any BakalariClient,
         sessionStore: any SessionStoring,
-        marksCache: any MarksCaching
+        marksCache: any MarksCaching,
+        timetableCache: any TimetableCaching = InMemoryTimetableCache()
     ) {
         self.client = client
         self.sessionStore = sessionStore
         self.marksCache = marksCache
+        self.timetableCache = timetableCache
     }
 
     func bootstrapSession() throws -> StoredSession? {
@@ -61,10 +64,37 @@ final class BakalariRepository {
     func logout() throws {
         try sessionStore.clearSession()
         try marksCache.clear()
+        try timetableCache.clear()
     }
 
     func loadCachedMarks() throws -> CachedMarks? {
         try marksCache.load()
+    }
+
+    /// Cached week for instant/offline display, if it matches the requested week.
+    func loadCachedTimetable(weekContaining date: Date) -> TimetableWeek? {
+        let monday = TimetableDates.monday(of: date)
+        guard let cached = try? timetableCache.load(weekStart: monday) else { return nil }
+        return TimetableMapper.makeWeek(from: cached.response, weekStart: monday)
+    }
+
+    /// Fetches and denormalizes the timetable for the week containing `date`, caching the raw response.
+    func loadTimetable(weekContaining date: Date) async throws -> TimetableWeek {
+        let monday = TimetableDates.monday(of: date)
+        let session = try await validSession()
+        let response = try await client.fetchTimetable(
+            baseURL: session.baseURL,
+            accessToken: session.accessToken,
+            date: monday
+        )
+        try? timetableCache.save(response, weekStart: monday)
+        return TimetableMapper.makeWeek(from: response, weekStart: monday)
+    }
+
+    /// Best-effort current user, used to populate the account menu on tabs other than Marks.
+    func loadUser() async -> UserResponse? {
+        guard let session = try? await validSession() else { return nil }
+        return try? await client.fetchUser(baseURL: session.baseURL, accessToken: session.accessToken)
     }
 
     func loadDashboard(forceRefresh: Bool = false) async throws -> DashboardData {

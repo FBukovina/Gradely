@@ -49,6 +49,29 @@ final class GradelyUITests: XCTestCase {
     }
 
     @MainActor
+    func testTimetableTabShowsWeekAndNavigates() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-uiTestingMockAPI", "-uiTestingLoggedIn"]
+        app.launch()
+
+        // Starts on the Marks tab.
+        XCTAssertTrue(app.collectionViews["subjectsList"].waitForExistence(timeout: 5))
+
+        // Switch to the Timetable tab (second tab).
+        app.tabBars.buttons.element(boundBy: 1).tap()
+
+        XCTAssertTrue(app.scrollViews["timetableList"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["weekNext"].exists)
+        XCTAssertTrue(app.buttons["dayChip-1"].exists)
+
+        // Moving off the current week reveals the "Today" shortcut; tapping it returns.
+        app.buttons["weekNext"].tap()
+        XCTAssertTrue(app.buttons["weekToday"].waitForExistence(timeout: 5))
+        app.buttons["weekToday"].tap()
+        XCTAssertTrue(app.scrollViews["timetableList"].waitForExistence(timeout: 5))
+    }
+
+    @MainActor
     func testLaunchPerformance() throws {
         measure(metrics: [XCTApplicationLaunchMetric()]) {
             let app = XCUIApplication()

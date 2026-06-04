@@ -76,3 +76,18 @@ extension GradeBand {
         )
     }
 }
+
+// MARK: - Lesson change styling
+
+extension LessonChangeKind {
+    /// Accent color for the change chip and lesson emphasis, reusing the grade palette.
+    var color: Color {
+        switch self {
+        case .none: .secondary
+        case .canceled: GradeBand.poor.foregroundColor        // rose
+        case .substitution: GradeBand.average.foregroundColor // amber
+        case .roomChanged: GradeBand.good.foregroundColor     // teal
+        case .added: GradeBand.excellent.foregroundColor      // emerald
+        }
+    }
+}

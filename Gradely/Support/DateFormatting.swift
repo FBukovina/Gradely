@@ -52,3 +52,47 @@ enum MarkDateFormatter {
         return formatter.date(from: value)
     }
 }
+
+/// Week math for the timetable: Monday-anchored navigation and the API `date` parameter.
+enum TimetableDates {
+    /// Gregorian calendar pinned to Monday-first so week boundaries match the Czech school week
+    /// regardless of the device locale.
+    static let weekCalendar: Calendar = {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.firstWeekday = 2 // Monday
+        return calendar
+    }()
+
+    private static let apiFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter
+    }()
+
+    /// Monday of the week containing `date`.
+    static func monday(of date: Date) -> Date {
+        let components = weekCalendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: date)
+        return weekCalendar.date(from: components) ?? date
+    }
+
+    /// Shifts `date` by whole weeks (negative goes back).
+    static func addingWeeks(_ count: Int, to date: Date) -> Date {
+        weekCalendar.date(byAdding: .weekOfYear, value: count, to: date) ?? date
+    }
+
+    /// `yyyy-MM-dd` string for the timetable `date` query parameter.
+    static func apiDateString(_ date: Date) -> String {
+        apiFormatter.string(from: date)
+    }
+
+    /// Localized Monday–Friday range label, e.g. "8 – 12 Jun".
+    static func weekRangeTitle(weekStart monday: Date) -> String {
+        let friday = weekCalendar.date(byAdding: .day, value: 4, to: monday) ?? monday
+        guard monday < friday else {
+            return monday.formatted(.dateTime.day().month(.abbreviated))
+        }
+        return (monday..<friday).formatted(.interval.day().month(.abbreviated))
+    }
+}

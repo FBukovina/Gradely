@@ -30,9 +30,22 @@ struct ContentView: View {
                         appViewModel.markSignedIn()
                     }
                 case .signedIn:
-                    SubjectsView(repository: repository) {
-                        appViewModel.signOut()
+                    TabView {
+                        SubjectsView(repository: repository) {
+                            appViewModel.signOut()
+                        }
+                        .tabItem {
+                            Label("subjects.title", systemImage: "checkmark.seal.fill")
+                        }
+
+                        TimetableView(repository: repository) {
+                            appViewModel.signOut()
+                        }
+                        .tabItem {
+                            Label("rozvrh.title", systemImage: "calendar")
+                        }
                     }
+                    .tint(Brand.primary)
                 }
             }
         }

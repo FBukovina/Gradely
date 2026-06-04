@@ -6,6 +6,7 @@ protocol BakalariClient {
     func fetchMarks(baseURL: URL, accessToken: String) async throws -> MarksResponse
     func fetchAbsences(baseURL: URL, accessToken: String) async throws -> AbsenceResponse
     func fetchUser(baseURL: URL, accessToken: String) async throws -> UserResponse
+    func fetchTimetable(baseURL: URL, accessToken: String, date: Date) async throws -> TimetableResponse
 }
 
 enum BakalariAPIError: LocalizedError, Equatable {
@@ -74,6 +75,15 @@ final class URLSessionBakalariClient: BakalariClient {
         try await get(baseURL: baseURL, path: "api/3/user", accessToken: accessToken)
     }
 
+    func fetchTimetable(baseURL: URL, accessToken: String, date: Date) async throws -> TimetableResponse {
+        try await get(
+            baseURL: baseURL,
+            path: "api/3/timetable/actual",
+            query: ["date": TimetableDates.apiDateString(date)],
+            accessToken: accessToken
+        )
+    }
+
     private func postForm<Response: Decodable>(
         baseURL: URL,
         path: String,
@@ -90,13 +100,26 @@ final class URLSessionBakalariClient: BakalariClient {
     private func get<Response: Decodable>(
         baseURL: URL,
         path: String,
+        query: [String: String] = [:],
         accessToken: String
     ) async throws -> Response {
-        var request = URLRequest(url: baseURL.appending(path: path))
+        var request = URLRequest(url: makeURL(baseURL: baseURL, path: path, query: query))
         request.httpMethod = "GET"
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
         return try await send(request)
+    }
+
+    private func makeURL(baseURL: URL, path: String, query: [String: String]) -> URL {
+        let url = baseURL.appending(path: path)
+        guard
+            !query.isEmpty,
+            var components = URLComponents(url: url, resolvingAgainstBaseURL: false)
+        else {
+            return url
+        }
+        components.queryItems = query.map { URLQueryItem(name: $0.key, value: $0.value) }
+        return components.url ?? url
     }
 
     private func send<Response: Decodable>(_ request: URLRequest) async throws -> Response {
@@ -204,8 +227,10 @@ struct MockBakalariClient: BakalariClient {
     var marksResult: MarksResponse
     var absenceResult: AbsenceResponse
     var userResult: UserResponse?
+    var timetableResult: TimetableResponse
     var loginError: Error?
     var marksError: Error?
+    var timetableError: Error?
 
     init(
         loginResult: LoginResponse = LoginResponse(
@@ -221,16 +246,20 @@ struct MockBakalariClient: BakalariClient {
         marksResult: MarksResponse = PreviewData.marksResponse,
         absenceResult: AbsenceResponse = PreviewData.absenceResponse,
         userResult: UserResponse? = PreviewData.userResponse,
+        timetableResult: TimetableResponse = PreviewData.timetableResponse,
         loginError: Error? = nil,
-        marksError: Error? = nil
+        marksError: Error? = nil,
+        timetableError: Error? = nil
     ) {
         self.loginResult = loginResult
         self.refreshedResult = refreshedResult
         self.marksResult = marksResult
         self.absenceResult = absenceResult
         self.userResult = userResult
+        self.timetableResult = timetableResult
         self.loginError = loginError
         self.marksError = marksError
+        self.timetableError = timetableError
     }
 
     func login(baseURL: URL, username: String, password: String) async throws -> LoginResponse {
@@ -256,6 +285,37 @@ struct MockBakalariClient: BakalariClient {
             return userResult
         }
         throw BakalariAPIError.httpStatus(404, nil)
+    }
+
+    func fetchTimetable(baseURL: URL, accessToken: String, date: Date) async throws -> TimetableResponse {
+        if let timetableError { throw timetableError }
+        return Self.rebased(timetableResult, toWeekContaining: date)
+    }
+
+    /// Shifts the fixture's day dates onto the requested week so demo week navigation shows lessons.
+    static func rebased(_ response: TimetableResponse, toWeekContaining date: Date) -> TimetableResponse {
+        let monday = TimetableDates.monday(of: date)
+        let days = response.days.map { day -> TimetableDayDTO in
+            let offset = max(0, day.dayOfWeek - 1)
+            let shifted = TimetableDates.weekCalendar.date(byAdding: .day, value: offset, to: monday) ?? monday
+            return TimetableDayDTO(
+                atoms: day.atoms,
+                dayOfWeek: day.dayOfWeek,
+                date: TimetableDates.apiDateString(shifted),
+                dayDescription: day.dayDescription,
+                dayType: day.dayType
+            )
+        }
+        return TimetableResponse(
+            hours: response.hours,
+            days: days,
+            classes: response.classes,
+            groups: response.groups,
+            subjects: response.subjects,
+            teachers: response.teachers,
+            rooms: response.rooms,
+            cycles: response.cycles
+        )
     }
 }
 
@@ -316,5 +376,13 @@ struct DemoAwareBakalariClient: BakalariClient {
         }
 
         return try await liveClient.fetchUser(baseURL: baseURL, accessToken: accessToken)
+    }
+
+    func fetchTimetable(baseURL: URL, accessToken: String, date: Date) async throws -> TimetableResponse {
+        if DemoAccount.isDemoBaseURL(baseURL) || DemoAccount.isDemoToken(accessToken) {
+            return try await demoClient.fetchTimetable(baseURL: baseURL, accessToken: accessToken, date: date)
+        }
+
+        return try await liveClient.fetchTimetable(baseURL: baseURL, accessToken: accessToken, date: date)
     }
 }

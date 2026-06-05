@@ -86,6 +86,120 @@ struct GradelyTests {
         #expect(abs(theoretical - 2.1833) < 0.001)
     }
 
+    @Test func explicitWeightsRemainAuthoritativeWhenResolving() {
+        let mark = testMark(markText: "2", typeNote: "Písemná práce", weight: 4, id: "explicit")
+        let subject = testSubject(marks: [mark])
+
+        let resolved = GradeMath.resolvedWeight(for: mark, in: subject)
+
+        #expect(resolved == ResolvedMarkWeight(value: 4, source: .explicit))
+    }
+
+    @Test func hiddenWeightReusesConsistentExplicitSameLabel() {
+        let visible = testMark(markText: "1", typeNote: "Pís. práce - malá", weight: 3, id: "visible")
+        let hidden = testMark(markText: "5", typeNote: "Pís. práce - malá", weight: nil, id: "hidden")
+        let subject = testSubject(marks: [visible, hidden])
+
+        let resolved = GradeMath.resolvedWeight(for: hidden, in: subject)
+
+        #expect(resolved == ResolvedMarkWeight(value: 3, source: .inferred))
+    }
+
+    @Test func hiddenWeightCanBeInferredFromOfficialAverageWhenUnique() {
+        let visible = testMark(markText: "1", typeNote: "Ústní", weight: 1, id: "visible")
+        let hidden = testMark(markText: "5", typeNote: "Písemná práce - velká", weight: nil, id: "hidden")
+        let subject = testSubject(marks: [visible, hidden], averageText: "3,67")
+
+        let resolved = GradeMath.resolvedWeight(for: hidden, in: subject)
+
+        #expect(resolved == ResolvedMarkWeight(value: 2, source: .inferred))
+    }
+
+    @Test func ambiguousHiddenWeightFallsBackToOne() {
+        let visible = testMark(markText: "2", typeNote: "Ústní", weight: 1, id: "visible")
+        let hidden = testMark(markText: "2", typeNote: "Neznámý typ", weight: nil, id: "hidden")
+        let subject = testSubject(marks: [visible, hidden], averageText: "2,00")
+
+        let resolved = GradeMath.resolvedWeight(for: hidden, in: subject)
+
+        #expect(resolved == ResolvedMarkWeight(value: 1, source: .fallback))
+    }
+
+    @Test func pointOnlyMarksAreIgnoredByWeightResolutionAverages() {
+        let visible = testMark(markText: "1", typeNote: "Ústní", weight: 1, id: "visible")
+        let points = testMark(
+            markText: "5",
+            type: "points",
+            typeNote: "Body",
+            weight: nil,
+            isPoints: true,
+            id: "points",
+            maxPoints: 10
+        )
+
+        let average = GradeMath.weightedAverage(for: [visible, points])
+        let resolvedPoints = GradeMath.resolvedWeights(for: [visible, points])["points"]
+
+        #expect(average == 1)
+        #expect(resolvedPoints == nil)
+    }
+
+    @Test func repositoryParsesWhatIfPredictionAverage() async throws {
+        let predictedSubject = testSubject(marks: PreviewData.mathMarks, averageText: "2,59")
+        let repository = BakalariRepository(
+            client: MockBakalariClient(predictionResult: predictedSubject),
+            sessionStore: InMemorySessionStore(session: validSession()),
+            marksCache: InMemoryMarksCache()
+        )
+
+        let average = try await repository.predictSubjectAverage(
+            subject: PreviewData.subjects[0],
+            markText: "3",
+            weight: 2
+        )
+
+        #expect(abs((average ?? 0) - 2.59) < 0.001)
+    }
+
+    @Test func subjectDetailViewModelUsesExactPredictionWhenAvailable() async throws {
+        let predictedSubject = testSubject(marks: PreviewData.mathMarks, averageText: "1,23")
+        let repository = BakalariRepository(
+            client: MockBakalariClient(predictionResult: predictedSubject),
+            sessionStore: InMemorySessionStore(session: validSession()),
+            marksCache: InMemoryMarksCache()
+        )
+        let viewModel = SubjectDetailViewModel(
+            subject: PreviewData.subjects[0],
+            absence: nil,
+            repository: repository
+        )
+
+        viewModel.updateTheoreticalMark("3")
+        #expect(viewModel.theoreticalAverage != nil)
+
+        try await waitForPrediction(viewModel, expectedAverage: 1.23)
+    }
+
+    @Test func subjectDetailViewModelKeepsLocalPredictionWhenExactPredictionFails() async throws {
+        let repository = BakalariRepository(
+            client: MockBakalariClient(predictionError: BakalariAPIError.httpStatus(403, nil)),
+            sessionStore: InMemorySessionStore(session: validSession()),
+            marksCache: InMemoryMarksCache()
+        )
+        let viewModel = SubjectDetailViewModel(
+            subject: PreviewData.subjects[0],
+            absence: nil,
+            repository: repository
+        )
+
+        viewModel.updateTheoreticalMark("3")
+        viewModel.incrementWeight()
+
+        try await waitForPredictionToFinish(viewModel)
+
+        #expect(abs((viewModel.theoreticalAverage ?? 0) - 2.1833) < 0.001)
+    }
+
     @Test func refreshesExpiredSession() async throws {
         let store = InMemorySessionStore(session: PreviewData.expiredSession)
         let refreshed = LoginResponse(
@@ -189,5 +303,70 @@ struct GradelyTests {
         } catch {
             #expect((error as? DemoAccountError) == .invalidCredentials)
         }
+    }
+
+    private func testMark(
+        markText: String,
+        caption: String? = nil,
+        type: String = "written",
+        typeNote: String?,
+        weight: Int?,
+        isPoints: Bool = false,
+        id: String,
+        maxPoints: Int? = nil
+    ) -> Mark {
+        Mark(
+            markDate: "2026-06-01T08:00:00+02:00",
+            caption: caption,
+            markText: markText,
+            type: type,
+            typeNote: typeNote,
+            weight: weight,
+            subjectID: "test",
+            isPoints: isPoints,
+            id: id,
+            maxPoints: maxPoints
+        )
+    }
+
+    private func testSubject(marks: [Mark], averageText: String? = nil) -> Subject {
+        Subject(
+            marks: marks,
+            subjectInfo: SubjectInfo(id: "test", abbrev: "T", name: "Test"),
+            averageText: averageText,
+            markPredictionEnabled: true
+        )
+    }
+
+    private func validSession() -> StoredSession {
+        StoredSession(
+            accessToken: "mock-access",
+            refreshToken: "mock-refresh",
+            tokenType: "Bearer",
+            expiresAt: Date().addingTimeInterval(3600),
+            baseURL: URL(string: "https://demo.bakalari.cz/")!
+        )
+    }
+
+    private func waitForPrediction(_ viewModel: SubjectDetailViewModel, expectedAverage: Double) async throws {
+        for _ in 0..<20 {
+            if let average = viewModel.theoreticalAverage, abs(average - expectedAverage) < 0.001 {
+                return
+            }
+            try await Task.sleep(nanoseconds: 10_000_000)
+        }
+
+        #expect(Bool(false), "Timed out waiting for exact prediction.")
+    }
+
+    private func waitForPredictionToFinish(_ viewModel: SubjectDetailViewModel) async throws {
+        for _ in 0..<20 {
+            if !viewModel.isPredictingExactAverage {
+                return
+            }
+            try await Task.sleep(nanoseconds: 10_000_000)
+        }
+
+        #expect(Bool(false), "Timed out waiting for prediction to finish.")
     }
 }

@@ -9,10 +9,17 @@ final class SubjectDetailViewModel {
 
     var theoreticalMark = ""
     var theoreticalWeight = 1
+    var isPredictingExactAverage = false
 
-    init(subject: Subject, absence: AbsencePerSubject?) {
+    private let repository: BakalariRepository
+    private var localTheoreticalAverage: Double?
+    private var exactTheoreticalAverage: Double?
+    @ObservationIgnored private var predictionTask: Task<Void, Never>?
+
+    init(subject: Subject, absence: AbsencePerSubject?, repository: BakalariRepository) {
         self.subject = subject
         self.absence = absence
+        self.repository = repository
     }
 
     var currentAverage: Double? {
@@ -30,14 +37,7 @@ final class SubjectDetailViewModel {
     }
 
     var theoreticalAverage: Double? {
-        guard let value = GradeMath.parseMarkValue(theoreticalMark), !theoreticalMark.isEmpty else {
-            return nil
-        }
-        return GradeMath.theoreticalAverage(
-            existingMarks: subject.marks,
-            markValue: value,
-            weight: theoreticalWeight
-        )
+        exactTheoreticalAverage ?? localTheoreticalAverage
     }
 
     var theoreticalDifference: Double? {
@@ -48,13 +48,82 @@ final class SubjectDetailViewModel {
     func updateTheoreticalMark(_ newValue: String) {
         guard newValue.count <= 3 else { return }
         theoreticalMark = newValue
+        refreshTheoreticalAverage()
     }
 
     func decrementWeight() {
         theoreticalWeight = max(1, theoreticalWeight - 1)
+        refreshTheoreticalAverage()
     }
 
     func incrementWeight() {
         theoreticalWeight = min(10, theoreticalWeight + 1)
+        refreshTheoreticalAverage()
+    }
+
+    func resolvedWeight(for mark: Mark) -> ResolvedMarkWeight {
+        GradeMath.resolvedWeight(for: mark, in: subject)
+    }
+
+    private func refreshTheoreticalAverage() {
+        predictionTask?.cancel()
+        exactTheoreticalAverage = nil
+        isPredictingExactAverage = false
+
+        guard let value = GradeMath.parseMarkValue(theoreticalMark), !theoreticalMark.isEmpty else {
+            localTheoreticalAverage = nil
+            return
+        }
+
+        localTheoreticalAverage = GradeMath.theoreticalAverage(
+            existingMarks: subject.marks,
+            subjectAverageText: subject.averageText,
+            markValue: value,
+            weight: theoreticalWeight
+        )
+
+        guard subject.markPredictionEnabled else { return }
+
+        let markText = theoreticalMark
+        let selectedWeight = theoreticalWeight
+        let subjectSnapshot = subject
+        let repositorySnapshot = repository
+
+        isPredictingExactAverage = true
+        predictionTask = Task { [weak self, repositorySnapshot, subjectSnapshot] in
+            do {
+                let exactAverage = try await repositorySnapshot.predictSubjectAverage(
+                    subject: subjectSnapshot,
+                    markText: markText,
+                    weight: selectedWeight
+                )
+                guard !Task.isCancelled else { return }
+
+                await MainActor.run {
+                    guard let self,
+                          self.theoreticalMark == markText,
+                          self.theoreticalWeight == selectedWeight
+                    else {
+                        return
+                    }
+                    if let exactAverage {
+                        self.exactTheoreticalAverage = exactAverage
+                    }
+                    self.isPredictingExactAverage = false
+                }
+            } catch {
+                guard !Task.isCancelled else { return }
+
+                await MainActor.run {
+                    guard let self,
+                          self.theoreticalMark == markText,
+                          self.theoreticalWeight == selectedWeight
+                    else {
+                        return
+                    }
+                    self.isPredictingExactAverage = false
+                }
+            }
+        }
     }
 }

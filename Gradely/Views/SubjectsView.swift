@@ -2,9 +2,11 @@ import SwiftUI
 
 struct SubjectsView: View {
     @State private var viewModel: SubjectsViewModel
+    private let repository: BakalariRepository
     let onSignedOut: () -> Void
 
     init(repository: BakalariRepository, onSignedOut: @escaping () -> Void) {
+        self.repository = repository
         _viewModel = State(initialValue: SubjectsViewModel(repository: repository))
         self.onSignedOut = onSignedOut
     }
@@ -69,7 +71,8 @@ struct SubjectsView: View {
                 SubjectDetailView(
                     viewModel: SubjectDetailViewModel(
                         subject: subject,
-                        absence: viewModel.absence(for: subject)
+                        absence: viewModel.absence(for: subject),
+                        repository: repository
                     )
                 )
             }

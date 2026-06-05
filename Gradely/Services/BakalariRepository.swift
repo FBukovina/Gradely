@@ -119,6 +119,18 @@ final class BakalariRepository {
         )
     }
 
+    func predictSubjectAverage(subject: Subject, markText: String, weight: Int) async throws -> Double? {
+        let session = try await validSession()
+        let predictedSubject = try await client.predictSubject(
+            baseURL: session.baseURL,
+            accessToken: session.accessToken,
+            subject: subject,
+            markText: markText,
+            weight: weight
+        )
+        return GradeMath.parseAverageText(predictedSubject.averageText)
+    }
+
     func validSession() async throws -> StoredSession {
         guard let session = try sessionStore.loadSession() else {
             throw AppError.notLoggedIn

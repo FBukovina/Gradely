@@ -263,6 +263,22 @@
         }
       }
     },
+    "detail.weight.estimated" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Odhad váhy %d"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Estimated weight %d"
+          }
+        }
+      }
+    },
     "error.api.decoding" : {
       "localizations" : {
         "cs" : {

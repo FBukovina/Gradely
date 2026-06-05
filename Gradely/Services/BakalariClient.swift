@@ -7,6 +7,7 @@ protocol BakalariClient {
     func fetchAbsences(baseURL: URL, accessToken: String) async throws -> AbsenceResponse
     func fetchUser(baseURL: URL, accessToken: String) async throws -> UserResponse
     func fetchTimetable(baseURL: URL, accessToken: String, date: Date) async throws -> TimetableResponse
+    func predictSubject(baseURL: URL, accessToken: String, subject: Subject, markText: String, weight: Int) async throws -> Subject
 }
 
 enum BakalariAPIError: LocalizedError, Equatable {
@@ -32,10 +33,12 @@ enum BakalariAPIError: LocalizedError, Equatable {
 final class URLSessionBakalariClient: BakalariClient {
     private let urlSession: URLSession
     private let decoder: JSONDecoder
+    private let encoder: JSONEncoder
 
     init(urlSession: URLSession = .shared) {
         self.urlSession = urlSession
         decoder = JSONDecoder()
+        encoder = JSONEncoder()
     }
 
     func login(baseURL: URL, username: String, password: String) async throws -> LoginResponse {
@@ -84,6 +87,15 @@ final class URLSessionBakalariClient: BakalariClient {
         )
     }
 
+    func predictSubject(baseURL: URL, accessToken: String, subject: Subject, markText: String, weight: Int) async throws -> Subject {
+        try await postJSON(
+            baseURL: baseURL,
+            path: "api/3/marks/what-if",
+            body: WhatIfMarkRequest.payload(for: subject, predictedMarkText: markText, predictedWeight: weight),
+            accessToken: accessToken
+        )
+    }
+
     private func postForm<Response: Decodable>(
         baseURL: URL,
         path: String,
@@ -107,6 +119,21 @@ final class URLSessionBakalariClient: BakalariClient {
         request.httpMethod = "GET"
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        return try await send(request)
+    }
+
+    private func postJSON<Body: Encodable, Response: Decodable>(
+        baseURL: URL,
+        path: String,
+        body: Body,
+        accessToken: String
+    ) async throws -> Response {
+        var request = URLRequest(url: baseURL.appending(path: path))
+        request.httpMethod = "POST"
+        request.setValue("application/json; charset=utf-8", forHTTPHeaderField: "Content-Type")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        request.httpBody = try encoder.encode(body)
         return try await send(request)
     }
 
@@ -162,6 +189,65 @@ private struct LoginErrorResponse: Decodable {
     enum CodingKeys: String, CodingKey {
         case error
         case errorDescription = "error_description"
+    }
+}
+
+private struct WhatIfMarkRequest: Encodable {
+    let id: String?
+    let markText: String
+    let weight: Int?
+    let maxPoints: Int
+    let subjectID: String
+
+    enum CodingKeys: String, CodingKey {
+        case id = "Id"
+        case markText = "MarkText"
+        case weight = "Weight"
+        case maxPoints = "MaxPoints"
+        case subjectID = "SubjectId"
+    }
+
+    static func payload(for subject: Subject, predictedMarkText: String, predictedWeight: Int) -> [WhatIfMarkRequest] {
+        let existingMarks = subject.marks.map { mark in
+            WhatIfMarkRequest(
+                id: mark.id,
+                markText: mark.markText,
+                weight: mark.weight,
+                maxPoints: mark.maxPoints ?? 0,
+                subjectID: mark.subjectID
+            )
+        }
+
+        let predictedMark = WhatIfMarkRequest(
+            id: nil,
+            markText: predictedMarkText,
+            weight: max(1, predictedWeight),
+            maxPoints: 0,
+            subjectID: subject.id
+        )
+
+        return existingMarks + [predictedMark]
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+
+        if let id {
+            try container.encode(id, forKey: .id)
+        } else {
+            try container.encodeNil(forKey: .id)
+        }
+
+        try container.encode(markText, forKey: .markText)
+
+        if let weight {
+            try container.encode(weight, forKey: .weight)
+        } else {
+            try container.encodeNil(forKey: .weight)
+        }
+
+        try container.encode(maxPoints, forKey: .maxPoints)
+        try container.encode(subjectID, forKey: .subjectID)
     }
 }
 
@@ -231,6 +317,8 @@ struct MockBakalariClient: BakalariClient {
     var loginError: Error?
     var marksError: Error?
     var timetableError: Error?
+    var predictionResult: Subject?
+    var predictionError: Error?
 
     init(
         loginResult: LoginResponse = LoginResponse(
@@ -249,7 +337,9 @@ struct MockBakalariClient: BakalariClient {
         timetableResult: TimetableResponse = PreviewData.timetableResponse,
         loginError: Error? = nil,
         marksError: Error? = nil,
-        timetableError: Error? = nil
+        timetableError: Error? = nil,
+        predictionResult: Subject? = nil,
+        predictionError: Error? = nil
     ) {
         self.loginResult = loginResult
         self.refreshedResult = refreshedResult
@@ -260,6 +350,8 @@ struct MockBakalariClient: BakalariClient {
         self.loginError = loginError
         self.marksError = marksError
         self.timetableError = timetableError
+        self.predictionResult = predictionResult
+        self.predictionError = predictionError
     }
 
     func login(baseURL: URL, username: String, password: String) async throws -> LoginResponse {
@@ -290,6 +382,33 @@ struct MockBakalariClient: BakalariClient {
     func fetchTimetable(baseURL: URL, accessToken: String, date: Date) async throws -> TimetableResponse {
         if let timetableError { throw timetableError }
         return Self.rebased(timetableResult, toWeekContaining: date)
+    }
+
+    func predictSubject(baseURL: URL, accessToken: String, subject: Subject, markText: String, weight: Int) async throws -> Subject {
+        if let predictionError { throw predictionError }
+        if let predictionResult { return predictionResult }
+
+        guard let value = GradeMath.parseMarkValue(markText) else {
+            return subject
+        }
+
+        let predictedAverage = GradeMath.theoreticalAverage(
+            existingMarks: subject.marks,
+            subjectAverageText: subject.averageText,
+            markValue: value,
+            weight: weight
+        )
+
+        return Subject(
+            marks: subject.marks,
+            subjectInfo: subject.subjectInfo,
+            averageText: String(format: "%.2f", locale: Locale(identifier: "en_US_POSIX"), predictedAverage),
+            temporaryMark: subject.temporaryMark,
+            subjectNote: subject.subjectNote,
+            temporaryMarkNote: subject.temporaryMarkNote,
+            pointsOnly: subject.pointsOnly,
+            markPredictionEnabled: subject.markPredictionEnabled
+        )
     }
 
     /// Shifts the fixture's day dates onto the requested week so demo week navigation shows lessons.
@@ -384,5 +503,25 @@ struct DemoAwareBakalariClient: BakalariClient {
         }
 
         return try await liveClient.fetchTimetable(baseURL: baseURL, accessToken: accessToken, date: date)
+    }
+
+    func predictSubject(baseURL: URL, accessToken: String, subject: Subject, markText: String, weight: Int) async throws -> Subject {
+        if DemoAccount.isDemoBaseURL(baseURL) || DemoAccount.isDemoToken(accessToken) {
+            return try await demoClient.predictSubject(
+                baseURL: baseURL,
+                accessToken: accessToken,
+                subject: subject,
+                markText: markText,
+                weight: weight
+            )
+        }
+
+        return try await liveClient.predictSubject(
+            baseURL: baseURL,
+            accessToken: accessToken,
+            subject: subject,
+            markText: markText,
+            weight: weight
+        )
     }
 }

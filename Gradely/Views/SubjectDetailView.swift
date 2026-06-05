@@ -30,7 +30,7 @@ struct SubjectDetailView: View {
             SectionHeader("detail.marks.section")
 
             ForEach(viewModel.sortedMarks) { mark in
-                MarkCard(mark: mark)
+                MarkCard(mark: mark, resolvedWeight: viewModel.resolvedWeight(for: mark))
                     .accessibilityIdentifier("markRow-\(mark.id)")
             }
         }
@@ -107,6 +107,7 @@ private struct AverageHero: View {
 
 private struct MarkCard: View {
     let mark: Mark
+    let resolvedWeight: ResolvedMarkWeight
 
     var body: some View {
         let band = GradeMath.band(for: mark)
@@ -142,9 +143,16 @@ private struct MarkCard: View {
                             color: .secondary
                         )
 
-                        if !mark.isPoints, let weight = mark.weight, weight > 1 {
+                        if !mark.isPoints, resolvedWeight.source == .explicit, resolvedWeight.value > 1 {
                             StatusChip(
-                                text: String.localizedStringWithFormat(String(localized: "detail.weight"), weight),
+                                text: String.localizedStringWithFormat(String(localized: "detail.weight"), resolvedWeight.value),
+                                color: Brand.secondary
+                            )
+                        }
+
+                        if !mark.isPoints, resolvedWeight.source == .inferred, resolvedWeight.value > 1 {
+                            StatusChip(
+                                text: String.localizedStringWithFormat(String(localized: "detail.weight.estimated"), resolvedWeight.value),
                                 color: Brand.secondary
                             )
                         }
@@ -283,7 +291,12 @@ private struct ResultView: View {
         SubjectDetailView(
             viewModel: SubjectDetailViewModel(
                 subject: PreviewData.subjects[0],
-                absence: PreviewData.absenceResponse.absencesPerSubject[0]
+                absence: PreviewData.absenceResponse.absencesPerSubject[0],
+                repository: BakalariRepository(
+                    client: MockBakalariClient(),
+                    sessionStore: InMemorySessionStore(session: PreviewData.expiredSession),
+                    marksCache: InMemoryMarksCache()
+                )
             )
         )
     }
@@ -294,7 +307,12 @@ private struct ResultView: View {
         SubjectDetailView(
             viewModel: SubjectDetailViewModel(
                 subject: PreviewData.subjects[0],
-                absence: PreviewData.absenceResponse.absencesPerSubject[0]
+                absence: PreviewData.absenceResponse.absencesPerSubject[0],
+                repository: BakalariRepository(
+                    client: MockBakalariClient(),
+                    sessionStore: InMemorySessionStore(session: PreviewData.expiredSession),
+                    marksCache: InMemoryMarksCache()
+                )
             )
         )
     }

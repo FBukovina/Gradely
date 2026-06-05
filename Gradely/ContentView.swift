@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ContentView: View {
     private let repository: BakalariRepository
+    private let schoolDirectoryProvider: any SchoolDirectoryProviding
     private let skipsOnboarding: Bool
     @AppStorage("onboarding.completed.v1") private var hasCompletedOnboarding = false
     @State private var appViewModel: AppViewModel
@@ -11,6 +12,7 @@ struct ContentView: View {
         skipsOnboarding: Bool = ProcessInfo.processInfo.arguments.contains("-uiTestingMockAPI")
     ) {
         repository = environment.repository
+        schoolDirectoryProvider = environment.schoolDirectoryProvider
         self.skipsOnboarding = skipsOnboarding
         _appViewModel = State(initialValue: AppViewModel(repository: environment.repository))
     }
@@ -26,7 +28,7 @@ struct ContentView: View {
                 case .checking:
                     SplashView()
                 case .signedOut:
-                    LoginView(repository: repository) {
+                    LoginView(repository: repository, schoolDirectoryProvider: schoolDirectoryProvider) {
                         appViewModel.markSignedIn()
                     }
                 case .signedIn:
@@ -89,7 +91,8 @@ private struct SplashView: View {
                 client: MockBakalariClient(),
                 sessionStore: InMemorySessionStore(),
                 marksCache: InMemoryMarksCache()
-            )
+            ),
+            schoolDirectoryProvider: MockSchoolDirectoryProvider(refreshResult: PreviewData.schoolDirectorySchools)
         )
     )
 }
@@ -101,7 +104,8 @@ private struct SplashView: View {
                 client: MockBakalariClient(),
                 sessionStore: InMemorySessionStore(session: PreviewData.expiredSession),
                 marksCache: InMemoryMarksCache(cachedMarks: CachedMarks(marksResponse: PreviewData.marksResponse, cachedAt: Date()))
-            )
+            ),
+            schoolDirectoryProvider: MockSchoolDirectoryProvider(refreshResult: PreviewData.schoolDirectorySchools)
         )
     )
 }

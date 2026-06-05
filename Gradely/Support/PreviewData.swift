@@ -107,6 +107,27 @@ enum PreviewData {
         studyYear: 2026
     )
 
+    static let schoolDirectorySchools = [
+        SchoolDirectorySchool(
+            id: "demo",
+            name: "Demo Gymnazium",
+            town: "Praha",
+            schoolURL: "https://demo.bakalari.cz"
+        ),
+        SchoolDirectorySchool(
+            id: "future",
+            name: "Future School",
+            town: "Brno",
+            schoolURL: "https://future.bakalari.cz"
+        ),
+        SchoolDirectorySchool(
+            id: "eden",
+            name: "Zakladni skola Eden",
+            town: "Praha",
+            schoolURL: "https://zseden.bakalari.cz/bakaweb/"
+        )
+    ]
+
     // MARK: - Timetable
 
     static let timetableHours = [

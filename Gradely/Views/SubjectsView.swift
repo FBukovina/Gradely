@@ -44,6 +44,7 @@ struct SubjectsView: View {
                 }
             }
             .navigationTitle(String(localized: "subjects.title"))
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {

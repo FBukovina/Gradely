@@ -136,7 +136,10 @@ struct GradelyTests {
             sessionStore: store,
             marksCache: InMemoryMarksCache()
         )
-        let viewModel = LoginViewModel(repository: repository)
+        let viewModel = LoginViewModel(
+            repository: repository,
+            schoolDirectoryProvider: MockSchoolDirectoryProvider()
+        )
         viewModel.schoolURL = "demo.bakalari.cz"
         viewModel.username = "student"
         viewModel.password = "secret"

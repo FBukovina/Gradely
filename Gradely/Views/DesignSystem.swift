@@ -87,7 +87,7 @@ extension LessonChangeKind {
         case .canceled: GradeBand.poor.foregroundColor        // rose
         case .substitution: GradeBand.average.foregroundColor // amber
         case .roomChanged: GradeBand.good.foregroundColor     // teal
-        case .added: GradeBand.excellent.foregroundColor      // emerald
+        case .added: Color(.systemPurple)                     // purple
         }
     }
 }

@@ -2,10 +2,18 @@ import SwiftUI
 
 struct LoginView: View {
     @State private var viewModel: LoginViewModel
+    @FocusState private var isSchoolSearchFocused: Bool
     let onSignedIn: () -> Void
 
-    init(repository: BakalariRepository, onSignedIn: @escaping () -> Void) {
-        _viewModel = State(initialValue: LoginViewModel(repository: repository))
+    init(
+        repository: BakalariRepository,
+        schoolDirectoryProvider: any SchoolDirectoryProviding,
+        onSignedIn: @escaping () -> Void
+    ) {
+        _viewModel = State(initialValue: LoginViewModel(
+            repository: repository,
+            schoolDirectoryProvider: schoolDirectoryProvider
+        ))
         self.onSignedIn = onSignedIn
     }
 
@@ -33,6 +41,14 @@ struct LoginView: View {
             }
         } message: {
             Text(viewModel.errorMessage ?? "")
+        }
+        .task {
+            await viewModel.loadSchoolDirectoryIfNeeded()
+        }
+        .onChange(of: isSchoolSearchFocused) { _, isFocused in
+            if isFocused {
+                viewModel.isSchoolSearchActive = true
+            }
         }
     }
 
@@ -65,6 +81,8 @@ struct LoginView: View {
     private var form: some View {
         Card {
             VStack(spacing: Spacing.lg) {
+                schoolSearchPicker
+
                 TextField(String(localized: "login.schoolURL"), text: $viewModel.schoolURL)
                     .textContentType(.URL)
                     .keyboardType(.URL)
@@ -121,6 +139,78 @@ struct LoginView: View {
                 .disabled(viewModel.isLoading)
                 .padding(.top, Spacing.xs)
                 .accessibilityIdentifier("loginButton")
+            }
+        }
+    }
+
+    private var schoolSearchPicker: some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            HStack(spacing: Spacing.sm) {
+                Image(systemName: "magnifyingglass")
+                    .foregroundStyle(.secondary)
+                    .accessibilityHidden(true)
+
+                TextField(
+                    String(localized: "schoolDirectory.search"),
+                    text: Binding(
+                        get: { viewModel.schoolSearchText },
+                        set: { viewModel.updateSchoolSearch($0) }
+                    )
+                )
+                .textInputAutocapitalization(.words)
+                .autocorrectionDisabled()
+                .submitLabel(.next)
+                .focused($isSchoolSearchFocused)
+                .accessibilityIdentifier("schoolSearchField")
+
+                if viewModel.isSchoolDirectoryLoading {
+                    ProgressView()
+                        .controlSize(.small)
+                        .tint(Brand.primary)
+                        .accessibilityIdentifier("schoolDirectoryLoading")
+                }
+            }
+            .brandField()
+
+            if let message = viewModel.schoolLookupErrorMessage {
+                Text(message)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("schoolDirectoryError")
+            }
+
+            let results = viewModel.schoolSearchResults
+            if !results.isEmpty {
+                VStack(spacing: 0) {
+                    ForEach(Array(results.enumerated()), id: \.element.id) { index, school in
+                        SchoolResultRow(school: school) {
+                            viewModel.selectSchool(school)
+                            isSchoolSearchFocused = false
+                        }
+                        if index < results.count - 1 {
+                            Divider()
+                                .padding(.leading, 44)
+                        }
+                    }
+                }
+                .background(
+                    RoundedRectangle(cornerRadius: Radius.sm, style: .continuous)
+                        .fill(Color(.tertiarySystemFill))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: Radius.sm, style: .continuous)
+                        .strokeBorder(Color.primary.opacity(0.06), lineWidth: 1)
+                )
+            } else if viewModel.isSchoolSearchActive,
+                      !viewModel.schoolSearchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                      !viewModel.isSchoolDirectoryLoading,
+                      viewModel.schoolLookupErrorMessage == nil,
+                      !viewModel.directorySchools.isEmpty {
+                Text("schoolDirectory.noResults")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .accessibilityIdentifier("schoolDirectoryNoResults")
             }
         }
     }
@@ -223,13 +313,62 @@ private struct ManualStep: View {
     }
 }
 
+private struct SchoolResultRow: View {
+    let school: SchoolDirectorySchool
+    let onSelect: () -> Void
+
+    var body: some View {
+        Button(action: onSelect) {
+            HStack(spacing: Spacing.md) {
+                Image(systemName: "building.columns.fill")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Brand.primary)
+                    .frame(width: 28, height: 28)
+                    .background(Brand.primary.opacity(0.13), in: RoundedRectangle(cornerRadius: Radius.sm, style: .continuous))
+                    .accessibilityHidden(true)
+
+                VStack(alignment: .leading, spacing: Spacing.xs) {
+                    Text(school.trimmedName)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.primary)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    HStack(spacing: Spacing.xs) {
+                        Text(school.trimmedTown)
+                        Text("-")
+                        Text(school.trimmedSchoolURL)
+                    }
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+                }
+
+                Spacer(minLength: Spacing.sm)
+
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(.secondary)
+                    .accessibilityHidden(true)
+            }
+            .padding(.horizontal, Spacing.md)
+            .padding(.vertical, Spacing.md)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("schoolResult-\(school.id)")
+    }
+}
+
 #Preview("Light") {
     LoginView(
         repository: BakalariRepository(
             client: MockBakalariClient(),
             sessionStore: InMemorySessionStore(),
             marksCache: InMemoryMarksCache()
-        )
+        ),
+        schoolDirectoryProvider: MockSchoolDirectoryProvider(refreshResult: PreviewData.schoolDirectorySchools)
     ) {}
 }
 
@@ -239,7 +378,8 @@ private struct ManualStep: View {
             client: MockBakalariClient(),
             sessionStore: InMemorySessionStore(),
             marksCache: InMemoryMarksCache()
-        )
+        ),
+        schoolDirectoryProvider: MockSchoolDirectoryProvider(refreshResult: PreviewData.schoolDirectorySchools)
     ) {}
     .preferredColorScheme(.dark)
 }

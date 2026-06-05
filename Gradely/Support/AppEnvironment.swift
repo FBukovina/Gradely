@@ -2,17 +2,20 @@ import Foundation
 
 struct AppEnvironment {
     let repository: BakalariRepository
+    let schoolDirectoryProvider: any SchoolDirectoryProviding
 
     static func live() -> AppEnvironment {
         let marksCache: any MarksCaching = (try? MarksCache()) ?? InMemoryMarksCache()
         let timetableCache: any TimetableCaching = (try? TimetableCache()) ?? InMemoryTimetableCache()
+        let schoolDirectoryCache: any SchoolDirectoryCaching = (try? SchoolDirectoryCache()) ?? InMemorySchoolDirectoryCache()
         return AppEnvironment(
             repository: BakalariRepository(
                 client: DemoAwareBakalariClient(liveClient: URLSessionBakalariClient()),
                 sessionStore: SessionStore(),
                 marksCache: marksCache,
                 timetableCache: timetableCache
-            )
+            ),
+            schoolDirectoryProvider: URLSessionSchoolDirectoryProvider(cache: schoolDirectoryCache)
         )
     }
 
@@ -45,7 +48,8 @@ struct AppEnvironment {
                 ),
                 sessionStore: store,
                 marksCache: cache
-            )
+            ),
+            schoolDirectoryProvider: MockSchoolDirectoryProvider(refreshResult: PreviewData.schoolDirectorySchools)
         )
     }
 }

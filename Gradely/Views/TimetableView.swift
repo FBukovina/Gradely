@@ -14,6 +14,7 @@ struct TimetableView: View {
         NavigationStack {
             content
                 .navigationTitle(String(localized: "rozvrh.title"))
+                .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .topBarTrailing) {
                         Button {

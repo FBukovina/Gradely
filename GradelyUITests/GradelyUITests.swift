@@ -6,6 +6,38 @@ final class GradelyUITests: XCTestCase {
     }
 
     @MainActor
+    func testMockLoginCanSelectSchoolFromDirectory() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-uiTestingMockAPI"]
+        app.launch()
+
+        XCTAssertTrue(app.textFields["schoolSearchField"].waitForExistence(timeout: 5))
+        app.textFields["schoolSearchField"].tap()
+        app.textFields["schoolSearchField"].typeText("demo")
+
+        let schoolResult = app.descendants(matching: .any)["schoolResult-demo"]
+        XCTAssertTrue(schoolResult.waitForExistence(timeout: 5))
+        schoolResult.tap()
+
+        let schoolURLField = app.textFields["schoolURLField"]
+        XCTAssertTrue(schoolURLField.waitForExistence(timeout: 2))
+        XCTAssertEqual(schoolURLField.value as? String, "https://demo.bakalari.cz")
+
+        app.textFields["usernameField"].tap()
+        app.textFields["usernameField"].typeText("student")
+
+        let passwordField = app.secureTextFields["passwordField"].exists
+            ? app.secureTextFields["passwordField"]
+            : app.textFields["passwordField"]
+        passwordField.tap()
+        passwordField.typeText("secret")
+
+        app.buttons["loginButton"].tap()
+
+        XCTAssertTrue(app.collectionViews["subjectsList"].waitForExistence(timeout: 5))
+    }
+
+    @MainActor
     func testMockLoginSubjectsDetailAndCalculatorFlow() throws {
         let app = XCUIApplication()
         app.launchArguments = ["-uiTestingMockAPI"]

@@ -17,6 +17,7 @@ struct AppEnvironment {
 
     static func live() -> AppEnvironment {
         let marksCache: any MarksCaching = (try? MarksCache()) ?? InMemoryMarksCache()
+        let absenceCache: any AbsenceCaching = (try? AbsenceCache()) ?? InMemoryAbsenceCache()
         let timetableCache: any TimetableCaching = (try? TimetableCache()) ?? InMemoryTimetableCache()
         let schoolDirectoryCache: any SchoolDirectoryCaching = (try? SchoolDirectoryCache()) ?? InMemorySchoolDirectoryCache()
         return AppEnvironment(
@@ -24,6 +25,7 @@ struct AppEnvironment {
                 client: DemoAwareBakalariClient(liveClient: URLSessionBakalariClient()),
                 sessionStore: SessionStore(),
                 marksCache: marksCache,
+                absenceCache: absenceCache,
                 timetableCache: timetableCache
             ),
             schoolDirectoryProvider: URLSessionSchoolDirectoryProvider(cache: schoolDirectoryCache),

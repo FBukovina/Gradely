@@ -96,7 +96,7 @@ struct AbsenceSubjectFallbackTests {
         #expect(resolved.isEmpty)
     }
 
-    @Test func repositorySynthesizesSubjectAbsenceWhenOfficialArrayIsEmpty() async throws {
+    @Test func repositoryAbsenceSynthesizesSubjectAbsenceWhenOfficialArrayIsEmpty() async throws {
         let timetable = timetableResponse(
             atoms: [
                 TimetableAtom(hourID: 1, subjectID: "math"),
@@ -124,11 +124,11 @@ struct AbsenceSubjectFallbackTests {
             dateProvider: { referenceDate }
         )
 
-        let dashboard = try await repository.loadDashboard()
+        let data = try await repository.loadAbsence()
 
-        #expect(dashboard.absencesPerSubject.count == 2)
-        #expect(dashboard.absencesPerSubject.first { $0.subjectName == "Matematika" }?.base == 1)
-        #expect(dashboard.absencesPerSubject.first { $0.subjectName == "Český jazyk" }?.base == 1)
+        #expect(data.absencesPerSubject.count == 2)
+        #expect(data.absencesPerSubject.first { $0.subjectName == "Matematika" }?.base == 1)
+        #expect(data.absencesPerSubject.first { $0.subjectName == "Český jazyk" }?.base == 1)
     }
 
     private var subjects: [Subject] {

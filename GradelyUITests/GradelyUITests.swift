@@ -89,8 +89,8 @@ final class GradelyUITests: XCTestCase {
         // Starts on the Marks tab.
         XCTAssertTrue(app.collectionViews["subjectsList"].waitForExistence(timeout: 5))
 
-        // Switch to the Timetable tab (second tab).
-        app.tabBars.buttons.element(boundBy: 1).tap()
+        // Switch to the Timetable tab (third tab).
+        app.tabBars.buttons.element(boundBy: 2).tap()
 
         XCTAssertTrue(app.scrollViews["timetableList"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["weekNext"].exists)

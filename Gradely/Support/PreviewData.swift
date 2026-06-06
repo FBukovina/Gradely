@@ -74,7 +74,58 @@ enum PreviewData {
 
     static let absenceResponse = AbsenceResponse(
         percentageThreshold: 25,
-        absences: [],
+        absences: [
+            AbsenceDay(
+                date: "2026-02-10T00:00:00+01:00",
+                unsolved: 0,
+                ok: 1,
+                missed: 0,
+                late: 0,
+                soon: 0,
+                school: 0,
+                distanceTeaching: 0
+            ),
+            AbsenceDay(
+                date: "2026-03-02T00:00:00+01:00",
+                unsolved: 0,
+                ok: 6,
+                missed: 0,
+                late: 0,
+                soon: 0,
+                school: 0,
+                distanceTeaching: 0
+            ),
+            AbsenceDay(
+                date: "2026-04-07T00:00:00+02:00",
+                unsolved: 0,
+                ok: 2,
+                missed: 0,
+                late: 1,
+                soon: 0,
+                school: 0,
+                distanceTeaching: 0
+            ),
+            AbsenceDay(
+                date: "2026-05-04T00:00:00+02:00",
+                unsolved: 0,
+                ok: 6,
+                missed: 0,
+                late: 0,
+                soon: 0,
+                school: 0,
+                distanceTeaching: 0
+            ),
+            AbsenceDay(
+                date: "2026-06-03T00:00:00+02:00",
+                unsolved: 6,
+                ok: 0,
+                missed: 0,
+                late: 0,
+                soon: 0,
+                school: 0,
+                distanceTeaching: 0
+            )
+        ],
         absencesPerSubject: [
             AbsencePerSubject(
                 subjectName: "Matematika",

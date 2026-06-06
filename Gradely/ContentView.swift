@@ -42,6 +42,13 @@ struct ContentView: View {
                             Label("subjects.title", systemImage: "checkmark.seal.fill")
                         }
 
+                        AbsenceView(repository: repository, supportTipProvider: supportTipProvider) {
+                            appViewModel.signOut()
+                        }
+                        .tabItem {
+                            Label("absence.title", systemImage: "calendar.badge.exclamationmark")
+                        }
+
                         TimetableView(repository: repository, supportTipProvider: supportTipProvider) {
                             appViewModel.signOut()
                         }

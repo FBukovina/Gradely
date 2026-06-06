@@ -6,6 +6,12 @@ struct DashboardData: Equatable {
     let user: UserResponse?
 }
 
+struct AbsenceData: Equatable {
+    let response: AbsenceResponse
+    let absencesPerSubject: [AbsencePerSubject]
+    let user: UserResponse?
+}
+
 enum AppError: LocalizedError, Equatable {
     case notLoggedIn
     case missingFields
@@ -27,6 +33,7 @@ final class BakalariRepository {
     private let client: any BakalariClient
     private let sessionStore: any SessionStoring
     private let marksCache: any MarksCaching
+    private let absenceCache: any AbsenceCaching
     private let timetableCache: any TimetableCaching
     private let dateProvider: () -> Date
 
@@ -34,12 +41,14 @@ final class BakalariRepository {
         client: any BakalariClient,
         sessionStore: any SessionStoring,
         marksCache: any MarksCaching,
+        absenceCache: any AbsenceCaching = InMemoryAbsenceCache(),
         timetableCache: any TimetableCaching = InMemoryTimetableCache(),
         dateProvider: @escaping () -> Date = Date.init
     ) {
         self.client = client
         self.sessionStore = sessionStore
         self.marksCache = marksCache
+        self.absenceCache = absenceCache
         self.timetableCache = timetableCache
         self.dateProvider = dateProvider
     }
@@ -67,11 +76,16 @@ final class BakalariRepository {
     func logout() throws {
         try sessionStore.clearSession()
         try marksCache.clear()
+        try absenceCache.clear()
         try timetableCache.clear()
     }
 
     func loadCachedMarks() throws -> CachedMarks? {
         try marksCache.load()
+    }
+
+    func loadCachedAbsence() throws -> CachedAbsence? {
+        try absenceCache.load()
     }
 
     /// Cached week for instant/offline display, if it matches the requested week.
@@ -115,15 +129,40 @@ final class BakalariRepository {
         async let absenceResponse = optionalAbsenceResponse(baseURL: session.baseURL, accessToken: session.accessToken)
         async let user = optionalUser(baseURL: session.baseURL, accessToken: session.accessToken)
 
-        let absencesPerSubject = await absencesForDashboard(
-            response: absenceResponse,
-            marksResponse: marksResponse,
-            session: session
-        )
+        let absence = await absenceResponse
+        if let absence {
+            try? absenceCache.save(absence)
+        }
 
         return DashboardData(
             marksResponse: marksResponse,
-            absencesPerSubject: absencesPerSubject,
+            absencesPerSubject: absence?.absencesPerSubject ?? [],
+            user: await user
+        )
+    }
+
+    func loadAbsence(forceRefresh: Bool = false) async throws -> AbsenceData {
+        if forceRefresh {
+            try absenceCache.clear()
+        }
+
+        let session = try await validSession()
+        async let user = optionalUser(baseURL: session.baseURL, accessToken: session.accessToken)
+
+        let response = try await client.fetchAbsences(
+            baseURL: session.baseURL,
+            accessToken: session.accessToken
+        )
+        try? absenceCache.save(response)
+
+        let resolvedSubjects = await resolvedSubjectAbsences(
+            response: response,
+            session: session
+        )
+
+        return AbsenceData(
+            response: response,
+            absencesPerSubject: resolvedSubjects,
             user: await user
         )
     }
@@ -166,16 +205,15 @@ final class BakalariRepository {
         try? await client.fetchUser(baseURL: baseURL, accessToken: accessToken)
     }
 
-    private func absencesForDashboard(
-        response: AbsenceResponse?,
-        marksResponse: MarksResponse,
+    private func resolvedSubjectAbsences(
+        response: AbsenceResponse,
         session: StoredSession
     ) async -> [AbsencePerSubject] {
-        guard let response else { return [] }
         guard response.absencesPerSubject.isEmpty else { return response.absencesPerSubject }
         guard !response.absences.isEmpty else { return [] }
 
         do {
+            let marksResponse = try await marksResponseForAbsenceFallback(session: session)
             let term = AbsenceSubjectFallback.currentTerm(containing: dateProvider())
             let timetables = try await loadTermTimetableResponses(
                 weekStarts: term.weekStarts,
@@ -191,6 +229,19 @@ final class BakalariRepository {
         } catch {
             return []
         }
+    }
+
+    private func marksResponseForAbsenceFallback(session: StoredSession) async throws -> MarksResponse {
+        if let cached = try? marksCache.load() {
+            return cached.marksResponse
+        }
+
+        let response = try await client.fetchMarks(
+            baseURL: session.baseURL,
+            accessToken: session.accessToken
+        )
+        try? marksCache.save(response)
+        return response
     }
 
     private func loadTermTimetableResponses(

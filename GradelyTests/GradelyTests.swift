@@ -305,6 +305,93 @@ struct GradelyTests {
         }
     }
 
+    @Test func supportTipViewModelLoadsTips() async {
+        let service = MockSupportTipService()
+        let viewModel = SupportTipViewModel(supportTipProvider: service)
+
+        await viewModel.load()
+
+        #expect(viewModel.loadState == .loaded)
+        #expect(viewModel.tips == MockSupportTipService.previewTips)
+        #expect(viewModel.purchaseErrorMessage == nil)
+    }
+
+    @Test func supportTipViewModelShowsUnavailableWhenNotConfigured() async {
+        let service = MockSupportTipService(
+            loadResult: Result<[SupportTipOption], Error>.failure(SupportTipServiceError.notConfigured)
+        )
+        let viewModel = SupportTipViewModel(supportTipProvider: service)
+
+        await viewModel.load()
+
+        guard case .failed(let message) = viewModel.loadState else {
+            Issue.record("Expected support loading to fail.")
+            return
+        }
+        #expect(message == String(localized: "support.tips.error.notConfigured"))
+        #expect(viewModel.tips.isEmpty)
+    }
+
+    @Test func supportTipViewModelShowsEmptyOfferingState() async {
+        let service = MockSupportTipService(tips: [])
+        let viewModel = SupportTipViewModel(supportTipProvider: service)
+
+        await viewModel.load()
+
+        #expect(viewModel.loadState == .empty)
+        #expect(viewModel.tips.isEmpty)
+    }
+
+    @Test func supportTipViewModelShowsRevenueCatLoadError() async {
+        let error = NSError(
+            domain: "RevenueCat",
+            code: 1,
+            userInfo: [NSLocalizedDescriptionKey: "Unable to fetch offerings."]
+        )
+        let service = MockSupportTipService(
+            loadResult: Result<[SupportTipOption], Error>.failure(error)
+        )
+        let viewModel = SupportTipViewModel(supportTipProvider: service)
+
+        await viewModel.load()
+
+        #expect(viewModel.loadState == .failed("Unable to fetch offerings."))
+    }
+
+    @Test func supportTipViewModelCompletesSuccessfulPurchase() async {
+        let service = MockSupportTipService()
+        let viewModel = SupportTipViewModel(supportTipProvider: service)
+        let tip = MockSupportTipService.previewTips[0]
+
+        await viewModel.purchase(tip)
+
+        #expect(viewModel.didCompletePurchase)
+        #expect(viewModel.purchaseErrorMessage == nil)
+        #expect(service.purchasedTipIDs == [tip.id])
+    }
+
+    @Test func supportTipViewModelTreatsPurchaseCancellationSilently() async {
+        let service = MockSupportTipService(purchaseResult: .success(.cancelled))
+        let viewModel = SupportTipViewModel(supportTipProvider: service)
+
+        await viewModel.purchase(MockSupportTipService.previewTips[1])
+
+        #expect(!viewModel.didCompletePurchase)
+        #expect(viewModel.purchaseErrorMessage == nil)
+    }
+
+    @Test func supportTipViewModelShowsPurchaseFailure() async {
+        let service = MockSupportTipService(
+            purchaseResult: .failure(SupportTipServiceError.purchaseFailed("The purchase could not be completed."))
+        )
+        let viewModel = SupportTipViewModel(supportTipProvider: service)
+
+        await viewModel.purchase(MockSupportTipService.previewTips[2])
+
+        #expect(!viewModel.didCompletePurchase)
+        #expect(viewModel.purchaseErrorMessage == "The purchase could not be completed.")
+    }
+
     private func testMark(
         markText: String,
         caption: String? = nil,

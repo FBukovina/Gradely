@@ -112,7 +112,9 @@ struct GitHubIcon: View {
 /// Shared by the Marks and Timetable tabs.
 struct AccountMenu: View {
     let user: UserResponse?
+    let supportTipProvider: any SupportTipProviding
     let onSignedOut: () -> Void
+    @State private var isSupportSheetPresented = false
 
     var body: some View {
         Menu {
@@ -127,6 +129,13 @@ struct AccountMenu: View {
                     }
                 }
             }
+
+            Button {
+                isSupportSheetPresented = true
+            } label: {
+                Label(String(localized: "support.tips.menu"), systemImage: "heart.fill")
+            }
+            .accessibilityIdentifier("supportGradelyButton")
 
             Link(destination: AppLinks.githubRepositoryURL) {
                 Label {
@@ -151,6 +160,14 @@ struct AccountMenu: View {
                 .background(Brand.primary.opacity(0.15), in: Circle())
         }
         .accessibilityLabel(String(localized: "account.menu"))
+        .accessibilityIdentifier("accountMenuButton")
+        .sheet(isPresented: $isSupportSheetPresented) {
+            SupportTipView(
+                viewModel: SupportTipViewModel(
+                    supportTipProvider: supportTipProvider
+                )
+            )
+        }
     }
 }
 

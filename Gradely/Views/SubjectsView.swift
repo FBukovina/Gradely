@@ -3,10 +3,16 @@ import SwiftUI
 struct SubjectsView: View {
     @State private var viewModel: SubjectsViewModel
     private let repository: BakalariRepository
+    private let supportTipProvider: any SupportTipProviding
     let onSignedOut: () -> Void
 
-    init(repository: BakalariRepository, onSignedOut: @escaping () -> Void) {
+    init(
+        repository: BakalariRepository,
+        supportTipProvider: any SupportTipProviding = MockSupportTipService(),
+        onSignedOut: @escaping () -> Void
+    ) {
         self.repository = repository
+        self.supportTipProvider = supportTipProvider
         _viewModel = State(initialValue: SubjectsViewModel(repository: repository))
         self.onSignedOut = onSignedOut
     }
@@ -61,7 +67,11 @@ struct SubjectsView: View {
                 }
 
                 ToolbarItem(placement: .topBarTrailing) {
-                    AccountMenu(user: viewModel.user, onSignedOut: onSignedOut)
+                    AccountMenu(
+                        user: viewModel.user,
+                        supportTipProvider: supportTipProvider,
+                        onSignedOut: onSignedOut
+                    )
                 }
             }
             .task {

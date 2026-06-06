@@ -3,10 +3,16 @@ import SwiftUI
 struct TimetableView: View {
     @State private var viewModel: TimetableViewModel
     @State private var selectedLesson: ScheduledLesson?
+    private let supportTipProvider: any SupportTipProviding
     let onSignedOut: () -> Void
 
-    init(repository: BakalariRepository, onSignedOut: @escaping () -> Void) {
+    init(
+        repository: BakalariRepository,
+        supportTipProvider: any SupportTipProviding = MockSupportTipService(),
+        onSignedOut: @escaping () -> Void
+    ) {
         _viewModel = State(initialValue: TimetableViewModel(repository: repository))
+        self.supportTipProvider = supportTipProvider
         self.onSignedOut = onSignedOut
     }
 
@@ -29,7 +35,11 @@ struct TimetableView: View {
                     }
 
                     ToolbarItem(placement: .topBarTrailing) {
-                        AccountMenu(user: viewModel.user, onSignedOut: onSignedOut)
+                        AccountMenu(
+                            user: viewModel.user,
+                            supportTipProvider: supportTipProvider,
+                            onSignedOut: onSignedOut
+                        )
                     }
                 }
                 .task {

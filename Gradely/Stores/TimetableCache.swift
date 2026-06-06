@@ -13,8 +13,8 @@ protocol TimetableCaching {
     func clear() throws
 }
 
-/// File-backed cache that keeps the most recently viewed week so the tab can render instantly
-/// (and offline) before the network refresh lands. Mirrors `MarksCache`.
+/// File-backed cache that keeps recently loaded weeks so the tab and absence fallback can render
+/// instantly (and offline) before the network refresh lands. Mirrors `MarksCache`.
 final class TimetableCache: TimetableCaching {
     private let fileURL: URL
     private let encoder: JSONEncoder
@@ -40,19 +40,22 @@ final class TimetableCache: TimetableCaching {
 
     func load(weekStart: Date) throws -> CachedTimetable? {
         guard FileManager.default.fileExists(atPath: fileURL.path) else { return nil }
-        let data = try Data(contentsOf: fileURL)
-        let payload = try decoder.decode(Payload.self, from: data)
-        guard payload.weekStartKey == Self.key(for: weekStart) else { return nil }
-        return CachedTimetable(response: payload.response, weekStart: payload.weekStart, cachedAt: payload.cachedAt)
+        return try loadEntries()[Self.key(for: weekStart)]
     }
 
     func save(_ response: TimetableResponse, weekStart: Date) throws {
-        let payload = Payload(
-            response: response,
-            weekStart: weekStart,
-            weekStartKey: Self.key(for: weekStart),
-            cachedAt: Date()
-        )
+        var entries = (try? loadEntries()) ?? [:]
+        let weekStartKey = Self.key(for: weekStart)
+        entries[weekStartKey] = CachedTimetable(response: response, weekStart: weekStart, cachedAt: Date())
+
+        let payload = Payload(entries: entries.map { key, value in
+            Payload.Entry(
+                weekStartKey: key,
+                response: value.response,
+                weekStart: value.weekStart,
+                cachedAt: value.cachedAt
+            )
+        })
         let data = try encoder.encode(payload)
         try data.write(to: fileURL, options: [.atomic, .completeFileProtection])
     }
@@ -67,35 +70,78 @@ final class TimetableCache: TimetableCaching {
     }
 
     private struct Payload: Codable {
+        let entries: [Entry]
+
+        struct Entry: Codable {
+            let weekStartKey: String
+            let response: TimetableResponse
+            let weekStart: Date
+            let cachedAt: Date
+        }
+    }
+
+    private struct LegacyPayload: Codable {
         let response: TimetableResponse
         let weekStart: Date
         let weekStartKey: String
         let cachedAt: Date
     }
+
+    private func loadEntries() throws -> [String: CachedTimetable] {
+        let data = try Data(contentsOf: fileURL)
+
+        if let payload = try? decoder.decode(Payload.self, from: data) {
+            return Dictionary(
+                payload.entries.map { entry in
+                    (
+                        entry.weekStartKey,
+                        CachedTimetable(
+                            response: entry.response,
+                            weekStart: entry.weekStart,
+                            cachedAt: entry.cachedAt
+                        )
+                    )
+                },
+                uniquingKeysWith: { first, _ in first }
+            )
+        }
+
+        let legacy = try decoder.decode(LegacyPayload.self, from: data)
+        return [
+            legacy.weekStartKey: CachedTimetable(
+                response: legacy.response,
+                weekStart: legacy.weekStart,
+                cachedAt: legacy.cachedAt
+            )
+        ]
+    }
 }
 
 final class InMemoryTimetableCache: TimetableCaching {
     private(set) var cached: CachedTimetable?
+    private var cachedByWeek: [String: CachedTimetable]
 
     init(cached: CachedTimetable? = nil) {
         self.cached = cached
+        if let cached {
+            cachedByWeek = [TimetableDates.apiDateString(cached.weekStart): cached]
+        } else {
+            cachedByWeek = [:]
+        }
     }
 
     func load(weekStart: Date) throws -> CachedTimetable? {
-        guard
-            let cached,
-            TimetableDates.apiDateString(cached.weekStart) == TimetableDates.apiDateString(weekStart)
-        else {
-            return nil
-        }
-        return cached
+        cachedByWeek[TimetableDates.apiDateString(weekStart)]
     }
 
     func save(_ response: TimetableResponse, weekStart: Date) throws {
-        cached = CachedTimetable(response: response, weekStart: weekStart, cachedAt: Date())
+        let saved = CachedTimetable(response: response, weekStart: weekStart, cachedAt: Date())
+        cached = saved
+        cachedByWeek[TimetableDates.apiDateString(weekStart)] = saved
     }
 
     func clear() throws {
         cached = nil
+        cachedByWeek = [:]
     }
 }

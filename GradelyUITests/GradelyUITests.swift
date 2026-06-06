@@ -104,6 +104,36 @@ final class GradelyUITests: XCTestCase {
     }
 
     @MainActor
+    func testSupportTipFlowUsesMockPurchase() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-uiTestingMockAPI", "-uiTestingLoggedIn"]
+        app.launch()
+
+        XCTAssertTrue(app.collectionViews["subjectsList"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["accountMenuButton"].waitForExistence(timeout: 5))
+        app.buttons["accountMenuButton"].tap()
+
+        let supportButton = app.buttons["supportGradelyButton"].waitForExistence(timeout: 3)
+            ? app.buttons["supportGradelyButton"]
+            : app.buttons["Support Gradely"]
+        XCTAssertTrue(supportButton.waitForExistence(timeout: 3))
+        supportButton.tap()
+
+        XCTAssertTrue(app.descendants(matching: .any)["supportTipsList"].waitForExistence(timeout: 5))
+        let smallTip = app.buttons["supportTip-tip_small"]
+        let mediumTip = app.buttons["supportTip-tip_medium"]
+        let largeTip = app.buttons["supportTip-tip_large"]
+
+        XCTAssertTrue(smallTip.waitForExistence(timeout: 5))
+        XCTAssertTrue(mediumTip.exists)
+        XCTAssertTrue(largeTip.exists)
+
+        smallTip.tap()
+
+        XCTAssertTrue(app.descendants(matching: .any)["supportTipsThankYou"].waitForExistence(timeout: 5))
+    }
+
+    @MainActor
     func testLaunchPerformance() throws {
         measure(metrics: [XCTApplicationLaunchMetric()]) {
             let app = XCUIApplication()

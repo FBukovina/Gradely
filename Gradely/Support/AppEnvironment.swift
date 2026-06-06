@@ -3,6 +3,17 @@ import Foundation
 struct AppEnvironment {
     let repository: BakalariRepository
     let schoolDirectoryProvider: any SchoolDirectoryProviding
+    let supportTipProvider: any SupportTipProviding
+
+    init(
+        repository: BakalariRepository,
+        schoolDirectoryProvider: any SchoolDirectoryProviding,
+        supportTipProvider: any SupportTipProviding = MockSupportTipService()
+    ) {
+        self.repository = repository
+        self.schoolDirectoryProvider = schoolDirectoryProvider
+        self.supportTipProvider = supportTipProvider
+    }
 
     static func live() -> AppEnvironment {
         let marksCache: any MarksCaching = (try? MarksCache()) ?? InMemoryMarksCache()
@@ -15,7 +26,8 @@ struct AppEnvironment {
                 marksCache: marksCache,
                 timetableCache: timetableCache
             ),
-            schoolDirectoryProvider: URLSessionSchoolDirectoryProvider(cache: schoolDirectoryCache)
+            schoolDirectoryProvider: URLSessionSchoolDirectoryProvider(cache: schoolDirectoryCache),
+            supportTipProvider: RevenueCatSupportTipService()
         )
     }
 
@@ -49,7 +61,8 @@ struct AppEnvironment {
                 sessionStore: store,
                 marksCache: cache
             ),
-            schoolDirectoryProvider: MockSchoolDirectoryProvider(refreshResult: PreviewData.schoolDirectorySchools)
+            schoolDirectoryProvider: MockSchoolDirectoryProvider(refreshResult: PreviewData.schoolDirectorySchools),
+            supportTipProvider: MockSupportTipService()
         )
     }
 }

@@ -28,17 +28,20 @@ final class BakalariRepository {
     private let sessionStore: any SessionStoring
     private let marksCache: any MarksCaching
     private let timetableCache: any TimetableCaching
+    private let dateProvider: () -> Date
 
     init(
         client: any BakalariClient,
         sessionStore: any SessionStoring,
         marksCache: any MarksCaching,
-        timetableCache: any TimetableCaching = InMemoryTimetableCache()
+        timetableCache: any TimetableCaching = InMemoryTimetableCache(),
+        dateProvider: @escaping () -> Date = Date.init
     ) {
         self.client = client
         self.sessionStore = sessionStore
         self.marksCache = marksCache
         self.timetableCache = timetableCache
+        self.dateProvider = dateProvider
     }
 
     func bootstrapSession() throws -> StoredSession? {
@@ -109,12 +112,18 @@ final class BakalariRepository {
         )
         try marksCache.save(marksResponse)
 
-        async let absences = optionalAbsences(baseURL: session.baseURL, accessToken: session.accessToken)
+        async let absenceResponse = optionalAbsenceResponse(baseURL: session.baseURL, accessToken: session.accessToken)
         async let user = optionalUser(baseURL: session.baseURL, accessToken: session.accessToken)
+
+        let absencesPerSubject = await absencesForDashboard(
+            response: absenceResponse,
+            marksResponse: marksResponse,
+            session: session
+        )
 
         return DashboardData(
             marksResponse: marksResponse,
-            absencesPerSubject: await absences,
+            absencesPerSubject: absencesPerSubject,
             user: await user
         )
     }
@@ -145,15 +154,86 @@ final class BakalariRepository {
         return try sessionStore.save(refreshedResponse: response, currentBaseURL: session.baseURL)
     }
 
-    private func optionalAbsences(baseURL: URL, accessToken: String) async -> [AbsencePerSubject] {
+    private func optionalAbsenceResponse(baseURL: URL, accessToken: String) async -> AbsenceResponse? {
         do {
-            return try await client.fetchAbsences(baseURL: baseURL, accessToken: accessToken).absencesPerSubject
+            return try await client.fetchAbsences(baseURL: baseURL, accessToken: accessToken)
         } catch {
-            return []
+            return nil
         }
     }
 
     private func optionalUser(baseURL: URL, accessToken: String) async -> UserResponse? {
         try? await client.fetchUser(baseURL: baseURL, accessToken: accessToken)
+    }
+
+    private func absencesForDashboard(
+        response: AbsenceResponse?,
+        marksResponse: MarksResponse,
+        session: StoredSession
+    ) async -> [AbsencePerSubject] {
+        guard let response else { return [] }
+        guard response.absencesPerSubject.isEmpty else { return response.absencesPerSubject }
+        guard !response.absences.isEmpty else { return [] }
+
+        do {
+            let term = AbsenceSubjectFallback.currentTerm(containing: dateProvider())
+            let timetables = try await loadTermTimetableResponses(
+                weekStarts: term.weekStarts,
+                session: session
+            )
+
+            return AbsenceSubjectFallback.makeAbsences(
+                from: response,
+                timetableResponses: timetables,
+                subjects: marksResponse.subjects,
+                validDateRange: term.start...term.end
+            )
+        } catch {
+            return []
+        }
+    }
+
+    private func loadTermTimetableResponses(
+        weekStarts: [Date],
+        session: StoredSession
+    ) async throws -> [TimetableResponse] {
+        let batchSize = 4
+        var responses: [TimetableResponse] = []
+        var batchStart = 0
+
+        while batchStart < weekStarts.count {
+            let batchEnd = min(batchStart + batchSize, weekStarts.count)
+
+            for weekStart in weekStarts[batchStart..<batchEnd] {
+                responses.append(
+                    try await loadRawTimetable(
+                        weekStart: weekStart,
+                        session: session
+                    )
+                )
+            }
+
+            batchStart = batchEnd
+            await Task.yield()
+        }
+
+        return responses
+    }
+
+    private func loadRawTimetable(
+        weekStart: Date,
+        session: StoredSession
+    ) async throws -> TimetableResponse {
+        if let cached = try? timetableCache.load(weekStart: weekStart) {
+            return cached.response
+        }
+
+        let response = try await client.fetchTimetable(
+            baseURL: session.baseURL,
+            accessToken: session.accessToken,
+            date: weekStart
+        )
+        try? timetableCache.save(response, weekStart: weekStart)
+        return response
     }
 }

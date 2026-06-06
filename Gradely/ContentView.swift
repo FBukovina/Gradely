@@ -3,6 +3,7 @@ import SwiftUI
 struct ContentView: View {
     private let repository: BakalariRepository
     private let schoolDirectoryProvider: any SchoolDirectoryProviding
+    private let supportTipProvider: any SupportTipProviding
     private let skipsOnboarding: Bool
     @AppStorage("onboarding.completed.v1") private var hasCompletedOnboarding = false
     @State private var appViewModel: AppViewModel
@@ -13,6 +14,7 @@ struct ContentView: View {
     ) {
         repository = environment.repository
         schoolDirectoryProvider = environment.schoolDirectoryProvider
+        supportTipProvider = environment.supportTipProvider
         self.skipsOnboarding = skipsOnboarding
         _appViewModel = State(initialValue: AppViewModel(repository: environment.repository))
     }
@@ -33,14 +35,14 @@ struct ContentView: View {
                     }
                 case .signedIn:
                     TabView {
-                        SubjectsView(repository: repository) {
+                        SubjectsView(repository: repository, supportTipProvider: supportTipProvider) {
                             appViewModel.signOut()
                         }
                         .tabItem {
                             Label("subjects.title", systemImage: "checkmark.seal.fill")
                         }
 
-                        TimetableView(repository: repository) {
+                        TimetableView(repository: repository, supportTipProvider: supportTipProvider) {
                             appViewModel.signOut()
                         }
                         .tabItem {

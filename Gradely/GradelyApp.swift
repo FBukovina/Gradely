@@ -9,6 +9,10 @@ import SwiftUI
 
 @main
 struct GradelyApp: App {
+    init() {
+        RevenueCatConfiguration.configureIfNeeded()
+    }
+
     var body: some Scene {
         WindowGroup {
             ContentView()

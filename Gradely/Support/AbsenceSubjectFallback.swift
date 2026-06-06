@@ -8,6 +8,46 @@ enum AbsenceSubjectFallback {
     }
 
     static func currentTerm(containing date: Date, calendar: Calendar = TimetableDates.weekCalendar) -> Term {
+        term(containing: date, now: date, calendar: calendar)
+    }
+
+    static func term(
+        for absences: [AbsenceDay],
+        now: Date,
+        calendar: Calendar = TimetableDates.weekCalendar
+    ) -> Term {
+        let dates = absences.compactMap { MarkDateFormatter.date(from: $0.date) }
+        guard let latestAbsenceDate = dates.max() else {
+            return currentTerm(containing: now, calendar: calendar)
+        }
+
+        return term(containing: latestAbsenceDate, now: now, calendar: calendar)
+    }
+
+    private static func term(
+        containing date: Date,
+        now: Date,
+        calendar: Calendar
+    ) -> Term {
+        let bounds = termBounds(containing: date, calendar: calendar)
+        let currentBounds = termBounds(containing: now, calendar: calendar)
+        let today = calendar.startOfDay(for: now)
+
+        let end: Date
+        if calendar.isDate(bounds.start, inSameDayAs: currentBounds.start),
+           calendar.isDate(bounds.termEnd, inSameDayAs: currentBounds.termEnd) {
+            end = min(today, bounds.termEnd)
+        } else {
+            end = bounds.termEnd
+        }
+
+        return Term(start: bounds.start, end: end, weekStarts: weekStarts(from: bounds.start, through: end))
+    }
+
+    private static func termBounds(
+        containing date: Date,
+        calendar: Calendar
+    ) -> (start: Date, termEnd: Date) {
         let day = calendar.startOfDay(for: date)
         let components = calendar.dateComponents([.year, .month], from: day)
         let year = components.year ?? calendar.component(.year, from: day)
@@ -31,8 +71,7 @@ enum AbsenceSubjectFallback {
             termEnd = makeDate(year: year + 1, month: 1, day: 31, calendar: calendar)
         }
 
-        let end = min(day, termEnd)
-        return Term(start: start, end: end, weekStarts: weekStarts(from: start, through: end))
+        return (start, termEnd)
     }
 
     static func makeAbsences(
@@ -46,9 +85,11 @@ enum AbsenceSubjectFallback {
         guard !response.absences.isEmpty, !timetableResponses.isEmpty, !subjects.isEmpty else { return [] }
 
         let subjectIndex = SubjectIndex(subjects: subjects)
-        var totals = Dictionary(
-            uniqueKeysWithValues: subjects.map { ($0.id, SubjectAbsenceTotal(subject: $0)) }
-        )
+        var totals: [String: SubjectAbsenceTotal] = [:]
+        for candidate in subjectIndex.candidates {
+            totals[candidate.key] = SubjectAbsenceTotal(displayName: candidate.displayName)
+        }
+
         let absenceByDate = Dictionary(
             response.absences.compactMap { day -> (String, AbsenceDay)? in
                 guard let key = dateKey(day.date) else { return nil }
@@ -104,8 +145,8 @@ enum AbsenceSubjectFallback {
 
         guard assignedAnyFullDay else { return [] }
 
-        return subjects.compactMap { subject in
-            guard let total = totals[subject.id], total.lessonsCount > 0 else { return nil }
+        return subjectIndex.candidates.compactMap { subject in
+            guard let total = totals[subject.key], total.lessonsCount > 0 else { return nil }
             return AbsencePerSubject(
                 subjectName: total.displayName,
                 lessonsCount: total.lessonsCount,
@@ -164,31 +205,55 @@ private struct SubjectAbsenceTotal {
     var lessonsCount = 0
     var base = 0
 
-    init(subject: Subject) {
-        let name = subject.trimmedName
-        if !name.isEmpty {
-            displayName = name
-        } else if !subject.trimmedAbbrev.isEmpty {
-            displayName = subject.trimmedAbbrev
-        } else {
-            displayName = subject.id
-        }
+    init(displayName: String) {
+        self.displayName = displayName
     }
 }
 
 private struct SubjectIndex {
+    let candidates: [SubjectCandidate]
     private let byRawID: [String: String]
     private let byNormalizedText: [String: String]
 
     init(subjects: [Subject]) {
-        byRawID = Dictionary(subjects.map { ($0.id, $0.id) }, uniquingKeysWith: { first, _ in first })
+        var usedKeys: Set<String> = []
+        var builtCandidates: [SubjectCandidate] = []
+
+        for (index, subject) in subjects.enumerated() {
+            let rawID = subject.id.trimmingCharacters(in: .whitespacesAndNewlines)
+            let baseKey = rawID.isEmpty ? "subject-\(index)" : rawID
+            let key = Self.uniqueKey(baseKey, usedKeys: &usedKeys)
+            builtCandidates.append(
+                SubjectCandidate(
+                    key: key,
+                    rawID: subject.id,
+                    name: subject.trimmedName,
+                    abbrev: subject.trimmedAbbrev,
+                    displayName: Self.displayName(for: subject, fallback: key)
+                )
+            )
+        }
+
+        candidates = builtCandidates
+
+        var rawMatches: [String: String] = [:]
+        for candidate in builtCandidates {
+            guard
+                !candidate.rawID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                rawMatches[candidate.rawID] == nil
+            else {
+                continue
+            }
+            rawMatches[candidate.rawID] = candidate.key
+        }
+        byRawID = rawMatches
 
         var textMatches: [String: String] = [:]
-        for subject in subjects {
-            for value in [subject.trimmedName, subject.trimmedAbbrev] {
+        for candidate in builtCandidates {
+            for value in [candidate.name, candidate.abbrev] {
                 let key = Self.normalized(value)
                 guard !key.isEmpty, textMatches[key] == nil else { continue }
-                textMatches[key] = subject.id
+                textMatches[key] = candidate.key
             }
         }
         byNormalizedText = textMatches
@@ -212,6 +277,34 @@ private struct SubjectIndex {
         return byNormalizedText[key]
     }
 
+    private static func displayName(for subject: Subject, fallback: String) -> String {
+        if !subject.trimmedName.isEmpty {
+            return subject.trimmedName
+        }
+
+        if !subject.trimmedAbbrev.isEmpty {
+            return subject.trimmedAbbrev
+        }
+
+        let rawID = subject.id.trimmingCharacters(in: .whitespacesAndNewlines)
+        return rawID.isEmpty ? fallback : rawID
+    }
+
+    private static func uniqueKey(_ base: String, usedKeys: inout Set<String>) -> String {
+        let trimmed = base.trimmingCharacters(in: .whitespacesAndNewlines)
+        let fallback = trimmed.isEmpty ? "subject" : trimmed
+        var candidate = fallback
+        var suffix = 2
+
+        while usedKeys.contains(candidate) {
+            candidate = "\(fallback)-\(suffix)"
+            suffix += 1
+        }
+
+        usedKeys.insert(candidate)
+        return candidate
+    }
+
     private static func normalized(_ value: String) -> String {
         value
             .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -220,6 +313,14 @@ private struct SubjectIndex {
             .filter { !$0.isEmpty }
             .joined(separator: " ")
     }
+}
+
+private struct SubjectCandidate {
+    let key: String
+    let rawID: String
+    let name: String
+    let abbrev: String
+    let displayName: String
 }
 
 private extension AbsenceDay {

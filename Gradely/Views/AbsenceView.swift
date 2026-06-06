@@ -107,7 +107,14 @@ struct AbsenceView: View {
 
                 switch viewModel.selectedSegment {
                 case .subjects:
-                    SubjectAbsenceTable(rows: viewModel.subjectRows)
+                    SubjectAbsenceTable(
+                        rows: viewModel.subjectRows,
+                        isResolving: viewModel.isResolvingSubjects,
+                        errorMessage: viewModel.subjectResolutionError,
+                        onRetry: {
+                            viewModel.retrySubjectResolution()
+                        }
+                    )
                 case .days:
                     CountsAbsenceTable(
                         leadingTitle: String(localized: "absence.column.day"),
@@ -283,25 +290,42 @@ private struct CountsAbsenceTable: View {
 
 private struct SubjectAbsenceTable: View {
     let rows: [AbsenceSubjectSummary]
+    let isResolving: Bool
+    let errorMessage: String?
+    let onRetry: () -> Void
 
     var body: some View {
-        if rows.isEmpty {
-            EmptyAbsenceSection(title: "absence.subjects.empty")
-        } else {
-            ScrollView(.horizontal, showsIndicators: false) {
-                LazyVStack(spacing: 0) {
-                    header
-                    ForEach(rows) { row in
-                        subjectRow(row)
-                    }
-                }
-                .frame(minWidth: 560)
-                .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
-                        .strokeBorder(Color.primary.opacity(0.06), lineWidth: 1)
-                )
+        VStack(spacing: Spacing.sm) {
+            if isResolving {
+                SubjectResolutionStatusView()
             }
+
+            if let errorMessage {
+                SubjectResolutionErrorView(message: errorMessage, onRetry: onRetry)
+            }
+
+            if rows.isEmpty, !isResolving, errorMessage == nil {
+                EmptyAbsenceSection(title: "absence.subjects.empty")
+            } else if !rows.isEmpty {
+                table
+            }
+        }
+    }
+
+    private var table: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            LazyVStack(spacing: 0) {
+                header
+                ForEach(rows) { row in
+                    subjectRow(row)
+                }
+            }
+            .frame(minWidth: 560)
+            .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
+                    .strokeBorder(Color.primary.opacity(0.06), lineWidth: 1)
+            )
         }
     }
 
@@ -346,6 +370,45 @@ private struct SubjectAbsenceTable: View {
             Divider()
         }
         .accessibilityIdentifier("absenceRow-subject-\(row.id)")
+    }
+}
+
+private struct SubjectResolutionStatusView: View {
+    var body: some View {
+        Card {
+            HStack(spacing: Spacing.sm) {
+                ProgressView()
+                Text("absence.subjects.calculating")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                Spacer()
+            }
+        }
+        .accessibilityIdentifier("absenceSubjectsCalculating")
+    }
+}
+
+private struct SubjectResolutionErrorView: View {
+    let message: String
+    let onRetry: () -> Void
+
+    var body: some View {
+        Card {
+            VStack(alignment: .leading, spacing: Spacing.sm) {
+                Label(String(localized: "absence.subjects.error.title"), systemImage: "exclamationmark.triangle")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(GradeBand.poor.foregroundColor)
+
+                Text(message)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+
+                Button(String(localized: "action.retry"), action: onRetry)
+                    .buttonStyle(.bordered)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .accessibilityIdentifier("absenceSubjectsError")
     }
 }
 

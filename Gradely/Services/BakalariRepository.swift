@@ -9,7 +9,14 @@ struct DashboardData: Equatable {
 struct AbsenceData: Equatable {
     let response: AbsenceResponse
     let absencesPerSubject: [AbsencePerSubject]
+    let subjectResolutionSource: AbsenceSubjectResolutionSource
     let user: UserResponse?
+}
+
+enum AbsenceSubjectResolutionSource: Equatable {
+    case official
+    case synthesized
+    case unavailable
 }
 
 enum AppError: LocalizedError, Equatable {
@@ -155,15 +162,56 @@ final class BakalariRepository {
         )
         try? absenceCache.save(response)
 
-        let resolvedSubjects = await resolvedSubjectAbsences(
+        return AbsenceData(
             response: response,
+            absencesPerSubject: response.absencesPerSubject,
+            subjectResolutionSource: response.absencesPerSubject.isEmpty ? .unavailable : .official,
+            user: await user
+        )
+    }
+
+    func resolveAbsencesPerSubject(from response: AbsenceResponse) async throws -> AbsenceData {
+        guard response.absencesPerSubject.isEmpty else {
+            return AbsenceData(
+                response: response,
+                absencesPerSubject: response.absencesPerSubject,
+                subjectResolutionSource: .official,
+                user: nil
+            )
+        }
+
+        guard !response.absences.isEmpty else {
+            return AbsenceData(
+                response: response,
+                absencesPerSubject: [],
+                subjectResolutionSource: .unavailable,
+                user: nil
+            )
+        }
+
+        let session = try await validSession()
+        let marksResponse = try await marksResponseForAbsenceFallback(session: session)
+        let term = AbsenceSubjectFallback.term(
+            for: response.absences,
+            now: dateProvider()
+        )
+        let timetables = try await loadTermTimetableResponses(
+            weekStarts: term.weekStarts,
             session: session
+        )
+
+        let resolved = AbsenceSubjectFallback.makeAbsences(
+            from: response,
+            timetableResponses: timetables,
+            subjects: marksResponse.subjects,
+            validDateRange: term.start...term.end
         )
 
         return AbsenceData(
             response: response,
-            absencesPerSubject: resolvedSubjects,
-            user: await user
+            absencesPerSubject: resolved,
+            subjectResolutionSource: resolved.isEmpty ? .unavailable : .synthesized,
+            user: nil
         )
     }
 
@@ -203,32 +251,6 @@ final class BakalariRepository {
 
     private func optionalUser(baseURL: URL, accessToken: String) async -> UserResponse? {
         try? await client.fetchUser(baseURL: baseURL, accessToken: accessToken)
-    }
-
-    private func resolvedSubjectAbsences(
-        response: AbsenceResponse,
-        session: StoredSession
-    ) async -> [AbsencePerSubject] {
-        guard response.absencesPerSubject.isEmpty else { return response.absencesPerSubject }
-        guard !response.absences.isEmpty else { return [] }
-
-        do {
-            let marksResponse = try await marksResponseForAbsenceFallback(session: session)
-            let term = AbsenceSubjectFallback.currentTerm(containing: dateProvider())
-            let timetables = try await loadTermTimetableResponses(
-                weekStarts: term.weekStarts,
-                session: session
-            )
-
-            return AbsenceSubjectFallback.makeAbsences(
-                from: response,
-                timetableResponses: timetables,
-                subjects: marksResponse.subjects,
-                validDateRange: term.start...term.end
-            )
-        } catch {
-            return []
-        }
     }
 
     private func marksResponseForAbsenceFallback(session: StoredSession) async throws -> MarksResponse {

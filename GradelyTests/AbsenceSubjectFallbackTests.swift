@@ -96,7 +96,54 @@ struct AbsenceSubjectFallbackTests {
         #expect(resolved.isEmpty)
     }
 
-    @Test func repositoryAbsenceSynthesizesSubjectAbsenceWhenOfficialArrayIsEmpty() async throws {
+    @Test func duplicateAndBlankSubjectIDsDoNotCrashFallback() {
+        let duplicateSubjects = [
+            subject(id: "", abbrev: "M", name: "Matematika"),
+            subject(id: "", abbrev: "MAT", name: "Matematika"),
+            subject(id: "czech", abbrev: "ČJ", name: "Český jazyk")
+        ]
+        let timetable = timetableResponse(
+            atoms: [
+                TimetableAtom(hourID: 1, subjectID: "tt-math"),
+                TimetableAtom(hourID: 2, subjectID: "czech")
+            ],
+            timetableSubjects: [
+                TimetableEntity(id: "tt-math", abbrev: "M", name: "Matematika"),
+                TimetableEntity(id: "czech", abbrev: "ČJ", name: "Český jazyk")
+            ]
+        )
+        let response = AbsenceResponse(
+            percentageThreshold: 25,
+            absences: [absenceDay(ok: 2)],
+            absencesPerSubject: []
+        )
+
+        let resolved = AbsenceSubjectFallback.makeAbsences(
+            from: response,
+            timetableResponses: [timetable],
+            subjects: duplicateSubjects,
+            validDateRange: referenceDate...referenceDate
+        )
+
+        #expect(resolved.count == 2)
+        #expect(resolved.first { $0.subjectName == "Matematika" }?.base == 1)
+        #expect(resolved.first { $0.subjectName == "Český jazyk" }?.base == 1)
+    }
+
+    @Test func termDerivedFromPastReturnedAbsenceScansFullSemester() {
+        let now = TimetableDates.weekCalendar.date(from: DateComponents(year: 2026, month: 6, day: 6))!
+        let term = AbsenceSubjectFallback.term(
+            for: [
+                absenceDay("2025-10-10T00:00:00+02:00", ok: 1)
+            ],
+            now: now
+        )
+
+        #expect(TimetableDates.apiDateString(term.start) == "2025-09-01")
+        #expect(TimetableDates.apiDateString(term.end) == "2026-01-31")
+    }
+
+    @Test func repositoryAbsenceReturnsRawFirstThenSynthesizesSubjects() async throws {
         let timetable = timetableResponse(
             atoms: [
                 TimetableAtom(hourID: 1, subjectID: "math"),
@@ -125,10 +172,54 @@ struct AbsenceSubjectFallbackTests {
         )
 
         let data = try await repository.loadAbsence()
+        #expect(data.absencesPerSubject.isEmpty)
+        #expect(data.subjectResolutionSource == .unavailable)
 
-        #expect(data.absencesPerSubject.count == 2)
-        #expect(data.absencesPerSubject.first { $0.subjectName == "Matematika" }?.base == 1)
-        #expect(data.absencesPerSubject.first { $0.subjectName == "Český jazyk" }?.base == 1)
+        let resolved = try await repository.resolveAbsencesPerSubject(from: data.response)
+
+        #expect(resolved.subjectResolutionSource == .synthesized)
+        #expect(resolved.absencesPerSubject.count == 2)
+        #expect(resolved.absencesPerSubject.first { $0.subjectName == "Matematika" }?.base == 1)
+        #expect(resolved.absencesPerSubject.first { $0.subjectName == "Český jazyk" }?.base == 1)
+    }
+
+    @Test func repositoryFetchesOnlyMissingTimetableWeeks() async throws {
+        let now = TimetableDates.weekCalendar.date(from: DateComponents(year: 2026, month: 2, day: 16))!
+        let absence = AbsenceResponse(
+            percentageThreshold: 25,
+            absences: [absenceDay(ok: 2)],
+            absencesPerSubject: []
+        )
+        let term = AbsenceSubjectFallback.term(for: absence.absences, now: now)
+        let timetable = timetableResponse(
+            atoms: [
+                TimetableAtom(hourID: 1, subjectID: "math"),
+                TimetableAtom(hourID: 2, subjectID: "czech")
+            ],
+            timetableSubjects: [
+                TimetableEntity(id: "math", abbrev: "M", name: "Matematika"),
+                TimetableEntity(id: "czech", abbrev: "ČJ", name: "Český jazyk")
+            ]
+        )
+        let timetableCache = InMemoryTimetableCache()
+        try timetableCache.save(timetable, weekStart: term.weekStarts[0])
+        let client = CountingBakalariClient(
+            marksResult: MarksResponse(subjects: subjects),
+            absenceResult: absence,
+            timetableResult: timetable
+        )
+        let repository = BakalariRepository(
+            client: client,
+            sessionStore: InMemorySessionStore(session: validSession()),
+            marksCache: InMemoryMarksCache(),
+            timetableCache: timetableCache,
+            dateProvider: { now }
+        )
+
+        _ = try await repository.resolveAbsencesPerSubject(from: absence)
+
+        #expect(client.timetableFetchDates.count == term.weekStarts.count - 1)
+        #expect(!client.timetableFetchDates.contains(term.weekStarts[0]))
     }
 
     private var subjects: [Subject] {
@@ -150,9 +241,9 @@ struct AbsenceSubjectFallbackTests {
         )
     }
 
-    private func absenceDay(ok: Int) -> AbsenceDay {
+    private func absenceDay(_ date: String, ok: Int) -> AbsenceDay {
         AbsenceDay(
-            date: "2026-02-02T00:00:00+01:00",
+            date: date,
             unsolved: 0,
             ok: ok,
             missed: 0,
@@ -161,6 +252,10 @@ struct AbsenceSubjectFallbackTests {
             school: 0,
             distanceTeaching: 0
         )
+    }
+
+    private func absenceDay(ok: Int) -> AbsenceDay {
+        absenceDay("2026-02-02T00:00:00+01:00", ok: ok)
     }
 
     private func timetableResponse(
@@ -192,5 +287,59 @@ struct AbsenceSubjectFallbackTests {
             expiresAt: Date().addingTimeInterval(3600),
             baseURL: URL(string: "https://demo.bakalari.cz/")!
         )
+    }
+}
+
+private final class CountingBakalariClient: BakalariClient {
+    let marksResult: MarksResponse
+    let absenceResult: AbsenceResponse
+    let timetableResult: TimetableResponse
+    private(set) var timetableFetchDates: [Date] = []
+
+    init(
+        marksResult: MarksResponse,
+        absenceResult: AbsenceResponse,
+        timetableResult: TimetableResponse
+    ) {
+        self.marksResult = marksResult
+        self.absenceResult = absenceResult
+        self.timetableResult = timetableResult
+    }
+
+    func login(baseURL: URL, username: String, password: String) async throws -> LoginResponse {
+        LoginResponse(
+            accessToken: "mock-access",
+            refreshToken: "mock-refresh",
+            tokenType: "Bearer",
+            expiresIn: 3600,
+            apiVersion: nil,
+            appVersion: nil,
+            userID: "mock-user"
+        )
+    }
+
+    func refreshToken(baseURL: URL, refreshToken: String) async throws -> LoginResponse {
+        try await login(baseURL: baseURL, username: "", password: "")
+    }
+
+    func fetchMarks(baseURL: URL, accessToken: String) async throws -> MarksResponse {
+        marksResult
+    }
+
+    func fetchAbsences(baseURL: URL, accessToken: String) async throws -> AbsenceResponse {
+        absenceResult
+    }
+
+    func fetchUser(baseURL: URL, accessToken: String) async throws -> UserResponse {
+        throw BakalariAPIError.httpStatus(404, nil)
+    }
+
+    func fetchTimetable(baseURL: URL, accessToken: String, date: Date) async throws -> TimetableResponse {
+        timetableFetchDates.append(date)
+        return MockBakalariClient.rebased(timetableResult, toWeekContaining: date)
+    }
+
+    func predictSubject(baseURL: URL, accessToken: String, subject: Subject, markText: String, weight: Int) async throws -> Subject {
+        subject
     }
 }

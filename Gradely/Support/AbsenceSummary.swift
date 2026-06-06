@@ -86,9 +86,9 @@ struct AbsenceSubjectSummary: Identifiable, Equatable {
     let absencePercentage: Double
     let exceedsThreshold: Bool
 
-    init(absence: AbsencePerSubject, threshold: Double) {
+    init(absence: AbsencePerSubject, threshold: Double, id: String? = nil) {
         subjectName = absence.subjectName.trimmingCharacters(in: .whitespacesAndNewlines)
-        id = subjectName.isEmpty ? absence.id : subjectName
+        self.id = id ?? (subjectName.isEmpty ? absence.id : subjectName)
         lessonsCount = absence.lessonsCount
         base = absence.base
         absencePercentage = absence.absencePercentage
@@ -161,8 +161,15 @@ enum AbsenceSummary {
         for absences: [AbsencePerSubject],
         threshold: Double
     ) -> [AbsenceSubjectSummary] {
-        absences
-            .map { AbsenceSubjectSummary(absence: $0, threshold: threshold) }
+        var seenIDs: [String: Int] = [:]
+        return absences
+            .map { absence in
+                let baseID = subjectID(for: absence)
+                let count = seenIDs[baseID, default: 0]
+                seenIDs[baseID] = count + 1
+                let uniqueID = count == 0 ? baseID : "\(baseID)-\(count + 1)"
+                return AbsenceSubjectSummary(absence: absence, threshold: threshold, id: uniqueID)
+            }
             .sorted {
                 if $0.exceedsThreshold != $1.exceedsThreshold {
                     return $0.exceedsThreshold && !$1.exceedsThreshold
@@ -185,5 +192,10 @@ enum AbsenceSummary {
                 .day()
                 .month(.defaultDigits)
         )
+    }
+
+    private static func subjectID(for absence: AbsencePerSubject) -> String {
+        let trimmed = absence.subjectName.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? "subject" : trimmed
     }
 }

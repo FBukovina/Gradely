@@ -79,16 +79,18 @@ struct AbsenceMonthSummary: Identifiable, Equatable {
 }
 
 struct AbsenceSubjectSummary: Identifiable, Equatable {
-    let id: String
+    let stableID: String
     let subjectName: String
     let lessonsCount: Int
     let base: Int
     let absencePercentage: Double
     let exceedsThreshold: Bool
 
-    init(absence: AbsencePerSubject, threshold: Double, id: String? = nil) {
+    var id: String { stableID }
+
+    init(absence: AbsencePerSubject, threshold: Double, stableID: String) {
+        self.stableID = stableID
         subjectName = absence.subjectName.trimmingCharacters(in: .whitespacesAndNewlines)
-        self.id = id ?? (subjectName.isEmpty ? absence.id : subjectName)
         lessonsCount = absence.lessonsCount
         base = absence.base
         absencePercentage = absence.absencePercentage
@@ -161,14 +163,14 @@ enum AbsenceSummary {
         for absences: [AbsencePerSubject],
         threshold: Double
     ) -> [AbsenceSubjectSummary] {
-        var seenIDs: [String: Int] = [:]
         return absences
-            .map { absence in
-                let baseID = subjectID(for: absence)
-                let count = seenIDs[baseID, default: 0]
-                seenIDs[baseID] = count + 1
-                let uniqueID = count == 0 ? baseID : "\(baseID)-\(count + 1)"
-                return AbsenceSubjectSummary(absence: absence, threshold: threshold, id: uniqueID)
+            .enumerated()
+            .map { index, absence in
+                AbsenceSubjectSummary(
+                    absence: absence,
+                    threshold: threshold,
+                    stableID: subjectStableID(for: absence, sourceIndex: index)
+                )
             }
             .sorted {
                 if $0.exceedsThreshold != $1.exceedsThreshold {
@@ -194,8 +196,17 @@ enum AbsenceSummary {
         )
     }
 
-    private static func subjectID(for absence: AbsencePerSubject) -> String {
-        let trimmed = absence.subjectName.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty ? "subject" : trimmed
+    private static func subjectStableID(for absence: AbsencePerSubject, sourceIndex: Int) -> String {
+        let normalized = absence.subjectName
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .folding(options: [.diacriticInsensitive, .caseInsensitive], locale: Locale(identifier: "cs_CZ"))
+            .unicodeScalars
+            .map { CharacterSet.alphanumerics.contains($0) ? Character($0).lowercased() : "-" }
+            .joined()
+            .split(separator: "-")
+            .joined(separator: "-")
+
+        let suffix = normalized.isEmpty ? "unnamed" : normalized
+        return "subject-\(sourceIndex)-\(suffix)"
     }
 }

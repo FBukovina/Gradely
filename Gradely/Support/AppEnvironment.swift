@@ -58,7 +58,10 @@ struct AppEnvironment {
                         apiVersion: nil,
                         appVersion: nil,
                         userID: "mock-user"
-                    )
+                    ),
+                    absenceResult: arguments.contains("-uiTestingEmptySubjectAbsence")
+                        ? PreviewData.absenceResponseWithoutSubjectRows
+                        : PreviewData.absenceResponse
                 ),
                 sessionStore: store,
                 marksCache: cache

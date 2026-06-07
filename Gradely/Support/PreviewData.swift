@@ -148,6 +148,12 @@ enum PreviewData {
         ]
     )
 
+    static let absenceResponseWithoutSubjectRows = AbsenceResponse(
+        percentageThreshold: absenceResponse.percentageThreshold,
+        absences: absenceResponse.absences,
+        absencesPerSubject: []
+    )
+
     static let userResponse = UserResponse(
         userUID: "mock-user",
         fullName: "Filip Bukovina",

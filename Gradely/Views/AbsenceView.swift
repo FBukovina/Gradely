@@ -108,9 +108,7 @@ struct AbsenceView: View {
                 switch viewModel.selectedSegment {
                 case .subjects:
                     SubjectAbsenceTable(
-                        rows: viewModel.subjectRows,
-                        isResolving: viewModel.isResolvingSubjects,
-                        errorMessage: viewModel.subjectResolutionError,
+                        state: viewModel.subjectAbsenceState,
                         onRetry: {
                             viewModel.retrySubjectResolution()
                         }
@@ -289,34 +287,28 @@ private struct CountsAbsenceTable: View {
 }
 
 private struct SubjectAbsenceTable: View {
-    let rows: [AbsenceSubjectSummary]
-    let isResolving: Bool
-    let errorMessage: String?
+    let state: AbsenceViewModel.SubjectAbsenceState
     let onRetry: () -> Void
 
     var body: some View {
-        VStack(spacing: Spacing.sm) {
-            if isResolving {
-                SubjectResolutionStatusView()
-            }
-
-            if let errorMessage {
-                SubjectResolutionErrorView(message: errorMessage, onRetry: onRetry)
-            }
-
-            if rows.isEmpty, !isResolving, errorMessage == nil {
-                EmptyAbsenceSection(title: "absence.subjects.empty")
-            } else if !rows.isEmpty {
-                table
-            }
+        switch state {
+        case .idle, .loading:
+            SubjectResolutionStatusView()
+        case .empty:
+            EmptyAbsenceSection(title: "absence.subjects.empty")
+                .accessibilityIdentifier("absenceSubjectsEmpty")
+        case .failed(let message):
+            SubjectResolutionErrorView(message: message, onRetry: onRetry)
+        case .loaded(let rows, _):
+            table(rows: rows)
         }
     }
 
-    private var table: some View {
+    private func table(rows: [AbsenceSubjectSummary]) -> some View {
         ScrollView(.horizontal, showsIndicators: false) {
             LazyVStack(spacing: 0) {
                 header
-                ForEach(rows) { row in
+                ForEach(rows, id: \.stableID) { row in
                     subjectRow(row)
                 }
             }
@@ -369,7 +361,7 @@ private struct SubjectAbsenceTable: View {
         .overlay(alignment: .bottom) {
             Divider()
         }
-        .accessibilityIdentifier("absenceRow-subject-\(row.id)")
+        .accessibilityIdentifier("absenceRow-\(row.stableID)")
     }
 }
 

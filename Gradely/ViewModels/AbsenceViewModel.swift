@@ -12,15 +12,27 @@ final class AbsenceViewModel {
         var id: String { rawValue }
     }
 
+    enum SubjectAbsenceState: Equatable {
+        case idle
+        case loading
+        case loaded(rows: [AbsenceSubjectSummary], source: AbsenceSubjectResolutionSource)
+        case empty
+        case failed(message: String)
+
+        var rows: [AbsenceSubjectSummary] {
+            if case .loaded(let rows, _) = self {
+                return rows
+            }
+            return []
+        }
+    }
+
     var isLoading = false
     var isRefreshing = false
-    var isResolvingSubjects = false
     var response: AbsenceResponse?
-    var absencesPerSubject: [AbsencePerSubject] = []
+    var subjectAbsenceState: SubjectAbsenceState = .idle
     var user: UserResponse?
     var errorMessage: String?
-    var subjectResolutionError: String?
-    var subjectResolutionSource: AbsenceSubjectResolutionSource = .unavailable
     var selectedSegment: Segment = .days
     var lastCacheDate: Date?
 
@@ -44,19 +56,12 @@ final class AbsenceViewModel {
         AbsenceSummary.monthSummaries(for: response?.absences ?? [])
     }
 
-    var subjectRows: [AbsenceSubjectSummary] {
-        AbsenceSummary.subjectSummaries(
-            for: absencesPerSubject,
-            threshold: response?.percentageThreshold ?? 0
-        )
-    }
-
     var totalCounts: AbsenceCounts {
         AbsenceSummary.totalCounts(for: response?.absences ?? [])
     }
 
     var hasAnyAbsenceData: Bool {
-        !(response?.absences ?? []).isEmpty || !absencesPerSubject.isEmpty
+        !(response?.absences ?? []).isEmpty || !subjectAbsenceState.rows.isEmpty
     }
 
     func loadIfNeeded() async {
@@ -74,7 +79,6 @@ final class AbsenceViewModel {
         subjectResolutionTask?.cancel()
         subjectResolutionTask = nil
         errorMessage = nil
-        subjectResolutionError = nil
         if response == nil {
             isLoading = true
         } else {
@@ -104,58 +108,81 @@ final class AbsenceViewModel {
 
     private func applyCached(_ cached: CachedAbsence) {
         response = cached.response
-        absencesPerSubject = cached.response.absencesPerSubject
-        subjectResolutionSource = cached.response.absencesPerSubject.isEmpty ? .unavailable : .official
+        subjectAbsenceState = state(
+            for: cached.response.absencesPerSubject,
+            source: cached.response.absencesPerSubject.isEmpty ? .unavailable : .official,
+            threshold: cached.response.percentageThreshold
+        )
         lastCacheDate = cached.cachedAt
     }
 
     private func applyLoaded(_ data: AbsenceData) {
         response = data.response
-        absencesPerSubject = data.absencesPerSubject
-        subjectResolutionSource = data.subjectResolutionSource
+        subjectAbsenceState = state(
+            for: data.absencesPerSubject,
+            source: data.subjectResolutionSource,
+            threshold: data.response.percentageThreshold
+        )
         user = data.user
     }
 
     private func startSubjectResolutionIfNeeded(for response: AbsenceResponse) {
         subjectResolutionTask?.cancel()
         subjectResolutionTask = nil
-        subjectResolutionError = nil
 
         guard response.absencesPerSubject.isEmpty else {
-            isResolvingSubjects = false
-            absencesPerSubject = response.absencesPerSubject
-            subjectResolutionSource = .official
+            subjectAbsenceState = state(
+                for: response.absencesPerSubject,
+                source: .official,
+                threshold: response.percentageThreshold
+            )
             return
         }
 
         guard !response.absences.isEmpty else {
-            isResolvingSubjects = false
-            absencesPerSubject = []
-            subjectResolutionSource = .unavailable
+            subjectAbsenceState = .empty
             return
         }
 
-        isResolvingSubjects = true
-        subjectResolutionTask = Task { @MainActor in
+        subjectAbsenceState = .loading
+        subjectResolutionTask = Task {
             do {
                 let data = try await repository.resolveAbsencesPerSubject(from: response)
                 guard !Task.isCancelled else { return }
-                applySubjectResolution(data, expectedResponse: response)
+                let nextState = state(
+                    for: data.absencesPerSubject,
+                    source: data.subjectResolutionSource,
+                    threshold: data.response.percentageThreshold
+                )
+                await MainActor.run {
+                    applySubjectResolution(nextState, expectedResponse: response)
+                }
             } catch {
                 guard !Task.isCancelled else { return }
-                isResolvingSubjects = false
-                subjectResolutionSource = .unavailable
-                subjectResolutionError = userFacingMessage(for: error)
+                let message = userFacingMessage(for: error)
+                await MainActor.run {
+                    applySubjectResolution(.failed(message: message), expectedResponse: response)
+                }
             }
         }
     }
 
-    private func applySubjectResolution(_ data: AbsenceData, expectedResponse: AbsenceResponse) {
+    private func applySubjectResolution(_ state: SubjectAbsenceState, expectedResponse: AbsenceResponse) {
         guard response == expectedResponse else { return }
-        absencesPerSubject = data.absencesPerSubject
-        subjectResolutionSource = data.subjectResolutionSource
-        subjectResolutionError = nil
-        isResolvingSubjects = false
+        subjectAbsenceState = state
+        subjectResolutionTask = nil
+    }
+
+    private func state(
+        for absences: [AbsencePerSubject],
+        source: AbsenceSubjectResolutionSource,
+        threshold: Double
+    ) -> SubjectAbsenceState {
+        let rows = AbsenceSummary.subjectSummaries(for: absences, threshold: threshold)
+        if !rows.isEmpty {
+            return .loaded(rows: rows, source: source)
+        }
+        return .empty
     }
 
     private func userFacingMessage(for error: Error) -> String {

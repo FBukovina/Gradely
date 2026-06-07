@@ -59,6 +59,33 @@ final class AbsenceUITests: XCTestCase {
         XCTAssertTrue(waitForAnyElement(possibleStates, timeout: 8))
     }
 
+    @MainActor
+    func testAbsenceLargeSubjectsFallbackDoesNotCrashWhenTappedImmediately() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-uiTestingMockAPI", "-uiTestingLoggedIn", "-uiTestingLargeAbsenceSubjects"]
+        app.launch()
+
+        XCTAssertTrue(app.collectionViews["subjectsList"].waitForExistence(timeout: 5))
+
+        app.tabBars.buttons.element(boundBy: 1).tap()
+        XCTAssertTrue(app.scrollViews["absenceList"].waitForExistence(timeout: 5))
+
+        let segment = app.segmentedControls["absenceSegmentedControl"]
+        XCTAssertTrue(segment.waitForExistence(timeout: 3))
+        segment.buttons.element(boundBy: 0).tap()
+
+        let descendants = app.descendants(matching: .any)
+        let possibleStates = [
+            descendants["absenceSubjectsCalculating"],
+            descendants["absenceSubjectsEmpty"],
+            descendants["absenceSubjectsError"],
+            descendants["absenceSubjectsWarning"],
+            descendants.matching(identifier: "absenceRow-subject-0-raw-ui-large-subject-0").firstMatch
+        ]
+
+        XCTAssertTrue(waitForAnyElement(possibleStates, timeout: 8))
+    }
+
     private func waitForAnyElement(_ elements: [XCUIElement], timeout: TimeInterval) -> Bool {
         let deadline = Date().addingTimeInterval(timeout)
         while Date() < deadline {

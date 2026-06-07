@@ -46,6 +46,8 @@ struct AppEnvironment {
                 ? CachedMarks(marksResponse: PreviewData.marksResponse, cachedAt: Date())
                 : nil
         )
+        let useLargeSubjectAbsenceMock = arguments.contains("-uiTestingLargeAbsenceSubjects")
+        let useEmptySubjectAbsenceMock = arguments.contains("-uiTestingEmptySubjectAbsence")
 
         return AppEnvironment(
             repository: BakalariRepository(
@@ -59,9 +61,12 @@ struct AppEnvironment {
                         appVersion: nil,
                         userID: "mock-user"
                     ),
-                    absenceResult: arguments.contains("-uiTestingEmptySubjectAbsence")
-                        ? PreviewData.absenceResponseWithoutSubjectRows
-                        : PreviewData.absenceResponse
+                    absenceResult: useLargeSubjectAbsenceMock
+                        ? PreviewData.largeSubjectAbsenceResponseWithoutSubjectRows
+                        : (useEmptySubjectAbsenceMock ? PreviewData.absenceResponseWithoutSubjectRows : PreviewData.absenceResponse),
+                    timetableResult: useLargeSubjectAbsenceMock
+                        ? PreviewData.largeSubjectTimetableResponse
+                        : PreviewData.timetableResponse
                 ),
                 sessionStore: store,
                 marksCache: cache

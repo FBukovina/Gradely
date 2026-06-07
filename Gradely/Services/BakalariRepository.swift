@@ -314,6 +314,25 @@ final class BakalariRepository {
         let totalWeeks = weekStarts.count
         var loaded: [LoadedTimetableWeek] = []
         var missingWeekStarts: [Date] = []
+        var lastPublishedCompletedWeeks: Int?
+
+        func publishProgress(force: Bool = false, completedWeeks: Int) async {
+            guard let progress else { return }
+            let shouldPublish = force
+                || lastPublishedCompletedWeeks == nil
+                || completedWeeks == totalWeeks
+                || completedWeeks - (lastPublishedCompletedWeeks ?? 0) >= 2
+
+            guard shouldPublish else { return }
+            lastPublishedCompletedWeeks = completedWeeks
+            await progress(
+                AbsenceSubjectResolutionProgress(
+                    loadedWeeks: loaded.count,
+                    completedWeeks: completedWeeks,
+                    totalWeeks: totalWeeks
+                )
+            )
+        }
 
         for weekStart in weekStarts {
             if let cached = try? timetableCache.load(weekStart: weekStart) {
@@ -324,13 +343,7 @@ final class BakalariRepository {
         }
 
         var completedWeeks = loaded.count
-        await progress?(
-            AbsenceSubjectResolutionProgress(
-                loadedWeeks: loaded.count,
-                completedWeeks: completedWeeks,
-                totalWeeks: totalWeeks
-            )
-        )
+        await publishProgress(force: true, completedWeeks: completedWeeks)
 
         let batchSize = 4
         var failedWeeks = 0
@@ -359,12 +372,9 @@ final class BakalariRepository {
                     failedWeeks += 1
                 }
 
-                await progress?(
-                    AbsenceSubjectResolutionProgress(
-                        loadedWeeks: loaded.count,
-                        completedWeeks: completedWeeks,
-                        totalWeeks: totalWeeks
-                    )
+                await publishProgress(
+                    force: completedWeeks == totalWeeks,
+                    completedWeeks: completedWeeks
                 )
 
                 if nextMissingIndex < missingWeekStarts.count {

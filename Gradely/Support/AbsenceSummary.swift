@@ -78,6 +78,12 @@ struct AbsenceMonthSummary: Identifiable, Equatable {
     let counts: AbsenceCounts
 }
 
+struct AbsenceCountRow: Identifiable, Equatable {
+    let id: String
+    let title: String
+    let counts: AbsenceCounts
+}
+
 struct AbsenceSubjectSummary: Identifiable, Equatable {
     let stableID: String
     let subjectName: String
@@ -217,6 +223,6 @@ enum AbsenceSummary {
             .joined(separator: "-")
 
         let suffix = normalized.isEmpty ? "unnamed" : normalized
-        return "subject-\(sourceIndex)-\(suffix)"
+        return "subject-\(sourceIndex)-\(suffix.prefix(80))"
     }
 }

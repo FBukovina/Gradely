@@ -160,6 +160,60 @@ struct AbsenceSubjectFallbackTests {
         #expect(resolved.first { $0.subjectName == "Český jazyk" }?.base == 1)
     }
 
+    @Test func largeAndBlankTimetableSubjectsProduceBoundedStableRows() {
+        let uniqueCount = 40
+        let blankCount = 20
+        let longIDs = (0..<uniqueCount).map { index in
+            "very-long-subject-\(index)-\(String(repeating: "identity-", count: 24))"
+        }
+        let atoms = longIDs.enumerated().map { index, subjectID in
+            TimetableAtom(hourID: index + 1, subjectID: subjectID)
+        } + (0..<blankCount).map { index in
+            TimetableAtom(hourID: uniqueCount + index + 1, subjectID: "")
+        }
+        let timetable = TimetableResponse(
+            hours: (1...atoms.count).map {
+                TimetableHour(id: $0, caption: "\($0)", beginTime: "8:00", endTime: "8:45")
+            },
+            days: [
+                TimetableDayDTO(
+                    atoms: atoms,
+                    dayOfWeek: 1,
+                    date: "2026-02-02T00:00:00+01:00"
+                )
+            ],
+            subjects: longIDs.enumerated().map { index, id in
+                TimetableEntity(id: id, abbrev: "S\(index)", name: "Subject \(index)")
+            } + [
+                TimetableEntity(id: "", abbrev: "BL", name: "Blank Lab"),
+                TimetableEntity(id: "", abbrev: "BL2", name: "Blank Lab Duplicate")
+            ]
+        )
+        let response = AbsenceResponse(
+            percentageThreshold: 25,
+            absences: [absenceDay(ok: atoms.count)],
+            absencesPerSubject: []
+        )
+
+        let result = AbsenceSubjectFallback.makeAbsenceResult(
+            from: response,
+            timetableResponses: [timetable],
+            subjects: [],
+            validDateRange: referenceDate...referenceDate
+        )
+        let summaries = AbsenceSummary.subjectSummaries(
+            for: result.absences,
+            threshold: response.percentageThreshold,
+            stableIDHints: result.stableIDHints
+        )
+        let stableIDs = Set(summaries.map(\.stableID))
+
+        #expect(result.absences.count == uniqueCount + 1)
+        #expect(result.absences.first { $0.subjectName == "Blank Lab" }?.lessonsCount == blankCount)
+        #expect(stableIDs.count == summaries.count)
+        #expect(summaries.allSatisfy { $0.stableID.count <= 95 })
+    }
+
     @Test func termDerivedFromPastReturnedAbsenceScansFullSemester() {
         let now = TimetableDates.weekCalendar.date(from: DateComponents(year: 2026, month: 6, day: 6))!
         let term = AbsenceSubjectFallback.term(
@@ -281,6 +335,35 @@ struct AbsenceSubjectFallbackTests {
         #expect(resolved.subjectResolutionWarning != nil)
         #expect(!resolved.absencesPerSubject.isEmpty)
         #expect(resolved.subjectStableIDHints.contains("raw-math"))
+    }
+
+    @Test func repositoryCoalescesTimetableProgressUpdates() async throws {
+        let now = TimetableDates.weekCalendar.date(from: DateComponents(year: 2026, month: 6, day: 6))!
+        let absence = PreviewData.absenceResponseWithoutSubjectRows
+        let term = AbsenceSubjectFallback.term(for: absence.absences, now: now)
+        let recorder = ProgressRecorder()
+        let client = CountingBakalariClient(
+            marksResult: MarksResponse(subjects: []),
+            absenceResult: absence,
+            timetableResult: PreviewData.timetableResponse
+        )
+        let repository = BakalariRepository(
+            client: client,
+            sessionStore: InMemorySessionStore(session: validSession()),
+            marksCache: InMemoryMarksCache(),
+            timetableCache: InMemoryTimetableCache(),
+            dateProvider: { now }
+        )
+
+        _ = try await repository.resolveAbsencesPerSubject(from: absence) { progress in
+            await recorder.append(progress)
+        }
+        let updates = await recorder.snapshot()
+
+        #expect(updates.count >= 2)
+        #expect(updates.count <= term.weekStarts.count / 2 + 2)
+        #expect(updates.first?.completedWeeks == 0)
+        #expect(updates.last?.completedWeeks == updates.last?.totalWeeks)
     }
 
     private var subjects: [Subject] {
@@ -418,5 +501,17 @@ private final class CountingBakalariClient: BakalariClient {
 
     func predictSubject(baseURL: URL, accessToken: String, subject: Subject, markText: String, weight: Int) async throws -> Subject {
         subject
+    }
+}
+
+private actor ProgressRecorder {
+    private var values: [AbsenceSubjectResolutionProgress] = []
+
+    func append(_ progress: AbsenceSubjectResolutionProgress) {
+        values.append(progress)
+    }
+
+    func snapshot() -> [AbsenceSubjectResolutionProgress] {
+        values
     }
 }

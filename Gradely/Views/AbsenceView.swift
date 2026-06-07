@@ -117,18 +117,14 @@ struct AbsenceView: View {
                     CountsAbsenceTable(
                         leadingTitle: String(localized: "absence.column.day"),
                         totalTitle: String(localized: "absence.total"),
-                        rows: viewModel.dayRows.map {
-                            CountsAbsenceRow(id: "day-\($0.id)", title: $0.title, counts: $0.counts)
-                        },
+                        rows: viewModel.dayCountRows,
                         emptyTitle: "absence.days.empty"
                     )
                 case .months:
                     CountsAbsenceTable(
                         leadingTitle: String(localized: "absence.column.month"),
                         totalTitle: String(localized: "absence.total"),
-                        rows: viewModel.monthRows.map {
-                            CountsAbsenceRow(id: "month-\($0.id)", title: $0.title, counts: $0.counts)
-                        },
+                        rows: viewModel.monthCountRows,
                         emptyTitle: "absence.months.empty"
                     )
                 }
@@ -184,16 +180,10 @@ private struct AbsenceHeader: View {
     }
 }
 
-private struct CountsAbsenceRow: Identifiable {
-    let id: String
-    let title: String
-    let counts: AbsenceCounts
-}
-
 private struct CountsAbsenceTable: View {
     let leadingTitle: String
     let totalTitle: String
-    let rows: [CountsAbsenceRow]
+    let rows: [AbsenceCountRow]
     let emptyTitle: LocalizedStringKey
 
     private let leadingWidth: CGFloat = 118
@@ -290,6 +280,10 @@ private struct SubjectAbsenceTable: View {
     let state: AbsenceViewModel.SubjectAbsenceState
     let onRetry: () -> Void
 
+    private let lessonsWidth: CGFloat = 72
+    private let absentWidth: CGFloat = 68
+    private let percentWidth: CGFloat = 78
+
     var body: some View {
         switch state {
         case .idle:
@@ -312,32 +306,29 @@ private struct SubjectAbsenceTable: View {
     }
 
     private func table(rows: [AbsenceSubjectSummary]) -> some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            LazyVStack(spacing: 0) {
-                header
-                ForEach(rows, id: \.stableID) { row in
-                    subjectRow(row)
-                }
+        LazyVStack(spacing: 0) {
+            header
+            ForEach(rows, id: \.stableID) { row in
+                subjectRow(row)
             }
-            .frame(minWidth: 560)
-            .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
-                    .strokeBorder(Color.primary.opacity(0.06), lineWidth: 1)
-            )
         }
+        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
+                .strokeBorder(Color.primary.opacity(0.06), lineWidth: 1)
+        )
     }
 
     private var header: some View {
         HStack(spacing: 0) {
             Text("absence.column.subject")
-                .frame(width: 230, alignment: .leading)
+                .frame(maxWidth: .infinity, alignment: .leading)
             Text("absence.column.lessons")
-                .frame(width: 92)
+                .frame(width: lessonsWidth)
             Text("absence.column.absent")
-                .frame(width: 92)
+                .frame(width: absentWidth)
             Text("absence.column.percent")
-                .frame(width: 92)
+                .frame(width: percentWidth)
         }
         .font(.caption.weight(.bold))
         .foregroundStyle(Brand.primary)
@@ -350,15 +341,15 @@ private struct SubjectAbsenceTable: View {
         HStack(spacing: 0) {
             Text(row.subjectName)
                 .font(.subheadline.weight(.semibold))
-                .lineLimit(1)
-                .frame(width: 230, alignment: .leading)
+                .lineLimit(2)
+                .frame(maxWidth: .infinity, alignment: .leading)
 
             Text("\(row.lessonsCount)")
-                .frame(width: 92)
+                .frame(width: lessonsWidth)
             Text("\(row.base)")
-                .frame(width: 92)
+                .frame(width: absentWidth)
             Text(String(format: "%.1f %%", row.absencePercentage))
-                .frame(width: 92)
+                .frame(width: percentWidth)
         }
         .font(.body.monospacedDigit())
         .foregroundStyle(row.exceedsThreshold ? GradeBand.poor.foregroundColor : .primary)

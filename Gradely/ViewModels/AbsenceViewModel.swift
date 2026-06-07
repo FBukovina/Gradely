@@ -35,6 +35,11 @@ final class AbsenceViewModel {
     var errorMessage: String?
     var selectedSegment: Segment = .days
     var lastCacheDate: Date?
+    var dayRows: [AbsenceDaySummary] = []
+    var monthRows: [AbsenceMonthSummary] = []
+    var dayCountRows: [AbsenceCountRow] = []
+    var monthCountRows: [AbsenceCountRow] = []
+    var totalCounts: AbsenceCounts = .zero
 
     private let repository: BakalariRepository
     private var hasLoaded = false
@@ -49,20 +54,8 @@ final class AbsenceViewModel {
         subjectResolutionTask?.cancel()
     }
 
-    var dayRows: [AbsenceDaySummary] {
-        AbsenceSummary.daySummaries(for: response?.absences ?? [])
-    }
-
-    var monthRows: [AbsenceMonthSummary] {
-        AbsenceSummary.monthSummaries(for: response?.absences ?? [])
-    }
-
-    var totalCounts: AbsenceCounts {
-        AbsenceSummary.totalCounts(for: response?.absences ?? [])
-    }
-
     var hasAnyAbsenceData: Bool {
-        !(response?.absences ?? []).isEmpty || !subjectAbsenceState.rows.isEmpty
+        !dayRows.isEmpty || !subjectAbsenceState.rows.isEmpty
     }
 
     func loadIfNeeded() async {
@@ -109,6 +102,7 @@ final class AbsenceViewModel {
 
     private func applyCached(_ cached: CachedAbsence) {
         response = cached.response
+        applyAbsenceSnapshots(from: cached.response)
         subjectAbsenceState = state(
             for: cached.response.absencesPerSubject,
             source: cached.response.absencesPerSubject.isEmpty ? .unavailable : .official,
@@ -120,6 +114,7 @@ final class AbsenceViewModel {
 
     private func applyLoaded(_ data: AbsenceData) {
         response = data.response
+        applyAbsenceSnapshots(from: data.response)
         subjectAbsenceState = state(
             for: data.absencesPerSubject,
             source: data.subjectResolutionSource,
@@ -128,6 +123,18 @@ final class AbsenceViewModel {
             warning: data.subjectResolutionWarning
         )
         user = data.user
+    }
+
+    private func applyAbsenceSnapshots(from response: AbsenceResponse) {
+        dayRows = AbsenceSummary.daySummaries(for: response.absences)
+        monthRows = AbsenceSummary.monthSummaries(for: response.absences)
+        totalCounts = AbsenceSummary.totalCounts(for: response.absences)
+        dayCountRows = dayRows.map {
+            AbsenceCountRow(id: "day-\($0.id)", title: $0.title, counts: $0.counts)
+        }
+        monthCountRows = monthRows.map {
+            AbsenceCountRow(id: "month-\($0.id)", title: $0.title, counts: $0.counts)
+        }
     }
 
     private func startSubjectResolutionIfNeeded(for response: AbsenceResponse) {

@@ -24,6 +24,8 @@ struct AbsenceViewModelTests {
         try await Task.sleep(nanoseconds: 50_000_000)
 
         #expect(viewModel.dayRows.count == cachedAbsence.absences.count)
+        #expect(viewModel.dayCountRows.count == cachedAbsence.absences.count)
+        #expect(!viewModel.monthCountRows.isEmpty)
         #expect(viewModel.totalCounts.total == AbsenceSummary.totalCounts(for: cachedAbsence.absences).total)
 
         _ = await loadTask.result
@@ -39,6 +41,8 @@ struct AbsenceViewModelTests {
         await viewModel.refresh(forceRefresh: false)
 
         #expect(!viewModel.dayRows.isEmpty)
+        #expect(!viewModel.dayCountRows.isEmpty)
+        #expect(!viewModel.monthCountRows.isEmpty)
         if case .loading = viewModel.subjectAbsenceState {
             #expect(true)
         } else {
@@ -74,6 +78,8 @@ struct AbsenceViewModelTests {
         #expect(didFail)
         #expect(!viewModel.dayRows.isEmpty)
         #expect(!viewModel.monthRows.isEmpty)
+        #expect(!viewModel.dayCountRows.isEmpty)
+        #expect(!viewModel.monthCountRows.isEmpty)
     }
 
     @Test func partialFallbackWarningDoesNotClearDayAndMonthData() async throws {

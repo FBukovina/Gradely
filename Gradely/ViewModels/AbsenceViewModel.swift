@@ -15,13 +15,25 @@ final class AbsenceViewModel {
     enum SubjectAbsenceState: Equatable {
         case idle
         case loading(progress: AbsenceSubjectResolutionProgress?)
-        case loaded(rows: [AbsenceSubjectSummary], source: AbsenceSubjectResolutionSource, warning: String?)
+        case loaded(
+            rows: [AbsenceSubjectSummary],
+            source: AbsenceSubjectResolutionSource,
+            warning: String?,
+            unresolvedPartialDays: [AbsencePartialDayCandidate]
+        )
         case empty
         case failed(message: String)
 
         var rows: [AbsenceSubjectSummary] {
-            if case .loaded(let rows, _, _) = self {
+            if case .loaded(let rows, _, _, _) = self {
                 return rows
+            }
+            return []
+        }
+
+        var unresolvedPartialDays: [AbsencePartialDayCandidate] {
+            if case .loaded(_, _, _, let unresolvedPartialDays) = self {
+                return unresolvedPartialDays
             }
             return []
         }
@@ -40,6 +52,10 @@ final class AbsenceViewModel {
     var dayCountRows: [AbsenceCountRow] = []
     var monthCountRows: [AbsenceCountRow] = []
     var totalCounts: AbsenceCounts = .zero
+    var isManualSelectionSheetPresented = false
+    var manualSelectionDrafts: [String: Set<String>] = [:]
+    var manualSelectionErrorMessage: String?
+    var isSavingManualSelections = false
 
     private let repository: BakalariRepository
     private var hasLoaded = false
@@ -55,7 +71,17 @@ final class AbsenceViewModel {
     }
 
     var hasAnyAbsenceData: Bool {
-        !dayRows.isEmpty || !subjectAbsenceState.rows.isEmpty
+        !dayRows.isEmpty || !subjectAbsenceState.rows.isEmpty || !subjectAbsenceState.unresolvedPartialDays.isEmpty
+    }
+
+    var manualResolutionCandidates: [AbsencePartialDayCandidate] {
+        subjectAbsenceState.unresolvedPartialDays
+    }
+
+    var canSaveManualSelectionDrafts: Bool {
+        !manualResolutionCandidates.isEmpty && manualResolutionCandidates.allSatisfy { day in
+            (manualSelectionDrafts[day.dateKey] ?? []).count == day.requiredSelectionCount
+        }
     }
 
     func loadIfNeeded() async {
@@ -107,7 +133,8 @@ final class AbsenceViewModel {
             for: cached.response.absencesPerSubject,
             source: cached.response.absencesPerSubject.isEmpty ? .unavailable : .official,
             threshold: cached.response.percentageThreshold,
-            stableIDHints: []
+            stableIDHints: [],
+            unresolvedPartialDays: []
         )
         lastCacheDate = cached.cachedAt
     }
@@ -120,7 +147,8 @@ final class AbsenceViewModel {
             source: data.subjectResolutionSource,
             threshold: data.response.percentageThreshold,
             stableIDHints: data.subjectStableIDHints,
-            warning: data.subjectResolutionWarning
+            warning: data.subjectResolutionWarning,
+            unresolvedPartialDays: data.unresolvedPartialDays
         )
         user = data.user
     }
@@ -147,7 +175,8 @@ final class AbsenceViewModel {
                 for: response.absencesPerSubject,
                 source: .official,
                 threshold: response.percentageThreshold,
-                stableIDHints: []
+                stableIDHints: [],
+                unresolvedPartialDays: []
             )
             return
         }
@@ -162,7 +191,7 @@ final class AbsenceViewModel {
         subjectAbsenceState = .loading(progress: nil)
         subjectResolutionTask = Task {
             do {
-                let data = try await repository.resolveAbsencesPerSubject(from: response) { [weak self] progress in
+                let data = try await repository.resolveAbsencesPerSubject(from: response, user: user) { [weak self] progress in
                     await MainActor.run {
                         guard
                             let self,
@@ -180,7 +209,8 @@ final class AbsenceViewModel {
                     source: data.subjectResolutionSource,
                     threshold: data.response.percentageThreshold,
                     stableIDHints: data.subjectStableIDHints,
-                    warning: data.subjectResolutionWarning
+                    warning: data.subjectResolutionWarning,
+                    unresolvedPartialDays: data.unresolvedPartialDays
                 )
                 await MainActor.run {
                     applySubjectResolution(nextState, expectedResponse: response, token: token)
@@ -205,20 +235,82 @@ final class AbsenceViewModel {
         subjectResolutionTask = nil
     }
 
+    func openManualSelectionSheet() {
+        manualSelectionErrorMessage = nil
+        manualSelectionDrafts = Dictionary(
+            uniqueKeysWithValues: manualResolutionCandidates.map { day in
+                (day.dateKey, Set(day.selectedLessonIDs))
+            }
+        )
+        isManualSelectionSheetPresented = true
+    }
+
+    func cancelManualSelectionSheet() {
+        manualSelectionErrorMessage = nil
+        manualSelectionDrafts = [:]
+        isManualSelectionSheetPresented = false
+    }
+
+    func selectedManualLessonCount(for dateKey: String) -> Int {
+        (manualSelectionDrafts[dateKey] ?? []).count
+    }
+
+    func isManualLessonSelected(_ lessonID: String, dateKey: String) -> Bool {
+        (manualSelectionDrafts[dateKey] ?? []).contains(lessonID)
+    }
+
+    func toggleManualLesson(_ lessonID: String, dateKey: String) {
+        guard let day = manualResolutionCandidates.first(where: { $0.dateKey == dateKey }) else { return }
+        var selected = manualSelectionDrafts[dateKey] ?? []
+        if selected.contains(lessonID) {
+            selected.remove(lessonID)
+        } else if selected.count < day.requiredSelectionCount {
+            selected.insert(lessonID)
+        }
+        manualSelectionDrafts[dateKey] = selected
+    }
+
+    func saveManualSelections() async {
+        guard let response else { return }
+        guard canSaveManualSelectionDrafts else { return }
+
+        manualSelectionErrorMessage = nil
+        isSavingManualSelections = true
+        defer { isSavingManualSelections = false }
+
+        do {
+            try await repository.saveManualAbsenceLessonSelections(
+                selectedLessonIDsByDate: manualSelectionDrafts,
+                user: user
+            )
+            isManualSelectionSheetPresented = false
+            manualSelectionDrafts = [:]
+            startSubjectResolutionIfNeeded(for: response)
+        } catch {
+            manualSelectionErrorMessage = userFacingMessage(for: error)
+        }
+    }
+
     private func state(
         for absences: [AbsencePerSubject],
         source: AbsenceSubjectResolutionSource,
         threshold: Double,
         stableIDHints: [String],
-        warning: String? = nil
+        warning: String? = nil,
+        unresolvedPartialDays: [AbsencePartialDayCandidate] = []
     ) -> SubjectAbsenceState {
         let rows = AbsenceSummary.subjectSummaries(
             for: absences,
             threshold: threshold,
             stableIDHints: stableIDHints
         )
-        if !rows.isEmpty {
-            return .loaded(rows: rows, source: source, warning: warning)
+        if !rows.isEmpty || !unresolvedPartialDays.isEmpty {
+            return .loaded(
+                rows: rows,
+                source: source,
+                warning: warning,
+                unresolvedPartialDays: unresolvedPartialDays
+            )
         }
         return .empty
     }

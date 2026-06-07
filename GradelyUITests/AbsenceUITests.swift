@@ -51,12 +51,44 @@ final class AbsenceUITests: XCTestCase {
             descendants["absenceSubjectsEmpty"],
             descendants["absenceSubjectsError"],
             descendants["absenceSubjectsWarning"],
+            descendants["absenceManualResolutionCallout"],
             descendants.matching(identifier: "absenceRow-subject-0-raw-math").firstMatch,
             descendants.matching(identifier: "absenceRow-subject-1-raw-czech").firstMatch,
             descendants.matching(identifier: "absenceRow-subject-2-raw-bio").firstMatch
         ]
 
         XCTAssertTrue(waitForAnyElement(possibleStates, timeout: 8))
+    }
+
+    @MainActor
+    func testAbsenceManualSubjectLessonSelectionUpdatesRows() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-uiTestingMockAPI", "-uiTestingLoggedIn", "-uiTestingManualSubjectAbsence"]
+        app.launch()
+
+        XCTAssertTrue(app.collectionViews["subjectsList"].waitForExistence(timeout: 5))
+
+        app.tabBars.buttons.element(boundBy: 1).tap()
+        XCTAssertTrue(app.scrollViews["absenceList"].waitForExistence(timeout: 5))
+
+        let segment = app.segmentedControls["absenceSegmentedControl"]
+        XCTAssertTrue(segment.waitForExistence(timeout: 3))
+        segment.buttons.element(boundBy: 0).tap()
+
+        let resolveButton = app.descendants(matching: .any)["absenceManualResolveButton"]
+        XCTAssertTrue(resolveButton.waitForExistence(timeout: 8))
+        resolveButton.tap()
+
+        let lesson = app.descendants(matching: .any)["absenceManualLesson-lesson-2026-02-02-2-raw-tev"]
+        XCTAssertTrue(lesson.waitForExistence(timeout: 5))
+        lesson.tap()
+
+        let saveButton = app.buttons["absenceManualSaveButton"]
+        XCTAssertTrue(saveButton.waitForExistence(timeout: 3))
+        XCTAssertTrue(saveButton.isEnabled)
+        saveButton.tap()
+
+        XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "absenceRow-subject-1-raw-tev").firstMatch.waitForExistence(timeout: 8))
     }
 
     @MainActor

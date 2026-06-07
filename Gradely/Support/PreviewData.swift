@@ -171,6 +171,23 @@ enum PreviewData {
         absencesPerSubject: []
     )
 
+    static let manualSubjectAbsenceResponseWithoutSubjectRows = AbsenceResponse(
+        percentageThreshold: absenceResponse.percentageThreshold,
+        absences: [
+            AbsenceDay(
+                date: "2026-02-02T00:00:00+01:00",
+                unsolved: 0,
+                ok: 1,
+                missed: 0,
+                late: 0,
+                soon: 0,
+                school: 0,
+                distanceTeaching: 0
+            )
+        ],
+        absencesPerSubject: []
+    )
+
     static let userResponse = UserResponse(
         userUID: "mock-user",
         fullName: "Filip Bukovina",
@@ -325,6 +342,29 @@ enum PreviewData {
             rooms: timetableRooms
         )
     }()
+
+    static let manualSubjectTimetableResponse = TimetableResponse(
+        hours: [
+            TimetableHour(id: 1, caption: "1", beginTime: "8:00", endTime: "8:45"),
+            TimetableHour(id: 2, caption: "2", beginTime: "8:55", endTime: "9:40")
+        ],
+        days: [
+            TimetableDayDTO(
+                atoms: [
+                    TimetableAtom(hourID: 1, subjectID: "math"),
+                    TimetableAtom(hourID: 2, subjectID: "tev")
+                ],
+                dayOfWeek: 1,
+                date: "2026-02-02T00:00:00+01:00"
+            )
+        ],
+        subjects: [
+            TimetableEntity(id: "math", abbrev: "M", name: "Matematika"),
+            TimetableEntity(id: "tev", abbrev: "TV", name: "Tělesná výchova")
+        ],
+        teachers: timetableTeachers,
+        rooms: timetableRooms
+    )
 
     private static let timetableWeekMonday = TimetableDates.monday(of: Date())
 

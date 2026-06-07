@@ -507,6 +507,86 @@
         }
       }
     },
+    "absence.manual.callout.button" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vybrat hodiny"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose lessons"
+          }
+        }
+      }
+    },
+    "absence.manual.callout.message" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld dní má částečnou absenci. Vyber přesné hodiny, aby se započítaly do předmětů."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld days have partial absence. Choose the exact lessons so they can count toward subjects."
+          }
+        }
+      }
+    },
+    "absence.manual.callout.title" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chybí přesné hodiny"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Exact lessons needed"
+          }
+        }
+      }
+    },
+    "absence.manual.selectedCount" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vybráno %lld z %lld hodin"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Selected %lld of %lld lessons"
+          }
+        }
+      }
+    },
+    "absence.manual.title" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vybrat zameškané hodiny"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose missed lessons"
+          }
+        }
+      }
+    },
     "absence.title" : {
       "localizations" : {
         "cs" : {
@@ -571,6 +651,22 @@
         }
       }
     },
+    "action.cancel" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zrušit"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cancel"
+          }
+        }
+      }
+    },
     "action.logout" : {
       "localizations" : {
         "cs" : {
@@ -631,6 +727,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Try again"
+          }
+        }
+      }
+    },
+    "action.save" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Uložit"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Save"
           }
         }
       }

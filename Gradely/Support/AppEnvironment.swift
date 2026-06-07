@@ -19,6 +19,7 @@ struct AppEnvironment {
         let marksCache: any MarksCaching = (try? MarksCache()) ?? InMemoryMarksCache()
         let absenceCache: any AbsenceCaching = (try? AbsenceCache()) ?? InMemoryAbsenceCache()
         let timetableCache: any TimetableCaching = (try? TimetableCache()) ?? InMemoryTimetableCache()
+        let absenceLessonSelectionStore: any AbsenceLessonSelectionStoring = (try? AbsenceLessonSelectionStore()) ?? InMemoryAbsenceLessonSelectionStore()
         let schoolDirectoryCache: any SchoolDirectoryCaching = (try? SchoolDirectoryCache()) ?? InMemorySchoolDirectoryCache()
         return AppEnvironment(
             repository: BakalariRepository(
@@ -26,7 +27,8 @@ struct AppEnvironment {
                 sessionStore: SessionStore(),
                 marksCache: marksCache,
                 absenceCache: absenceCache,
-                timetableCache: timetableCache
+                timetableCache: timetableCache,
+                absenceLessonSelectionStore: absenceLessonSelectionStore
             ),
             schoolDirectoryProvider: URLSessionSchoolDirectoryProvider(cache: schoolDirectoryCache),
             supportTipProvider: RevenueCatSupportTipService()
@@ -47,6 +49,7 @@ struct AppEnvironment {
                 : nil
         )
         let useLargeSubjectAbsenceMock = arguments.contains("-uiTestingLargeAbsenceSubjects")
+        let useManualSubjectAbsenceMock = arguments.contains("-uiTestingManualSubjectAbsence")
         let useEmptySubjectAbsenceMock = arguments.contains("-uiTestingEmptySubjectAbsence")
 
         return AppEnvironment(
@@ -63,10 +66,14 @@ struct AppEnvironment {
                     ),
                     absenceResult: useLargeSubjectAbsenceMock
                         ? PreviewData.largeSubjectAbsenceResponseWithoutSubjectRows
-                        : (useEmptySubjectAbsenceMock ? PreviewData.absenceResponseWithoutSubjectRows : PreviewData.absenceResponse),
+                        : (
+                            useManualSubjectAbsenceMock
+                                ? PreviewData.manualSubjectAbsenceResponseWithoutSubjectRows
+                                : (useEmptySubjectAbsenceMock ? PreviewData.absenceResponseWithoutSubjectRows : PreviewData.absenceResponse)
+                        ),
                     timetableResult: useLargeSubjectAbsenceMock
                         ? PreviewData.largeSubjectTimetableResponse
-                        : PreviewData.timetableResponse
+                        : (useManualSubjectAbsenceMock ? PreviewData.manualSubjectTimetableResponse : PreviewData.timetableResponse)
                 ),
                 sessionStore: store,
                 marksCache: cache

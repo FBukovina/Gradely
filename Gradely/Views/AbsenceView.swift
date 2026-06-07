@@ -44,6 +44,9 @@ struct AbsenceView: View {
                 .task {
                     await viewModel.loadIfNeeded()
                 }
+                .sheet(isPresented: $viewModel.isManualSelectionSheetPresented) {
+                    ManualAbsenceLessonSelectionSheet(viewModel: viewModel)
+                }
         }
     }
 
@@ -111,6 +114,9 @@ struct AbsenceView: View {
                         state: viewModel.subjectAbsenceState,
                         onRetry: {
                             viewModel.retrySubjectResolution()
+                        },
+                        onResolveMissingHours: {
+                            viewModel.openManualSelectionSheet()
                         }
                     )
                 case .days:
@@ -279,6 +285,7 @@ private struct CountsAbsenceTable: View {
 private struct SubjectAbsenceTable: View {
     let state: AbsenceViewModel.SubjectAbsenceState
     let onRetry: () -> Void
+    let onResolveMissingHours: () -> Void
 
     private let lessonsWidth: CGFloat = 72
     private let absentWidth: CGFloat = 68
@@ -295,12 +302,20 @@ private struct SubjectAbsenceTable: View {
                 .accessibilityIdentifier("absenceSubjectsEmpty")
         case .failed(let message):
             SubjectResolutionErrorView(message: message, onRetry: onRetry)
-        case .loaded(let rows, _, let warning):
+        case .loaded(let rows, _, let warning, let unresolvedPartialDays):
             VStack(spacing: Spacing.sm) {
                 if let warning, !warning.isEmpty {
                     SubjectResolutionWarningView(message: warning)
                 }
-                table(rows: rows)
+                if !unresolvedPartialDays.isEmpty {
+                    SubjectManualResolutionCallout(
+                        days: unresolvedPartialDays,
+                        onResolveMissingHours: onResolveMissingHours
+                    )
+                }
+                if !rows.isEmpty {
+                    table(rows: rows)
+                }
             }
         }
     }
@@ -360,6 +375,120 @@ private struct SubjectAbsenceTable: View {
             Divider()
         }
         .accessibilityIdentifier("absenceRow-\(row.stableID)")
+    }
+}
+
+private struct SubjectManualResolutionCallout: View {
+    let days: [AbsencePartialDayCandidate]
+    let onResolveMissingHours: () -> Void
+
+    var body: some View {
+        Card {
+            VStack(alignment: .leading, spacing: Spacing.sm) {
+                Label("absence.manual.callout.title", systemImage: "hand.tap")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Brand.primary)
+
+                Text(
+                    String(
+                        format: String(localized: "absence.manual.callout.message"),
+                        days.count
+                    )
+                )
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+
+                Button("absence.manual.callout.button", action: onResolveMissingHours)
+                    .buttonStyle(.borderedProminent)
+                    .accessibilityIdentifier("absenceManualResolveButton")
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .accessibilityIdentifier("absenceManualResolutionCallout")
+    }
+}
+
+private struct ManualAbsenceLessonSelectionSheet: View {
+    @Bindable var viewModel: AbsenceViewModel
+
+    var body: some View {
+        NavigationStack {
+            List {
+                if let message = viewModel.manualSelectionErrorMessage {
+                    Section {
+                        Label(message, systemImage: "exclamationmark.triangle")
+                            .foregroundStyle(GradeBand.poor.foregroundColor)
+                    }
+                }
+
+                ForEach(viewModel.manualResolutionCandidates) { day in
+                    Section {
+                        ForEach(day.lessons) { lesson in
+                            Button {
+                                viewModel.toggleManualLesson(lesson.id, dateKey: day.dateKey)
+                            } label: {
+                                HStack(spacing: Spacing.sm) {
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(lesson.displayTitle)
+                                            .font(.subheadline.weight(.semibold))
+                                            .foregroundStyle(.primary)
+
+                                        if !lesson.timeRange.isEmpty {
+                                            Text(lesson.timeRange)
+                                                .font(.caption)
+                                                .foregroundStyle(.secondary)
+                                        }
+                                    }
+
+                                    Spacer()
+
+                                    if viewModel.isManualLessonSelected(lesson.id, dateKey: day.dateKey) {
+                                        Image(systemName: "checkmark.circle.fill")
+                                            .foregroundStyle(Brand.primary)
+                                    } else {
+                                        Image(systemName: "circle")
+                                            .foregroundStyle(.tertiary)
+                                    }
+                                }
+                                .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityIdentifier("absenceManualLesson-\(lesson.id)")
+                        }
+                    } header: {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(day.title)
+                            Text(
+                                String(
+                                    format: String(localized: "absence.manual.selectedCount"),
+                                    viewModel.selectedManualLessonCount(for: day.dateKey),
+                                    day.requiredSelectionCount
+                                )
+                            )
+                        }
+                        .accessibilityIdentifier("absenceManualDay-\(day.dateKey)")
+                    }
+                }
+            }
+            .navigationTitle("absence.manual.title")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("action.cancel") {
+                        viewModel.cancelManualSelectionSheet()
+                    }
+                }
+
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("action.save") {
+                        Task { await viewModel.saveManualSelections() }
+                    }
+                    .disabled(!viewModel.canSaveManualSelectionDrafts || viewModel.isSavingManualSelections)
+                    .accessibilityIdentifier("absenceManualSaveButton")
+                }
+            }
+        }
+        .accessibilityIdentifier("absenceManualSelectionSheet")
     }
 }
 

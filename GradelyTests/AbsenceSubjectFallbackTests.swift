@@ -69,7 +69,7 @@ struct AbsenceSubjectFallbackTests {
         #expect(czech?.base == 1)
     }
 
-    @Test func partialDayAbsenceDoesNotSynthesizeSubjectAbsence() {
+    @Test func partialDayAbsenceCreatesManualLessonCandidatesWithoutGuessing() {
         let timetable = timetableResponse(
             atoms: [
                 TimetableAtom(hourID: 1, subjectID: "math"),
@@ -86,14 +86,116 @@ struct AbsenceSubjectFallbackTests {
             absencesPerSubject: []
         )
 
-        let resolved = AbsenceSubjectFallback.makeAbsences(
+        let result = AbsenceSubjectFallback.makeAbsenceResult(
             from: response,
             timetableResponses: [timetable],
             subjects: subjects,
             validDateRange: referenceDate...referenceDate
         )
 
-        #expect(resolved.isEmpty)
+        #expect(result.absences.count == 2)
+        #expect(result.absences.allSatisfy { $0.base == 0 })
+        #expect(result.unresolvedPartialDays.count == 1)
+        #expect(result.unresolvedPartialDays[0].requiredSelectionCount == 1)
+        #expect(result.unresolvedPartialDays[0].lessons.count == 2)
+    }
+
+    @Test func savedManualSelectionMapsPartialAbsenceToSelectedSubject() {
+        let timetable = timetableResponse(
+            atoms: [
+                TimetableAtom(hourID: 1, subjectID: "math"),
+                TimetableAtom(hourID: 2, subjectID: "tev")
+            ],
+            timetableSubjects: [
+                TimetableEntity(id: "math", abbrev: "M", name: "Matematika"),
+                TimetableEntity(id: "tev", abbrev: "TV", name: "Tělesná výchova")
+            ]
+        )
+        let response = AbsenceResponse(
+            percentageThreshold: 25,
+            absences: [absenceDay(ok: 1)],
+            absencesPerSubject: []
+        )
+        let selections = AbsenceLessonSelections(
+            selectedLessonIDsByDate: [
+                "2026-02-02": ["lesson-2026-02-02-2-raw-tev"]
+            ]
+        )
+
+        let result = AbsenceSubjectFallback.makeAbsenceResult(
+            from: response,
+            timetableResponses: [timetable],
+            subjects: subjects,
+            manualSelections: selections,
+            validDateRange: referenceDate...referenceDate
+        )
+
+        #expect(result.unresolvedPartialDays.isEmpty)
+        #expect(result.appliedManualSelectionCount == 1)
+        #expect(result.absences.first { $0.subjectName == "Tělesná výchova" }?.base == 1)
+        #expect(result.absences.first { $0.subjectName == "Matematika" }?.base == 0)
+    }
+
+    @Test func changeSubjectIsUsedForSubstitutedLesson() {
+        let timetable = timetableResponse(
+            atoms: [
+                TimetableAtom(
+                    hourID: 1,
+                    subjectID: "math",
+                    change: TimetableChange(changeSubject: "tev", changeType: "Substitution")
+                )
+            ],
+            timetableSubjects: [
+                TimetableEntity(id: "math", abbrev: "M", name: "Matematika"),
+                TimetableEntity(id: "tev", abbrev: "TV", name: "Tělesná výchova")
+            ]
+        )
+        let response = AbsenceResponse(
+            percentageThreshold: 25,
+            absences: [absenceDay(ok: 1)],
+            absencesPerSubject: []
+        )
+
+        let result = AbsenceSubjectFallback.makeAbsenceResult(
+            from: response,
+            timetableResponses: [timetable],
+            subjects: subjects,
+            validDateRange: referenceDate...referenceDate
+        )
+
+        #expect(result.absences.first { $0.subjectName == "Tělesná výchova" }?.base == 1)
+        #expect(result.absences.first { $0.subjectName == "Matematika" } == nil)
+    }
+
+    @Test func duplicateSameHourSubjectAtomsAreCollapsed() {
+        let timetable = timetableResponse(
+            atoms: [
+                TimetableAtom(hourID: 1, groupIDs: ["a"], subjectID: "math"),
+                TimetableAtom(hourID: 1, groupIDs: ["b"], subjectID: "math"),
+                TimetableAtom(hourID: 2, subjectID: "czech")
+            ],
+            timetableSubjects: [
+                TimetableEntity(id: "math", abbrev: "M", name: "Matematika"),
+                TimetableEntity(id: "czech", abbrev: "ČJ", name: "Český jazyk")
+            ]
+        )
+        let response = AbsenceResponse(
+            percentageThreshold: 25,
+            absences: [absenceDay(ok: 2)],
+            absencesPerSubject: []
+        )
+
+        let result = AbsenceSubjectFallback.makeAbsenceResult(
+            from: response,
+            timetableResponses: [timetable],
+            subjects: subjects,
+            validDateRange: referenceDate...referenceDate
+        )
+
+        #expect(result.absences.first { $0.subjectName == "Matematika" }?.lessonsCount == 1)
+        #expect(result.absences.first { $0.subjectName == "Matematika" }?.base == 1)
+        #expect(result.absences.first { $0.subjectName == "Český jazyk" }?.lessonsCount == 1)
+        #expect(result.absences.first { $0.subjectName == "Český jazyk" }?.base == 1)
     }
 
     @Test func timetableSubjectsAreUsedWhenMarksSubjectsAreMissing() {
@@ -364,6 +466,22 @@ struct AbsenceSubjectFallbackTests {
         #expect(updates.count <= term.weekStarts.count / 2 + 2)
         #expect(updates.first?.completedWeeks == 0)
         #expect(updates.last?.completedWeeks == updates.last?.totalWeeks)
+    }
+
+    @Test func manualSelectionsAreScopedBySchoolAndUser() throws {
+        let store = InMemoryAbsenceLessonSelectionStore()
+        let firstScope = AbsenceLessonSelectionScope(baseURL: "https://first.example", userID: "student")
+        let secondScope = AbsenceLessonSelectionScope(baseURL: "https://second.example", userID: "student")
+        let selections = AbsenceLessonSelections(
+            selectedLessonIDsByDate: [
+                "2026-02-02": ["lesson-2026-02-02-2-raw-tev"]
+            ]
+        )
+
+        try store.save(selections, scope: firstScope)
+
+        #expect(try store.load(scope: firstScope) == selections)
+        #expect(try store.load(scope: secondScope) == .empty)
     }
 
     private var subjects: [Subject] {

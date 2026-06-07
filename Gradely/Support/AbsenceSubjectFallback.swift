@@ -1,11 +1,42 @@
 import Foundation
 
+struct AbsenceLessonCandidate: Identifiable, Equatable {
+    let id: String
+    let dateKey: String
+    let hourID: Int
+    let hourCaption: String
+    let timeRange: String
+    let subjectKey: String
+    let subjectName: String
+
+    var displayTitle: String {
+        timeRange.isEmpty ? "\(hourCaption). \(subjectName)" : "\(hourCaption). \(subjectName), \(timeRange)"
+    }
+}
+
+struct AbsencePartialDayCandidate: Identifiable, Equatable {
+    let dateKey: String
+    let title: String
+    let requiredSelectionCount: Int
+    let selectedLessonIDs: [String]
+    let lessons: [AbsenceLessonCandidate]
+
+    var id: String { dateKey }
+}
+
 enum AbsenceSubjectFallback {
     struct Result: Equatable {
         let absences: [AbsencePerSubject]
         let stableIDHints: [String]
+        let unresolvedPartialDays: [AbsencePartialDayCandidate]
+        let appliedManualSelectionCount: Int
 
-        static let empty = Result(absences: [], stableIDHints: [])
+        static let empty = Result(
+            absences: [],
+            stableIDHints: [],
+            unresolvedPartialDays: [],
+            appliedManualSelectionCount: 0
+        )
     }
 
     struct Term: Equatable {
@@ -101,16 +132,24 @@ enum AbsenceSubjectFallback {
         from response: AbsenceResponse,
         timetableResponses: [TimetableResponse],
         subjects: [Subject],
+        manualSelections: AbsenceLessonSelections = .empty,
         validDateRange: ClosedRange<Date>? = nil,
         calendar: Calendar = TimetableDates.weekCalendar
     ) -> Result {
         guard response.absencesPerSubject.isEmpty else {
-            return Result(absences: response.absencesPerSubject, stableIDHints: [])
+            return Result(
+                absences: response.absencesPerSubject,
+                stableIDHints: [],
+                unresolvedPartialDays: [],
+                appliedManualSelectionCount: 0
+            )
         }
         guard !response.absences.isEmpty, !timetableResponses.isEmpty else { return .empty }
 
         var subjectCatalog = TimetableSubjectCatalog(markSubjects: subjects)
         var totals: [String: SubjectAbsenceTotal] = [:]
+        var unresolvedPartialDays: [String: AbsencePartialDayCandidate] = [:]
+        var appliedManualSelectionCount = 0
 
         let absenceByDate = Dictionary(
             response.absences.compactMap { day -> (String, AbsenceDay)? in
@@ -126,6 +165,10 @@ enum AbsenceSubjectFallback {
                 timetable.subjects.map { ($0.id, $0) },
                 uniquingKeysWith: { first, _ in first }
             )
+            let hoursByID = Dictionary(
+                timetable.hours.map { ($0.id, $0) },
+                uniquingKeysWith: { first, _ in first }
+            )
 
             for day in timetable.days {
                 guard
@@ -135,42 +178,64 @@ enum AbsenceSubjectFallback {
                     continue
                 }
 
-                let countableAtoms = day.atoms.filter { atom in
-                    atom.subjectID != nil && !LessonChangeKind(changeType: atom.change?.changeType).isCanceled
-                }
-                guard !countableAtoms.isEmpty else { continue }
+                let dateKey = TimetableDates.apiDateString(date)
+                let countableLessons = countableLessons(
+                    for: day,
+                    dateKey: dateKey,
+                    timetableSubjects: timetable.subjects,
+                    timetableSubjectsByID: timetableSubjects,
+                    hoursByID: hoursByID,
+                    subjectCatalog: &subjectCatalog
+                )
+                guard !countableLessons.isEmpty else { continue }
 
-                var matchedSubjectIDs: [String] = []
-                for atom in countableAtoms {
-                    guard let subjectID = atom.subjectID else { continue }
-                    let timetableSubject = timetableSubjects[subjectID]
-                    let matchedID = subjectCatalog.key(rawTimetableID: subjectID, entity: timetableSubject)
-
-                    if totals[matchedID] == nil {
-                        totals[matchedID] = SubjectAbsenceTotal(
-                            displayName: subjectCatalog.displayName(for: matchedID)
+                for lesson in countableLessons {
+                    if totals[lesson.subjectKey] == nil {
+                        totals[lesson.subjectKey] = SubjectAbsenceTotal(
+                            displayName: lesson.subjectName
                         )
                     }
 
-                    totals[matchedID]?.lessonsCount += 1
-                    matchedSubjectIDs.append(matchedID)
+                    totals[lesson.subjectKey]?.lessonsCount += 1
                 }
 
                 guard
-                    let absenceDay = absenceByDate[TimetableDates.apiDateString(date)],
-                    absenceDay.fullDayAbsenceCount >= countableAtoms.count
+                    let absenceDay = absenceByDate[dateKey],
+                    absenceDay.fullDayAbsenceCount > 0
                 else {
                     continue
                 }
 
-                for subjectID in matchedSubjectIDs {
-                    totals[subjectID]?.base += 1
+                if absenceDay.fullDayAbsenceCount >= countableLessons.count {
+                    for lesson in countableLessons {
+                        totals[lesson.subjectKey]?.base += 1
+                        assignedAnyFullDay = true
+                    }
+                    continue
+                }
+
+                let validLessonIDs = Set(countableLessons.map(\.id))
+                let selectedLessonIDs = manualSelections.selectedLessonIDs(for: dateKey).intersection(validLessonIDs)
+                if selectedLessonIDs.count == absenceDay.fullDayAbsenceCount {
+                    for lesson in countableLessons where selectedLessonIDs.contains(lesson.id) {
+                        totals[lesson.subjectKey]?.base += 1
+                        appliedManualSelectionCount += 1
+                    }
                     assignedAnyFullDay = true
+                } else {
+                    unresolvedPartialDays[dateKey] = AbsencePartialDayCandidate(
+                        dateKey: dateKey,
+                        title: dayTitle(for: date),
+                        requiredSelectionCount: min(absenceDay.fullDayAbsenceCount, countableLessons.count),
+                        selectedLessonIDs: Array(selectedLessonIDs).sorted(),
+                        lessons: countableLessons.map(\.candidate)
+                    )
                 }
             }
         }
 
-        guard assignedAnyFullDay else { return .empty }
+        let unresolvedDays = unresolvedPartialDays.values.sorted { $0.dateKey < $1.dateKey }
+        guard assignedAnyFullDay || !unresolvedDays.isEmpty else { return .empty }
 
         let rows: [(absence: AbsencePerSubject, stableIDHint: String)] = subjectCatalog.keys.compactMap { key in
             guard let total = totals[key], total.lessonsCount > 0 else { return nil }
@@ -190,7 +255,129 @@ enum AbsenceSubjectFallback {
 
         return Result(
             absences: rows.map(\.absence),
-            stableIDHints: rows.map(\.stableIDHint)
+            stableIDHints: rows.map(\.stableIDHint),
+            unresolvedPartialDays: unresolvedDays,
+            appliedManualSelectionCount: appliedManualSelectionCount
+        )
+    }
+
+    private static func countableLessons(
+        for day: TimetableDayDTO,
+        dateKey: String,
+        timetableSubjects: [TimetableEntity],
+        timetableSubjectsByID: [String: TimetableEntity],
+        hoursByID: [Int: TimetableHour],
+        subjectCatalog: inout TimetableSubjectCatalog
+    ) -> [CountableTimetableLesson] {
+        var lessons: [CountableTimetableLesson] = []
+        var seenLessonKeys: Set<String> = []
+
+        for atom in day.atoms {
+            guard !LessonChangeKind(changeType: atom.change?.changeType).isCanceled else { continue }
+            guard let subjectReference = effectiveSubjectReference(for: atom) else { continue }
+
+            let entity = timetableSubject(
+                for: subjectReference,
+                timetableSubjects: timetableSubjects,
+                timetableSubjectsByID: timetableSubjectsByID
+            )
+            let rawID = entity?.id ?? subjectReference
+            let subjectKey = subjectCatalog.key(rawTimetableID: rawID, entity: entity)
+            let dedupeKey = "\(atom.hourID)#\(subjectKey)"
+            guard seenLessonKeys.insert(dedupeKey).inserted else { continue }
+
+            let hour = hoursByID[atom.hourID]
+                ?? TimetableHour(id: atom.hourID, caption: "\(atom.hourID)", beginTime: "", endTime: "")
+            let subjectName = subjectCatalog.displayName(for: subjectKey)
+            lessons.append(
+                CountableTimetableLesson(
+                    id: lessonID(dateKey: dateKey, hourID: atom.hourID, subjectKey: subjectKey),
+                    dateKey: dateKey,
+                    hourID: atom.hourID,
+                    hourCaption: hour.caption.isEmpty ? "\(atom.hourID)" : hour.caption,
+                    timeRange: timeRange(for: hour),
+                    subjectKey: subjectKey,
+                    subjectName: subjectName
+                )
+            )
+        }
+
+        return lessons.sorted { lhs, rhs in
+            if lhs.hourID != rhs.hourID {
+                return lhs.hourID < rhs.hourID
+            }
+            return lhs.subjectName.localizedCaseInsensitiveCompare(rhs.subjectName) == .orderedAscending
+        }
+    }
+
+    private static func effectiveSubjectReference(for atom: TimetableAtom) -> String? {
+        let changeSubject = atom.change?.changeSubject?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if !changeSubject.isEmpty {
+            return changeSubject
+        }
+
+        guard let subjectID = atom.subjectID else { return nil }
+        return subjectID.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private static func timetableSubject(
+        for subjectReference: String,
+        timetableSubjects: [TimetableEntity],
+        timetableSubjectsByID: [String: TimetableEntity]
+    ) -> TimetableEntity? {
+        if let entity = timetableSubjectsByID[subjectReference] {
+            return entity
+        }
+
+        let normalizedReference = normalized(subjectReference)
+        return timetableSubjects.first { entity in
+            [
+                entity.id,
+                entity.abbrev,
+                entity.name
+            ].contains { normalized($0) == normalizedReference }
+        }
+    }
+
+    private static func lessonID(dateKey: String, hourID: Int, subjectKey: String) -> String {
+        "lesson-\(dateKey)-\(hourID)-\(storageSafe(subjectKey))"
+    }
+
+    private static func storageSafe(_ value: String) -> String {
+        let normalized = value
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .folding(options: [.diacriticInsensitive, .caseInsensitive], locale: Locale(identifier: "cs_CZ"))
+            .unicodeScalars
+            .map { CharacterSet.alphanumerics.contains($0) ? Character($0).lowercased() : "-" }
+            .joined()
+            .split(separator: "-")
+            .joined(separator: "-")
+
+        return normalized.isEmpty ? "unknown" : String(normalized.prefix(80))
+    }
+
+    private static func normalized(_ value: String) -> String {
+        value
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .folding(options: [.diacriticInsensitive, .caseInsensitive], locale: Locale(identifier: "cs_CZ"))
+            .components(separatedBy: .whitespacesAndNewlines)
+            .filter { !$0.isEmpty }
+            .joined(separator: " ")
+    }
+
+    private static func timeRange(for hour: TimetableHour) -> String {
+        let begin = hour.beginTime.trimmingCharacters(in: .whitespacesAndNewlines)
+        let end = hour.endTime.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !begin.isEmpty, !end.isEmpty else { return "" }
+        return "\(begin)-\(end)"
+    }
+
+    private static func dayTitle(for date: Date) -> String {
+        date.formatted(
+            .dateTime
+                .weekday(.abbreviated)
+                .day()
+                .month(.defaultDigits)
         )
     }
 
@@ -242,6 +429,28 @@ private struct SubjectAbsenceTotal {
 
     init(displayName: String) {
         self.displayName = displayName
+    }
+}
+
+private struct CountableTimetableLesson {
+    let id: String
+    let dateKey: String
+    let hourID: Int
+    let hourCaption: String
+    let timeRange: String
+    let subjectKey: String
+    let subjectName: String
+
+    var candidate: AbsenceLessonCandidate {
+        AbsenceLessonCandidate(
+            id: id,
+            dateKey: dateKey,
+            hourID: hourID,
+            hourCaption: hourCaption,
+            timeRange: timeRange,
+            subjectKey: subjectKey,
+            subjectName: subjectName
+        )
     }
 }
 

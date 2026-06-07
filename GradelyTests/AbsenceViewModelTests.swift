@@ -50,7 +50,7 @@ struct AbsenceViewModelTests {
         }
 
         let didLoad = await waitForSubjectState(viewModel) { state in
-            if case .loaded(let rows, .synthesized, nil) = state {
+            if case .loaded(let rows, .synthesized, nil, _) = state {
                 return !rows.isEmpty
             }
             return false
@@ -104,7 +104,7 @@ struct AbsenceViewModelTests {
         await viewModel.refresh(forceRefresh: false)
 
         let didLoadPartial = await waitForSubjectState(viewModel) { state in
-            if case .loaded(let rows, .partialSynthesized, let warning) = state {
+            if case .loaded(let rows, .partialSynthesized, let warning, _) = state {
                 return !rows.isEmpty && warning != nil
             }
             return false
@@ -113,6 +113,75 @@ struct AbsenceViewModelTests {
         #expect(didLoadPartial)
         #expect(!viewModel.dayRows.isEmpty)
         #expect(!viewModel.monthRows.isEmpty)
+    }
+
+    @Test func manualPartialDaySelectionUpdatesSubjectRows() async throws {
+        let absence = AbsenceResponse(
+            percentageThreshold: 25,
+            absences: [
+                AbsenceDay(
+                    date: "2026-02-02T00:00:00+01:00",
+                    unsolved: 0,
+                    ok: 1,
+                    missed: 0,
+                    late: 0,
+                    soon: 0,
+                    school: 0,
+                    distanceTeaching: 0
+                )
+            ],
+            absencesPerSubject: []
+        )
+        let timetable = TimetableResponse(
+            hours: [
+                TimetableHour(id: 1, caption: "1", beginTime: "8:00", endTime: "8:45"),
+                TimetableHour(id: 2, caption: "2", beginTime: "8:55", endTime: "9:40")
+            ],
+            days: [
+                TimetableDayDTO(
+                    atoms: [
+                        TimetableAtom(hourID: 1, subjectID: "math"),
+                        TimetableAtom(hourID: 2, subjectID: "tev")
+                    ],
+                    dayOfWeek: 1,
+                    date: "2026-02-02T00:00:00+01:00"
+                )
+            ],
+            subjects: [
+                TimetableEntity(id: "math", abbrev: "M", name: "Matematika"),
+                TimetableEntity(id: "tev", abbrev: "TV", name: "Tělesná výchova")
+            ]
+        )
+        let viewModel = AbsenceViewModel(
+            repository: repository(
+                client: DelayedAbsenceClient(absenceResult: absence, timetableResult: timetable)
+            )
+        )
+
+        await viewModel.refresh(forceRefresh: false)
+
+        let didNeedManualSelection = await waitForSubjectState(viewModel) { state in
+            if case .loaded(_, .synthesized, _, let unresolvedDays) = state {
+                return unresolvedDays.count == 1
+            }
+            return false
+        }
+        #expect(didNeedManualSelection)
+
+        viewModel.openManualSelectionSheet()
+        viewModel.toggleManualLesson("lesson-2026-02-02-2-raw-tev", dateKey: "2026-02-02")
+        #expect(viewModel.canSaveManualSelectionDrafts)
+        await viewModel.saveManualSelections()
+
+        let didApplyManualSelection = await waitForSubjectState(viewModel) { state in
+            if case .loaded(let rows, .synthesized, _, let unresolvedDays) = state {
+                return unresolvedDays.isEmpty
+                    && rows.first { $0.subjectName == "Tělesná výchova" }?.base == 1
+            }
+            return false
+        }
+
+        #expect(didApplyManualSelection)
     }
 
     private func waitForSubjectState(

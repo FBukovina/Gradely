@@ -12,6 +12,7 @@ struct AbsenceData: Equatable {
     let subjectResolutionSource: AbsenceSubjectResolutionSource
     let subjectResolutionWarning: String?
     let subjectStableIDHints: [String]
+    let unresolvedPartialDays: [AbsencePartialDayCandidate]
     let user: UserResponse?
 
     init(
@@ -20,6 +21,7 @@ struct AbsenceData: Equatable {
         subjectResolutionSource: AbsenceSubjectResolutionSource,
         subjectResolutionWarning: String? = nil,
         subjectStableIDHints: [String] = [],
+        unresolvedPartialDays: [AbsencePartialDayCandidate] = [],
         user: UserResponse?
     ) {
         self.response = response
@@ -27,6 +29,7 @@ struct AbsenceData: Equatable {
         self.subjectResolutionSource = subjectResolutionSource
         self.subjectResolutionWarning = subjectResolutionWarning
         self.subjectStableIDHints = subjectStableIDHints
+        self.unresolvedPartialDays = unresolvedPartialDays
         self.user = user
     }
 }
@@ -67,6 +70,7 @@ final class BakalariRepository {
     private let marksCache: any MarksCaching
     private let absenceCache: any AbsenceCaching
     private let timetableCache: any TimetableCaching
+    private let absenceLessonSelectionStore: any AbsenceLessonSelectionStoring
     private let dateProvider: () -> Date
     private let timetableFetchTimeoutNanoseconds: UInt64
 
@@ -76,6 +80,7 @@ final class BakalariRepository {
         marksCache: any MarksCaching,
         absenceCache: any AbsenceCaching = InMemoryAbsenceCache(),
         timetableCache: any TimetableCaching = InMemoryTimetableCache(),
+        absenceLessonSelectionStore: any AbsenceLessonSelectionStoring = InMemoryAbsenceLessonSelectionStore(),
         dateProvider: @escaping () -> Date = Date.init,
         timetableFetchTimeoutNanoseconds: UInt64 = 12_000_000_000
     ) {
@@ -84,6 +89,7 @@ final class BakalariRepository {
         self.marksCache = marksCache
         self.absenceCache = absenceCache
         self.timetableCache = timetableCache
+        self.absenceLessonSelectionStore = absenceLessonSelectionStore
         self.dateProvider = dateProvider
         self.timetableFetchTimeoutNanoseconds = timetableFetchTimeoutNanoseconds
     }
@@ -113,6 +119,7 @@ final class BakalariRepository {
         try marksCache.clear()
         try absenceCache.clear()
         try timetableCache.clear()
+        try absenceLessonSelectionStore.clearAll()
     }
 
     func loadCachedMarks() throws -> CachedMarks? {
@@ -200,6 +207,7 @@ final class BakalariRepository {
 
     func resolveAbsencesPerSubject(
         from response: AbsenceResponse,
+        user: UserResponse? = nil,
         progress: ((AbsenceSubjectResolutionProgress) async -> Void)? = nil
     ) async throws -> AbsenceData {
         guard response.absencesPerSubject.isEmpty else {
@@ -221,6 +229,8 @@ final class BakalariRepository {
         }
 
         let session = try await validSession()
+        let selectionScope = absenceLessonSelectionScope(session: session, user: user)
+        let manualSelections = (try? absenceLessonSelectionStore.load(scope: selectionScope)) ?? .empty
         let marksResponse = try? await marksResponseForAbsenceFallback(session: session)
         let term = AbsenceSubjectFallback.term(
             for: response.absences,
@@ -240,6 +250,7 @@ final class BakalariRepository {
             from: response,
             timetableResponses: timetables.responses,
             subjects: marksResponse?.subjects ?? [],
+            manualSelections: manualSelections,
             validDateRange: term.start...term.end
         )
         let hasPartialTimetable = timetables.failedWeeks > 0
@@ -251,8 +262,24 @@ final class BakalariRepository {
             subjectResolutionSource: resolved.absences.isEmpty ? .unavailable : (hasPartialTimetable ? .partialSynthesized : .synthesized),
             subjectResolutionWarning: warning,
             subjectStableIDHints: resolved.stableIDHints,
+            unresolvedPartialDays: resolved.unresolvedPartialDays,
             user: nil
         )
+    }
+
+    func saveManualAbsenceLessonSelections(
+        selectedLessonIDsByDate: [String: Set<String>],
+        user: UserResponse?
+    ) async throws {
+        let session = try await validSession()
+        let scope = absenceLessonSelectionScope(session: session, user: user)
+        var selections = try absenceLessonSelectionStore.load(scope: scope)
+
+        for (dateKey, lessonIDs) in selectedLessonIDsByDate {
+            selections.selectedLessonIDsByDate[dateKey] = Array(lessonIDs).sorted()
+        }
+
+        try absenceLessonSelectionStore.save(selections, scope: scope)
     }
 
     func predictSubjectAverage(subject: Subject, markText: String, weight: Int) async throws -> Double? {
@@ -304,6 +331,17 @@ final class BakalariRepository {
         )
         try? marksCache.save(response)
         return response
+    }
+
+    private func absenceLessonSelectionScope(
+        session: StoredSession,
+        user: UserResponse?
+    ) -> AbsenceLessonSelectionScope {
+        let userID = user?.userUID.trimmingCharacters(in: .whitespacesAndNewlines)
+        return AbsenceLessonSelectionScope(
+            baseURL: session.baseURL.absoluteString,
+            userID: userID?.isEmpty == false ? userID! : "unknown-user"
+        )
     }
 
     private func loadTermTimetableResponses(

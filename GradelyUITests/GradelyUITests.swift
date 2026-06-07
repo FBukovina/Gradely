@@ -134,6 +134,24 @@ final class GradelyUITests: XCTestCase {
     }
 
     @MainActor
+    func testVersionSupportPromptOpensSupportTips() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-uiTestingMockAPI", "-uiTestingLoggedIn", "-uiTestingShowSupportPrompt"]
+        app.launch()
+
+        let prompt = app.alerts.firstMatch
+        XCTAssertTrue(prompt.waitForExistence(timeout: 5))
+
+        let supportButton = prompt.buttons["Support Gradely"].exists
+            ? prompt.buttons["Support Gradely"]
+            : prompt.buttons["Podpořit Gradely"]
+        XCTAssertTrue(supportButton.exists)
+        supportButton.tap()
+
+        XCTAssertTrue(app.descendants(matching: .any)["supportTipsList"].waitForExistence(timeout: 5))
+    }
+
+    @MainActor
     func testLaunchPerformance() throws {
         measure(metrics: [XCTApplicationLaunchMetric()]) {
             let app = XCUIApplication()

@@ -2,9 +2,11 @@ import Foundation
 import RevenueCat
 
 enum RevenueCatConfiguration {
+    private static let publicIOSAPIKey = "appl_KTNbCvFOqwPTWfQKhjDCgSdSANH"
+
     static func configureIfNeeded(bundle: Bundle = .main) {
         guard !Purchases.isConfigured,
-              let apiKey = bundle.revenueCatIOSAPIKey
+              let apiKey = bundle.revenueCatIOSAPIKey ?? publicIOSAPIKey.nonEmptyAPIKey
         else {
             return
         }
@@ -28,5 +30,12 @@ private extension Bundle {
             return nil
         }
         return trimmed
+    }
+}
+
+private extension String {
+    var nonEmptyAPIKey: String? {
+        let trimmed = trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
     }
 }

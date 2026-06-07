@@ -1804,6 +1804,70 @@
         }
       }
     },
+    "support.updatePrompt.later" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Možná později"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Maybe later"
+          }
+        }
+      }
+    },
+    "support.updatePrompt.message" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gradely 1.4 přidává dobrovolnou podporu vývoje. Pokud vám aplikace pomáhá, můžete poslat jednorázové poděkování."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gradely 1.4 adds optional support for development. If the app helps you, you can send a one-time tip."
+          }
+        }
+      }
+    },
+    "support.updatePrompt.support" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Podpořit Gradely"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Support Gradely"
+          }
+        }
+      }
+    },
+    "support.updatePrompt.title" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Díky za aktualizaci"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Thanks for updating"
+          }
+        }
+      }
+    },
     "support.tips.empty" : {
       "localizations" : {
         "cs" : {

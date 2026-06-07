@@ -161,7 +161,8 @@ enum AbsenceSummary {
 
     static func subjectSummaries(
         for absences: [AbsencePerSubject],
-        threshold: Double
+        threshold: Double,
+        stableIDHints: [String] = []
     ) -> [AbsenceSubjectSummary] {
         return absences
             .enumerated()
@@ -169,7 +170,11 @@ enum AbsenceSummary {
                 AbsenceSubjectSummary(
                     absence: absence,
                     threshold: threshold,
-                    stableID: subjectStableID(for: absence, sourceIndex: index)
+                    stableID: subjectStableID(
+                        for: absence,
+                        sourceIndex: index,
+                        stableIDHint: stableIDHints.indices.contains(index) ? stableIDHints[index] : nil
+                    )
                 )
             }
             .sorted {
@@ -196,8 +201,13 @@ enum AbsenceSummary {
         )
     }
 
-    private static func subjectStableID(for absence: AbsencePerSubject, sourceIndex: Int) -> String {
-        let normalized = absence.subjectName
+    private static func subjectStableID(
+        for absence: AbsencePerSubject,
+        sourceIndex: Int,
+        stableIDHint: String?
+    ) -> String {
+        let source = stableIDHint ?? absence.subjectName
+        let normalized = source
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .folding(options: [.diacriticInsensitive, .caseInsensitive], locale: Locale(identifier: "cs_CZ"))
             .unicodeScalars

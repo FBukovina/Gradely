@@ -427,6 +427,38 @@
         }
       }
     },
+    "absence.subjects.error.noTimetable" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rozvrh se nepodařilo načíst, takže zameškanost v předmětech nejde dopočítat."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Timetable could not be loaded, so subject absence cannot be calculated."
+          }
+        }
+      }
+    },
+    "absence.subjects.error.timeout" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Načítání rozvrhu trvalo příliš dlouho."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Timetable loading took too long."
+          }
+        }
+      }
+    },
     "absence.subjects.error.title" : {
       "localizations" : {
         "cs" : {
@@ -439,6 +471,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Could not calculate subject absence"
+          }
+        }
+      }
+    },
+    "absence.subjects.partial.warning" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Některé týdny rozvrhu se nepodařilo načíst. Výsledek je částečný odhad."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Some timetable weeks could not be loaded. This is a partial estimate."
+          }
+        }
+      }
+    },
+    "absence.subjects.progress" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zkontrolováno %lld z %lld týdnů"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Checked %lld of %lld weeks"
           }
         }
       }

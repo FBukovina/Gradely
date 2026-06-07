@@ -292,15 +292,22 @@ private struct SubjectAbsenceTable: View {
 
     var body: some View {
         switch state {
-        case .idle, .loading:
-            SubjectResolutionStatusView()
+        case .idle:
+            SubjectResolutionStatusView(progress: nil)
+        case .loading(let progress):
+            SubjectResolutionStatusView(progress: progress)
         case .empty:
             EmptyAbsenceSection(title: "absence.subjects.empty")
                 .accessibilityIdentifier("absenceSubjectsEmpty")
         case .failed(let message):
             SubjectResolutionErrorView(message: message, onRetry: onRetry)
-        case .loaded(let rows, _):
-            table(rows: rows)
+        case .loaded(let rows, _, let warning):
+            VStack(spacing: Spacing.sm) {
+                if let warning, !warning.isEmpty {
+                    SubjectResolutionWarningView(message: warning)
+                }
+                table(rows: rows)
+            }
         }
     }
 
@@ -366,17 +373,48 @@ private struct SubjectAbsenceTable: View {
 }
 
 private struct SubjectResolutionStatusView: View {
+    let progress: AbsenceSubjectResolutionProgress?
+
     var body: some View {
         Card {
             HStack(spacing: Spacing.sm) {
                 ProgressView()
-                Text("absence.subjects.calculating")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("absence.subjects.calculating")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+
+                    if let progress {
+                        Text(
+                            String(
+                                format: String(localized: "absence.subjects.progress"),
+                                progress.completedWeeks,
+                                progress.totalWeeks
+                            )
+                        )
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                        .accessibilityIdentifier("absenceSubjectsProgress")
+                    }
+                }
                 Spacer()
             }
         }
         .accessibilityIdentifier("absenceSubjectsCalculating")
+    }
+}
+
+private struct SubjectResolutionWarningView: View {
+    let message: String
+
+    var body: some View {
+        Card {
+            Label(message, systemImage: "exclamationmark.triangle")
+                .font(.subheadline)
+                .foregroundStyle(GradeBand.average.foregroundColor)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .accessibilityIdentifier("absenceSubjectsWarning")
     }
 }
 

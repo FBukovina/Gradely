@@ -14,13 +14,13 @@ final class AbsenceViewModel {
 
     enum SubjectAbsenceState: Equatable {
         case idle
-        case loading
-        case loaded(rows: [AbsenceSubjectSummary], source: AbsenceSubjectResolutionSource)
+        case loading(progress: AbsenceSubjectResolutionProgress?)
+        case loaded(rows: [AbsenceSubjectSummary], source: AbsenceSubjectResolutionSource, warning: String?)
         case empty
         case failed(message: String)
 
         var rows: [AbsenceSubjectSummary] {
-            if case .loaded(let rows, _) = self {
+            if case .loaded(let rows, _, _) = self {
                 return rows
             }
             return []
@@ -39,6 +39,7 @@ final class AbsenceViewModel {
     private let repository: BakalariRepository
     private var hasLoaded = false
     @ObservationIgnored private var subjectResolutionTask: Task<Void, Never>?
+    @ObservationIgnored private var subjectResolutionToken = UUID()
 
     init(repository: BakalariRepository) {
         self.repository = repository
@@ -111,7 +112,8 @@ final class AbsenceViewModel {
         subjectAbsenceState = state(
             for: cached.response.absencesPerSubject,
             source: cached.response.absencesPerSubject.isEmpty ? .unavailable : .official,
-            threshold: cached.response.percentageThreshold
+            threshold: cached.response.percentageThreshold,
+            stableIDHints: []
         )
         lastCacheDate = cached.cachedAt
     }
@@ -121,7 +123,9 @@ final class AbsenceViewModel {
         subjectAbsenceState = state(
             for: data.absencesPerSubject,
             source: data.subjectResolutionSource,
-            threshold: data.response.percentageThreshold
+            threshold: data.response.percentageThreshold,
+            stableIDHints: data.subjectStableIDHints,
+            warning: data.subjectResolutionWarning
         )
         user = data.user
     }
@@ -129,12 +133,14 @@ final class AbsenceViewModel {
     private func startSubjectResolutionIfNeeded(for response: AbsenceResponse) {
         subjectResolutionTask?.cancel()
         subjectResolutionTask = nil
+        subjectResolutionToken = UUID()
 
         guard response.absencesPerSubject.isEmpty else {
             subjectAbsenceState = state(
                 for: response.absencesPerSubject,
                 source: .official,
-                threshold: response.percentageThreshold
+                threshold: response.percentageThreshold,
+                stableIDHints: []
             )
             return
         }
@@ -144,31 +150,50 @@ final class AbsenceViewModel {
             return
         }
 
-        subjectAbsenceState = .loading
+        let token = UUID()
+        subjectResolutionToken = token
+        subjectAbsenceState = .loading(progress: nil)
         subjectResolutionTask = Task {
             do {
-                let data = try await repository.resolveAbsencesPerSubject(from: response)
+                let data = try await repository.resolveAbsencesPerSubject(from: response) { [weak self] progress in
+                    await MainActor.run {
+                        guard
+                            let self,
+                            self.response == response,
+                            self.subjectResolutionToken == token
+                        else {
+                            return
+                        }
+                        self.subjectAbsenceState = .loading(progress: progress)
+                    }
+                }
                 guard !Task.isCancelled else { return }
                 let nextState = state(
                     for: data.absencesPerSubject,
                     source: data.subjectResolutionSource,
-                    threshold: data.response.percentageThreshold
+                    threshold: data.response.percentageThreshold,
+                    stableIDHints: data.subjectStableIDHints,
+                    warning: data.subjectResolutionWarning
                 )
                 await MainActor.run {
-                    applySubjectResolution(nextState, expectedResponse: response)
+                    applySubjectResolution(nextState, expectedResponse: response, token: token)
                 }
             } catch {
                 guard !Task.isCancelled else { return }
                 let message = userFacingMessage(for: error)
                 await MainActor.run {
-                    applySubjectResolution(.failed(message: message), expectedResponse: response)
+                    applySubjectResolution(.failed(message: message), expectedResponse: response, token: token)
                 }
             }
         }
     }
 
-    private func applySubjectResolution(_ state: SubjectAbsenceState, expectedResponse: AbsenceResponse) {
-        guard response == expectedResponse else { return }
+    private func applySubjectResolution(
+        _ state: SubjectAbsenceState,
+        expectedResponse: AbsenceResponse,
+        token: UUID
+    ) {
+        guard response == expectedResponse, subjectResolutionToken == token else { return }
         subjectAbsenceState = state
         subjectResolutionTask = nil
     }
@@ -176,11 +201,17 @@ final class AbsenceViewModel {
     private func state(
         for absences: [AbsencePerSubject],
         source: AbsenceSubjectResolutionSource,
-        threshold: Double
+        threshold: Double,
+        stableIDHints: [String],
+        warning: String? = nil
     ) -> SubjectAbsenceState {
-        let rows = AbsenceSummary.subjectSummaries(for: absences, threshold: threshold)
+        let rows = AbsenceSummary.subjectSummaries(
+            for: absences,
+            threshold: threshold,
+            stableIDHints: stableIDHints
+        )
         if !rows.isEmpty {
-            return .loaded(rows: rows, source: source)
+            return .loaded(rows: rows, source: source, warning: warning)
         }
         return .empty
     }

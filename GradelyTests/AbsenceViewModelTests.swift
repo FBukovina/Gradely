@@ -24,7 +24,7 @@ struct AbsenceViewModelTests {
         try await Task.sleep(nanoseconds: 50_000_000)
 
         #expect(viewModel.dayRows.count == cachedAbsence.absences.count)
-        #expect(viewModel.totalCounts.total == 30)
+        #expect(viewModel.totalCounts.total == AbsenceSummary.totalCounts(for: cachedAbsence.absences).total)
 
         _ = await loadTask.result
     }
@@ -39,10 +39,14 @@ struct AbsenceViewModelTests {
         await viewModel.refresh(forceRefresh: false)
 
         #expect(!viewModel.dayRows.isEmpty)
-        #expect(viewModel.subjectAbsenceState == .loading)
+        if case .loading = viewModel.subjectAbsenceState {
+            #expect(true)
+        } else {
+            Issue.record("Expected subject absence to start in loading state.")
+        }
 
         let didLoad = await waitForSubjectState(viewModel) { state in
-            if case .loaded(let rows, .synthesized) = state {
+            if case .loaded(let rows, .synthesized, nil) = state {
                 return !rows.isEmpty
             }
             return false
@@ -72,6 +76,39 @@ struct AbsenceViewModelTests {
         #expect(!viewModel.monthRows.isEmpty)
     }
 
+    @Test func partialFallbackWarningDoesNotClearDayAndMonthData() async throws {
+        let absence = PreviewData.absenceResponseWithoutSubjectRows
+        let cachedWeekStart = TimetableDates.monday(
+            of: MarkDateFormatter.date(from: "2026-05-04T00:00:00+02:00")!
+        )
+        let timetableCache = InMemoryTimetableCache()
+        try timetableCache.save(MockBakalariClient.rebased(PreviewData.timetableResponse, toWeekContaining: cachedWeekStart), weekStart: cachedWeekStart)
+        let client = DelayedAbsenceClient(
+            absenceResult: absence,
+            timetableDelay: 500_000_000
+        )
+        let viewModel = AbsenceViewModel(
+            repository: repository(
+                client: client,
+                timetableCache: timetableCache,
+                timetableFetchTimeoutNanoseconds: 10_000_000
+            )
+        )
+
+        await viewModel.refresh(forceRefresh: false)
+
+        let didLoadPartial = await waitForSubjectState(viewModel) { state in
+            if case .loaded(let rows, .partialSynthesized, let warning) = state {
+                return !rows.isEmpty && warning != nil
+            }
+            return false
+        }
+
+        #expect(didLoadPartial)
+        #expect(!viewModel.dayRows.isEmpty)
+        #expect(!viewModel.monthRows.isEmpty)
+    }
+
     private func waitForSubjectState(
         _ viewModel: AbsenceViewModel,
         timeout: TimeInterval = 3,
@@ -89,17 +126,20 @@ struct AbsenceViewModelTests {
 
     private func repository(
         client: any BakalariClient,
-        absenceCache: any AbsenceCaching = InMemoryAbsenceCache()
+        absenceCache: any AbsenceCaching = InMemoryAbsenceCache(),
+        timetableCache: any TimetableCaching = InMemoryTimetableCache(),
+        timetableFetchTimeoutNanoseconds: UInt64 = 12_000_000_000
     ) -> BakalariRepository {
         BakalariRepository(
             client: client,
             sessionStore: InMemorySessionStore(session: validSession()),
             marksCache: InMemoryMarksCache(),
             absenceCache: absenceCache,
-            timetableCache: InMemoryTimetableCache(),
+            timetableCache: timetableCache,
             dateProvider: {
                 TimetableDates.weekCalendar.date(from: DateComponents(year: 2026, month: 6, day: 6)) ?? Date()
-            }
+            },
+            timetableFetchTimeoutNanoseconds: timetableFetchTimeoutNanoseconds
         )
     }
 

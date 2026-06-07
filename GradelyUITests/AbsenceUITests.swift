@@ -50,8 +50,10 @@ final class AbsenceUITests: XCTestCase {
             descendants["absenceSubjectsCalculating"],
             descendants["absenceSubjectsEmpty"],
             descendants["absenceSubjectsError"],
-            descendants.matching(identifier: "absenceRow-subject-0-matematika").firstMatch,
-            descendants.matching(identifier: "absenceRow-subject-1-cesky-jazyk").firstMatch
+            descendants["absenceSubjectsWarning"],
+            descendants.matching(identifier: "absenceRow-subject-0-raw-math").firstMatch,
+            descendants.matching(identifier: "absenceRow-subject-1-raw-czech").firstMatch,
+            descendants.matching(identifier: "absenceRow-subject-2-raw-bio").firstMatch
         ]
 
         XCTAssertTrue(waitForAnyElement(possibleStates, timeout: 8))

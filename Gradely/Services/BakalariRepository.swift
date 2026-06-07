@@ -10,13 +10,38 @@ struct AbsenceData: Equatable {
     let response: AbsenceResponse
     let absencesPerSubject: [AbsencePerSubject]
     let subjectResolutionSource: AbsenceSubjectResolutionSource
+    let subjectResolutionWarning: String?
+    let subjectStableIDHints: [String]
     let user: UserResponse?
+
+    init(
+        response: AbsenceResponse,
+        absencesPerSubject: [AbsencePerSubject],
+        subjectResolutionSource: AbsenceSubjectResolutionSource,
+        subjectResolutionWarning: String? = nil,
+        subjectStableIDHints: [String] = [],
+        user: UserResponse?
+    ) {
+        self.response = response
+        self.absencesPerSubject = absencesPerSubject
+        self.subjectResolutionSource = subjectResolutionSource
+        self.subjectResolutionWarning = subjectResolutionWarning
+        self.subjectStableIDHints = subjectStableIDHints
+        self.user = user
+    }
 }
 
 enum AbsenceSubjectResolutionSource: Equatable {
     case official
     case synthesized
+    case partialSynthesized
     case unavailable
+}
+
+struct AbsenceSubjectResolutionProgress: Equatable {
+    let loadedWeeks: Int
+    let completedWeeks: Int
+    let totalWeeks: Int
 }
 
 enum AppError: LocalizedError, Equatable {
@@ -43,6 +68,7 @@ final class BakalariRepository {
     private let absenceCache: any AbsenceCaching
     private let timetableCache: any TimetableCaching
     private let dateProvider: () -> Date
+    private let timetableFetchTimeoutNanoseconds: UInt64
 
     init(
         client: any BakalariClient,
@@ -50,7 +76,8 @@ final class BakalariRepository {
         marksCache: any MarksCaching,
         absenceCache: any AbsenceCaching = InMemoryAbsenceCache(),
         timetableCache: any TimetableCaching = InMemoryTimetableCache(),
-        dateProvider: @escaping () -> Date = Date.init
+        dateProvider: @escaping () -> Date = Date.init,
+        timetableFetchTimeoutNanoseconds: UInt64 = 12_000_000_000
     ) {
         self.client = client
         self.sessionStore = sessionStore
@@ -58,6 +85,7 @@ final class BakalariRepository {
         self.absenceCache = absenceCache
         self.timetableCache = timetableCache
         self.dateProvider = dateProvider
+        self.timetableFetchTimeoutNanoseconds = timetableFetchTimeoutNanoseconds
     }
 
     func bootstrapSession() throws -> StoredSession? {
@@ -170,7 +198,10 @@ final class BakalariRepository {
         )
     }
 
-    func resolveAbsencesPerSubject(from response: AbsenceResponse) async throws -> AbsenceData {
+    func resolveAbsencesPerSubject(
+        from response: AbsenceResponse,
+        progress: ((AbsenceSubjectResolutionProgress) async -> Void)? = nil
+    ) async throws -> AbsenceData {
         guard response.absencesPerSubject.isEmpty else {
             return AbsenceData(
                 response: response,
@@ -190,27 +221,36 @@ final class BakalariRepository {
         }
 
         let session = try await validSession()
-        let marksResponse = try await marksResponseForAbsenceFallback(session: session)
+        let marksResponse = try? await marksResponseForAbsenceFallback(session: session)
         let term = AbsenceSubjectFallback.term(
             for: response.absences,
             now: dateProvider()
         )
-        let timetables = try await loadTermTimetableResponses(
+        let timetables = await loadTermTimetableResponses(
             weekStarts: term.weekStarts,
-            session: session
+            session: session,
+            progress: progress
         )
 
-        let resolved = AbsenceSubjectFallback.makeAbsences(
+        guard !timetables.responses.isEmpty else {
+            throw AbsenceSubjectResolutionError.noUsableTimetable
+        }
+
+        let resolved = AbsenceSubjectFallback.makeAbsenceResult(
             from: response,
-            timetableResponses: timetables,
-            subjects: marksResponse.subjects,
+            timetableResponses: timetables.responses,
+            subjects: marksResponse?.subjects ?? [],
             validDateRange: term.start...term.end
         )
+        let hasPartialTimetable = timetables.failedWeeks > 0
+        let warning = hasPartialTimetable ? String(localized: "absence.subjects.partial.warning") : nil
 
         return AbsenceData(
             response: response,
-            absencesPerSubject: resolved,
-            subjectResolutionSource: resolved.isEmpty ? .unavailable : .synthesized,
+            absencesPerSubject: resolved.absences,
+            subjectResolutionSource: resolved.absences.isEmpty ? .unavailable : (hasPartialTimetable ? .partialSynthesized : .synthesized),
+            subjectResolutionWarning: warning,
+            subjectStableIDHints: resolved.stableIDHints,
             user: nil
         )
     }
@@ -268,45 +308,148 @@ final class BakalariRepository {
 
     private func loadTermTimetableResponses(
         weekStarts: [Date],
-        session: StoredSession
-    ) async throws -> [TimetableResponse] {
+        session: StoredSession,
+        progress: ((AbsenceSubjectResolutionProgress) async -> Void)?
+    ) async -> TermTimetableLoadResult {
+        let totalWeeks = weekStarts.count
+        var loaded: [LoadedTimetableWeek] = []
+        var missingWeekStarts: [Date] = []
+
+        for weekStart in weekStarts {
+            if let cached = try? timetableCache.load(weekStart: weekStart) {
+                loaded.append(LoadedTimetableWeek(weekStart: weekStart, response: cached.response))
+            } else {
+                missingWeekStarts.append(weekStart)
+            }
+        }
+
+        var completedWeeks = loaded.count
+        await progress?(
+            AbsenceSubjectResolutionProgress(
+                loadedWeeks: loaded.count,
+                completedWeeks: completedWeeks,
+                totalWeeks: totalWeeks
+            )
+        )
+
         let batchSize = 4
-        var responses: [TimetableResponse] = []
-        var batchStart = 0
+        var failedWeeks = 0
 
-        while batchStart < weekStarts.count {
-            let batchEnd = min(batchStart + batchSize, weekStarts.count)
+        await withTaskGroup(of: TimetableWeekLoadOutcome.self) { group in
+            var nextMissingIndex = 0
+            let initialCount = min(batchSize, missingWeekStarts.count)
 
-            for weekStart in weekStarts[batchStart..<batchEnd] {
-                responses.append(
-                    try await loadRawTimetable(
+            for _ in 0..<initialCount {
+                let weekStart = missingWeekStarts[nextMissingIndex]
+                nextMissingIndex += 1
+                group.addTask {
+                    await self.loadUncachedRawTimetableWithTimeout(
                         weekStart: weekStart,
                         session: session
                     )
-                )
+                }
             }
 
-            batchStart = batchEnd
-            await Task.yield()
+            while let outcome = await group.next() {
+                completedWeeks += 1
+
+                if let response = outcome.response {
+                    loaded.append(LoadedTimetableWeek(weekStart: outcome.weekStart, response: response))
+                } else {
+                    failedWeeks += 1
+                }
+
+                await progress?(
+                    AbsenceSubjectResolutionProgress(
+                        loadedWeeks: loaded.count,
+                        completedWeeks: completedWeeks,
+                        totalWeeks: totalWeeks
+                    )
+                )
+
+                if nextMissingIndex < missingWeekStarts.count {
+                    let weekStart = missingWeekStarts[nextMissingIndex]
+                    nextMissingIndex += 1
+                    group.addTask {
+                        await self.loadUncachedRawTimetableWithTimeout(
+                            weekStart: weekStart,
+                            session: session
+                        )
+                    }
+                }
+            }
         }
 
-        return responses
+        return TermTimetableLoadResult(
+            responses: loaded
+                .sorted { $0.weekStart < $1.weekStart }
+                .map(\.response),
+            loadedWeeks: loaded.count,
+            totalWeeks: totalWeeks,
+            failedWeeks: failedWeeks
+        )
     }
 
-    private func loadRawTimetable(
+    private func loadUncachedRawTimetableWithTimeout(
         weekStart: Date,
         session: StoredSession
-    ) async throws -> TimetableResponse {
-        if let cached = try? timetableCache.load(weekStart: weekStart) {
-            return cached.response
-        }
+    ) async -> TimetableWeekLoadOutcome {
+        do {
+            let response = try await withThrowingTaskGroup(of: TimetableResponse.self) { group in
+                group.addTask {
+                    try await self.client.fetchTimetable(
+                        baseURL: session.baseURL,
+                        accessToken: session.accessToken,
+                        date: weekStart
+                    )
+                }
+                group.addTask {
+                    try await Task.sleep(nanoseconds: self.timetableFetchTimeoutNanoseconds)
+                    throw AbsenceSubjectResolutionError.timetableTimeout
+                }
 
-        let response = try await client.fetchTimetable(
-            baseURL: session.baseURL,
-            accessToken: session.accessToken,
-            date: weekStart
-        )
-        try? timetableCache.save(response, weekStart: weekStart)
-        return response
+                guard let response = try await group.next() else {
+                    throw AbsenceSubjectResolutionError.timetableTimeout
+                }
+
+                group.cancelAll()
+                return response
+            }
+            try? self.timetableCache.save(response, weekStart: weekStart)
+            return TimetableWeekLoadOutcome(weekStart: weekStart, response: response)
+        } catch {
+            return TimetableWeekLoadOutcome(weekStart: weekStart, response: nil)
+        }
+    }
+}
+
+private struct TermTimetableLoadResult {
+    let responses: [TimetableResponse]
+    let loadedWeeks: Int
+    let totalWeeks: Int
+    let failedWeeks: Int
+}
+
+private struct LoadedTimetableWeek {
+    let weekStart: Date
+    let response: TimetableResponse
+}
+
+private struct TimetableWeekLoadOutcome {
+    let weekStart: Date
+    let response: TimetableResponse?
+}
+
+private enum AbsenceSubjectResolutionError: LocalizedError {
+    case noUsableTimetable
+    case timetableTimeout
+
+    var errorDescription: String? {
+        switch self {
+        case .noUsableTimetable:
+            return String(localized: "absence.subjects.error.noTimetable")
+        case .timetableTimeout:
+            return String(localized: "absence.subjects.error.timeout")
+        }
     }
 }

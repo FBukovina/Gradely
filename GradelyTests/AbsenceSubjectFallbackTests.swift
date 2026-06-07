@@ -96,6 +96,36 @@ struct AbsenceSubjectFallbackTests {
         #expect(resolved.isEmpty)
     }
 
+    @Test func timetableSubjectsAreUsedWhenMarksSubjectsAreMissing() {
+        let timetable = timetableResponse(
+            atoms: [
+                TimetableAtom(hourID: 1, subjectID: "tt-math"),
+                TimetableAtom(hourID: 2, subjectID: "tt-czech")
+            ],
+            timetableSubjects: [
+                TimetableEntity(id: "tt-math", abbrev: "M", name: "Matematika"),
+                TimetableEntity(id: "tt-czech", abbrev: "ČJ", name: "Český jazyk")
+            ]
+        )
+        let response = AbsenceResponse(
+            percentageThreshold: 25,
+            absences: [absenceDay(ok: 2)],
+            absencesPerSubject: []
+        )
+
+        let result = AbsenceSubjectFallback.makeAbsenceResult(
+            from: response,
+            timetableResponses: [timetable],
+            subjects: [],
+            validDateRange: referenceDate...referenceDate
+        )
+
+        #expect(result.absences.count == 2)
+        #expect(result.absences.first { $0.subjectName == "Matematika" }?.base == 1)
+        #expect(result.absences.first { $0.subjectName == "Český jazyk" }?.base == 1)
+        #expect(result.stableIDHints == ["raw-tt-math", "raw-tt-czech"])
+    }
+
     @Test func duplicateAndBlankSubjectIDsDoNotCrashFallback() {
         let duplicateSubjects = [
             subject(id: "", abbrev: "M", name: "Matematika"),
@@ -222,6 +252,37 @@ struct AbsenceSubjectFallbackTests {
         #expect(!client.timetableFetchDates.contains(term.weekStarts[0]))
     }
 
+    @Test func repositoryReturnsPartialRowsWhenMissingWeeksTimeout() async throws {
+        let now = TimetableDates.weekCalendar.date(from: DateComponents(year: 2026, month: 6, day: 6))!
+        let fullDayDate = MarkDateFormatter.date(from: "2026-05-04T00:00:00+02:00")!
+        let cachedWeekStart = TimetableDates.monday(of: fullDayDate)
+        let cachedTimetable = MockBakalariClient.rebased(PreviewData.timetableResponse, toWeekContaining: cachedWeekStart)
+        let timetableCache = InMemoryTimetableCache()
+        try timetableCache.save(cachedTimetable, weekStart: cachedWeekStart)
+        let absence = PreviewData.absenceResponseWithoutSubjectRows
+        let client = CountingBakalariClient(
+            marksResult: MarksResponse(subjects: []),
+            absenceResult: absence,
+            timetableResult: PreviewData.timetableResponse,
+            timetableDelay: 500_000_000
+        )
+        let repository = BakalariRepository(
+            client: client,
+            sessionStore: InMemorySessionStore(session: validSession()),
+            marksCache: InMemoryMarksCache(),
+            timetableCache: timetableCache,
+            dateProvider: { now },
+            timetableFetchTimeoutNanoseconds: 10_000_000
+        )
+
+        let resolved = try await repository.resolveAbsencesPerSubject(from: absence)
+
+        #expect(resolved.subjectResolutionSource == .partialSynthesized)
+        #expect(resolved.subjectResolutionWarning != nil)
+        #expect(!resolved.absencesPerSubject.isEmpty)
+        #expect(resolved.subjectStableIDHints.contains("raw-math"))
+    }
+
     private var subjects: [Subject] {
         [
             subject(id: "math", abbrev: "M", name: "Matematika"),
@@ -294,16 +355,26 @@ private final class CountingBakalariClient: BakalariClient {
     let marksResult: MarksResponse
     let absenceResult: AbsenceResponse
     let timetableResult: TimetableResponse
-    private(set) var timetableFetchDates: [Date] = []
+    let timetableDelay: UInt64
+    private let lock = NSLock()
+    private var recordedTimetableFetchDates: [Date] = []
+
+    var timetableFetchDates: [Date] {
+        lock.lock()
+        defer { lock.unlock() }
+        return recordedTimetableFetchDates
+    }
 
     init(
         marksResult: MarksResponse,
         absenceResult: AbsenceResponse,
-        timetableResult: TimetableResponse
+        timetableResult: TimetableResponse,
+        timetableDelay: UInt64 = 0
     ) {
         self.marksResult = marksResult
         self.absenceResult = absenceResult
         self.timetableResult = timetableResult
+        self.timetableDelay = timetableDelay
     }
 
     func login(baseURL: URL, username: String, password: String) async throws -> LoginResponse {
@@ -335,7 +406,13 @@ private final class CountingBakalariClient: BakalariClient {
     }
 
     func fetchTimetable(baseURL: URL, accessToken: String, date: Date) async throws -> TimetableResponse {
-        timetableFetchDates.append(date)
+        lock.lock()
+        recordedTimetableFetchDates.append(date)
+        lock.unlock()
+
+        if timetableDelay > 0 {
+            try await Task.sleep(nanoseconds: timetableDelay)
+        }
         return MockBakalariClient.rebased(timetableResult, toWeekContaining: date)
     }
 

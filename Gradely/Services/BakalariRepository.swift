@@ -1,4 +1,5 @@
 import Foundation
+import WidgetKit
 
 struct DashboardData: Equatable {
     let marksResponse: MarksResponse
@@ -70,6 +71,7 @@ final class BakalariRepository {
     private let marksCache: any MarksCaching
     private let absenceCache: any AbsenceCaching
     private let timetableCache: any TimetableCaching
+    private let nextLessonWidgetStore: (any NextLessonWidgetStoring)?
     private let absenceLessonSelectionStore: any AbsenceLessonSelectionStoring
     private let dateProvider: () -> Date
     private let timetableFetchTimeoutNanoseconds: UInt64
@@ -80,6 +82,7 @@ final class BakalariRepository {
         marksCache: any MarksCaching,
         absenceCache: any AbsenceCaching = InMemoryAbsenceCache(),
         timetableCache: any TimetableCaching = InMemoryTimetableCache(),
+        nextLessonWidgetStore: (any NextLessonWidgetStoring)? = nil,
         absenceLessonSelectionStore: any AbsenceLessonSelectionStoring = InMemoryAbsenceLessonSelectionStore(),
         dateProvider: @escaping () -> Date = Date.init,
         timetableFetchTimeoutNanoseconds: UInt64 = 12_000_000_000
@@ -89,6 +92,7 @@ final class BakalariRepository {
         self.marksCache = marksCache
         self.absenceCache = absenceCache
         self.timetableCache = timetableCache
+        self.nextLessonWidgetStore = nextLessonWidgetStore
         self.absenceLessonSelectionStore = absenceLessonSelectionStore
         self.dateProvider = dateProvider
         self.timetableFetchTimeoutNanoseconds = timetableFetchTimeoutNanoseconds
@@ -119,6 +123,8 @@ final class BakalariRepository {
         try marksCache.clear()
         try absenceCache.clear()
         try timetableCache.clear()
+        try? nextLessonWidgetStore?.clear()
+        WidgetCenter.shared.reloadTimelines(ofKind: NextLessonWidgetConstants.widgetKind)
         try absenceLessonSelectionStore.clearAll()
     }
 
@@ -134,7 +140,9 @@ final class BakalariRepository {
     func loadCachedTimetable(weekContaining date: Date) -> TimetableWeek? {
         let monday = TimetableDates.monday(of: date)
         guard let cached = try? timetableCache.load(weekStart: monday) else { return nil }
-        return TimetableMapper.makeWeek(from: cached.response, weekStart: monday)
+        let week = TimetableMapper.makeWeek(from: cached.response, weekStart: monday)
+        publishNextLessonWidgetSnapshot(for: week, weekStart: monday)
+        return week
     }
 
     /// Fetches and denormalizes the timetable for the week containing `date`, caching the raw response.
@@ -147,7 +155,9 @@ final class BakalariRepository {
             date: monday
         )
         try? timetableCache.save(response, weekStart: monday)
-        return TimetableMapper.makeWeek(from: response, weekStart: monday)
+        let week = TimetableMapper.makeWeek(from: response, weekStart: monday)
+        publishNextLessonWidgetSnapshot(for: week, weekStart: monday)
+        return week
     }
 
     /// Best-effort current user, used to populate the account menu on tabs other than Marks.
@@ -468,6 +478,14 @@ final class BakalariRepository {
         } catch {
             return TimetableWeekLoadOutcome(weekStart: weekStart, response: nil)
         }
+    }
+
+    private func publishNextLessonWidgetSnapshot(for week: TimetableWeek, weekStart: Date) {
+        guard let nextLessonWidgetStore else { return }
+
+        let lessons = NextLessonWidgetSnapshotBuilder.lessons(from: week)
+        try? nextLessonWidgetStore.updateLessons(lessons, forWeekStarting: weekStart, cachedAt: dateProvider())
+        WidgetCenter.shared.reloadTimelines(ofKind: NextLessonWidgetConstants.widgetKind)
     }
 }
 

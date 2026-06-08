@@ -28,6 +28,7 @@ struct AppEnvironment {
                 marksCache: marksCache,
                 absenceCache: absenceCache,
                 timetableCache: timetableCache,
+                nextLessonWidgetStore: NextLessonWidgetStore(),
                 absenceLessonSelectionStore: absenceLessonSelectionStore
             ),
             schoolDirectoryProvider: URLSessionSchoolDirectoryProvider(cache: schoolDirectoryCache),

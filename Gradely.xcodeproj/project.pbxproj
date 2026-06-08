@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		81EE6CCB2FCDDC4B009D28DE /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = 81EE6CCC2FCDDC4B009D28DE /* RevenueCat */; };
+		C53D9B8831BC494585B5670D /* GradelyWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 23EA86CD939E4E779E620824 /* GradelyWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -25,15 +26,42 @@
 			remoteGlobalIDString = 81EE6CA02FCDDC4A009D28DE;
 			remoteInfo = Gradely;
 		};
+		D734A237614240099FDAEE21 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 81EE6C992FCDDC4A009D28DE /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 3C92596932E94E9D8745B9E6;
+			remoteInfo = GradelyWidgets;
+		};
 /* End PBXContainerItemProxy section */
 
+/* Begin PBXCopyFilesBuildPhase section */
+		28E3FBE556724CC49EE2E04A /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				C53D9B8831BC494585B5670D /* GradelyWidgets.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
+		23EA86CD939E4E779E620824 /* GradelyWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = GradelyWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		81EE6CA12FCDDC4A009D28DE /* Gradely.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Gradely.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		81EE6CAE2FCDDC4B009D28DE /* GradelyTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = GradelyTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		81EE6CB82FCDDC4B009D28DE /* GradelyUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = GradelyUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		2E470A758D5B4B02B64C39E1 /* GradelyShared */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = GradelyShared;
+			sourceTree = "<group>";
+		};
 		81EE6CA32FCDDC4A009D28DE /* Gradely */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = Gradely;
@@ -49,9 +77,21 @@
 			path = GradelyUITests;
 			sourceTree = "<group>";
 		};
+		F8540C70F48A43EC9B9EA8A2 /* GradelyWidgets */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = GradelyWidgets;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		37A6E66451C349508EA31149 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		81EE6C9E2FCDDC4A009D28DE /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -81,6 +121,8 @@
 			isa = PBXGroup;
 			children = (
 				81EE6CA32FCDDC4A009D28DE /* Gradely */,
+				2E470A758D5B4B02B64C39E1 /* GradelyShared */,
+				F8540C70F48A43EC9B9EA8A2 /* GradelyWidgets */,
 				81EE6CB12FCDDC4B009D28DE /* GradelyTests */,
 				81EE6CBB2FCDDC4B009D28DE /* GradelyUITests */,
 				81EE6CA22FCDDC4A009D28DE /* Products */,
@@ -91,6 +133,7 @@
 			isa = PBXGroup;
 			children = (
 				81EE6CA12FCDDC4A009D28DE /* Gradely.app */,
+				23EA86CD939E4E779E620824 /* GradelyWidgets.appex */,
 				81EE6CAE2FCDDC4B009D28DE /* GradelyTests.xctest */,
 				81EE6CB82FCDDC4B009D28DE /* GradelyUITests.xctest */,
 			);
@@ -100,6 +143,29 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		3C92596932E94E9D8745B9E6 /* GradelyWidgets */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 88AF564662E647598A38D268 /* Build configuration list for PBXNativeTarget "GradelyWidgets" */;
+			buildPhases = (
+				7BA5A12D94014895BE12F1B3 /* Sources */,
+				37A6E66451C349508EA31149 /* Frameworks */,
+				AA2C35F4628043609E303584 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				2E470A758D5B4B02B64C39E1 /* GradelyShared */,
+				F8540C70F48A43EC9B9EA8A2 /* GradelyWidgets */,
+			);
+			name = GradelyWidgets;
+			packageProductDependencies = (
+			);
+			productName = GradelyWidgets;
+			productReference = 23EA86CD939E4E779E620824 /* GradelyWidgets.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 		81EE6CA02FCDDC4A009D28DE /* Gradely */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 81EE6CC22FCDDC4B009D28DE /* Build configuration list for PBXNativeTarget "Gradely" */;
@@ -107,12 +173,15 @@
 				81EE6C9D2FCDDC4A009D28DE /* Sources */,
 				81EE6C9E2FCDDC4A009D28DE /* Frameworks */,
 				81EE6C9F2FCDDC4A009D28DE /* Resources */,
+				28E3FBE556724CC49EE2E04A /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				82B61A8324CB45848EA5AC14 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
+				2E470A758D5B4B02B64C39E1 /* GradelyShared */,
 				81EE6CA32FCDDC4A009D28DE /* Gradely */,
 			);
 			name = Gradely;
@@ -179,9 +248,20 @@
 				LastSwiftUpdateCheck = 2650;
 				LastUpgradeCheck = 2650;
 				TargetAttributes = {
+					3C92596932E94E9D8745B9E6 = {
+						CreatedOnToolsVersion = 26.5;
+						SystemCapabilities = {
+							com.apple.ApplicationGroups.iOS = {
+								enabled = 1;
+							};
+						};
+					};
 					81EE6CA02FCDDC4A009D28DE = {
 						CreatedOnToolsVersion = 26.5;
 						SystemCapabilities = {
+							com.apple.ApplicationGroups.iOS = {
+								enabled = 1;
+							};
 							com.apple.InAppPurchase = {
 								enabled = 1;
 							};
@@ -216,6 +296,7 @@
 			projectRoot = "";
 			targets = (
 				81EE6CA02FCDDC4A009D28DE /* Gradely */,
+				3C92596932E94E9D8745B9E6 /* GradelyWidgets */,
 				81EE6CAD2FCDDC4B009D28DE /* GradelyTests */,
 				81EE6CB72FCDDC4B009D28DE /* GradelyUITests */,
 			);
@@ -244,9 +325,23 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		AA2C35F4628043609E303584 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		7BA5A12D94014895BE12F1B3 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		81EE6C9D2FCDDC4A009D28DE /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -281,9 +376,47 @@
 			target = 81EE6CA02FCDDC4A009D28DE /* Gradely */;
 			targetProxy = 81EE6CB92FCDDC4B009D28DE /* PBXContainerItemProxy */;
 		};
+		82B61A8324CB45848EA5AC14 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 3C92596932E94E9D8745B9E6 /* GradelyWidgets */;
+			targetProxy = D734A237614240099FDAEE21 /* PBXContainerItemProxy */;
+		};
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
+		2D79EEE0741D465FB1A1FB5D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = GradelyWidgets/GradelyWidgets.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 10;
+				DEVELOPMENT_TEAM = C2U9S337H8;
+				ENABLE_PREVIEWS = YES;
+				INFOPLIST_FILE = "GradelyWidgets-Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.4;
+				PRODUCT_BUNDLE_IDENTIFIER = com.bukovinafilip.BakalariMarks.GradelyWidgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
 		81EE6CC02FCDDC4B009D28DE /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -410,18 +543,13 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Gradely/Gradely.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 10;
 				DEVELOPMENT_TEAM = C2U9S337H8;
 				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = Gradely;
-				INFOPLIST_KEY_RevenueCatIOSAPIKey = "$(REVENUECAT_IOS_API_KEY)";
-				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
-				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
-				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "Gradely-Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -450,18 +578,13 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Gradely/Gradely.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 10;
 				DEVELOPMENT_TEAM = C2U9S337H8;
 				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = Gradely;
-				INFOPLIST_KEY_RevenueCatIOSAPIKey = "$(REVENUECAT_IOS_API_KEY)";
-				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
-				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
-				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "Gradely-Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -569,6 +692,39 @@
 			};
 			name = Release;
 		};
+		D2104289C66A45019D2AAE8C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = GradelyWidgets/GradelyWidgets.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 10;
+				DEVELOPMENT_TEAM = C2U9S337H8;
+				ENABLE_PREVIEWS = YES;
+				INFOPLIST_FILE = "GradelyWidgets-Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.4;
+				PRODUCT_BUNDLE_IDENTIFIER = com.bukovinafilip.BakalariMarks.GradelyWidgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -604,6 +760,15 @@
 			buildConfigurations = (
 				81EE6CC92FCDDC4B009D28DE /* Debug */,
 				81EE6CCA2FCDDC4B009D28DE /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		88AF564662E647598A38D268 /* Build configuration list for PBXNativeTarget "GradelyWidgets" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				2D79EEE0741D465FB1A1FB5D /* Debug */,
+				D2104289C66A45019D2AAE8C /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

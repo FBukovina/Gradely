@@ -1,5 +1,11 @@
 import SwiftUI
 
+private enum AppTab: Hashable {
+    case subjects
+    case absence
+    case timetable
+}
+
 struct ContentView: View {
     private static let supportPromptVersion = "1.4"
 
@@ -15,6 +21,7 @@ struct ContentView: View {
     @State private var isVersionSupportPromptPresented = false
     @State private var isSupportTipSheetPresented = false
     @State private var didForcePresentSupportPrompt = false
+    @State private var selectedTab: AppTab = .subjects
 
     init(
         environment: AppEnvironment = .current(),
@@ -47,13 +54,14 @@ struct ContentView: View {
                         appViewModel.markSignedIn()
                     }
                 case .signedIn:
-                    TabView {
+                    TabView(selection: $selectedTab) {
                         SubjectsView(repository: repository, supportTipProvider: supportTipProvider) {
                             appViewModel.signOut()
                         }
                         .tabItem {
                             Label("subjects.title", systemImage: "checkmark.seal.fill")
                         }
+                        .tag(AppTab.subjects)
 
                         AbsenceView(repository: repository, supportTipProvider: supportTipProvider) {
                             appViewModel.signOut()
@@ -61,6 +69,7 @@ struct ContentView: View {
                         .tabItem {
                             Label("absence.title", systemImage: "calendar.badge.exclamationmark")
                         }
+                        .tag(AppTab.absence)
 
                         TimetableView(repository: repository, supportTipProvider: supportTipProvider) {
                             appViewModel.signOut()
@@ -68,6 +77,7 @@ struct ContentView: View {
                         .tabItem {
                             Label("rozvrh.title", systemImage: "calendar")
                         }
+                        .tag(AppTab.timetable)
                     }
                     .tint(Brand.primary)
                 }
@@ -82,6 +92,9 @@ struct ContentView: View {
         }
         .onChange(of: hasCompletedOnboarding) {
             presentVersionSupportPromptIfNeeded()
+        }
+        .onOpenURL { url in
+            handleOpenURL(url)
         }
         .alert(String(localized: "support.updatePrompt.title"), isPresented: $isVersionSupportPromptPresented) {
             Button(String(localized: "support.updatePrompt.later"), role: .cancel) {}
@@ -102,6 +115,14 @@ struct ContentView: View {
 
     private var shouldShowOnboarding: Bool {
         !skipsOnboarding && !hasCompletedOnboarding
+    }
+
+    private func handleOpenURL(_ url: URL) {
+        guard url.scheme == "gradely" else { return }
+
+        if url.host == "timetable" || url.path == "/timetable" {
+            selectedTab = .timetable
+        }
     }
 
     private func presentVersionSupportPromptIfNeeded() {

@@ -73,6 +73,7 @@ final class BakalariRepository {
     private let timetableCache: any TimetableCaching
     private let nextLessonWidgetStore: (any NextLessonWidgetStoring)?
     private let absenceLessonSelectionStore: any AbsenceLessonSelectionStoring
+    private let schoolDirectoryProvider: (any SchoolDirectoryProviding)?
     private let dateProvider: () -> Date
     private let timetableFetchTimeoutNanoseconds: UInt64
 
@@ -84,6 +85,7 @@ final class BakalariRepository {
         timetableCache: any TimetableCaching = InMemoryTimetableCache(),
         nextLessonWidgetStore: (any NextLessonWidgetStoring)? = nil,
         absenceLessonSelectionStore: any AbsenceLessonSelectionStoring = InMemoryAbsenceLessonSelectionStore(),
+        schoolDirectoryProvider: (any SchoolDirectoryProviding)? = nil,
         dateProvider: @escaping () -> Date = Date.init,
         timetableFetchTimeoutNanoseconds: UInt64 = 12_000_000_000
     ) {
@@ -94,6 +96,7 @@ final class BakalariRepository {
         self.timetableCache = timetableCache
         self.nextLessonWidgetStore = nextLessonWidgetStore
         self.absenceLessonSelectionStore = absenceLessonSelectionStore
+        self.schoolDirectoryProvider = schoolDirectoryProvider
         self.dateProvider = dateProvider
         self.timetableFetchTimeoutNanoseconds = timetableFetchTimeoutNanoseconds
     }
@@ -163,7 +166,10 @@ final class BakalariRepository {
     /// Best-effort current user, used to populate the account menu on tabs other than Marks.
     func loadUser() async -> UserResponse? {
         guard let session = try? await validSession() else { return nil }
-        return try? await client.fetchUser(baseURL: session.baseURL, accessToken: session.accessToken)
+        guard let user = try? await client.fetchUser(baseURL: session.baseURL, accessToken: session.accessToken) else {
+            return nil
+        }
+        return resolvedUser(user, session: session)
     }
 
     func loadDashboard(forceRefresh: Bool = false) async throws -> DashboardData {
@@ -189,7 +195,7 @@ final class BakalariRepository {
         return DashboardData(
             marksResponse: marksResponse,
             absencesPerSubject: absence?.absencesPerSubject ?? [],
-            user: await user
+            user: resolvedUser(await user, session: session)
         )
     }
 
@@ -211,7 +217,7 @@ final class BakalariRepository {
             response: response,
             absencesPerSubject: response.absencesPerSubject,
             subjectResolutionSource: response.absencesPerSubject.isEmpty ? .unavailable : .official,
-            user: await user
+            user: resolvedUser(await user, session: session)
         )
     }
 
@@ -328,6 +334,23 @@ final class BakalariRepository {
 
     private func optionalUser(baseURL: URL, accessToken: String) async -> UserResponse? {
         try? await client.fetchUser(baseURL: baseURL, accessToken: accessToken)
+    }
+
+    private func resolvedUser(_ user: UserResponse?, session: StoredSession) -> UserResponse? {
+        guard let user else { return nil }
+
+        if let displaySchoolName = user.displaySchoolName {
+            return user.schoolName == displaySchoolName ? user : user.replacingSchoolName(displaySchoolName)
+        }
+
+        guard let schoolDirectoryProvider,
+              let cachedDirectory = try? schoolDirectoryProvider.loadCachedDirectory(),
+              let directorySchoolName = SchoolNameResolver.directoryName(for: session.baseURL, in: cachedDirectory.schools)
+        else {
+            return user.replacingSchoolName(nil)
+        }
+
+        return user.replacingSchoolName(directorySchoolName)
     }
 
     private func marksResponseForAbsenceFallback(session: StoredSession) async throws -> MarksResponse {

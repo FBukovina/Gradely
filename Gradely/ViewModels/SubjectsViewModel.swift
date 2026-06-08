@@ -32,12 +32,7 @@ final class SubjectsViewModel {
     }
 
     var schoolName: String? {
-        guard let schoolName = user?.schoolName?.trimmingCharacters(in: .whitespacesAndNewlines),
-              !schoolName.isEmpty
-        else {
-            return nil
-        }
-        return schoolName
+        user?.displaySchoolName
     }
 
     /// Subject with the best (lowest) average — `1` is best in the Czech scale.

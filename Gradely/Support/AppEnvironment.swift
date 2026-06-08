@@ -21,6 +21,7 @@ struct AppEnvironment {
         let timetableCache: any TimetableCaching = (try? TimetableCache()) ?? InMemoryTimetableCache()
         let absenceLessonSelectionStore: any AbsenceLessonSelectionStoring = (try? AbsenceLessonSelectionStore()) ?? InMemoryAbsenceLessonSelectionStore()
         let schoolDirectoryCache: any SchoolDirectoryCaching = (try? SchoolDirectoryCache()) ?? InMemorySchoolDirectoryCache()
+        let schoolDirectoryProvider = URLSessionSchoolDirectoryProvider(cache: schoolDirectoryCache)
         return AppEnvironment(
             repository: BakalariRepository(
                 client: DemoAwareBakalariClient(liveClient: URLSessionBakalariClient()),
@@ -29,9 +30,10 @@ struct AppEnvironment {
                 absenceCache: absenceCache,
                 timetableCache: timetableCache,
                 nextLessonWidgetStore: NextLessonWidgetStore(),
-                absenceLessonSelectionStore: absenceLessonSelectionStore
+                absenceLessonSelectionStore: absenceLessonSelectionStore,
+                schoolDirectoryProvider: schoolDirectoryProvider
             ),
-            schoolDirectoryProvider: URLSessionSchoolDirectoryProvider(cache: schoolDirectoryCache),
+            schoolDirectoryProvider: schoolDirectoryProvider,
             supportTipProvider: RevenueCatSupportTipService()
         )
     }
@@ -52,6 +54,7 @@ struct AppEnvironment {
         let useLargeSubjectAbsenceMock = arguments.contains("-uiTestingLargeAbsenceSubjects")
         let useManualSubjectAbsenceMock = arguments.contains("-uiTestingManualSubjectAbsence")
         let useEmptySubjectAbsenceMock = arguments.contains("-uiTestingEmptySubjectAbsence")
+        let schoolDirectoryProvider = MockSchoolDirectoryProvider(refreshResult: PreviewData.schoolDirectorySchools)
 
         return AppEnvironment(
             repository: BakalariRepository(
@@ -77,9 +80,10 @@ struct AppEnvironment {
                         : (useManualSubjectAbsenceMock ? PreviewData.manualSubjectTimetableResponse : PreviewData.timetableResponse)
                 ),
                 sessionStore: store,
-                marksCache: cache
+                marksCache: cache,
+                schoolDirectoryProvider: schoolDirectoryProvider
             ),
-            schoolDirectoryProvider: MockSchoolDirectoryProvider(refreshResult: PreviewData.schoolDirectorySchools),
+            schoolDirectoryProvider: schoolDirectoryProvider,
             supportTipProvider: MockSupportTipService()
         )
     }

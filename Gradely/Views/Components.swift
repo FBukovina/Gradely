@@ -121,7 +121,7 @@ struct AccountMenu: View {
             if let user {
                 Section {
                     Text(user.fullName)
-                    if let schoolName = user.schoolName {
+                    if let schoolName = user.displaySchoolName {
                         Text(schoolName)
                     }
                     if let className = user.userClass?.abbrev {

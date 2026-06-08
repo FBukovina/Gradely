@@ -52,7 +52,7 @@ struct UserResponse: Codable, Equatable {
         self.userUID = userUID
         self.fullName = fullName
         self.userClass = userClass
-        self.schoolName = schoolName
+        self.schoolName = SchoolNameResolver.displayableName(schoolName)
         self.userType = userType
         self.userTypeText = userTypeText
         self.studyYear = studyYear
@@ -63,8 +63,9 @@ struct UserResponse: Codable, Equatable {
         userUID = try container.decode(String.self, forKey: .userUID)
         fullName = try container.decode(String.self, forKey: .fullName)
         userClass = try container.decodeIfPresent(ClassInfo.self, forKey: .userClass)
-        schoolName = try container.decodeIfPresent(String.self, forKey: .schoolOrganizationName)
-            ?? container.decodeIfPresent(String.self, forKey: .schoolName)
+        let organizationName = try container.decodeIfPresent(String.self, forKey: .schoolOrganizationName)
+        let apiSchoolName = try container.decodeIfPresent(String.self, forKey: .schoolName)
+        schoolName = SchoolNameResolver.firstDisplayableName(organizationName, apiSchoolName)
         userType = try container.decode(String.self, forKey: .userType)
         userTypeText = try container.decode(String.self, forKey: .userTypeText)
         studyYear = try container.decodeIfPresent(Int.self, forKey: .studyYear)
@@ -79,6 +80,92 @@ struct UserResponse: Codable, Equatable {
         try container.encode(userType, forKey: .userType)
         try container.encode(userTypeText, forKey: .userTypeText)
         try container.encodeIfPresent(studyYear, forKey: .studyYear)
+    }
+
+    var displaySchoolName: String? {
+        SchoolNameResolver.displayableName(schoolName)
+    }
+
+    func replacingSchoolName(_ schoolName: String?) -> UserResponse {
+        UserResponse(
+            userUID: userUID,
+            fullName: fullName,
+            userClass: userClass,
+            schoolName: schoolName,
+            userType: userType,
+            userTypeText: userTypeText,
+            studyYear: studyYear
+        )
+    }
+}
+
+enum SchoolNameResolver {
+    private static let placeholderNames: Set<String> = [
+        "nazev skoly"
+    ]
+
+    static func firstDisplayableName(_ names: String?...) -> String? {
+        names.lazy.compactMap(displayableName).first
+    }
+
+    static func displayableName(_ rawName: String?) -> String? {
+        guard let trimmed = rawName?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !trimmed.isEmpty
+        else {
+            return nil
+        }
+
+        let normalized = normalizedName(trimmed)
+        guard !placeholderNames.contains(normalized) else {
+            return nil
+        }
+
+        return trimmed
+    }
+
+    static func directoryName(for baseURL: URL, in schools: [SchoolDirectorySchool]) -> String? {
+        guard let normalizedBaseURL = normalizedURL(from: baseURL.absoluteString) else {
+            return nil
+        }
+
+        let baseKey = normalizedBaseURL.absoluteString.lowercased()
+        if let exactMatch = schools.first(where: { school in
+            normalizedURL(from: school.trimmedSchoolURL)?.absoluteString.lowercased() == baseKey
+        }) {
+            return displayableName(exactMatch.trimmedName)
+        }
+
+        guard let baseHost = URLComponents(url: normalizedBaseURL, resolvingAgainstBaseURL: false)?
+            .host?
+            .lowercased()
+        else {
+            return nil
+        }
+
+        var hostMatchNames: [String] = []
+        for school in schools {
+            guard let schoolURL = normalizedURL(from: school.trimmedSchoolURL),
+                  URLComponents(url: schoolURL, resolvingAgainstBaseURL: false)?.host?.lowercased() == baseHost,
+                  let name = displayableName(school.trimmedName),
+                  !hostMatchNames.contains(name)
+            else {
+                continue
+            }
+            hostMatchNames.append(name)
+        }
+
+        return hostMatchNames.count == 1 ? hostMatchNames[0] : nil
+    }
+
+    private static func normalizedURL(from rawValue: String) -> URL? {
+        try? SchoolURLNormalizer.normalizedBaseURL(from: rawValue)
+    }
+
+    private static func normalizedName(_ name: String) -> String {
+        name
+            .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: Locale(identifier: "cs_CZ"))
+            .split(whereSeparator: { $0.isWhitespace })
+            .joined(separator: " ")
     }
 }
 

@@ -545,17 +545,18 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Gradely/Gradely.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 10;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = C2U9S337H8;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = "Gradely-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = Gradely;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.4;
+				MARKETING_VERSION = 1.5;
 				PRODUCT_BUNDLE_IDENTIFIER = com.bukovinafilip.BakalariMarks;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REVENUECAT_IOS_API_KEY = appl_KTNbCvFOqwPTWfQKhjDCgSdSANH;
@@ -580,17 +581,18 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Gradely/Gradely.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 10;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = C2U9S337H8;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = "Gradely-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = Gradely;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.4;
+				MARKETING_VERSION = 1.5;
 				PRODUCT_BUNDLE_IDENTIFIER = com.bukovinafilip.BakalariMarks;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REVENUECAT_IOS_API_KEY = appl_KTNbCvFOqwPTWfQKhjDCgSdSANH;

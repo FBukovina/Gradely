@@ -25,7 +25,7 @@ enum NextLessonWidgetSnapshotBuilder {
                     subjectAbbrev: lesson.subjectAbbrev,
                     timeRange: timeRange(for: lesson.hour),
                     room: lesson.roomAbbrev ?? lesson.roomName,
-                    teacher: lesson.teacherName ?? lesson.teacherAbbrev,
+                    teacher: nil,
                     changeKind: changeKind(for: lesson.changeKind)
                 )
             }

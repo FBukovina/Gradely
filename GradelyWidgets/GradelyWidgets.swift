@@ -98,7 +98,7 @@ struct NextLessonProvider: TimelineProvider {
             subjectAbbrev: "M",
             timeRange: "08:55-09:40",
             room: "12",
-            teacher: "Novak",
+            teacher: nil,
             changeKind: .none
         )
     }
@@ -109,8 +109,8 @@ private struct NextLessonWidgetView: View {
 
     var body: some View {
         switch entry.selection {
-        case .lesson(let lesson, let timing):
-            lessonView(lesson: lesson, timing: timing)
+        case .lesson(let lesson, _):
+            lessonView(lesson: lesson)
         case .noSnapshot:
             emptyView(title: "Open Gradely", subtitle: "Load timetable", systemImage: "calendar")
         case .noLessons:
@@ -120,35 +120,24 @@ private struct NextLessonWidgetView: View {
         }
     }
 
-    private func lessonView(lesson: NextLessonWidgetLesson, timing: NextLessonWidgetTiming) -> some View {
+    private func lessonView(lesson: NextLessonWidgetLesson) -> some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text(statusText(for: lesson, timing: timing))
-                .font(.caption2.weight(.bold))
-                .textCase(.uppercase)
-                .lineLimit(1)
+            if let statusLine = statusLine(for: lesson) {
+                Text(statusLine)
+                    .font(.caption2.weight(.bold).monospacedDigit())
+                    .lineLimit(1)
+            }
 
             Text(lesson.title)
                 .font(.headline.weight(.heavy))
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
 
-            if let timeRange = lesson.timeRange {
-                Text(timeRange)
-                    .font(.caption.weight(.semibold).monospacedDigit())
+            if let room = lesson.room {
+                Label(room, systemImage: "door.left.hand.open")
+                    .font(.caption2.weight(.semibold))
                     .lineLimit(1)
             }
-
-            HStack(spacing: 6) {
-                if let room = lesson.room {
-                    Label(room, systemImage: "door.left.hand.open")
-                }
-
-                if let teacher = lesson.teacher {
-                    Label(teacher, systemImage: "person.fill")
-                }
-            }
-            .font(.caption2.weight(.semibold))
-            .lineLimit(1)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
         .widgetAccentable()
@@ -168,14 +157,20 @@ private struct NextLessonWidgetView: View {
         .widgetAccentable()
     }
 
-    private func statusText(for lesson: NextLessonWidgetLesson, timing: NextLessonWidgetTiming) -> String {
-        let timingText = timing == .current ? "Now" : "Next"
+    private func statusLine(for lesson: NextLessonWidgetLesson) -> String? {
+        let timeRange = lesson.timeRange?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let changeText = changeText(for: lesson.changeKind)
 
-        guard let changeText = changeText(for: lesson.changeKind) else {
-            return timingText
+        switch (timeRange?.isEmpty == false ? timeRange : nil, changeText) {
+        case (.some(let timeRange), .some(let changeText)):
+            return "\(timeRange) - \(changeText)"
+        case (.some(let timeRange), nil):
+            return timeRange
+        case (nil, .some(let changeText)):
+            return changeText
+        case (nil, nil):
+            return nil
         }
-
-        return "\(timingText) - \(changeText)"
     }
 
     private func changeText(for changeKind: NextLessonWidgetChangeKind) -> String? {

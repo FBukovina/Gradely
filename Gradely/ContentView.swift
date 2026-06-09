@@ -4,12 +4,14 @@ private enum AppTab: Hashable {
     case subjects
     case absence
     case timetable
+    case stravaCZ
 }
 
 struct ContentView: View {
     private static let supportPromptVersion = "1.4"
 
     private let repository: BakalariRepository
+    private let stravaCZRepository: StravaCZRepository
     private let schoolDirectoryProvider: any SchoolDirectoryProviding
     private let supportTipProvider: any SupportTipProviding
     private let skipsOnboarding: Bool
@@ -31,12 +33,16 @@ struct ContentView: View {
         forcesVersionSupportPrompt: Bool = ProcessInfo.processInfo.arguments.contains("-uiTestingShowSupportPrompt")
     ) {
         repository = environment.repository
+        stravaCZRepository = environment.stravaCZRepository
         schoolDirectoryProvider = environment.schoolDirectoryProvider
         supportTipProvider = environment.supportTipProvider
         self.skipsOnboarding = skipsOnboarding
         self.suppressesVersionSupportPrompt = suppressesVersionSupportPrompt
         self.forcesVersionSupportPrompt = forcesVersionSupportPrompt
-        _appViewModel = State(initialValue: AppViewModel(repository: environment.repository))
+        _appViewModel = State(initialValue: AppViewModel(
+            repository: environment.repository,
+            stravaCZRepository: environment.stravaCZRepository
+        ))
     }
 
     var body: some View {
@@ -56,7 +62,7 @@ struct ContentView: View {
                 case .signedIn:
                     TabView(selection: $selectedTab) {
                         SubjectsView(repository: repository, supportTipProvider: supportTipProvider) {
-                            appViewModel.signOut()
+                            Task { await appViewModel.signOut() }
                         }
                         .tabItem {
                             Label("subjects.title", systemImage: "checkmark.seal.fill")
@@ -64,7 +70,7 @@ struct ContentView: View {
                         .tag(AppTab.subjects)
 
                         AbsenceView(repository: repository, supportTipProvider: supportTipProvider) {
-                            appViewModel.signOut()
+                            Task { await appViewModel.signOut() }
                         }
                         .tabItem {
                             Label("absence.title", systemImage: "calendar.badge.exclamationmark")
@@ -72,12 +78,18 @@ struct ContentView: View {
                         .tag(AppTab.absence)
 
                         TimetableView(repository: repository, supportTipProvider: supportTipProvider) {
-                            appViewModel.signOut()
+                            Task { await appViewModel.signOut() }
                         }
                         .tabItem {
                             Label("rozvrh.title", systemImage: "calendar")
                         }
                         .tag(AppTab.timetable)
+
+                        StravaCZView(repository: stravaCZRepository)
+                            .tabItem {
+                                Label("stravacz.title", systemImage: "fork.knife")
+                            }
+                            .tag(AppTab.stravaCZ)
                     }
                     .tint(Brand.primary)
                 }

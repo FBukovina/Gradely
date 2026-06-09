@@ -2,15 +2,18 @@ import Foundation
 
 struct AppEnvironment {
     let repository: BakalariRepository
+    let stravaCZRepository: StravaCZRepository
     let schoolDirectoryProvider: any SchoolDirectoryProviding
     let supportTipProvider: any SupportTipProviding
 
     init(
         repository: BakalariRepository,
+        stravaCZRepository: StravaCZRepository = AppEnvironment.makeMockStravaCZRepository(),
         schoolDirectoryProvider: any SchoolDirectoryProviding,
         supportTipProvider: any SupportTipProviding = MockSupportTipService()
     ) {
         self.repository = repository
+        self.stravaCZRepository = stravaCZRepository
         self.schoolDirectoryProvider = schoolDirectoryProvider
         self.supportTipProvider = supportTipProvider
     }
@@ -32,6 +35,11 @@ struct AppEnvironment {
                 nextLessonWidgetStore: NextLessonWidgetStore(),
                 absenceLessonSelectionStore: absenceLessonSelectionStore,
                 schoolDirectoryProvider: schoolDirectoryProvider
+            ),
+            stravaCZRepository: StravaCZRepository(
+                client: URLSessionStravaCZClient(),
+                sessionStore: StravaCZSessionStore(),
+                menuCache: (try? StravaCZMenuCache()) ?? InMemoryStravaCZMenuCache()
             ),
             schoolDirectoryProvider: schoolDirectoryProvider,
             supportTipProvider: RevenueCatSupportTipService()
@@ -83,8 +91,23 @@ struct AppEnvironment {
                 marksCache: cache,
                 schoolDirectoryProvider: schoolDirectoryProvider
             ),
+            stravaCZRepository: makeMockStravaCZRepository(
+                session: arguments.contains("-uiTestingStravaCZLoggedIn") ? PreviewData.stravaCZSession : nil
+            ),
             schoolDirectoryProvider: schoolDirectoryProvider,
             supportTipProvider: MockSupportTipService()
+        )
+    }
+
+    static func makeMockStravaCZRepository(session: StravaCZStoredSession? = nil) -> StravaCZRepository {
+        let menu = session == nil
+            ? nil
+            : CachedStravaCZMenu(menu: StravaCZMenu.make(from: PreviewData.stravaCZMenuResponse), cachedAt: Date())
+
+        return StravaCZRepository(
+            client: MockStravaCZClient(),
+            sessionStore: InMemoryStravaCZSessionStore(session: session),
+            menuCache: InMemoryStravaCZMenuCache(cachedMenu: menu)
         )
     }
 }

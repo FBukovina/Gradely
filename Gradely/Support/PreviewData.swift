@@ -399,4 +399,158 @@ enum PreviewData {
         expiresAt: Date(timeIntervalSince1970: 0),
         baseURL: URL(string: "https://demo.bakalari.cz/")!
     )
+
+    static let stravaCZLoginResponse = StravaCZLoginResponse(
+        sessionID: "MOCK_STRAVACZ_SID",
+        serviceURL: "https://wss5.strava.cz/WSStravne5_15/WSStravne5.svc",
+        canteenNumber: "1234",
+        username: "student",
+        user: StravaCZLoginUser(
+            fullName: "Student One",
+            email: "student@example.com",
+            balance: 100,
+            id: "student",
+            currency: "Kč",
+            canteenName: "Demo jídelna"
+        )
+    )
+
+    static let stravaCZSession = StravaCZStoredSession(
+        sessionID: "MOCK_STRAVACZ_SID",
+        serviceURL: "https://wss5.strava.cz/WSStravne5_15/WSStravne5.svc",
+        canteenNumber: "1234",
+        username: "student",
+        fullName: "Student One",
+        email: "student@example.com",
+        balance: 100,
+        currency: "Kč",
+        canteenName: "Demo jídelna",
+        savedAt: Date()
+    )
+
+    static let stravaCZMenuResponse: StravaCZMenuResponse = {
+        let json = """
+        {
+          "table0": [
+            {
+              "id": 0,
+              "datum": "15.09.2025",
+              "druh_popis": "Polévka",
+              "delsiPopis": "Vývar se zeleninou",
+              "nazev": "Vývar se zeleninou",
+              "zakazaneAlergeny": null,
+              "alergeny": [["01", "Obiloviny"], ["09", "Celer"]],
+              "omezeniObj": {"den": ""},
+              "pocet": 0,
+              "veta": "75",
+              "cena": "0"
+            },
+            {
+              "id": 1,
+              "datum": "15.09.2025",
+              "druh_popis": "Oběd 1",
+              "delsiPopis": "Rajská omáčka s těstovinami",
+              "nazev": "Rajská omáčka s těstovinami",
+              "zakazaneAlergeny": null,
+              "alergeny": [["01", "Obiloviny"], ["07", "Mléko"]],
+              "omezeniObj": {"den": ""},
+              "pocet": 0,
+              "veta": "1",
+              "cena": "40.00"
+            },
+            {
+              "id": 2,
+              "datum": "15.09.2025",
+              "druh_popis": "Oběd 2",
+              "delsiPopis": "Zeleninové rizoto se sýrem",
+              "nazev": "Zeleninové rizoto se sýrem",
+              "zakazaneAlergeny": null,
+              "alergeny": [["07", "Mléko"]],
+              "omezeniObj": {"den": ""},
+              "pocet": 0,
+              "veta": "2",
+              "cena": "42.00"
+            }
+          ],
+          "table1": [
+            {
+              "id": 3,
+              "datum": "16-09.2025",
+              "druh_popis": "Oběd 1",
+              "delsiPopis": "Kuřecí řízek, bramborová kaše",
+              "nazev": "Kuřecí řízek, bramborová kaše",
+              "zakazaneAlergeny": null,
+              "alergeny": [["01", "Obiloviny"], ["03", "Vejce"], ["07", "Mléko"]],
+              "omezeniObj": {"den": "CO"},
+              "pocet": 0,
+              "veta": "3",
+              "cena": "45.00"
+            },
+            {
+              "id": 4,
+              "datum": "16-09.2025",
+              "druh_popis": "Oběd 2",
+              "delsiPopis": "Těstovinový salát",
+              "nazev": "Těstovinový salát",
+              "zakazaneAlergeny": null,
+              "alergeny": [["01", "Obiloviny"]],
+              "omezeniObj": {"den": "T"},
+              "pocet": 0,
+              "veta": "4",
+              "cena": "35.00"
+            }
+          ]
+        }
+        """
+        return try! JSONDecoder().decode(StravaCZMenuResponse.self, from: Data(json.utf8))
+    }()
+
+    static let stravaCZMenuAfterOrderResponse: StravaCZMenuResponse = {
+        let json = """
+        {
+          "table0": [
+            {
+              "id": 0,
+              "datum": "15.09.2025",
+              "druh_popis": "Polévka",
+              "delsiPopis": "Vývar se zeleninou",
+              "nazev": "Vývar se zeleninou",
+              "zakazaneAlergeny": null,
+              "alergeny": [["01", "Obiloviny"], ["09", "Celer"]],
+              "omezeniObj": {"den": ""},
+              "pocet": 0,
+              "veta": "75",
+              "cena": "0"
+            },
+            {
+              "id": 1,
+              "datum": "15.09.2025",
+              "druh_popis": "Oběd 1",
+              "delsiPopis": "Rajská omáčka s těstovinami",
+              "nazev": "Rajská omáčka s těstovinami",
+              "zakazaneAlergeny": null,
+              "alergeny": [["01", "Obiloviny"], ["07", "Mléko"]],
+              "omezeniObj": {"den": ""},
+              "pocet": 1,
+              "veta": "1",
+              "cena": "40.00"
+            },
+            {
+              "id": 2,
+              "datum": "15.09.2025",
+              "druh_popis": "Oběd 2",
+              "delsiPopis": "Zeleninové rizoto se sýrem",
+              "nazev": "Zeleninové rizoto se sýrem",
+              "zakazaneAlergeny": null,
+              "alergeny": [["07", "Mléko"]],
+              "omezeniObj": {"den": ""},
+              "pocet": 0,
+              "veta": "2",
+              "cena": "42.00"
+            }
+          ]
+        }
+        """
+        return try! JSONDecoder().decode(StravaCZMenuResponse.self, from: Data(json.utf8))
+    }()
 }

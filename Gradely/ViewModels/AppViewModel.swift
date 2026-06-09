@@ -11,11 +11,13 @@ final class AppViewModel {
     }
 
     private let repository: BakalariRepository
+    private let stravaCZRepository: StravaCZRepository
 
     var phase: Phase = .checking
 
-    init(repository: BakalariRepository) {
+    init(repository: BakalariRepository, stravaCZRepository: StravaCZRepository) {
         self.repository = repository
+        self.stravaCZRepository = stravaCZRepository
     }
 
     func bootstrap() async {
@@ -30,12 +32,9 @@ final class AppViewModel {
         phase = .signedIn
     }
 
-    func signOut() {
-        do {
-            try repository.logout()
-        } catch {
-            // If cleanup fails, the safest user-facing state is still signed out.
-        }
+    func signOut() async {
+        await stravaCZRepository.logout()
+        try? repository.logout()
         phase = .signedOut
     }
 }

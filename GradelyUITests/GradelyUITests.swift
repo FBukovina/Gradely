@@ -134,6 +134,65 @@ final class GradelyUITests: XCTestCase {
     }
 
     @MainActor
+    func testStravaCZConnectOrderCancelAndGlobalLogoutClearsSession() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-uiTestingMockAPI", "-uiTestingLoggedIn"]
+        app.launch()
+
+        XCTAssertTrue(app.collectionViews["subjectsList"].waitForExistence(timeout: 5))
+
+        app.tabBars.buttons.element(boundBy: 3).tap()
+        XCTAssertTrue(app.descendants(matching: .any)["stravaCZConnectView"].waitForExistence(timeout: 5))
+
+        app.textFields["stravaCZCanteenField"].tap()
+        app.textFields["stravaCZCanteenField"].typeText("1234")
+
+        app.textFields["stravaCZUsernameField"].tap()
+        app.textFields["stravaCZUsernameField"].typeText("student")
+
+        let passwordField = app.secureTextFields["stravaCZPasswordField"].exists
+            ? app.secureTextFields["stravaCZPasswordField"]
+            : app.textFields["stravaCZPasswordField"]
+        passwordField.tap()
+        passwordField.typeText("secret")
+
+        app.buttons["stravaCZConnectButton"].tap()
+
+        XCTAssertTrue(app.collectionViews["stravaCZMenuList"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["stravaCZBalance"].waitForExistence(timeout: 5))
+
+        let orderButton = app.descendants(matching: .any)["stravaCZOrderButton-1"]
+        if !orderButton.waitForExistence(timeout: 2) {
+            app.collectionViews["stravaCZMenuList"].swipeUp()
+        }
+        XCTAssertTrue(orderButton.waitForExistence(timeout: 5))
+        orderButton.tap()
+
+        let cancelButton = app.descendants(matching: .any)["stravaCZCancelButton-1"]
+        XCTAssertTrue(cancelButton.waitForExistence(timeout: 5))
+        cancelButton.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["stravaCZOrderButton-1"].waitForExistence(timeout: 5))
+
+        app.tabBars.buttons.element(boundBy: 0).tap()
+        XCTAssertTrue(app.buttons["accountMenuButton"].waitForExistence(timeout: 5))
+        app.buttons["accountMenuButton"].tap()
+
+        let logoutButton = app.buttons["logoutButton"].waitForExistence(timeout: 3)
+            ? app.buttons["logoutButton"]
+            : app.buttons["Log out"]
+        XCTAssertTrue(logoutButton.waitForExistence(timeout: 3))
+        logoutButton.tap()
+
+        XCTAssertTrue(app.textFields["schoolURLField"].waitForExistence(timeout: 5))
+        app.buttons["demoAccountButton"].tap()
+        app.buttons["loginButton"].tap()
+
+        XCTAssertTrue(app.collectionViews["subjectsList"].waitForExistence(timeout: 5))
+        app.tabBars.buttons.element(boundBy: 3).tap()
+        XCTAssertTrue(app.descendants(matching: .any)["stravaCZConnectView"].waitForExistence(timeout: 5))
+    }
+
+    @MainActor
     func testVersionSupportPromptOpensSupportTips() throws {
         let app = XCUIApplication()
         app.launchArguments = ["-uiTestingMockAPI", "-uiTestingLoggedIn", "-uiTestingShowSupportPrompt"]

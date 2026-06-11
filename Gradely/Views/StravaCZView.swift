@@ -236,18 +236,15 @@ struct StravaCZView: View {
                 }
 
                 ForEach(viewModel.menu?.days ?? []) { day in
-                    Section {
-                        ForEach(day.meals) { meal in
-                            StravaCZMealRow(
-                                meal: meal,
-                                isSubmitting: viewModel.submittingMealID == meal.id
-                            ) {
-                                Task { await viewModel.toggleMeal(meal) }
-                            }
-                        }
-                    } header: {
-                        Text(day.displayDate)
+                    StravaCZDayCard(
+                        day: day,
+                        submittingMealID: viewModel.submittingMealID
+                    ) { meal in
+                        Task { await viewModel.toggleMeal(meal) }
                     }
+                    .listRowInsets(EdgeInsets(top: Spacing.sm, leading: Spacing.lg, bottom: Spacing.sm, trailing: Spacing.lg))
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
                 }
             }
             .listStyle(.plain)
@@ -332,26 +329,92 @@ private struct StravaCZHeader: View {
     }
 }
 
+private struct StravaCZDayCard: View {
+    let day: StravaCZMenuDay
+    let submittingMealID: Int?
+    let onToggle: (StravaCZMeal) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Spacing.md) {
+            VStack(alignment: .leading, spacing: Spacing.xs) {
+                if let weekdayText {
+                    Text(weekdayText)
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(Brand.primary)
+                        .textCase(.uppercase)
+                        .tracking(0.8)
+                }
+
+                Text(day.displayDate)
+                    .font(.title3.weight(.bold))
+                    .foregroundStyle(.primary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(day.meals.indices, id: \.self) { index in
+                    let meal = day.meals[index]
+
+                    if index > day.meals.startIndex {
+                        Divider()
+                            .padding(.leading, Spacing.xs)
+                    }
+
+                    StravaCZMealRow(
+                        meal: meal,
+                        isSubmitting: submittingMealID == meal.id
+                    ) {
+                        onToggle(meal)
+                    }
+                }
+            }
+        }
+        .padding(Spacing.lg)
+        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
+                .stroke(Brand.primary.opacity(0.28), lineWidth: 1.25)
+        )
+    }
+
+    private var weekdayText: String? {
+        guard let date else { return nil }
+
+        let formatter = DateFormatter()
+        formatter.locale = .autoupdatingCurrent
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        formatter.dateFormat = "EEEE"
+        return formatter.string(from: date)
+    }
+
+    private var date: Date? {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter.date(from: day.dateKey)
+    }
+}
+
 private struct StravaCZMealRow: View {
     let meal: StravaCZMeal
     let isSubmitting: Bool
     let onToggle: () -> Void
 
     var body: some View {
-        HStack(alignment: .top, spacing: Spacing.md) {
+        HStack(alignment: .center, spacing: Spacing.md) {
             VStack(alignment: .leading, spacing: Spacing.sm) {
-                HStack(spacing: Spacing.xs) {
-                    StatusChip(text: meal.type.localizedTitle, color: meal.type == .soup ? .secondary : Brand.primary)
-                    if meal.orderType != .normal {
-                        StatusChip(text: meal.orderType.localizedTitle, color: meal.orderType == .restricted ? GradeBand.poor.foregroundColor : GradeBand.average.foregroundColor)
-                    }
-                    if meal.ordered {
-                        StatusChip(text: String(localized: "stravacz.meal.ordered"), color: GradeBand.excellent.foregroundColor)
-                    }
-                }
+                Text(meal.type.localizedTitle)
+                    .font(.caption2.weight(.bold))
+                    .foregroundStyle(meal.type == .main ? Brand.primary : .secondary)
+                    .textCase(.uppercase)
+                    .tracking(0.5)
+                    .padding(.horizontal, Spacing.sm)
+                    .padding(.vertical, 3)
+                    .background((meal.type == .main ? Brand.primary : Color.secondary).opacity(0.10), in: Capsule())
 
                 Text(meal.name)
-                    .font(.headline)
+                    .font(meal.type == .main ? .headline.weight(.semibold) : .subheadline.weight(.medium))
                     .foregroundStyle(.primary)
                     .fixedSize(horizontal: false, vertical: true)
 
@@ -370,30 +433,53 @@ private struct StravaCZMealRow: View {
             Spacer(minLength: Spacing.sm)
 
             if meal.canModify {
-                Button(action: onToggle) {
-                    if isSubmitting {
-                        ProgressView()
-                            .controlSize(.small)
-                    } else {
-                        Text(meal.ordered ? String(localized: "stravacz.meal.cancel") : String(localized: "stravacz.meal.order"))
-                            .accessibilityIdentifier(meal.ordered ? "stravaCZCancelButton-\(meal.id)" : "stravaCZOrderButton-\(meal.id)")
-                    }
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(meal.ordered ? GradeBand.poor.foregroundColor : Brand.primary)
-                .disabled(isSubmitting)
-                .accessibilityLabel(meal.ordered ? String(localized: "stravacz.meal.cancel") : String(localized: "stravacz.meal.order"))
-                .accessibilityIdentifier(meal.ordered ? "stravaCZCancelButton-\(meal.id)" : "stravaCZOrderButton-\(meal.id)")
+                StravaCZMealSelectionButton(
+                    meal: meal,
+                    isSubmitting: isSubmitting,
+                    onToggle: onToggle
+                )
             } else {
-                Image(systemName: "lock.fill")
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(.secondary)
-                    .frame(width: 30, height: 30)
-                    .background(Color(.tertiarySystemFill), in: Circle())
-                    .accessibilityLabel(String(localized: "stravacz.meal.readOnly"))
+                Color.clear
+                    .frame(width: 40, height: 40)
+                    .accessibilityHidden(true)
             }
         }
-        .padding(.vertical, Spacing.sm)
+        .padding(.vertical, Spacing.md)
+    }
+}
+
+private struct StravaCZMealSelectionButton: View {
+    let meal: StravaCZMeal
+    let isSubmitting: Bool
+    let onToggle: () -> Void
+
+    var body: some View {
+        Button(action: onToggle) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(meal.ordered ? Brand.primary : Color.clear)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .stroke(meal.ordered ? Brand.primary : Color.secondary.opacity(0.55), lineWidth: 2)
+                    )
+
+                if isSubmitting {
+                    ProgressView()
+                        .controlSize(.small)
+                        .tint(meal.ordered ? Brand.onAccent : Brand.primary)
+                } else if meal.ordered {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 15, weight: .bold))
+                        .foregroundStyle(Brand.onAccent)
+                }
+            }
+            .frame(width: 36, height: 36)
+            .contentShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .disabled(isSubmitting)
+        .accessibilityLabel(meal.ordered ? String(localized: "stravacz.meal.cancel") : String(localized: "stravacz.meal.order"))
+        .accessibilityIdentifier(meal.ordered ? "stravaCZCancelButton-\(meal.id)" : "stravaCZOrderButton-\(meal.id)")
     }
 }
 

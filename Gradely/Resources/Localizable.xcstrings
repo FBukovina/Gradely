@@ -299,6 +299,86 @@
         }
       }
     },
+    "absence.manual.callout.button" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vybrat hodiny"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose lessons"
+          }
+        }
+      }
+    },
+    "absence.manual.callout.message" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld dní má částečnou absenci. Vyber přesné hodiny, aby se započítaly do předmětů."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld days have partial absence. Choose the exact lessons so they can count toward subjects."
+          }
+        }
+      }
+    },
+    "absence.manual.callout.title" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chybí přesné hodiny"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Exact lessons needed"
+          }
+        }
+      }
+    },
+    "absence.manual.selectedCount" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vybráno %lld z %lld hodin"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Selected %lld of %lld lessons"
+          }
+        }
+      }
+    },
+    "absence.manual.title" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vybrat zameškané hodiny"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose missed lessons"
+          }
+        }
+      }
+    },
     "absence.months.empty" : {
       "localizations" : {
         "cs" : {
@@ -395,22 +475,6 @@
         }
       }
     },
-    "absence.subjects.empty" : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Žádná zameškanost v předmětech."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No subject absence."
-          }
-        }
-      }
-    },
     "absence.subjects.calculating" : {
       "localizations" : {
         "cs" : {
@@ -423,6 +487,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Calculating subject absence from timetable…"
+          }
+        }
+      }
+    },
+    "absence.subjects.empty" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Žádná zameškanost v předmětech."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No subject absence."
           }
         }
       }
@@ -503,86 +583,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Checked %lld of %lld weeks"
-          }
-        }
-      }
-    },
-    "absence.manual.callout.button" : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vybrat hodiny"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Choose lessons"
-          }
-        }
-      }
-    },
-    "absence.manual.callout.message" : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld dní má částečnou absenci. Vyber přesné hodiny, aby se započítaly do předmětů."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld days have partial absence. Choose the exact lessons so they can count toward subjects."
-          }
-        }
-      }
-    },
-    "absence.manual.callout.title" : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Chybí přesné hodiny"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Exact lessons needed"
-          }
-        }
-      }
-    },
-    "absence.manual.selectedCount" : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vybráno %lld z %lld hodin"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Selected %lld of %lld lessons"
-          }
-        }
-      }
-    },
-    "absence.manual.title" : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vybrat zameškané hodiny"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Choose missed lessons"
           }
         }
       }
@@ -1095,6 +1095,134 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "The school URL is not valid."
+          }
+        }
+      }
+    },
+    "error.stravacz.authentication" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Přihlášení do Strava.cz vypršelo. Přihlaste se prosím znovu."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your Strava.cz session expired. Please sign in again."
+          }
+        }
+      }
+    },
+    "error.stravacz.decoding" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Odpověď Strava.cz se nepodařilo přečíst: %@"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Could not read the Strava.cz response: %@"
+          }
+        }
+      }
+    },
+    "error.stravacz.insufficientBalance" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Na účtu Strava.cz není dostatečný zůstatek."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your Strava.cz balance is too low."
+          }
+        }
+      }
+    },
+    "error.stravacz.invalidResponse" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Strava.cz vrátila neplatnou odpověď."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Strava.cz returned an invalid response."
+          }
+        }
+      }
+    },
+    "error.stravacz.mealNotFound" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Toto jídlo už v jídelníčku není."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This meal is no longer in the menu."
+          }
+        }
+      }
+    },
+    "error.stravacz.mealNotModifiable" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Toto jídlo nejde objednat ani odhlásit."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This meal cannot be ordered or canceled."
+          }
+        }
+      }
+    },
+    "error.stravacz.notLoggedIn" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nejste přihlášeni do Strava.cz."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You are not signed in to Strava.cz."
+          }
+        }
+      }
+    },
+    "error.stravacz.status" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Strava.cz vrátila chybu %d."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Strava.cz returned error %d."
           }
         }
       }
@@ -1708,134 +1836,6 @@
         }
       }
     },
-    "error.stravacz.authentication" : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Přihlášení do Strava.cz vypršelo. Přihlaste se prosím znovu."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Your Strava.cz session expired. Please sign in again."
-          }
-        }
-      }
-    },
-    "error.stravacz.decoding" : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Odpověď Strava.cz se nepodařilo přečíst: %@"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Could not read the Strava.cz response: %@"
-          }
-        }
-      }
-    },
-    "error.stravacz.insufficientBalance" : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Na účtu Strava.cz není dostatečný zůstatek."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Your Strava.cz balance is too low."
-          }
-        }
-      }
-    },
-    "error.stravacz.invalidResponse" : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Strava.cz vrátila neplatnou odpověď."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Strava.cz returned an invalid response."
-          }
-        }
-      }
-    },
-    "error.stravacz.mealNotFound" : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Toto jídlo už v jídelníčku není."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "This meal is no longer in the menu."
-          }
-        }
-      }
-    },
-    "error.stravacz.mealNotModifiable" : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Toto jídlo nejde objednat ani odhlásit."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "This meal cannot be ordered or canceled."
-          }
-        }
-      }
-    },
-    "error.stravacz.notLoggedIn" : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nejste přihlášeni do Strava.cz."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "You are not signed in to Strava.cz."
-          }
-        }
-      }
-    },
-    "error.stravacz.status" : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Strava.cz vrátila chybu %d."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Strava.cz returned error %d."
-          }
-        }
-      }
-    },
     "stravacz.account.menu" : {
       "localizations" : {
         "cs" : {
@@ -2029,6 +2029,7 @@
       }
     },
     "stravacz.meal.ordered" : {
+      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
@@ -2045,6 +2046,7 @@
       }
     },
     "stravacz.meal.readOnly" : {
+      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
@@ -2172,6 +2174,22 @@
         }
       }
     },
+    "stravacz.ordered" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Objednáno"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ordered"
+          }
+        }
+      }
+    },
     "stravacz.orderType.normal" : {
       "localizations" : {
         "cs" : {
@@ -2216,22 +2234,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Closed"
-          }
-        }
-      }
-    },
-    "stravacz.ordered" : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Objednáno"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ordered"
           }
         }
       }
@@ -2440,70 +2442,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Marks"
-          }
-        }
-      }
-    },
-    "support.updatePrompt.later" : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Možná později"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Maybe later"
-          }
-        }
-      }
-    },
-    "support.updatePrompt.message" : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gradely 1.4 přidává dobrovolnou podporu vývoje. Pokud vám aplikace pomáhá, můžete poslat jednorázové poděkování."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gradely 1.4 adds optional support for development. If the app helps you, you can send a one-time tip."
-          }
-        }
-      }
-    },
-    "support.updatePrompt.support" : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Podpořit Gradely"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Support Gradely"
-          }
-        }
-      }
-    },
-    "support.updatePrompt.title" : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Díky za aktualizaci"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Thanks for updating"
           }
         }
       }
@@ -2744,6 +2682,70 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Support"
+          }
+        }
+      }
+    },
+    "support.updatePrompt.later" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Možná později"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Maybe later"
+          }
+        }
+      }
+    },
+    "support.updatePrompt.message" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gradely 1.4 přidává dobrovolnou podporu vývoje. Pokud vám aplikace pomáhá, můžete poslat jednorázové poděkování."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gradely 1.4 adds optional support for development. If the app helps you, you can send a one-time tip."
+          }
+        }
+      }
+    },
+    "support.updatePrompt.support" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Podpořit Gradely"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Support Gradely"
+          }
+        }
+      }
+    },
+    "support.updatePrompt.title" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Díky za aktualizaci"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Thanks for updating"
           }
         }
       }

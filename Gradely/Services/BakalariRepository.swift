@@ -1,4 +1,5 @@
 import Foundation
+import GradelyWatchShared
 import WidgetKit
 
 struct DashboardData: Equatable {
@@ -74,6 +75,7 @@ final class BakalariRepository {
     private let nextLessonWidgetStore: (any NextLessonWidgetStoring)?
     private let absenceLessonSelectionStore: any AbsenceLessonSelectionStoring
     private let schoolDirectoryProvider: (any SchoolDirectoryProviding)?
+    private let watchSyncService: (any WatchSyncing)?
     private let dateProvider: () -> Date
     private let timetableFetchTimeoutNanoseconds: UInt64
 
@@ -86,6 +88,7 @@ final class BakalariRepository {
         nextLessonWidgetStore: (any NextLessonWidgetStoring)? = nil,
         absenceLessonSelectionStore: any AbsenceLessonSelectionStoring = InMemoryAbsenceLessonSelectionStore(),
         schoolDirectoryProvider: (any SchoolDirectoryProviding)? = nil,
+        watchSyncService: (any WatchSyncing)? = nil,
         dateProvider: @escaping () -> Date = Date.init,
         timetableFetchTimeoutNanoseconds: UInt64 = 12_000_000_000
     ) {
@@ -97,12 +100,19 @@ final class BakalariRepository {
         self.nextLessonWidgetStore = nextLessonWidgetStore
         self.absenceLessonSelectionStore = absenceLessonSelectionStore
         self.schoolDirectoryProvider = schoolDirectoryProvider
+        self.watchSyncService = watchSyncService
         self.dateProvider = dateProvider
         self.timetableFetchTimeoutNanoseconds = timetableFetchTimeoutNanoseconds
     }
 
     func bootstrapSession() throws -> StoredSession? {
-        try sessionStore.loadSession()
+        let session = try sessionStore.loadSession()
+        if let session {
+            watchSyncService?.update(session: session)
+        } else {
+            watchSyncService?.publishSignedOut()
+        }
+        return session
     }
 
     func login(schoolURL: String, username: String, password: String) async throws -> StoredSession {
@@ -118,7 +128,9 @@ final class BakalariRepository {
             username: username.trimmingCharacters(in: .whitespacesAndNewlines),
             password: password
         )
-        return try sessionStore.save(loginResponse: response, baseURL: baseURL)
+        let session = try sessionStore.save(loginResponse: response, baseURL: baseURL)
+        watchSyncService?.update(session: session)
+        return session
     }
 
     func logout() throws {
@@ -129,6 +141,7 @@ final class BakalariRepository {
         try? nextLessonWidgetStore?.clear()
         WidgetCenter.shared.reloadTimelines(ofKind: NextLessonWidgetConstants.widgetKind)
         try absenceLessonSelectionStore.clearAll()
+        watchSyncService?.publishSignedOut()
     }
 
     func loadCachedMarks() throws -> CachedMarks? {
@@ -145,6 +158,7 @@ final class BakalariRepository {
         guard let cached = try? timetableCache.load(weekStart: monday) else { return nil }
         let week = TimetableMapper.makeWeek(from: cached.response, weekStart: monday)
         publishNextLessonWidgetSnapshot(for: week, weekStart: monday)
+        publishWatchTimetable(for: week, cachedAt: cached.cachedAt)
         return week
     }
 
@@ -160,6 +174,7 @@ final class BakalariRepository {
         try? timetableCache.save(response, weekStart: monday)
         let week = TimetableMapper.makeWeek(from: response, weekStart: monday)
         publishNextLessonWidgetSnapshot(for: week, weekStart: monday)
+        publishWatchTimetable(for: week, cachedAt: dateProvider())
         return week
     }
 
@@ -169,7 +184,11 @@ final class BakalariRepository {
         guard let user = try? await client.fetchUser(baseURL: session.baseURL, accessToken: session.accessToken) else {
             return nil
         }
-        return resolvedUser(user, session: session)
+        let resolved = resolvedUser(user, session: session)
+        if let resolved {
+            watchSyncService?.update(user: resolved)
+        }
+        return resolved
     }
 
     func loadDashboard(forceRefresh: Bool = false) async throws -> DashboardData {
@@ -192,10 +211,15 @@ final class BakalariRepository {
             try? absenceCache.save(absence)
         }
 
+        let resolvedDashboardUser = resolvedUser(await user, session: session)
+        if let resolvedDashboardUser {
+            watchSyncService?.update(user: resolvedDashboardUser)
+        }
+
         return DashboardData(
             marksResponse: marksResponse,
             absencesPerSubject: absence?.absencesPerSubject ?? [],
-            user: resolvedUser(await user, session: session)
+            user: resolvedDashboardUser
         )
     }
 
@@ -213,11 +237,16 @@ final class BakalariRepository {
         )
         try? absenceCache.save(response)
 
+        let resolvedAbsenceUser = resolvedUser(await user, session: session)
+        if let resolvedAbsenceUser {
+            watchSyncService?.update(user: resolvedAbsenceUser)
+        }
+
         return AbsenceData(
             response: response,
             absencesPerSubject: response.absencesPerSubject,
             subjectResolutionSource: response.absencesPerSubject.isEmpty ? .unavailable : .official,
-            user: resolvedUser(await user, session: session)
+            user: resolvedAbsenceUser
         )
     }
 
@@ -321,7 +350,9 @@ final class BakalariRepository {
             baseURL: session.baseURL,
             refreshToken: session.refreshToken
         )
-        return try sessionStore.save(refreshedResponse: response, currentBaseURL: session.baseURL)
+        let refreshedSession = try sessionStore.save(refreshedResponse: response, currentBaseURL: session.baseURL)
+        watchSyncService?.update(session: refreshedSession)
+        return refreshedSession
     }
 
     private func optionalAbsenceResponse(baseURL: URL, accessToken: String) async -> AbsenceResponse? {
@@ -509,6 +540,10 @@ final class BakalariRepository {
         let lessons = NextLessonWidgetSnapshotBuilder.lessons(from: week)
         try? nextLessonWidgetStore.updateLessons(lessons, forWeekStarting: weekStart, cachedAt: dateProvider())
         WidgetCenter.shared.reloadTimelines(ofKind: NextLessonWidgetConstants.widgetKind)
+    }
+
+    private func publishWatchTimetable(for week: TimetableWeek, cachedAt: Date) {
+        watchSyncService?.update(timetable: WatchPayloadBuilder.timetable(from: week, cachedAt: cachedAt))
     }
 }
 

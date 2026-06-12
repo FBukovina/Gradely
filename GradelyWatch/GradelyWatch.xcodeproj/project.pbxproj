@@ -1,0 +1,659 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		B100001C2FCE00000000001C /* GradelyWatchShared in Frameworks */ = {isa = PBXBuildFile; productRef = B100001A2FCE00000000001A /* GradelyWatchShared */; };
+		B100001D2FCE00000000001D /* GradelyWatchShared in Frameworks */ = {isa = PBXBuildFile; productRef = B100001B2FCE00000000001B /* GradelyWatchShared */; };
+		B20000082FCE0000000000B8 /* GradelyWatchComplications.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = B20000022FCE0000000000B2 /* GradelyWatchComplications.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		B200000F2FCE0000000000BF /* GradelyWatchShared in Frameworks */ = {isa = PBXBuildFile; productRef = B200000E2FCE0000000000BE /* GradelyWatchShared */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		B100001F2FCE00000000001F /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = B10000012FCE000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = B100000E2FCE00000000000E;
+			remoteInfo = GradelyWatch;
+		};
+		B20000092FCE0000000000B9 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = B10000012FCE000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = B20000032FCE0000000000B3;
+			remoteInfo = GradelyWatchComplications;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		B20000072FCE0000000000B7 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				B20000082FCE0000000000B8 /* GradelyWatchComplications.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		B10000062FCE000000000006 /* GradelyWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = GradelyWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		B10000072FCE000000000007 /* GradelyWatchTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = GradelyWatchTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		B20000022FCE0000000000B2 /* GradelyWatchComplications.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = GradelyWatchComplications.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		B10000042FCE000000000004 /* GradelyWatch */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = GradelyWatch;
+			sourceTree = "<group>";
+		};
+		B10000052FCE000000000005 /* GradelyWatchTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = GradelyWatchTests;
+			sourceTree = "<group>";
+		};
+		B20000012FCE0000000000B1 /* GradelyWatchComplications */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = GradelyWatchComplications;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		B10000092FCE000000000009 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B100001C2FCE00000000001C /* GradelyWatchShared in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B100000C2FCE00000000000C /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B100001D2FCE00000000001D /* GradelyWatchShared in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B20000052FCE0000000000B5 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B200000F2FCE0000000000BF /* GradelyWatchShared in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		B10000022FCE000000000002 = {
+			isa = PBXGroup;
+			children = (
+				B10000042FCE000000000004 /* GradelyWatch */,
+				B20000012FCE0000000000B1 /* GradelyWatchComplications */,
+				B10000052FCE000000000005 /* GradelyWatchTests */,
+				B10000032FCE000000000003 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		B10000032FCE000000000003 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				B10000062FCE000000000006 /* GradelyWatch.app */,
+				B20000022FCE0000000000B2 /* GradelyWatchComplications.appex */,
+				B10000072FCE000000000007 /* GradelyWatchTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		B100000E2FCE00000000000E /* GradelyWatch */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B10000112FCE000000000011 /* Build configuration list for PBXNativeTarget "GradelyWatch" */;
+			buildPhases = (
+				B10000082FCE000000000008 /* Sources */,
+				B10000092FCE000000000009 /* Frameworks */,
+				B100000A2FCE00000000000A /* Resources */,
+				B20000072FCE0000000000B7 /* Embed Foundation Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				B200000A2FCE0000000000BA /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				B10000042FCE000000000004 /* GradelyWatch */,
+			);
+			name = GradelyWatch;
+			packageProductDependencies = (
+				B100001A2FCE00000000001A /* GradelyWatchShared */,
+			);
+			productName = GradelyWatch;
+			productReference = B10000062FCE000000000006 /* GradelyWatch.app */;
+			productType = "com.apple.product-type.application";
+		};
+		B100000F2FCE00000000000F /* GradelyWatchTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B10000122FCE000000000012 /* Build configuration list for PBXNativeTarget "GradelyWatchTests" */;
+			buildPhases = (
+				B100000B2FCE00000000000B /* Sources */,
+				B100000C2FCE00000000000C /* Frameworks */,
+				B100000D2FCE00000000000D /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				B100001E2FCE00000000001E /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				B10000052FCE000000000005 /* GradelyWatchTests */,
+			);
+			name = GradelyWatchTests;
+			packageProductDependencies = (
+				B100001B2FCE00000000001B /* GradelyWatchShared */,
+			);
+			productName = GradelyWatchTests;
+			productReference = B10000072FCE000000000007 /* GradelyWatchTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		B20000032FCE0000000000B3 /* GradelyWatchComplications */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B200000B2FCE0000000000BB /* Build configuration list for PBXNativeTarget "GradelyWatchComplications" */;
+			buildPhases = (
+				B20000042FCE0000000000B4 /* Sources */,
+				B20000052FCE0000000000B5 /* Frameworks */,
+				B20000062FCE0000000000B6 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				B20000012FCE0000000000B1 /* GradelyWatchComplications */,
+			);
+			name = GradelyWatchComplications;
+			packageProductDependencies = (
+				B200000E2FCE0000000000BE /* GradelyWatchShared */,
+			);
+			productName = GradelyWatchComplications;
+			productReference = B20000022FCE0000000000B2 /* GradelyWatchComplications.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		B10000012FCE000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2650;
+				LastUpgradeCheck = 2650;
+				TargetAttributes = {
+					B100000E2FCE00000000000E = {
+						CreatedOnToolsVersion = 26.5;
+					};
+					B100000F2FCE00000000000F = {
+						CreatedOnToolsVersion = 26.5;
+						TestTargetID = B100000E2FCE00000000000E;
+					};
+				};
+			};
+			buildConfigurationList = B10000102FCE000000000010 /* Build configuration list for PBXProject "GradelyWatch" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = B10000022FCE000000000002;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				B10000192FCE000000000019 /* XCLocalSwiftPackageReference "../GradelyWatchShared" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = B10000032FCE000000000003 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				B100000E2FCE00000000000E /* GradelyWatch */,
+				B20000032FCE0000000000B3 /* GradelyWatchComplications */,
+				B100000F2FCE00000000000F /* GradelyWatchTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		B100000A2FCE00000000000A /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B100000D2FCE00000000000D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B20000062FCE0000000000B6 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		B10000082FCE000000000008 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B100000B2FCE00000000000B /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B20000042FCE0000000000B4 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		B100001E2FCE00000000001E /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = B100000E2FCE00000000000E /* GradelyWatch */;
+			targetProxy = B100001F2FCE00000000001F /* PBXContainerItemProxy */;
+		};
+		B200000A2FCE0000000000BA /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = B20000032FCE0000000000B3 /* GradelyWatchComplications */;
+			targetProxy = B20000092FCE0000000000B9 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		B10000132FCE000000000013 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = C2U9S337H8;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = watchos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				WATCHOS_DEPLOYMENT_TARGET = 26.0;
+			};
+			name = Debug;
+		};
+		B10000142FCE000000000014 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = C2U9S337H8;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = watchos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+				WATCHOS_DEPLOYMENT_TARGET = 26.0;
+			};
+			name = Release;
+		};
+		B10000152FCE000000000015 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
+				CODE_SIGN_ENTITLEMENTS = GradelyWatch/GradelyWatch.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 8;
+				DEVELOPMENT_TEAM = C2U9S337H8;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = Gradey;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_KEY_WKApplication = YES;
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.bukovinafilip.BakalariMarks;
+				INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.7;
+				PRODUCT_BUNDLE_IDENTIFIER = com.bukovinafilip.BakalariMarks.watchkitapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SUPPORTED_PLATFORMS = "watchos watchsimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 26.0;
+			};
+			name = Debug;
+		};
+		B10000162FCE000000000016 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
+				CODE_SIGN_ENTITLEMENTS = GradelyWatch/GradelyWatch.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 8;
+				DEVELOPMENT_TEAM = C2U9S337H8;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = Gradey;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_KEY_WKApplication = YES;
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.bukovinafilip.BakalariMarks;
+				INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.7;
+				PRODUCT_BUNDLE_IDENTIFIER = com.bukovinafilip.BakalariMarks.watchkitapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SUPPORTED_PLATFORMS = "watchos watchsimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 26.0;
+			};
+			name = Release;
+		};
+		B10000172FCE000000000017 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = C2U9S337H8;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.bukovinafilip.BakalariMarks.watchkitapp.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SUPPORTED_PLATFORMS = "watchos watchsimulator";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/GradelyWatch.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/GradelyWatch";
+				WATCHOS_DEPLOYMENT_TARGET = 26.0;
+			};
+			name = Debug;
+		};
+		B10000182FCE000000000018 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = C2U9S337H8;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.bukovinafilip.BakalariMarks.watchkitapp.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SUPPORTED_PLATFORMS = "watchos watchsimulator";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/GradelyWatch.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/GradelyWatch";
+				WATCHOS_DEPLOYMENT_TARGET = 26.0;
+			};
+			name = Release;
+		};
+		B200000C2FCE0000000000BC /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = GradelyWatchComplications/GradelyWatchComplications.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 5;
+				DEVELOPMENT_TEAM = C2U9S337H8;
+				ENABLE_PREVIEWS = YES;
+				INFOPLIST_FILE = "GradelyWatchComplications-Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.7;
+				PRODUCT_BUNDLE_IDENTIFIER = com.bukovinafilip.BakalariMarks.watchkitapp.complications;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SUPPORTED_PLATFORMS = "watchos watchsimulator";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 26.0;
+			};
+			name = Debug;
+		};
+		B200000D2FCE0000000000BD /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = GradelyWatchComplications/GradelyWatchComplications.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 5;
+				DEVELOPMENT_TEAM = C2U9S337H8;
+				ENABLE_PREVIEWS = YES;
+				INFOPLIST_FILE = "GradelyWatchComplications-Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.7;
+				PRODUCT_BUNDLE_IDENTIFIER = com.bukovinafilip.BakalariMarks.watchkitapp.complications;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SUPPORTED_PLATFORMS = "watchos watchsimulator";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 26.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		B10000102FCE000000000010 /* Build configuration list for PBXProject "GradelyWatch" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B10000132FCE000000000013 /* Debug */,
+				B10000142FCE000000000014 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		B10000112FCE000000000011 /* Build configuration list for PBXNativeTarget "GradelyWatch" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B10000152FCE000000000015 /* Debug */,
+				B10000162FCE000000000016 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		B10000122FCE000000000012 /* Build configuration list for PBXNativeTarget "GradelyWatchTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B10000172FCE000000000017 /* Debug */,
+				B10000182FCE000000000018 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		B200000B2FCE0000000000BB /* Build configuration list for PBXNativeTarget "GradelyWatchComplications" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B200000C2FCE0000000000BC /* Debug */,
+				B200000D2FCE0000000000BD /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		B10000192FCE000000000019 /* XCLocalSwiftPackageReference "../GradelyWatchShared" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../GradelyWatchShared;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		B100001A2FCE00000000001A /* GradelyWatchShared */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B10000192FCE000000000019 /* XCLocalSwiftPackageReference "../GradelyWatchShared" */;
+			productName = GradelyWatchShared;
+		};
+		B100001B2FCE00000000001B /* GradelyWatchShared */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B10000192FCE000000000019 /* XCLocalSwiftPackageReference "../GradelyWatchShared" */;
+			productName = GradelyWatchShared;
+		};
+		B200000E2FCE0000000000BE /* GradelyWatchShared */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B10000192FCE000000000019 /* XCLocalSwiftPackageReference "../GradelyWatchShared" */;
+			productName = GradelyWatchShared;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = B10000012FCE000000000001 /* Project object */;
+}

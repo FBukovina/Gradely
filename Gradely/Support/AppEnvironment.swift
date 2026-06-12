@@ -5,17 +5,20 @@ struct AppEnvironment {
     let stravaCZRepository: StravaCZRepository
     let schoolDirectoryProvider: any SchoolDirectoryProviding
     let supportTipProvider: any SupportTipProviding
+    let watchSyncService: (any WatchSyncing)?
 
     init(
         repository: BakalariRepository,
         stravaCZRepository: StravaCZRepository = AppEnvironment.makeMockStravaCZRepository(),
         schoolDirectoryProvider: any SchoolDirectoryProviding,
-        supportTipProvider: any SupportTipProviding = MockSupportTipService()
+        supportTipProvider: any SupportTipProviding = MockSupportTipService(),
+        watchSyncService: (any WatchSyncing)? = nil
     ) {
         self.repository = repository
         self.stravaCZRepository = stravaCZRepository
         self.schoolDirectoryProvider = schoolDirectoryProvider
         self.supportTipProvider = supportTipProvider
+        self.watchSyncService = watchSyncService
     }
 
     static func live() -> AppEnvironment {
@@ -25,6 +28,7 @@ struct AppEnvironment {
         let absenceLessonSelectionStore: any AbsenceLessonSelectionStoring = (try? AbsenceLessonSelectionStore()) ?? InMemoryAbsenceLessonSelectionStore()
         let schoolDirectoryCache: any SchoolDirectoryCaching = (try? SchoolDirectoryCache()) ?? InMemorySchoolDirectoryCache()
         let schoolDirectoryProvider = URLSessionSchoolDirectoryProvider(cache: schoolDirectoryCache)
+        let watchSyncService = LiveWatchSyncService()
         return AppEnvironment(
             repository: BakalariRepository(
                 client: DemoAwareBakalariClient(liveClient: URLSessionBakalariClient()),
@@ -34,7 +38,8 @@ struct AppEnvironment {
                 timetableCache: timetableCache,
                 nextLessonWidgetStore: NextLessonWidgetStore(),
                 absenceLessonSelectionStore: absenceLessonSelectionStore,
-                schoolDirectoryProvider: schoolDirectoryProvider
+                schoolDirectoryProvider: schoolDirectoryProvider,
+                watchSyncService: watchSyncService
             ),
             stravaCZRepository: StravaCZRepository(
                 client: URLSessionStravaCZClient(),
@@ -42,7 +47,8 @@ struct AppEnvironment {
                 menuCache: (try? StravaCZMenuCache()) ?? InMemoryStravaCZMenuCache()
             ),
             schoolDirectoryProvider: schoolDirectoryProvider,
-            supportTipProvider: RevenueCatSupportTipService()
+            supportTipProvider: RevenueCatSupportTipService(),
+            watchSyncService: watchSyncService
         )
     }
 

@@ -14,6 +14,7 @@ struct ContentView: View {
     private let stravaCZRepository: StravaCZRepository
     private let schoolDirectoryProvider: any SchoolDirectoryProviding
     private let supportTipProvider: any SupportTipProviding
+    private let watchSyncService: (any WatchSyncing)?
     private let skipsOnboarding: Bool
     private let suppressesVersionSupportPrompt: Bool
     private let forcesVersionSupportPrompt: Bool
@@ -36,6 +37,7 @@ struct ContentView: View {
         stravaCZRepository = environment.stravaCZRepository
         schoolDirectoryProvider = environment.schoolDirectoryProvider
         supportTipProvider = environment.supportTipProvider
+        watchSyncService = environment.watchSyncService
         self.skipsOnboarding = skipsOnboarding
         self.suppressesVersionSupportPrompt = suppressesVersionSupportPrompt
         self.forcesVersionSupportPrompt = forcesVersionSupportPrompt
@@ -96,6 +98,7 @@ struct ContentView: View {
             }
         }
         .task {
+            watchSyncService?.start()
             await appViewModel.bootstrap()
             presentVersionSupportPromptIfNeeded()
         }

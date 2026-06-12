@@ -2029,7 +2029,6 @@
       }
     },
     "stravacz.meal.ordered" : {
-      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "stringUnit" : {

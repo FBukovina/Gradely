@@ -438,6 +438,8 @@ private struct StravaCZMealRow: View {
                     isSubmitting: isSubmitting,
                     onToggle: onToggle
                 )
+            } else if meal.ordered {
+                StravaCZMealOrderedIndicator(mealID: meal.id)
             } else {
                 Color.clear
                     .frame(width: 40, height: 40)
@@ -480,6 +482,19 @@ private struct StravaCZMealSelectionButton: View {
         .disabled(isSubmitting)
         .accessibilityLabel(meal.ordered ? String(localized: "stravacz.meal.cancel") : String(localized: "stravacz.meal.order"))
         .accessibilityIdentifier(meal.ordered ? "stravaCZCancelButton-\(meal.id)" : "stravaCZOrderButton-\(meal.id)")
+    }
+}
+
+private struct StravaCZMealOrderedIndicator: View {
+    let mealID: Int
+
+    var body: some View {
+        Image(systemName: "checkmark.circle.fill")
+            .font(.system(size: 28, weight: .semibold))
+            .foregroundStyle(Brand.primary)
+            .frame(width: 40, height: 40)
+            .accessibilityLabel(String(localized: "stravacz.meal.ordered"))
+            .accessibilityIdentifier("stravaCZOrderedIndicator-\(mealID)")
     }
 }
 

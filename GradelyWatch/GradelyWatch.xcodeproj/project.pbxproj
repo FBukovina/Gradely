@@ -535,7 +535,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = GradelyWatchComplications/GradelyWatchComplications.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 10;
 				DEVELOPMENT_TEAM = C2U9S337H8;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = "GradelyWatchComplications-Info.plist";
@@ -565,7 +565,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = GradelyWatchComplications/GradelyWatchComplications.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 10;
 				DEVELOPMENT_TEAM = C2U9S337H8;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = "GradelyWatchComplications-Info.plist";

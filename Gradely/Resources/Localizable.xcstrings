@@ -252,6 +252,7 @@
       }
     },
     "absence.empty.message" : {
+      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
@@ -268,6 +269,7 @@
       }
     },
     "absence.empty.title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
@@ -375,6 +377,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Choose missed lessons"
+          }
+        }
+      }
+    },
+    "absence.months.empty" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Žádná absence po měsících."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No monthly absence."
           }
         }
       }
@@ -631,22 +649,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Total hours"
-          }
-        }
-      }
-    },
-    "absence.months.empty" : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Žádná absence po měsících."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No monthly absence."
           }
         }
       }
@@ -1040,13 +1042,13 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Gradely"
+            "value" : "Gradey"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Gradely"
+            "value" : "Gradey"
           }
         }
       }
@@ -1941,13 +1943,13 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vítejte v Gradely"
+            "value" : "Vítejte v Gradey"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Welcome to Gradely"
+            "value" : "Welcome to Gradey"
           }
         }
       }
@@ -2171,13 +2173,13 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vložte ji do pole URL školy. Gradely přijme i adresu bez https:// a zabezpečenou část doplní."
+            "value" : "Vložte ji do pole URL školy. Gradey přijme i adresu bez https:// a zabezpečenou část doplní."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Paste it into School URL. Gradely also accepts the address without https:// and adds the secure part."
+            "value" : "Paste it into School URL. Gradey also accepts the address without https:// and adds the secure part."
           }
         }
       }
@@ -2340,7 +2342,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Your school canteen login is separate from Bakaláři. Gradely does not store this password."
+            "value" : "Your school canteen login is separate from Bakaláři. Gradey does not store this password."
           }
         }
       }
@@ -2895,13 +2897,13 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Díky, že používáte Gradely"
+            "value" : "Díky, že používáte Gradey"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Thanks for using Gradely"
+            "value" : "Thanks for using Gradey"
           }
         }
       }
@@ -2927,13 +2929,13 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Podpořit Gradely"
+            "value" : "Podpořit Gradey"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Support Gradely"
+            "value" : "Support Gradey"
           }
         }
       }
@@ -2975,13 +2977,13 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vaše podpora pomáhá udržet Gradely rychlé, čisté a užitečné."
+            "value" : "Vaše podpora pomáhá udržet Gradey rychlé, čisté a užitečné."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Your support helps keep Gradely fast, clean, and useful."
+            "value" : "Your support helps keep Gradey fast, clean, and useful."
           }
         }
       }
@@ -2997,7 +2999,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Thank you for supporting Gradely"
+            "value" : "Thank you for supporting Gradey"
           }
         }
       }
@@ -3087,13 +3089,13 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Gradely 1.4 přidává dobrovolnou podporu vývoje. Pokud vám aplikace pomáhá, můžete poslat jednorázové poděkování."
+            "value" : "Gradey 1.4 přidává dobrovolnou podporu vývoje. Pokud vám aplikace pomáhá, můžete poslat jednorázové poděkování."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Gradely 1.4 adds optional support for development. If the app helps you, you can send a one-time tip."
+            "value" : "Gradey 1.4 adds optional support for development. If the app helps you, you can send a one-time tip."
           }
         }
       }
@@ -3103,13 +3105,13 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Podpořit Gradely"
+            "value" : "Podpořit Gradey"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Support Gradely"
+            "value" : "Support Gradey"
           }
         }
       }

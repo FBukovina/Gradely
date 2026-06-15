@@ -4,7 +4,7 @@ enum NextLessonWidgetConstants {
     static let appGroupIdentifier = "group.com.bukovinafilip.BakalariMarks"
     static let widgetKind = "GradelyNextLessonWidget"
     static let snapshotFileName = "next-lesson-widget-snapshot.json"
-    static let timetableDeepLink = URL(string: "gradely://timetable")!
+    static let timetableDeepLink = URL(string: "gradey://timetable")!
 }
 
 enum NextLessonWidgetChangeKind: String, Codable, Equatable {

@@ -16,7 +16,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "B400000A2FCEF1000000000A"
-               BuildableName = "Gradely.app"
+               BuildableName = "Gradey.app"
                BlueprintName = "GradelyMac"
                ReferencedContainer = "container:Gradely.xcodeproj">
             </BuildableReference>
@@ -45,7 +45,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "B400000A2FCEF1000000000A"
-            BuildableName = "Gradely.app"
+            BuildableName = "Gradey.app"
             BlueprintName = "GradelyMac"
             ReferencedContainer = "container:Gradely.xcodeproj">
          </BuildableReference>
@@ -62,7 +62,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "B400000A2FCEF1000000000A"
-            BuildableName = "Gradely.app"
+            BuildableName = "Gradey.app"
             BlueprintName = "GradelyMac"
             ReferencedContainer = "container:Gradely.xcodeproj">
          </BuildableReference>

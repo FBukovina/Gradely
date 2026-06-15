@@ -143,11 +143,11 @@ private struct NextLessonWidgetView: View {
         case .lesson(let lesson, let timing):
             accessoryLessonView(lesson: lesson, timing: timing)
         case .noSnapshot:
-            accessoryEmptyView(title: "Open Gradely", subtitle: "Load timetable", systemImage: "calendar")
+            accessoryEmptyView(title: "Open Gradey", subtitle: "Load timetable", systemImage: "calendar")
         case .noLessons:
-            accessoryEmptyView(title: "No lessons", subtitle: "Open Gradely", systemImage: "calendar.badge.checkmark")
+            accessoryEmptyView(title: "No lessons", subtitle: "Open Gradey", systemImage: "calendar.badge.checkmark")
         case .stale:
-            accessoryEmptyView(title: "Open Gradely", subtitle: "Refresh timetable", systemImage: "arrow.clockwise")
+            accessoryEmptyView(title: "Open Gradey", subtitle: "Refresh timetable", systemImage: "arrow.clockwise")
         }
     }
 
@@ -157,11 +157,11 @@ private struct NextLessonWidgetView: View {
         case .lesson(let lesson, let timing):
             systemLessonView(lesson: lesson, timing: timing)
         case .noSnapshot:
-            systemEmptyView(title: "Open Gradely", subtitle: "Load your timetable to show the next lesson.", systemImage: "calendar")
+            systemEmptyView(title: "Open Gradey", subtitle: "Load your timetable to show the next lesson.", systemImage: "calendar")
         case .noLessons:
             systemEmptyView(title: "No lessons", subtitle: "Your timetable is clear for now.", systemImage: "calendar.badge.checkmark")
         case .stale:
-            systemEmptyView(title: "Refresh timetable", subtitle: "Open Gradely to update this widget.", systemImage: "arrow.clockwise")
+            systemEmptyView(title: "Refresh timetable", subtitle: "Open Gradey to update this widget.", systemImage: "arrow.clockwise")
         }
     }
 

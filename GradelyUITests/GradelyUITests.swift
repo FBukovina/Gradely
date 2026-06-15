@@ -115,7 +115,7 @@ final class GradelyUITests: XCTestCase {
 
         let supportButton = app.buttons["supportGradelyButton"].waitForExistence(timeout: 3)
             ? app.buttons["supportGradelyButton"]
-            : app.buttons["Support Gradely"]
+            : app.buttons["Support Gradey"]
         XCTAssertTrue(supportButton.waitForExistence(timeout: 3))
         supportButton.tap()
 
@@ -201,9 +201,9 @@ final class GradelyUITests: XCTestCase {
         let prompt = app.alerts.firstMatch
         XCTAssertTrue(prompt.waitForExistence(timeout: 5))
 
-        let supportButton = prompt.buttons["Support Gradely"].exists
-            ? prompt.buttons["Support Gradely"]
-            : prompt.buttons["Podpořit Gradely"]
+        let supportButton = prompt.buttons["Support Gradey"].exists
+            ? prompt.buttons["Support Gradey"]
+            : prompt.buttons["Podpořit Gradey"]
         XCTAssertTrue(supportButton.exists)
         supportButton.tap()
 

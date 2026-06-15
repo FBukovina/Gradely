@@ -100,11 +100,11 @@
 
 /* Begin PBXFileReference section */
 		23EA86CD939E4E779E620824 /* GradelyWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = GradelyWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
-		81EE6CA12FCDDC4A009D28DE /* Gradely.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Gradely.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		81EE6CA12FCDDC4A009D28DE /* Gradey.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Gradey.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		81EE6CAE2FCDDC4B009D28DE /* GradelyTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = GradelyTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		81EE6CB82FCDDC4B009D28DE /* GradelyUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = GradelyUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		A20000012FCE0000000000A1 /* GradelyWatch.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = GradelyWatch.xcodeproj; path = GradelyWatch/GradelyWatch.xcodeproj; sourceTree = "<group>"; };
-		B40000052FCEF10000000005 /* Gradely.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Gradely.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		B40000052FCEF10000000005 /* Gradey.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Gradey.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B50000022FCF000000000002 /* GradelyMacWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = GradelyMacWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -215,8 +215,8 @@
 		81EE6CA22FCDDC4A009D28DE /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				81EE6CA12FCDDC4A009D28DE /* Gradely.app */,
-				B40000052FCEF10000000005 /* Gradely.app */,
+				81EE6CA12FCDDC4A009D28DE /* Gradey.app */,
+				B40000052FCEF10000000005 /* Gradey.app */,
 				23EA86CD939E4E779E620824 /* GradelyWidgets.appex */,
 				B50000022FCF000000000002 /* GradelyMacWidgets.appex */,
 				81EE6CAE2FCDDC4B009D28DE /* GradelyTests.xctest */,
@@ -284,8 +284,8 @@
 				A10000022FCE000000000002 /* GradelyWatchShared */,
 				81EE6CCC2FCDDC4B009D28DE /* RevenueCat */,
 			);
-			productName = Gradely;
-			productReference = 81EE6CA12FCDDC4A009D28DE /* Gradely.app */;
+			productName = Gradey;
+			productReference = 81EE6CA12FCDDC4A009D28DE /* Gradey.app */;
 			productType = "com.apple.product-type.application";
 		};
 		81EE6CAD2FCDDC4B009D28DE /* GradelyTests */ = {
@@ -358,8 +358,8 @@
 				B400000E2FCEF1000000000E /* RevenueCat */,
 				B400000F2FCEF1000000000F /* GradelyWatchShared */,
 			);
-			productName = Gradely;
-			productReference = B40000052FCEF10000000005 /* Gradely.app */;
+			productName = Gradey;
+			productReference = B40000052FCEF10000000005 /* Gradey.app */;
 			productType = "com.apple.product-type.application";
 		};
 		B500000A2FCF00000000000A /* GradelyMacWidgets */ = {
@@ -600,7 +600,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = GradelyWidgets/GradelyWidgets.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 10;
 				DEVELOPMENT_TEAM = C2U9S337H8;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = "GradelyWidgets-Info.plist";
@@ -612,7 +612,8 @@
 				);
 				MARKETING_VERSION = 1.8;
 				PRODUCT_BUNDLE_IDENTIFIER = com.bukovinafilip.BakalariMarks.GradelyWidgets;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_MODULE_NAME = GradelyWidgets;
+				PRODUCT_NAME = GradelyWidgets;
 				SKIP_INSTALL = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -757,6 +758,9 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 10;
 				DEVELOPMENT_TEAM = C2U9S337H8;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = "Gradely-Info.plist";
@@ -767,12 +771,15 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.8;
 				PRODUCT_BUNDLE_IDENTIFIER = com.bukovinafilip.BakalariMarks;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_MODULE_NAME = Gradely;
+				PRODUCT_NAME = Gradey;
+				REGISTER_APP_GROUPS = YES;
 				REVENUECAT_IOS_API_KEY = appl_KTNbCvFOqwPTWfQKhjDCgSdSANH;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
 				SUPPORTS_MACCATALYST = NO;
 				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
@@ -804,12 +811,14 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.8;
 				PRODUCT_BUNDLE_IDENTIFIER = com.bukovinafilip.BakalariMarks;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_MODULE_NAME = Gradely;
+				PRODUCT_NAME = Gradey;
 				REVENUECAT_IOS_API_KEY = appl_KTNbCvFOqwPTWfQKhjDCgSdSANH;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
 				SUPPORTS_MACCATALYST = NO;
 				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
@@ -840,7 +849,7 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Gradely.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Gradely";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Gradey.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Gradey";
 			};
 			name = Debug;
 		};
@@ -862,7 +871,7 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Gradely.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Gradely";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Gradey.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Gradey";
 			};
 			name = Release;
 		};
@@ -926,7 +935,8 @@
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.8;
 				PRODUCT_BUNDLE_IDENTIFIER = com.bukovinafilip.BakalariMarks.mac;
-				PRODUCT_NAME = Gradely;
+				PRODUCT_MODULE_NAME = Gradely;
+				PRODUCT_NAME = Gradey;
 				REVENUECAT_MACOS_API_KEY = appl_KTNbCvFOqwPTWfQKhjDCgSdSANH;
 				SDKROOT = macosx;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -961,7 +971,8 @@
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.8;
 				PRODUCT_BUNDLE_IDENTIFIER = com.bukovinafilip.BakalariMarks.mac;
-				PRODUCT_NAME = Gradely;
+				PRODUCT_MODULE_NAME = Gradely;
+				PRODUCT_NAME = Gradey;
 				REVENUECAT_MACOS_API_KEY = appl_KTNbCvFOqwPTWfQKhjDCgSdSANH;
 				SDKROOT = macosx;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -995,7 +1006,8 @@
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.8;
 				PRODUCT_BUNDLE_IDENTIFIER = com.bukovinafilip.BakalariMarks.mac.GradelyWidgets;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_MODULE_NAME = GradelyMacWidgets;
+				PRODUCT_NAME = GradelyMacWidgets;
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
@@ -1028,7 +1040,8 @@
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.8;
 				PRODUCT_BUNDLE_IDENTIFIER = com.bukovinafilip.BakalariMarks.mac.GradelyWidgets;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_MODULE_NAME = GradelyMacWidgets;
+				PRODUCT_NAME = GradelyMacWidgets;
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
@@ -1048,7 +1061,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = GradelyWidgets/GradelyWidgets.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 10;
 				DEVELOPMENT_TEAM = C2U9S337H8;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = "GradelyWidgets-Info.plist";
@@ -1060,7 +1073,8 @@
 				);
 				MARKETING_VERSION = 1.8;
 				PRODUCT_BUNDLE_IDENTIFIER = com.bukovinafilip.BakalariMarks.GradelyWidgets;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_MODULE_NAME = GradelyWidgets;
+				PRODUCT_NAME = GradelyWidgets;
 				SKIP_INSTALL = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -1155,8 +1169,8 @@
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/RevenueCat/purchases-ios-spm.git";
 			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 5.0.0;
+				kind = exactVersion;
+				version = 5.77.0;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */

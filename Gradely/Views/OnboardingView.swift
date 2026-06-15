@@ -33,7 +33,7 @@ struct OnboardingView: View {
                             .padding(.horizontal, Spacing.xl)
                     }
                 }
-                .tabViewStyle(.page(indexDisplayMode: .always))
+                .gradelyOnboardingTabStyle()
                 .animation(.easeInOut(duration: 0.2), value: selection)
 
                 Button {
@@ -123,6 +123,17 @@ private struct OnboardingPageView: View {
             Spacer(minLength: Spacing.xl)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
+private extension View {
+    @ViewBuilder
+    func gradelyOnboardingTabStyle() -> some View {
+        #if os(macOS)
+        self
+        #else
+        self.tabViewStyle(.page(indexDisplayMode: .always))
+        #endif
     }
 }
 

@@ -20,9 +20,13 @@ struct TimetableView: View {
         NavigationStack {
             content
                 .navigationTitle(String(localized: "rozvrh.title"))
-                .navigationBarTitleDisplayMode(.inline)
+                .gradelyNavigationTitleDisplayMode(.inline)
                 .toolbar {
-                    ToolbarItem(placement: .topBarTrailing) {
+                    ToolbarItem(placement: .gradelyTopBarLeading) {
+                        CreditsToolbarButton()
+                    }
+
+                    ToolbarItem(placement: .gradelyTopBarTrailing) {
                         Button {
                             Task { await viewModel.refresh() }
                         } label: {
@@ -34,7 +38,7 @@ struct TimetableView: View {
                         .accessibilityIdentifier("timetableRefreshButton")
                     }
 
-                    ToolbarItem(placement: .topBarTrailing) {
+                    ToolbarItem(placement: .gradelyTopBarTrailing) {
                         AccountMenu(
                             user: viewModel.user,
                             supportTipProvider: supportTipProvider,
@@ -85,7 +89,7 @@ struct TimetableView: View {
             Divider()
             dayContent
         }
-        .background(Color(.systemGroupedBackground).ignoresSafeArea())
+        .background(Color.gradelyGroupedBackground.ignoresSafeArea())
     }
 
     private var dayContent: some View {
@@ -225,7 +229,7 @@ private struct DayChip: View {
             .frame(width: 52, height: 66)
             .background {
                 RoundedRectangle(cornerRadius: Radius.md, style: .continuous)
-                    .fill(isSelected ? AnyShapeStyle(Brand.gradient) : AnyShapeStyle(Color(.secondarySystemGroupedBackground)))
+                    .fill(isSelected ? AnyShapeStyle(Brand.gradient) : AnyShapeStyle(Color.gradelySecondaryGroupedBackground))
             }
             .overlay {
                 RoundedRectangle(cornerRadius: Radius.md, style: .continuous)
@@ -344,7 +348,7 @@ private struct LessonCard: View {
         .opacity(lesson.isCanceled ? 0.6 : 1)
         .background(
             RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
-                .fill(Color(.secondarySystemGroupedBackground))
+                .fill(Color.gradelySecondaryGroupedBackground)
         )
         .overlay(
             RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
@@ -476,14 +480,12 @@ private struct LessonDetailSheet: View {
                 .frame(maxWidth: 640)
                 .frame(maxWidth: .infinity)
             }
-            .background(Color(.systemGroupedBackground).ignoresSafeArea())
+            .background(Color.gradelyGroupedBackground.ignoresSafeArea())
             .navigationTitle(lesson.subjectName ?? lesson.title)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button(String(localized: "action.ok")) { dismiss() }
-                }
-            }
+            .gradelyNavigationTitleDisplayMode(.inline)
+        }
+        .gradelyModalDismissButton {
+            dismiss()
         }
         .presentationDetents([.medium, .large])
     }

@@ -19,9 +19,13 @@ struct AbsenceView: View {
         NavigationStack {
             content
                 .navigationTitle(String(localized: "absence.title"))
-                .navigationBarTitleDisplayMode(.inline)
+                .gradelyNavigationTitleDisplayMode(.inline)
                 .toolbar {
-                    ToolbarItem(placement: .topBarTrailing) {
+                    ToolbarItem(placement: .gradelyTopBarLeading) {
+                        CreditsToolbarButton()
+                    }
+
+                    ToolbarItem(placement: .gradelyTopBarTrailing) {
                         Button {
                             Task { await viewModel.refresh(forceRefresh: true) }
                         } label: {
@@ -33,7 +37,7 @@ struct AbsenceView: View {
                         .accessibilityIdentifier("absenceRefreshButton")
                     }
 
-                    ToolbarItem(placement: .topBarTrailing) {
+                    ToolbarItem(placement: .gradelyTopBarTrailing) {
                         AccountMenu(
                             user: viewModel.user,
                             supportTipProvider: supportTipProvider,
@@ -46,6 +50,9 @@ struct AbsenceView: View {
                 }
                 .sheet(isPresented: $viewModel.isManualSelectionSheetPresented) {
                     ManualAbsenceLessonSelectionSheet(viewModel: viewModel)
+                }
+                .sheet(isPresented: $viewModel.isPredictionSheetPresented) {
+                    AbsencePredictionSheet(viewModel: viewModel)
                 }
         }
     }
@@ -72,13 +79,6 @@ struct AbsenceView: View {
                 .buttonStyle(.borderedProminent)
             }
             .accessibilityIdentifier("absenceErrorView")
-        } else if !viewModel.hasAnyAbsenceData {
-            ContentUnavailableView(
-                String(localized: "absence.empty.title"),
-                systemImage: "calendar.badge.checkmark",
-                description: Text("absence.empty.message")
-            )
-            .accessibilityIdentifier("absenceEmptyView")
         } else {
             absenceContent
         }
@@ -88,6 +88,15 @@ struct AbsenceView: View {
         ScrollView {
             LazyVStack(spacing: Spacing.md) {
                 AbsenceHeader(user: viewModel.user, totalCounts: viewModel.totalCounts)
+                AbsencePredictorCard(
+                    result: viewModel.predictionResult,
+                    onOpen: {
+                        viewModel.openPredictionSheet()
+                    },
+                    onClear: {
+                        viewModel.clearPredictionSelections()
+                    }
+                )
 
                 Picker("absence.segment.title", selection: $viewModel.selectedSegment) {
                     ForEach(AbsenceViewModel.Segment.allCases) { segment in
@@ -141,7 +150,7 @@ struct AbsenceView: View {
         .refreshable {
             await viewModel.refresh(forceRefresh: true)
         }
-        .background(Color(.systemGroupedBackground).ignoresSafeArea())
+        .background(Color.gradelyGroupedBackground.ignoresSafeArea())
         .accessibilityIdentifier("absenceList")
     }
 }
@@ -186,6 +195,166 @@ private struct AbsenceHeader: View {
     }
 }
 
+private struct AbsencePredictorCard: View {
+    let result: AbsencePredictionResult
+    let onOpen: () -> Void
+    let onClear: () -> Void
+
+    var body: some View {
+        Card {
+            VStack(alignment: .leading, spacing: Spacing.md) {
+                HStack(alignment: .top, spacing: Spacing.md) {
+                    Image(systemName: "calendar.badge.clock")
+                        .font(.title3.weight(.bold))
+                        .foregroundStyle(Brand.primary)
+                        .frame(width: 42, height: 42)
+                        .background(Brand.primary.opacity(0.14), in: RoundedRectangle(cornerRadius: Radius.sm, style: .continuous))
+
+                    VStack(alignment: .leading, spacing: Spacing.xs) {
+                        Text("absence.predictor.title")
+                            .font(.headline)
+                        Text(messageKey)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    Spacer()
+                }
+
+                if result.hasSelection {
+                    predictionSummary
+                }
+
+                HStack(spacing: Spacing.sm) {
+                    Button(action: onOpen) {
+                        Text(openButtonKey)
+                    }
+                        .buttonStyle(.borderedProminent)
+                        .accessibilityIdentifier("absencePredictorOpenButton")
+
+                    if result.hasSelection {
+                        Button(role: .destructive, action: onClear) {
+                            Text("action.clear")
+                        }
+                        .buttonStyle(.bordered)
+                        .accessibilityIdentifier("absencePredictorClearButton")
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .accessibilityIdentifier("absencePredictorCard")
+    }
+
+    private var messageKey: LocalizedStringKey {
+        result.hasSelection ? "absence.predictor.summary.message" : "absence.predictor.empty.message"
+    }
+
+    private var openButtonKey: LocalizedStringKey {
+        result.hasSelection ? "absence.predictor.edit" : "absence.predictor.open"
+    }
+
+    private var predictionSummary: some View {
+        VStack(alignment: .leading, spacing: Spacing.md) {
+            HStack(spacing: Spacing.md) {
+                metricTile(
+                    title: "absence.predictor.total",
+                    value: "\(result.currentTotal.total) -> \(result.projectedTotal.total)"
+                )
+                metricTile(
+                    title: "absence.predictor.okAdded",
+                    value: String.localizedStringWithFormat(
+                        String(localized: "absence.predictor.addedHours"),
+                        result.addedHours
+                    )
+                )
+            }
+
+            if !result.subjectRows.isEmpty {
+                VStack(spacing: 0) {
+                    ForEach(result.subjectRows) { row in
+                        subjectRow(row)
+                    }
+                }
+                .background(Color.gradelyTertiaryGroupedBackground, in: RoundedRectangle(cornerRadius: Radius.md, style: .continuous))
+                .accessibilityIdentifier("absencePredictorSubjectRows")
+            }
+        }
+        .accessibilityIdentifier("absencePredictionTotal")
+    }
+
+    private func metricTile(title: LocalizedStringKey, value: String) -> some View {
+        VStack(alignment: .leading, spacing: Spacing.xs) {
+            Text(title)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+            Text(value)
+                .font(.title3.weight(.bold).monospacedDigit())
+                .foregroundStyle(Brand.primary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(Spacing.md)
+        .background(Color.gradelyTertiaryGroupedBackground, in: RoundedRectangle(cornerRadius: Radius.md, style: .continuous))
+    }
+
+    private func subjectRow(_ row: AbsencePredictionSubjectRow) -> some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            HStack(alignment: .firstTextBaseline, spacing: Spacing.sm) {
+                Text(row.subjectName)
+                    .font(.subheadline.weight(.semibold))
+                    .lineLimit(2)
+
+                Spacer()
+
+                StatusChip(
+                    text: String.localizedStringWithFormat(
+                        String(localized: "absence.predictor.addedHours"),
+                        row.addedHours
+                    ),
+                    color: row.exceedsThreshold ? GradeBand.poor.foregroundColor : Brand.secondary
+                )
+            }
+
+            if let currentBase = row.currentBase,
+               let projectedBase = row.projectedBase,
+               let currentPercentage = row.currentPercentage,
+               let projectedPercentage = row.projectedPercentage {
+                HStack(spacing: Spacing.md) {
+                    Text(
+                        String.localizedStringWithFormat(
+                            String(localized: "absence.predictor.subject.absentChange"),
+                            currentBase,
+                            projectedBase
+                        )
+                    )
+                    Text(
+                        String.localizedStringWithFormat(
+                            String(localized: "absence.predictor.subject.percentChange"),
+                            currentPercentage,
+                            projectedPercentage
+                        )
+                    )
+                }
+                .font(.caption.monospacedDigit())
+                .foregroundStyle(row.exceedsThreshold ? GradeBand.poor.foregroundColor : .secondary)
+            } else {
+                Text("absence.predictor.baselineUnavailable")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(.horizontal, Spacing.md)
+        .padding(.vertical, Spacing.md)
+        .background(row.exceedsThreshold ? GradeBand.poor.soft : Color.clear)
+        .overlay(alignment: .bottom) {
+            Divider()
+        }
+        .accessibilityIdentifier("absencePredictionRow-\(row.id)")
+    }
+}
+
 private struct CountsAbsenceTable: View {
     let leadingTitle: String
     let totalTitle: String
@@ -224,7 +393,7 @@ private struct CountsAbsenceTable: View {
                 }
             }
             .frame(minWidth: leadingWidth + columnWidth * CGFloat(AbsenceCategory.allCases.count))
-            .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+            .background(Color.gradelySecondaryGroupedBackground, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
                     .strokeBorder(Color.primary.opacity(0.06), lineWidth: 1)
@@ -249,7 +418,7 @@ private struct CountsAbsenceTable: View {
         }
         .padding(.horizontal, Spacing.md)
         .padding(.vertical, Spacing.md)
-        .background(Color(.tertiarySystemGroupedBackground))
+        .background(Color.gradelyTertiaryGroupedBackground)
     }
 
     private func countRow(
@@ -274,7 +443,7 @@ private struct CountsAbsenceTable: View {
         }
         .padding(.horizontal, Spacing.md)
         .padding(.vertical, Spacing.lg)
-        .background(isTotal ? Color(.tertiarySystemGroupedBackground) : Color(.secondarySystemGroupedBackground))
+        .background(isTotal ? Color.gradelyTertiaryGroupedBackground : Color.gradelySecondaryGroupedBackground)
         .overlay(alignment: .bottom) {
             Divider()
         }
@@ -327,7 +496,7 @@ private struct SubjectAbsenceTable: View {
                 subjectRow(row)
             }
         }
-        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+        .background(Color.gradelySecondaryGroupedBackground, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
                 .strokeBorder(Color.primary.opacity(0.06), lineWidth: 1)
@@ -349,7 +518,7 @@ private struct SubjectAbsenceTable: View {
         .foregroundStyle(Brand.primary)
         .padding(.horizontal, Spacing.md)
         .padding(.vertical, Spacing.md)
-        .background(Color(.tertiarySystemGroupedBackground))
+        .background(Color.gradelyTertiaryGroupedBackground)
     }
 
     private func subjectRow(_ row: AbsenceSubjectSummary) -> some View {
@@ -370,7 +539,7 @@ private struct SubjectAbsenceTable: View {
         .foregroundStyle(row.exceedsThreshold ? GradeBand.poor.foregroundColor : .primary)
         .padding(.horizontal, Spacing.md)
         .padding(.vertical, Spacing.lg)
-        .background(row.exceedsThreshold ? GradeBand.poor.soft : Color(.secondarySystemGroupedBackground))
+        .background(row.exceedsThreshold ? GradeBand.poor.soft : Color.gradelySecondaryGroupedBackground)
         .overlay(alignment: .bottom) {
             Divider()
         }
@@ -471,7 +640,7 @@ private struct ManualAbsenceLessonSelectionSheet: View {
                 }
             }
             .navigationTitle("absence.manual.title")
-            .navigationBarTitleDisplayMode(.inline)
+            .gradelyNavigationTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("action.cancel") {
@@ -489,6 +658,130 @@ private struct ManualAbsenceLessonSelectionSheet: View {
             }
         }
         .accessibilityIdentifier("absenceManualSelectionSheet")
+    }
+}
+
+private struct AbsencePredictionSheet: View {
+    @Bindable var viewModel: AbsenceViewModel
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    DatePicker(
+                        "absence.predictor.date",
+                        selection: $viewModel.predictionSelectedDate,
+                        in: viewModel.predictionMinimumDate...,
+                        displayedComponents: .date
+                    )
+                    .accessibilityIdentifier("absencePredictorDatePicker")
+                }
+
+                predictionLessonSection
+
+                Section {
+                    Button(role: .destructive) {
+                        viewModel.clearPredictionDraftSelections()
+                    } label: {
+                        Text("action.clear")
+                    }
+                    .disabled(viewModel.predictionDraftSelectedCount == 0)
+                    .accessibilityIdentifier("absencePredictorSheetClearButton")
+                }
+            }
+            .navigationTitle("absence.predictor.sheet.title")
+            .gradelyNavigationTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("action.cancel") {
+                        viewModel.cancelPredictionSheet()
+                    }
+                }
+
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("action.done") {
+                        viewModel.commitPredictionSelections()
+                    }
+                    .accessibilityIdentifier("absencePredictorDoneButton")
+                }
+            }
+            .task {
+                await viewModel.loadPredictionLessonsForSelectedDate()
+            }
+            .onChange(of: viewModel.predictionSelectedDate) {
+                Task { await viewModel.loadPredictionLessonsForSelectedDate() }
+            }
+        }
+        .accessibilityIdentifier("absencePredictionSheet")
+    }
+
+    @ViewBuilder
+    private var predictionLessonSection: some View {
+        if viewModel.isLoadingPredictionLessons {
+            Section {
+                HStack(spacing: Spacing.sm) {
+                    ProgressView()
+                    Text("absence.predictor.loading")
+                        .foregroundStyle(.secondary)
+                }
+            }
+        } else if let message = viewModel.predictionErrorMessage {
+            Section {
+                Label(message, systemImage: "exclamationmark.triangle")
+                    .foregroundStyle(GradeBand.poor.foregroundColor)
+
+                Button("action.retry") {
+                    Task { await viewModel.loadPredictionLessonsForSelectedDate() }
+                }
+            }
+        } else if viewModel.predictionLessons.isEmpty {
+            Section {
+                Label("absence.predictor.noLessons", systemImage: "calendar.badge.checkmark")
+                    .foregroundStyle(.secondary)
+            }
+        } else {
+            Section {
+                ForEach(viewModel.predictionLessons) { lesson in
+                    Button {
+                        viewModel.togglePredictionLesson(lesson)
+                    } label: {
+                        HStack(spacing: Spacing.sm) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(lesson.displayTitle)
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(.primary)
+
+                                if !lesson.timeRange.isEmpty {
+                                    Text(lesson.timeRange)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+
+                            Spacer()
+
+                            if viewModel.isPredictionLessonSelected(lesson.id) {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundStyle(Brand.primary)
+                            } else {
+                                Image(systemName: "circle")
+                                    .foregroundStyle(.tertiary)
+                            }
+                        }
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("absencePredictorLesson-\(lesson.id)")
+                }
+            } header: {
+                Text(
+                    String.localizedStringWithFormat(
+                        String(localized: "absence.predictor.selectedCount"),
+                        viewModel.predictionDraftSelectedCount
+                    )
+                )
+            }
+        }
     }
 }
 
@@ -608,7 +901,7 @@ private enum AbsenceCategory: CaseIterable, Identifiable {
         case .ok: Brand.secondary
         case .missed: GradeBand.poor.foregroundColor
         case .late: GradeBand.average.foregroundColor
-        case .soon: Color(.systemOrange)
+        case .soon: Color.gradelySystemOrange
         case .school, .distanceTeaching: Brand.secondary
         }
     }

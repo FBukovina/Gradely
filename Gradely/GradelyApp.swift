@@ -15,7 +15,16 @@ struct GradelyApp: App {
 
     var body: some Scene {
         WindowGroup {
+            #if os(macOS)
             ContentView()
+                .frame(minWidth: 880, minHeight: 600)
+            #else
+            ContentView()
+            #endif
         }
+        #if os(macOS)
+        .defaultSize(width: 1040, height: 720)
+        .windowResizability(.contentMinSize)
+        #endif
     }
 }

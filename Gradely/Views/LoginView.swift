@@ -85,8 +85,8 @@ struct LoginView: View {
 
                 TextField(String(localized: "login.schoolURL"), text: $viewModel.schoolURL)
                     .textContentType(.URL)
-                    .keyboardType(.URL)
-                    .textInputAutocapitalization(.never)
+                    .gradelyKeyboardType(.url)
+                    .gradelyTextInputAutocapitalization(.never)
                     .autocorrectionDisabled()
                     .submitLabel(.next)
                     .brandField()
@@ -96,7 +96,7 @@ struct LoginView: View {
 
                 TextField(String(localized: "login.username"), text: $viewModel.username)
                     .textContentType(.username)
-                    .textInputAutocapitalization(.never)
+                    .gradelyTextInputAutocapitalization(.never)
                     .autocorrectionDisabled()
                     .submitLabel(.next)
                     .brandField()
@@ -157,7 +157,7 @@ struct LoginView: View {
                         set: { viewModel.updateSchoolSearch($0) }
                     )
                 )
-                .textInputAutocapitalization(.words)
+                .gradelyTextInputAutocapitalization(.words)
                 .autocorrectionDisabled()
                 .submitLabel(.next)
                 .focused($isSchoolSearchFocused)
@@ -196,7 +196,7 @@ struct LoginView: View {
                 }
                 .background(
                     RoundedRectangle(cornerRadius: Radius.sm, style: .continuous)
-                        .fill(Color(.tertiarySystemFill))
+                        .fill(Color.gradelyTertiaryFill)
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: Radius.sm, style: .continuous)
@@ -238,7 +238,7 @@ struct LoginView: View {
         .padding(.vertical, Spacing.md)
         .background(
             RoundedRectangle(cornerRadius: Radius.sm, style: .continuous)
-                .fill(Color(.tertiarySystemFill))
+                .fill(Color.gradelyTertiaryFill)
         )
         .accessibilityIdentifier("schoolURLManual")
     }

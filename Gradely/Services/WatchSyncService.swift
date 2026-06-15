@@ -1,6 +1,8 @@
 import Foundation
 import GradelyWatchShared
+#if canImport(WatchConnectivity) && !os(macOS)
 import WatchConnectivity
+#endif
 
 @MainActor
 protocol WatchSyncing: AnyObject {
@@ -11,6 +13,7 @@ protocol WatchSyncing: AnyObject {
     func publishSignedOut()
 }
 
+#if canImport(WatchConnectivity) && !os(macOS)
 @MainActor
 final class LiveWatchSyncService: NSObject, WatchSyncing {
     private var session: WCSession?
@@ -138,3 +141,4 @@ extension LiveWatchSyncService: WCSessionDelegate {
         }
     }
 }
+#endif

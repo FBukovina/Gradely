@@ -28,7 +28,13 @@ struct AppEnvironment {
         let absenceLessonSelectionStore: any AbsenceLessonSelectionStoring = (try? AbsenceLessonSelectionStore()) ?? InMemoryAbsenceLessonSelectionStore()
         let schoolDirectoryCache: any SchoolDirectoryCaching = (try? SchoolDirectoryCache()) ?? InMemorySchoolDirectoryCache()
         let schoolDirectoryProvider = URLSessionSchoolDirectoryProvider(cache: schoolDirectoryCache)
-        let watchSyncService = LiveWatchSyncService()
+        #if os(macOS)
+        let watchSyncService: (any WatchSyncing)? = nil
+        let nextLessonWidgetStore: (any NextLessonWidgetStoring)? = NextLessonWidgetStore()
+        #else
+        let watchSyncService: (any WatchSyncing)? = LiveWatchSyncService()
+        let nextLessonWidgetStore: (any NextLessonWidgetStoring)? = NextLessonWidgetStore()
+        #endif
         return AppEnvironment(
             repository: BakalariRepository(
                 client: DemoAwareBakalariClient(liveClient: URLSessionBakalariClient()),
@@ -36,7 +42,7 @@ struct AppEnvironment {
                 marksCache: marksCache,
                 absenceCache: absenceCache,
                 timetableCache: timetableCache,
-                nextLessonWidgetStore: NextLessonWidgetStore(),
+                nextLessonWidgetStore: nextLessonWidgetStore,
                 absenceLessonSelectionStore: absenceLessonSelectionStore,
                 schoolDirectoryProvider: schoolDirectoryProvider,
                 watchSyncService: watchSyncService

@@ -2,11 +2,11 @@ import Foundation
 import RevenueCat
 
 enum RevenueCatConfiguration {
-    private static let publicIOSAPIKey = "appl_KTNbCvFOqwPTWfQKhjDCgSdSANH"
+    private static let publicAppleAPIKey = "appl_KTNbCvFOqwPTWfQKhjDCgSdSANH"
 
     static func configureIfNeeded(bundle: Bundle = .main) {
         guard !Purchases.isConfigured,
-              let apiKey = bundle.revenueCatIOSAPIKey ?? publicIOSAPIKey.nonEmptyAPIKey
+              let apiKey = bundle.revenueCatPlatformAPIKey ?? publicAppleAPIKey.nonEmptyAPIKey
         else {
             return
         }
@@ -20,8 +20,17 @@ enum RevenueCatConfiguration {
 }
 
 private extension Bundle {
-    var revenueCatIOSAPIKey: String? {
-        guard let rawValue = object(forInfoDictionaryKey: "RevenueCatIOSAPIKey") as? String else {
+    var revenueCatPlatformAPIKey: String? {
+        #if os(macOS)
+        revenueCatAPIKey(forInfoDictionaryKey: "RevenueCatMacOSAPIKey")
+            ?? revenueCatAPIKey(forInfoDictionaryKey: "RevenueCatIOSAPIKey")
+        #else
+        revenueCatAPIKey(forInfoDictionaryKey: "RevenueCatIOSAPIKey")
+        #endif
+    }
+
+    func revenueCatAPIKey(forInfoDictionaryKey key: String) -> String? {
+        guard let rawValue = object(forInfoDictionaryKey: key) as? String else {
             return nil
         }
 

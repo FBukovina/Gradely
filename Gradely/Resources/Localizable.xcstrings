@@ -379,6 +379,262 @@
         }
       }
     },
+    "absence.predictor.addedHours" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "+%lld h"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "+%lld h"
+          }
+        }
+      }
+    },
+    "absence.predictor.baselineUnavailable" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pro tento předmět zatím není spolehlivý základ pro procenta."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No reliable percentage baseline for this subject yet."
+          }
+        }
+      }
+    },
+    "absence.predictor.date" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Datum"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Date"
+          }
+        }
+      }
+    },
+    "absence.predictor.edit" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Upravit plán"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Edit plan"
+          }
+        }
+      }
+    },
+    "absence.predictor.empty.message" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vyber budoucí hodiny a uvidíš, jak změní zameškanost."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose future lessons to see how they change your absence."
+          }
+        }
+      }
+    },
+    "absence.predictor.loading" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Načítám rozvrh…"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Loading timetable…"
+          }
+        }
+      }
+    },
+    "absence.predictor.noLessons" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pro tento den nejsou v rozvrhu žádné započitatelné hodiny."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No countable lessons in the timetable for this day."
+          }
+        }
+      }
+    },
+    "absence.predictor.okAdded" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Omluveno navíc"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Excused added"
+          }
+        }
+      }
+    },
+    "absence.predictor.open" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Naplánovat absenci"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Plan absence"
+          }
+        }
+      }
+    },
+    "absence.predictor.selectedCount" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vybráno %lld hodin"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Selected %lld lessons"
+          }
+        }
+      }
+    },
+    "absence.predictor.sheet.title" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prediktor absence"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Absence predictor"
+          }
+        }
+      }
+    },
+    "absence.predictor.subject.absentChange" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Absence %lld -> %lld"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Absent %lld -> %lld"
+          }
+        }
+      }
+    },
+    "absence.predictor.subject.percentChange" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%.1f %% -> %.1f %%"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%.1f %% -> %.1f %%"
+          }
+        }
+      }
+    },
+    "absence.predictor.summary.message" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Orientační výsledek pro vybrané budoucí hodiny."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Projected result for selected future lessons."
+          }
+        }
+      }
+    },
+    "absence.predictor.title" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prediktor absence"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Absence predictor"
+          }
+        }
+      }
+    },
+    "absence.predictor.total" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Celkem hodin"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Total hours"
+          }
+        }
+      }
+    },
     "absence.months.empty" : {
       "localizations" : {
         "cs" : {
@@ -667,6 +923,38 @@
         }
       }
     },
+    "action.clear" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vymazat"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clear"
+          }
+        }
+      }
+    },
+    "action.done" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hotovo"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Done"
+          }
+        }
+      }
+    },
     "action.logout" : {
       "localizations" : {
         "cs" : {
@@ -759,6 +1047,87 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Gradely"
+          }
+        }
+      }
+    },
+    "credits.madeBy" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vyvinuto v"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Developed by"
+          }
+        }
+      }
+    },
+    "credits.menu" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tvůrci"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Credits"
+          }
+        }
+      }
+    },
+    "credits.role.leadDeveloper" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hlavní vývojář"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lead Developer"
+          }
+        }
+      }
+    },
+    "credits.role.leadGraphics" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Grafika & marketing"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lead Graphics & Marketing"
+          }
+        }
+      }
+    },
+    "credits.title" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tvůrci"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Credits"
           }
         }
       }
@@ -1259,6 +1628,9 @@
         }
       }
     },
+    "Instagram" : {
+
+    },
     "login.button" : {
       "localizations" : {
         "cs" : {
@@ -1580,6 +1952,12 @@
         }
       }
     },
+    "Open" : {
+
+    },
+    "openside.tech" : {
+
+    },
     "overview.best" : {
       "localizations" : {
         "cs" : {
@@ -1835,6 +2213,9 @@
           }
         }
       }
+    },
+    "Side" : {
+
     },
     "stravacz.account.menu" : {
       "localizations" : {

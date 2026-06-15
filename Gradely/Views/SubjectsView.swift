@@ -52,9 +52,13 @@ struct SubjectsView: View {
                 }
             }
             .navigationTitle(String(localized: "subjects.title"))
-            .navigationBarTitleDisplayMode(.inline)
+            .gradelyNavigationTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItem(placement: .gradelyTopBarLeading) {
+                    CreditsToolbarButton()
+                }
+
+                ToolbarItem(placement: .gradelyTopBarTrailing) {
                     Button {
                         Task { await viewModel.refresh(forceRefresh: true) }
                     } label: {
@@ -66,7 +70,7 @@ struct SubjectsView: View {
                     .accessibilityIdentifier("refreshButton")
                 }
 
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItem(placement: .gradelyTopBarTrailing) {
                     AccountMenu(
                         user: viewModel.user,
                         supportTipProvider: supportTipProvider,
@@ -76,15 +80,6 @@ struct SubjectsView: View {
             }
             .task {
                 await viewModel.loadIfNeeded()
-            }
-            .navigationDestination(for: Subject.self) { subject in
-                SubjectDetailView(
-                    viewModel: SubjectDetailViewModel(
-                        subject: subject,
-                        absence: viewModel.absence(for: subject),
-                        repository: repository
-                    )
-                )
             }
         }
     }
@@ -110,7 +105,15 @@ struct SubjectsView: View {
             }
 
             ForEach(viewModel.subjects) { subject in
-                NavigationLink(value: subject) {
+                NavigationLink {
+                    SubjectDetailView(
+                        viewModel: SubjectDetailViewModel(
+                            subject: subject,
+                            absence: viewModel.absence(for: subject),
+                            repository: repository
+                        )
+                    )
+                } label: {
                     SubjectCard(subject: subject)
                 }
                 .listRowInsets(EdgeInsets(top: Spacing.xs, leading: Spacing.lg, bottom: Spacing.xs, trailing: Spacing.lg))
@@ -121,7 +124,7 @@ struct SubjectsView: View {
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
-        .background(Color(.systemGroupedBackground).ignoresSafeArea())
+        .background(Color.gradelyGroupedBackground.ignoresSafeArea())
         .refreshable {
             await viewModel.refresh(forceRefresh: true)
         }
@@ -250,7 +253,7 @@ private struct SubjectCard: View {
         .padding(Spacing.md)
         .background(
             RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
-                .fill(Color(.secondarySystemGroupedBackground))
+                .fill(Color.gradelySecondaryGroupedBackground)
         )
         .overlay(
             RoundedRectangle(cornerRadius: Radius.card, style: .continuous)

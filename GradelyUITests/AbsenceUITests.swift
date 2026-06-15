@@ -92,6 +92,34 @@ final class AbsenceUITests: XCTestCase {
     }
 
     @MainActor
+    func testAbsencePredictorShowsProjectedSummaryAfterChoosingLesson() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-uiTestingMockAPI", "-uiTestingLoggedIn"]
+        app.launch()
+
+        XCTAssertTrue(app.collectionViews["subjectsList"].waitForExistence(timeout: 5))
+
+        app.tabBars.buttons.element(boundBy: 1).tap()
+        XCTAssertTrue(app.scrollViews["absenceList"].waitForExistence(timeout: 5))
+
+        let openButton = app.descendants(matching: .any)["absencePredictorOpenButton"]
+        XCTAssertTrue(openButton.waitForExistence(timeout: 3))
+        openButton.tap()
+
+        let lesson = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "identifier BEGINSWITH %@", "absencePredictorLesson-"))
+            .firstMatch
+        XCTAssertTrue(lesson.waitForExistence(timeout: 8))
+        lesson.tap()
+
+        let doneButton = app.buttons["absencePredictorDoneButton"]
+        XCTAssertTrue(doneButton.waitForExistence(timeout: 3))
+        doneButton.tap()
+
+        XCTAssertTrue(app.descendants(matching: .any)["absencePredictionTotal"].waitForExistence(timeout: 3))
+    }
+
+    @MainActor
     func testAbsenceLargeSubjectsFallbackDoesNotCrashWhenTappedImmediately() throws {
         let app = XCUIApplication()
         app.launchArguments = ["-uiTestingMockAPI", "-uiTestingLoggedIn", "-uiTestingLargeAbsenceSubjects"]

@@ -1,6 +1,8 @@
 import Foundation
 import GradelyWatchShared
+#if canImport(WidgetKit) && (os(iOS) || os(macOS))
 import WidgetKit
+#endif
 
 struct DashboardData: Equatable {
     let marksResponse: MarksResponse
@@ -139,7 +141,9 @@ final class BakalariRepository {
         try absenceCache.clear()
         try timetableCache.clear()
         try? nextLessonWidgetStore?.clear()
+        #if canImport(WidgetKit) && (os(iOS) || os(macOS))
         WidgetCenter.shared.reloadTimelines(ofKind: NextLessonWidgetConstants.widgetKind)
+        #endif
         try absenceLessonSelectionStore.clearAll()
         watchSyncService?.publishSignedOut()
     }
@@ -176,6 +180,34 @@ final class BakalariRepository {
         publishNextLessonWidgetSnapshot(for: week, weekStart: monday)
         publishWatchTimetable(for: week, cachedAt: dateProvider())
         return week
+    }
+
+    func loadAbsencePredictionLessons(
+        on date: Date,
+        user: UserResponse?
+    ) async throws -> [AbsenceLessonCandidate] {
+        _ = user
+        let weekStart = TimetableDates.monday(of: date)
+        let session = try await validSession()
+
+        let response: TimetableResponse
+        if let cached = try? timetableCache.load(weekStart: weekStart) {
+            response = cached.response
+        } else {
+            response = try await client.fetchTimetable(
+                baseURL: session.baseURL,
+                accessToken: session.accessToken,
+                date: weekStart
+            )
+            try? timetableCache.save(response, weekStart: weekStart)
+        }
+
+        let marksResponse = try? await marksResponseForAbsenceFallback(session: session)
+        return AbsenceTimetableLessonResolver.candidates(
+            on: date,
+            in: response,
+            subjects: marksResponse?.subjects ?? []
+        )
     }
 
     /// Best-effort current user, used to populate the account menu on tabs other than Marks.
@@ -535,11 +567,13 @@ final class BakalariRepository {
     }
 
     private func publishNextLessonWidgetSnapshot(for week: TimetableWeek, weekStart: Date) {
+        #if canImport(WidgetKit) && (os(iOS) || os(macOS))
         guard let nextLessonWidgetStore else { return }
 
         let lessons = NextLessonWidgetSnapshotBuilder.lessons(from: week)
         try? nextLessonWidgetStore.updateLessons(lessons, forWeekStarting: weekStart, cachedAt: dateProvider())
         WidgetCenter.shared.reloadTimelines(ofKind: NextLessonWidgetConstants.widgetKind)
+        #endif
     }
 
     private func publishWatchTimetable(for week: TimetableWeek, cachedAt: Date) {

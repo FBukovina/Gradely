@@ -11,10 +11,14 @@ struct StravaCZView: View {
         NavigationStack {
             content
                 .navigationTitle(String(localized: "stravacz.title"))
-                .navigationBarTitleDisplayMode(.inline)
+                .gradelyNavigationTitleDisplayMode(.inline)
                 .toolbar {
+                    ToolbarItem(placement: .gradelyTopBarLeading) {
+                        CreditsToolbarButton()
+                    }
+
                     if viewModel.phase == .signedIn {
-                        ToolbarItem(placement: .topBarTrailing) {
+                        ToolbarItem(placement: .gradelyTopBarTrailing) {
                             Button {
                                 Task { await viewModel.refresh(forceRefresh: true) }
                             } label: {
@@ -26,7 +30,7 @@ struct StravaCZView: View {
                             .accessibilityIdentifier("stravaCZRefreshButton")
                         }
 
-                        ToolbarItem(placement: .topBarTrailing) {
+                        ToolbarItem(placement: .gradelyTopBarTrailing) {
                             Menu {
                                 Button(role: .destructive) {
                                     Task { await viewModel.disconnect() }
@@ -97,7 +101,7 @@ struct StravaCZView: View {
 
     private var connectView: some View {
         ZStack {
-            Color(.systemGroupedBackground).ignoresSafeArea()
+            Color.gradelyGroupedBackground.ignoresSafeArea()
 
             ScrollView {
                 VStack(alignment: .leading, spacing: Spacing.xl) {
@@ -123,7 +127,7 @@ struct StravaCZView: View {
                     Card {
                         VStack(spacing: Spacing.lg) {
                             TextField(String(localized: "stravacz.canteenNumber"), text: $viewModel.canteenNumber)
-                                .keyboardType(.numberPad)
+                                .gradelyKeyboardType(.numberPad)
                                 .textContentType(.oneTimeCode)
                                 .submitLabel(.next)
                                 .brandField()
@@ -131,7 +135,7 @@ struct StravaCZView: View {
 
                             TextField(String(localized: "stravacz.username"), text: $viewModel.username)
                                 .textContentType(.username)
-                                .textInputAutocapitalization(.never)
+                                .gradelyTextInputAutocapitalization(.never)
                                 .autocorrectionDisabled()
                                 .submitLabel(.next)
                                 .brandField()
@@ -249,7 +253,7 @@ struct StravaCZView: View {
             }
             .listStyle(.plain)
             .scrollContentBackground(.hidden)
-            .background(Color(.systemGroupedBackground).ignoresSafeArea())
+            .background(Color.gradelyGroupedBackground.ignoresSafeArea())
             .refreshable {
                 await viewModel.refresh(forceRefresh: true)
             }
@@ -370,7 +374,7 @@ private struct StravaCZDayCard: View {
             }
         }
         .padding(Spacing.lg)
-        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+        .background(Color.gradelySecondaryGroupedBackground, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
                 .stroke(Brand.primary.opacity(0.28), lineWidth: 1.25)

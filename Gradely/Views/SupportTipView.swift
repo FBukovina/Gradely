@@ -17,19 +17,15 @@ struct SupportTipView: View {
                 }
                 .padding(Spacing.lg)
             }
-            .background(Color(.systemGroupedBackground).ignoresSafeArea())
+            .background(Color.gradelyGroupedBackground.ignoresSafeArea())
             .navigationTitle(String(localized: "support.tips.title"))
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button(String(localized: "action.ok")) {
-                        dismiss()
-                    }
-                }
-            }
+            .gradelyNavigationTitleDisplayMode(.inline)
             .task {
                 await viewModel.loadIfNeeded()
             }
+        }
+        .gradelyModalDismissButton {
+            dismiss()
         }
     }
 

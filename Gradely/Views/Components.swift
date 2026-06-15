@@ -12,7 +12,7 @@ struct Card<Content: View>: View {
             .padding(padding)
             .background(
                 RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
-                    .fill(Color(.secondarySystemGroupedBackground))
+                    .fill(Color.gradelySecondaryGroupedBackground)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
@@ -154,10 +154,7 @@ struct AccountMenu: View {
             .accessibilityIdentifier("logoutButton")
         } label: {
             Image(systemName: "person.fill")
-                .font(.footnote.weight(.bold))
-                .foregroundStyle(Brand.primary)
-                .frame(width: 30, height: 30)
-                .background(Brand.primary.opacity(0.15), in: Circle())
+                .gradelyToolbarIconButton()
         }
         .accessibilityLabel(String(localized: "account.menu"))
         .accessibilityIdentifier("accountMenuButton")
@@ -167,6 +164,26 @@ struct AccountMenu: View {
                     supportTipProvider: supportTipProvider
                 )
             )
+        }
+    }
+}
+
+// MARK: - Credits toolbar button
+
+struct CreditsToolbarButton: View {
+    @State private var isPresented = false
+
+    var body: some View {
+        Button {
+            isPresented = true
+        } label: {
+            Image(systemName: "person.2.fill")
+                .gradelyToolbarIconButton()
+        }
+        .accessibilityLabel(String(localized: "credits.title"))
+        .accessibilityIdentifier("creditsButton")
+        .sheet(isPresented: $isPresented) {
+            CreditsView()
         }
     }
 }
@@ -250,13 +267,49 @@ struct BrandFieldStyle: ViewModifier {
             .padding(.vertical, Spacing.md)
             .background(
                 RoundedRectangle(cornerRadius: Radius.sm, style: .continuous)
-                    .fill(Color(.tertiarySystemFill))
+                    .fill(Color.gradelyTertiaryFill)
             )
     }
 }
 
 extension View {
     func brandField() -> some View { modifier(BrandFieldStyle()) }
+
+    @ViewBuilder
+    func gradelyModalDismissButton(_ dismiss: @escaping () -> Void) -> some View {
+        #if os(macOS)
+        overlay(alignment: .topTrailing) {
+            Button {
+                dismiss()
+            } label: {
+                Text("action.ok")
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(.primary)
+                    .padding(.horizontal, Spacing.sm + 2)
+                    .padding(.vertical, 5)
+                    .background(Color.gradelyTertiaryFill, in: Capsule())
+                    .overlay {
+                        Capsule()
+                            .strokeBorder(Color.primary.opacity(0.08), lineWidth: 1)
+                    }
+            }
+            .buttonStyle(.plain)
+            .keyboardShortcut(.defaultAction)
+            .padding(.top, 20)
+            .padding(.trailing, Spacing.lg)
+            .accessibilityIdentifier("modalDismissButton")
+        }
+        #else
+        toolbar {
+            ToolbarItem(placement: .confirmationAction) {
+                Button(String(localized: "action.ok")) {
+                    dismiss()
+                }
+                .accessibilityIdentifier("modalDismissButton")
+            }
+        }
+        #endif
+    }
 }
 
 // MARK: - Aurora background
@@ -265,7 +318,7 @@ extension View {
 struct AuroraBackground: View {
     var body: some View {
         ZStack {
-            Color(.systemGroupedBackground)
+            Color.gradelyGroupedBackground
             GeometryReader { geo in
                 ZStack {
                     glow(Brand.auroraGlows[0], size: geo.size.width * 1.6)

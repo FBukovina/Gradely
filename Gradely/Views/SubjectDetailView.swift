@@ -19,10 +19,10 @@ struct SubjectDetailView: View {
             .frame(maxWidth: 640)
             .frame(maxWidth: .infinity)
         }
-        .background(Color(.systemGroupedBackground).ignoresSafeArea())
+        .background(Color.gradelyGroupedBackground.ignoresSafeArea())
         .scrollDismissesKeyboard(.interactively)
         .navigationTitle(viewModel.subject.trimmedName)
-        .navigationBarTitleDisplayMode(.large)
+        .gradelyNavigationTitleDisplayMode(.large)
     }
 
     private var marksSection: some View {
@@ -186,7 +186,7 @@ private struct TheoreticalCalculatorView: View {
                     get: { viewModel.theoreticalMark },
                     set: { viewModel.updateTheoreticalMark($0) }
                 ))
-                .keyboardType(.numbersAndPunctuation)
+                .gradelyKeyboardType(.numbersAndPunctuation)
                 .brandField()
                 .accessibilityIdentifier("theoreticalMarkField")
 
@@ -221,7 +221,7 @@ private struct TheoreticalCalculatorView: View {
         .padding(.horizontal, Spacing.sm)
         .background(
             RoundedRectangle(cornerRadius: Radius.sm, style: .continuous)
-                .fill(Color(.tertiarySystemFill))
+                .fill(Color.gradelyTertiaryFill)
         )
         .accessibilityIdentifier("theoreticalWeightStepper")
     }
@@ -232,7 +232,7 @@ private struct TheoreticalCalculatorView: View {
                 .font(.headline.weight(.bold))
                 .foregroundStyle(disabled ? AnyShapeStyle(.tertiary) : AnyShapeStyle(Brand.primary))
                 .frame(width: 36, height: 32)
-                .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: Radius.sm - 4, style: .continuous))
+                .background(Color.gradelySecondaryGroupedBackground, in: RoundedRectangle(cornerRadius: Radius.sm - 4, style: .continuous))
         }
         .buttonStyle(.plain)
         .disabled(disabled)

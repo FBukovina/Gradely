@@ -63,37 +63,30 @@ struct ContentView: View {
                     }
                 case .signedIn:
                     TabView(selection: $selectedTab) {
-                        SubjectsView(repository: repository, supportTipProvider: supportTipProvider) {
-                            Task { await appViewModel.signOut() }
-                        }
-                        .tabItem {
-                            Label("subjects.title", systemImage: "checkmark.seal.fill")
-                        }
-                        .tag(AppTab.subjects)
-
-                        AbsenceView(repository: repository, supportTipProvider: supportTipProvider) {
-                            Task { await appViewModel.signOut() }
-                        }
-                        .tabItem {
-                            Label("absence.title", systemImage: "calendar.badge.exclamationmark")
-                        }
-                        .tag(AppTab.absence)
-
-                        TimetableView(repository: repository, supportTipProvider: supportTipProvider) {
-                            Task { await appViewModel.signOut() }
-                        }
-                        .tabItem {
-                            Label("rozvrh.title", systemImage: "calendar")
-                        }
-                        .tag(AppTab.timetable)
-
-                        StravaCZView(repository: stravaCZRepository)
-                            .tabItem {
-                                Label("stravacz.title", systemImage: "fork.knife")
+                        Tab("subjects.title", systemImage: "checkmark.seal.fill", value: AppTab.subjects) {
+                            SubjectsView(repository: repository, supportTipProvider: supportTipProvider) {
+                                Task { await appViewModel.signOut() }
                             }
-                            .tag(AppTab.stravaCZ)
+                        }
+
+                        Tab("absence.title", systemImage: "calendar.badge.exclamationmark", value: AppTab.absence) {
+                            AbsenceView(repository: repository, supportTipProvider: supportTipProvider) {
+                                Task { await appViewModel.signOut() }
+                            }
+                        }
+
+                        Tab("rozvrh.title", systemImage: "calendar", value: AppTab.timetable) {
+                            TimetableView(repository: repository, supportTipProvider: supportTipProvider) {
+                                Task { await appViewModel.signOut() }
+                            }
+                        }
+
+                        Tab("stravacz.title", systemImage: "fork.knife", value: AppTab.stravaCZ) {
+                            StravaCZView(repository: stravaCZRepository)
+                        }
                     }
                     .tint(Brand.primary)
+                    .gradelySidebarAdaptable()
                 }
             }
         }

@@ -56,14 +56,26 @@ final class AbsenceViewModel {
     var manualSelectionDrafts: [String: Set<String>] = [:]
     var manualSelectionErrorMessage: String?
     var isSavingManualSelections = false
+    var isPredictionSheetPresented = false
+    var predictionSelectedDate: Date
+    var predictionLessons: [AbsenceLessonCandidate] = []
+    var predictionDraftLessonIDs: Set<String> = []
+    var predictionSelectedLessons: [AbsenceLessonCandidate] = []
+    var predictionErrorMessage: String?
+    var isLoadingPredictionLessons = false
 
     private let repository: BakalariRepository
+    private let predictionMinimumDay: Date
     private var hasLoaded = false
+    @ObservationIgnored private var predictionLessonsByDate: [String: [AbsenceLessonCandidate]] = [:]
+    @ObservationIgnored private var predictionLessonCacheByID: [String: AbsenceLessonCandidate] = [:]
     @ObservationIgnored private var subjectResolutionTask: Task<Void, Never>?
     @ObservationIgnored private var subjectResolutionToken = UUID()
 
-    init(repository: BakalariRepository) {
+    init(repository: BakalariRepository, today: Date = Date()) {
         self.repository = repository
+        predictionMinimumDay = TimetableDates.weekCalendar.startOfDay(for: today)
+        predictionSelectedDate = predictionMinimumDay
     }
 
     deinit {
@@ -82,6 +94,23 @@ final class AbsenceViewModel {
         !manualResolutionCandidates.isEmpty && manualResolutionCandidates.allSatisfy { day in
             (manualSelectionDrafts[day.dateKey] ?? []).count == day.requiredSelectionCount
         }
+    }
+
+    var predictionMinimumDate: Date {
+        predictionMinimumDay
+    }
+
+    var predictionDraftSelectedCount: Int {
+        predictionDraftLessonIDs.count
+    }
+
+    var predictionResult: AbsencePredictionResult {
+        AbsencePrediction.project(
+            currentTotalCounts: totalCounts,
+            subjectRows: subjectAbsenceState.rows,
+            selectedLessons: predictionSelectedLessons,
+            threshold: response?.percentageThreshold ?? 0
+        )
     }
 
     func loadIfNeeded() async {
@@ -291,6 +320,87 @@ final class AbsenceViewModel {
         }
     }
 
+    func openPredictionSheet() {
+        predictionErrorMessage = nil
+        predictionSelectedDate = normalizedPredictionDate(predictionSelectedDate)
+        predictionDraftLessonIDs = Set(predictionSelectedLessons.map(\.id))
+        for lesson in predictionSelectedLessons {
+            predictionLessonCacheByID[lesson.id] = lesson
+        }
+        isPredictionSheetPresented = true
+    }
+
+    func cancelPredictionSheet() {
+        predictionErrorMessage = nil
+        predictionDraftLessonIDs = []
+        isPredictionSheetPresented = false
+    }
+
+    func clearPredictionSelections() {
+        predictionDraftLessonIDs = []
+        predictionSelectedLessons = []
+    }
+
+    func clearPredictionDraftSelections() {
+        predictionDraftLessonIDs = []
+    }
+
+    func commitPredictionSelections() {
+        let selectedLessons = predictionDraftLessonIDs.compactMap { predictionLessonCacheByID[$0] }
+        predictionSelectedLessons = AbsencePrediction.selectedLessonsByID(selectedLessons)
+        predictionErrorMessage = nil
+        isPredictionSheetPresented = false
+    }
+
+    func isPredictionLessonSelected(_ lessonID: String) -> Bool {
+        predictionDraftLessonIDs.contains(lessonID)
+    }
+
+    func togglePredictionLesson(_ lesson: AbsenceLessonCandidate) {
+        predictionLessonCacheByID[lesson.id] = lesson
+        if predictionDraftLessonIDs.contains(lesson.id) {
+            predictionDraftLessonIDs.remove(lesson.id)
+        } else {
+            predictionDraftLessonIDs.insert(lesson.id)
+        }
+    }
+
+    func loadPredictionLessonsForSelectedDate() async {
+        let date = normalizedPredictionDate(predictionSelectedDate)
+        if date != predictionSelectedDate {
+            predictionSelectedDate = date
+        }
+
+        let dateKey = TimetableDates.apiDateString(date)
+        if let cached = predictionLessonsByDate[dateKey] {
+            predictionLessons = cached
+            predictionErrorMessage = nil
+            return
+        }
+
+        predictionErrorMessage = nil
+        isLoadingPredictionLessons = true
+        defer {
+            if currentPredictionDateKey == dateKey {
+                isLoadingPredictionLessons = false
+            }
+        }
+
+        do {
+            let lessons = try await repository.loadAbsencePredictionLessons(on: date, user: user)
+            guard currentPredictionDateKey == dateKey else { return }
+            predictionLessonsByDate[dateKey] = lessons
+            predictionLessons = lessons
+            for lesson in lessons {
+                predictionLessonCacheByID[lesson.id] = lesson
+            }
+        } catch {
+            guard currentPredictionDateKey == dateKey else { return }
+            predictionLessons = []
+            predictionErrorMessage = userFacingMessage(for: error)
+        }
+    }
+
     private func state(
         for absences: [AbsencePerSubject],
         source: AbsenceSubjectResolutionSource,
@@ -313,6 +423,15 @@ final class AbsenceViewModel {
             )
         }
         return .empty
+    }
+
+    private var currentPredictionDateKey: String {
+        TimetableDates.apiDateString(normalizedPredictionDate(predictionSelectedDate))
+    }
+
+    private func normalizedPredictionDate(_ date: Date) -> Date {
+        let day = TimetableDates.weekCalendar.startOfDay(for: date)
+        return day < predictionMinimumDay ? predictionMinimumDay : day
     }
 
     private func userFacingMessage(for error: Error) -> String {

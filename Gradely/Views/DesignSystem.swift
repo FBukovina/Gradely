@@ -1,4 +1,199 @@
 import SwiftUI
+#if os(macOS)
+import AppKit
+#endif
+#if os(iOS)
+import UIKit
+#endif
+
+// MARK: - Cross-platform SwiftUI helpers
+
+enum GradelyKeyboardType {
+    case numberPad
+    case numbersAndPunctuation
+    case url
+}
+
+enum GradelyTextInputAutocapitalization {
+    case never
+    case words
+}
+
+enum GradelyNavigationTitleDisplayMode {
+    case inline
+    case large
+}
+
+extension Color {
+    static var gradelyGroupedBackground: Color {
+        #if os(macOS)
+        Color(nsColor: .windowBackgroundColor)
+        #else
+        Color(.systemGroupedBackground)
+        #endif
+    }
+
+    static var gradelySecondaryGroupedBackground: Color {
+        #if os(macOS)
+        Color(nsColor: .controlBackgroundColor)
+        #else
+        Color(.secondarySystemGroupedBackground)
+        #endif
+    }
+
+    static var gradelyTertiaryGroupedBackground: Color {
+        #if os(macOS)
+        Color(nsColor: .underPageBackgroundColor)
+        #else
+        Color(.tertiarySystemGroupedBackground)
+        #endif
+    }
+
+    static var gradelyTertiaryFill: Color {
+        #if os(macOS)
+        Color(nsColor: .separatorColor).opacity(0.22)
+        #else
+        Color(.tertiarySystemFill)
+        #endif
+    }
+
+    static var gradelySystemGray: Color {
+        #if os(macOS)
+        Color(nsColor: .secondaryLabelColor)
+        #else
+        Color(.systemGray)
+        #endif
+    }
+
+    static var gradelySystemGray5: Color {
+        #if os(macOS)
+        Color(nsColor: .separatorColor)
+        #else
+        Color(.systemGray5)
+        #endif
+    }
+
+    static var gradelySystemOrange: Color {
+        #if os(macOS)
+        Color(nsColor: .systemOrange)
+        #else
+        Color(.systemOrange)
+        #endif
+    }
+
+    static var gradelySystemPurple: Color {
+        #if os(macOS)
+        Color(nsColor: .systemPurple)
+        #else
+        Color(.systemPurple)
+        #endif
+    }
+}
+
+extension ToolbarItemPlacement {
+    static var gradelyTopBarLeading: ToolbarItemPlacement {
+        #if os(macOS)
+        .navigation
+        #else
+        .topBarLeading
+        #endif
+    }
+
+    static var gradelyTopBarTrailing: ToolbarItemPlacement {
+        #if os(macOS)
+        .primaryAction
+        #else
+        .topBarTrailing
+        #endif
+    }
+}
+
+extension View {
+    @ViewBuilder
+    func gradelyKeyboardType(_ keyboardType: GradelyKeyboardType) -> some View {
+        #if os(iOS)
+        self.keyboardType(keyboardType.uiKeyboardType)
+        #else
+        self
+        #endif
+    }
+
+    @ViewBuilder
+    func gradelyTextInputAutocapitalization(_ capitalization: GradelyTextInputAutocapitalization) -> some View {
+        #if os(iOS)
+        self.textInputAutocapitalization(capitalization.swiftUIValue)
+        #else
+        self
+        #endif
+    }
+
+    @ViewBuilder
+    func gradelyNavigationTitleDisplayMode(_ displayMode: GradelyNavigationTitleDisplayMode) -> some View {
+        #if os(macOS)
+        self
+        #else
+        self.navigationBarTitleDisplayMode(displayMode.swiftUIValue)
+        #endif
+    }
+
+    /// Presents a `TabView` as a native source-list sidebar on macOS while leaving
+    /// the standard tab bar in place on iOS.
+    @ViewBuilder
+    func gradelySidebarAdaptable() -> some View {
+        #if os(macOS)
+        self.tabViewStyle(.sidebarAdaptable)
+        #else
+        self
+        #endif
+    }
+
+    /// iOS-style circular tinted chip for toolbar icon buttons; a plain, system-tinted
+    /// template icon on macOS where chips look out of place in the window toolbar.
+    @ViewBuilder
+    func gradelyToolbarIconButton() -> some View {
+        #if os(macOS)
+        self.imageScale(.large)
+        #else
+        self
+            .font(.footnote.weight(.bold))
+            .foregroundStyle(Brand.primary)
+            .frame(width: 30, height: 30)
+            .background(Brand.primary.opacity(0.15), in: Circle())
+        #endif
+    }
+}
+
+#if os(iOS)
+private extension GradelyKeyboardType {
+    var uiKeyboardType: UIKeyboardType {
+        switch self {
+        case .numberPad: .numberPad
+        case .numbersAndPunctuation: .numbersAndPunctuation
+        case .url: .URL
+        }
+    }
+}
+
+private extension GradelyTextInputAutocapitalization {
+    var swiftUIValue: TextInputAutocapitalization {
+        switch self {
+        case .never: .never
+        case .words: .words
+        }
+    }
+}
+#endif
+
+#if !os(macOS)
+private extension GradelyNavigationTitleDisplayMode {
+    var swiftUIValue: NavigationBarItem.TitleDisplayMode {
+        switch self {
+        case .inline: .inline
+        case .large: .large
+        }
+    }
+}
+#endif
 
 // MARK: - Brand palette
 
@@ -87,7 +282,7 @@ extension LessonChangeKind {
         case .canceled: GradeBand.poor.foregroundColor        // rose
         case .substitution: GradeBand.average.foregroundColor // amber
         case .roomChanged: GradeBand.good.foregroundColor     // teal
-        case .added: Color(.systemPurple)                     // purple
+        case .added: .gradelySystemPurple                     // purple
         }
     }
 }

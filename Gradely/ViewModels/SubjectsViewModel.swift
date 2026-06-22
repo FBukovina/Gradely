@@ -12,10 +12,10 @@ final class SubjectsViewModel {
     var errorMessage: String?
     var lastCacheDate: Date?
 
-    private let repository: BakalariRepository
+    private let repository: SchoolRepository
     private var hasLoaded = false
 
-    init(repository: BakalariRepository) {
+    init(repository: SchoolRepository) {
         self.repository = repository
     }
 

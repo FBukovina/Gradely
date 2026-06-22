@@ -65,6 +65,27 @@ struct GradelyWatchSharedTests {
         #expect(payload.timetable == nil)
     }
 
+    @Test func eduPageCredentialsRoundTripForDirectWatchRefresh() throws {
+        let auth = GradelyWatchAuth(
+            baseURL: URL(string: "https://school.edupage.org")!,
+            accessToken: "session",
+            refreshToken: "",
+            tokenType: "Cookie",
+            expiresAt: Date(timeIntervalSince1970: 2_000),
+            provider: .eduPage,
+            username: "student",
+            password: "secret",
+            sessionID: "session",
+            selectedStudentID: "Student1",
+            gsecHash: "gsec"
+        )
+
+        let encoded = try GradelyWatchSyncCodec.encoder.encode(auth)
+        let decoded = try GradelyWatchSyncCodec.decoder.decode(GradelyWatchAuth.self, from: encoded)
+        #expect(decoded == auth)
+        #expect(decoded.resolvedProvider == .eduPage)
+    }
+
     @Test func selectsCurrentThenUpcomingLesson() {
         let dayStart = Date(timeIntervalSince1970: 1_000)
         let current = GradelyWatchTimetableLesson(

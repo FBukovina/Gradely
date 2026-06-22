@@ -39,7 +39,7 @@ enum AbsencePrediction {
         currentTotalCounts: AbsenceCounts,
         subjectRows: [AbsenceSubjectSummary],
         selectedLessons: [AbsenceLessonCandidate],
-        threshold: Double
+        threshold: Double?
     ) -> AbsencePredictionResult {
         let uniqueLessons = selectedLessonsByID(selectedLessons)
         var projectedTotal = currentTotalCounts
@@ -148,7 +148,8 @@ enum AbsencePrediction {
         return lhs.subjectName.localizedCaseInsensitiveCompare(rhs.subjectName) == .orderedAscending
     }
 
-    private static func normalizedThreshold(_ threshold: Double) -> Double {
-        threshold > 0 && threshold <= 1 ? threshold * 100 : threshold
+    private static func normalizedThreshold(_ threshold: Double?) -> Double {
+        guard let threshold else { return 0 }
+        return threshold > 0 && threshold <= 1 ? threshold * 100 : threshold
     }
 }

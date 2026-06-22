@@ -123,7 +123,7 @@ struct TimetableTests {
     }
 
     @Test func repositoryLoadsRebasedDemoWeek() async throws {
-        let repository = BakalariRepository(
+        let repository = SchoolRepository(
             client: MockBakalariClient(),
             sessionStore: InMemorySessionStore(session: PreviewData.expiredSession),
             marksCache: InMemoryMarksCache()

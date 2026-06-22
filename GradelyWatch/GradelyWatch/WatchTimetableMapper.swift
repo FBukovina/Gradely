@@ -281,7 +281,14 @@ enum WatchTimetableMapper {
     }
 
     private static func parseDate(_ value: String) -> Date? {
-        ISO8601DateFormatter().date(from: value)
+        if let date = ISO8601DateFormatter().date(from: value) {
+            return date
+        }
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter.date(from: value)
     }
 
     private static func startOfDay(date: Date?, dayOfWeek: Int, weekStart: Date, calendar: Calendar) -> Date {

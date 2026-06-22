@@ -11,8 +11,6 @@
 		A10000032FCE000000000003 /* GradelyWatchShared in Frameworks */ = {isa = PBXBuildFile; productRef = A10000022FCE000000000002 /* GradelyWatchShared */; };
 		A10000042FCE000000000004 /* GradelyWatchShared in Frameworks */ = {isa = PBXBuildFile; productRef = A10000052FCE000000000005 /* GradelyWatchShared */; };
 		A20000072FCE0000000000A7 /* GradelyWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = A20000042FCE0000000000A4 /* GradelyWatch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-		B40000012FCEF10000000001 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = B400000E2FCEF1000000000E /* RevenueCat */; };
-		B40000032FCEF10000000003 /* GradelyWatchShared in Frameworks */ = {isa = PBXBuildFile; productRef = B400000F2FCEF1000000000F /* GradelyWatchShared */; };
 		B50000012FCF000000000001 /* GradelyMacWidgets.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = B50000022FCF000000000002 /* GradelyMacWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		C53D9B8831BC494585B5670D /* GradelyWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 23EA86CD939E4E779E620824 /* GradelyWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
@@ -182,8 +180,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				B40000032FCEF10000000003 /* GradelyWatchShared in Frameworks */,
-				B40000012FCEF10000000001 /* RevenueCat in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -355,8 +351,6 @@
 			);
 			name = GradelyMac;
 			packageProductDependencies = (
-				B400000E2FCEF1000000000E /* RevenueCat */,
-				B400000F2FCEF1000000000F /* GradelyWatchShared */,
 			);
 			productName = Gradey;
 			productReference = B40000052FCEF10000000005 /* Gradey.app */;
@@ -771,7 +765,6 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.8;
 				PRODUCT_BUNDLE_IDENTIFIER = com.bukovinafilip.BakalariMarks;
 				PRODUCT_MODULE_NAME = Gradely;
@@ -779,7 +772,7 @@
 				REGISTER_APP_GROUPS = YES;
 				REVENUECAT_IOS_API_KEY = appl_KTNbCvFOqwPTWfQKhjDCgSdSANH;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
 				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
@@ -811,14 +804,13 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.8;
 				PRODUCT_BUNDLE_IDENTIFIER = com.bukovinafilip.BakalariMarks;
 				PRODUCT_MODULE_NAME = Gradely;
 				PRODUCT_NAME = Gradey;
 				REVENUECAT_IOS_API_KEY = appl_KTNbCvFOqwPTWfQKhjDCgSdSANH;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
 				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
@@ -928,13 +920,15 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = "GradelyMac/GradelyMac-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = Gradey;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.education";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.8;
-				PRODUCT_BUNDLE_IDENTIFIER = com.bukovinafilip.BakalariMarks.mac;
+				PRODUCT_BUNDLE_IDENTIFIER = com.bukovinafilip.BakalariMarks;
 				PRODUCT_MODULE_NAME = Gradely;
 				PRODUCT_NAME = Gradey;
 				REVENUECAT_MACOS_API_KEY = appl_KTNbCvFOqwPTWfQKhjDCgSdSANH;
@@ -964,13 +958,15 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = "GradelyMac/GradelyMac-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = Gradey;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.education";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.8;
-				PRODUCT_BUNDLE_IDENTIFIER = com.bukovinafilip.BakalariMarks.mac;
+				PRODUCT_BUNDLE_IDENTIFIER = com.bukovinafilip.BakalariMarks;
 				PRODUCT_MODULE_NAME = Gradely;
 				PRODUCT_NAME = Gradey;
 				REVENUECAT_MACOS_API_KEY = appl_KTNbCvFOqwPTWfQKhjDCgSdSANH;
@@ -1005,7 +1001,7 @@
 				);
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.8;
-				PRODUCT_BUNDLE_IDENTIFIER = com.bukovinafilip.BakalariMarks.mac.GradelyWidgets;
+				PRODUCT_BUNDLE_IDENTIFIER = com.bukovinafilip.BakalariMarks.GradelyMacWidgets;
 				PRODUCT_MODULE_NAME = GradelyMacWidgets;
 				PRODUCT_NAME = GradelyMacWidgets;
 				SDKROOT = macosx;
@@ -1039,7 +1035,7 @@
 				);
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.8;
-				PRODUCT_BUNDLE_IDENTIFIER = com.bukovinafilip.BakalariMarks.mac.GradelyWidgets;
+				PRODUCT_BUNDLE_IDENTIFIER = com.bukovinafilip.BakalariMarks.GradelyMacWidgets;
 				PRODUCT_MODULE_NAME = GradelyMacWidgets;
 				PRODUCT_NAME = GradelyMacWidgets;
 				SDKROOT = macosx;
@@ -1187,16 +1183,6 @@
 			productName = GradelyWatchShared;
 		};
 		A10000052FCE000000000005 /* GradelyWatchShared */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = A10000012FCE000000000001 /* XCLocalSwiftPackageReference "GradelyWatchShared" */;
-			productName = GradelyWatchShared;
-		};
-		B400000E2FCEF1000000000E /* RevenueCat */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 81EE6CCD2FCDDC4B009D28DE /* XCRemoteSwiftPackageReference "purchases-ios-spm" */;
-			productName = RevenueCat;
-		};
-		B400000F2FCEF1000000000F /* GradelyWatchShared */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = A10000012FCE000000000001 /* XCLocalSwiftPackageReference "GradelyWatchShared" */;
 			productName = GradelyWatchShared;

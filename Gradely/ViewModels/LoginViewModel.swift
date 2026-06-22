@@ -4,6 +4,7 @@ import Observation
 @MainActor
 @Observable
 final class LoginViewModel {
+    var provider: SchoolProvider = .bakalari
     var schoolURL = ""
     var schoolSearchText = ""
     var username = ""
@@ -16,13 +17,18 @@ final class LoginViewModel {
     var schoolLookupErrorMessage: String?
     var directorySchools: [SchoolDirectorySchool] = []
     var selectedSchoolID: String?
+    var twoFactorCode = ""
+    var isTwoFactorPresented = false
+    var isCheckingDeviceApproval = false
+    var isStudentSelectionPresented = false
+    var availableStudents: [SchoolStudentProfile] = []
 
-    private let repository: BakalariRepository
+    private let repository: SchoolRepository
     private let schoolDirectoryProvider: any SchoolDirectoryProviding
     private var hasLoadedSchoolDirectory = false
 
     init(
-        repository: BakalariRepository,
+        repository: SchoolRepository,
         schoolDirectoryProvider: any SchoolDirectoryProviding
     ) {
         self.repository = repository
@@ -40,17 +46,79 @@ final class LoginViewModel {
         defer { isLoading = false }
 
         do {
-            _ = try await repository.login(
+            let step = try await repository.beginLogin(
+                provider: provider,
                 schoolURL: schoolURL,
                 username: username,
                 password: password
             )
+            return handle(step)
+        } catch {
+            errorMessage = userFacingMessage(for: error)
+            return false
+        }
+    }
+
+    func completeTwoFactor() async -> Bool {
+        errorMessage = nil
+        isLoading = true
+        defer { isLoading = false }
+        do {
+            let step = try await repository.completeEduPageTwoFactor(code: twoFactorCode)
+            return handle(step)
+        } catch {
+            errorMessage = userFacingMessage(for: error)
+            return false
+        }
+    }
+
+    func checkDeviceApproval() async -> Bool {
+        errorMessage = nil
+        isCheckingDeviceApproval = true
+        defer { isCheckingDeviceApproval = false }
+        do {
+            guard try await repository.isEduPageTwoFactorConfirmed() else {
+                errorMessage = SchoolAuthenticationError.twoFactorNotConfirmed.errorDescription
+                return false
+            }
+            let step = try await repository.completeApprovedEduPageTwoFactor()
+            return handle(step)
+        } catch {
+            errorMessage = userFacingMessage(for: error)
+            return false
+        }
+    }
+
+    func resendDeviceApproval() async {
+        do {
+            try await repository.resendEduPageTwoFactorNotification()
+        } catch {
+            errorMessage = userFacingMessage(for: error)
+        }
+    }
+
+    func selectStudent(_ student: SchoolStudentProfile) async -> Bool {
+        errorMessage = nil
+        isLoading = true
+        defer { isLoading = false }
+        do {
+            _ = try await repository.selectEduPageStudent(student.id)
+            isStudentSelectionPresented = false
             password = ""
             return true
         } catch {
             errorMessage = userFacingMessage(for: error)
             return false
         }
+    }
+
+    func changeProvider(_ provider: SchoolProvider) {
+        self.provider = provider
+        schoolURL = ""
+        schoolSearchText = ""
+        selectedSchoolID = nil
+        isSchoolSearchActive = false
+        errorMessage = nil
     }
 
     func clearError() {
@@ -68,6 +136,7 @@ final class LoginViewModel {
     }
 
     func loadSchoolDirectoryIfNeeded() async {
+        guard provider == .bakalari else { return }
         guard !hasLoadedSchoolDirectory else { return }
         hasLoadedSchoolDirectory = true
         schoolLookupErrorMessage = nil
@@ -112,5 +181,25 @@ final class LoginViewModel {
             return message
         }
         return error.localizedDescription
+    }
+
+    private func handle(_ step: SchoolLoginStep) -> Bool {
+        switch step {
+        case .signedIn:
+            password = ""
+            twoFactorCode = ""
+            isTwoFactorPresented = false
+            isStudentSelectionPresented = false
+            return true
+        case .twoFactor:
+            twoFactorCode = ""
+            isTwoFactorPresented = true
+            return false
+        case .studentSelection(let students):
+            availableStudents = students
+            isTwoFactorPresented = false
+            isStudentSelectionPresented = true
+            return false
+        }
     }
 }

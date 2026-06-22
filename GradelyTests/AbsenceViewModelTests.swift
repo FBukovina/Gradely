@@ -204,8 +204,8 @@ struct AbsenceViewModelTests {
         absenceCache: any AbsenceCaching = InMemoryAbsenceCache(),
         timetableCache: any TimetableCaching = InMemoryTimetableCache(),
         timetableFetchTimeoutNanoseconds: UInt64 = 12_000_000_000
-    ) -> BakalariRepository {
-        BakalariRepository(
+    ) -> SchoolRepository {
+        SchoolRepository(
             client: client,
             sessionStore: InMemorySessionStore(session: validSession()),
             marksCache: InMemoryMarksCache(),

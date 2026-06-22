@@ -1,15 +1,75 @@
 import Foundation
 import Security
 
+/// Bakaláři username/password kept in the Keychain so the app can silently
+/// re-authenticate when the rotating refresh-token chain is rejected
+/// ("token already redeemed"), instead of forcing a manual logout/login.
+struct BakalariCredentials: Codable, Equatable {
+    let username: String
+    let password: String
+}
+
 struct StoredSession: Codable, Equatable {
     var accessToken: String
     var refreshToken: String
     var tokenType: String
     var expiresAt: Date
     var baseURL: URL
+    var provider: SchoolProvider
+    var eduPage: EduPageSessionData?
+    var bakalari: BakalariCredentials?
+
+    init(
+        accessToken: String,
+        refreshToken: String,
+        tokenType: String,
+        expiresAt: Date,
+        baseURL: URL,
+        provider: SchoolProvider = .bakalari,
+        eduPage: EduPageSessionData? = nil,
+        bakalari: BakalariCredentials? = nil
+    ) {
+        self.accessToken = accessToken
+        self.refreshToken = refreshToken
+        self.tokenType = tokenType
+        self.expiresAt = expiresAt
+        self.baseURL = baseURL
+        self.provider = provider
+        self.eduPage = eduPage
+        self.bakalari = bakalari
+    }
 
     var isExpired: Bool {
-        expiresAt <= Date().addingTimeInterval(60)
+        provider == .bakalari && expiresAt <= Date().addingTimeInterval(60)
+    }
+
+    var cacheScope: String {
+        let host = baseURL.host?.lowercased() ?? baseURL.absoluteString.lowercased()
+        let user = eduPage?.activeStudent?.id ?? eduPage?.userID ?? "default"
+        return "\(provider.rawValue)-\(host)-\(user)"
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case accessToken
+        case refreshToken
+        case tokenType
+        case expiresAt
+        case baseURL
+        case provider
+        case eduPage
+        case bakalari
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        accessToken = try container.decode(String.self, forKey: .accessToken)
+        refreshToken = try container.decode(String.self, forKey: .refreshToken)
+        tokenType = try container.decode(String.self, forKey: .tokenType)
+        expiresAt = try container.decode(Date.self, forKey: .expiresAt)
+        baseURL = try container.decode(URL.self, forKey: .baseURL)
+        provider = try container.decodeIfPresent(SchoolProvider.self, forKey: .provider) ?? .bakalari
+        eduPage = try container.decodeIfPresent(EduPageSessionData.self, forKey: .eduPage)
+        bakalari = try container.decodeIfPresent(BakalariCredentials.self, forKey: .bakalari)
     }
 }
 
@@ -17,6 +77,7 @@ protocol SessionStoring {
     func loadSession() throws -> StoredSession?
     func save(loginResponse: LoginResponse, baseURL: URL) throws -> StoredSession
     func save(refreshedResponse: LoginResponse, currentBaseURL: URL) throws -> StoredSession
+    func save(session: StoredSession) throws
     func clearSession() throws
 }
 
@@ -62,6 +123,10 @@ final class SessionStore: SessionStoring {
     func clearSession() throws {
         try keychain.delete(account: sessionAccount)
         userDefaults.removeObject(forKey: baseURLKey)
+    }
+
+    func save(session: StoredSession) throws {
+        try save(session)
     }
 
     private func save(_ session: StoredSession) throws {
@@ -177,5 +242,9 @@ final class InMemorySessionStore: SessionStoring {
 
     func clearSession() throws {
         session = nil
+    }
+
+    func save(session: StoredSession) throws {
+        self.session = session
     }
 }

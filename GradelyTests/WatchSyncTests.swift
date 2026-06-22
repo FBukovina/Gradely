@@ -7,7 +7,7 @@ import Testing
 struct WatchSyncTests {
     @Test func repositoryPublishesSessionAfterLogin() async throws {
         let watchSync = RecordingWatchSyncService()
-        let repository = BakalariRepository(
+        let repository = SchoolRepository(
             client: MockBakalariClient(),
             sessionStore: InMemorySessionStore(),
             marksCache: InMemoryMarksCache(),
@@ -25,7 +25,7 @@ struct WatchSyncTests {
 
     @Test func repositoryPublishesTimetableAfterLoad() async throws {
         let watchSync = RecordingWatchSyncService()
-        let repository = BakalariRepository(
+        let repository = SchoolRepository(
             client: MockBakalariClient(),
             sessionStore: InMemorySessionStore(session: PreviewData.expiredSession),
             marksCache: InMemoryMarksCache(),
@@ -41,7 +41,7 @@ struct WatchSyncTests {
 
     @Test func repositoryPublishesSignedOutOnLogout() throws {
         let watchSync = RecordingWatchSyncService()
-        let repository = BakalariRepository(
+        let repository = SchoolRepository(
             client: MockBakalariClient(),
             sessionStore: InMemorySessionStore(session: PreviewData.expiredSession),
             marksCache: InMemoryMarksCache(),

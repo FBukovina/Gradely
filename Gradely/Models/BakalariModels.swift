@@ -277,7 +277,7 @@ struct Mark: Codable, Equatable, Hashable, Identifiable {
     let teacherID: String?
     let type: String
     let typeNote: String?
-    let weight: Int?
+    let weight: Double?
     let subjectID: String
     let isNew: Bool
     let isPoints: Bool
@@ -346,7 +346,7 @@ struct Mark: Codable, Equatable, Hashable, Identifiable {
         teacherID: String? = nil,
         type: String,
         typeNote: String? = nil,
-        weight: Int? = nil,
+        weight: Double? = nil,
         subjectID: String,
         isNew: Bool = false,
         isPoints: Bool = false,
@@ -391,7 +391,13 @@ struct Mark: Codable, Equatable, Hashable, Identifiable {
         teacherID = try container.decodeIfPresent(String.self, forKey: .teacherID)
         type = try container.decodeIfPresent(String.self, forKey: .type) ?? ""
         typeNote = try container.decodeIfPresent(String.self, forKey: .typeNote)
-        weight = try container.decodeIfPresent(Int.self, forKey: .weight)
+        if let doubleWeight = try? container.decode(Double.self, forKey: .weight) {
+            weight = doubleWeight
+        } else if let stringWeight = try? container.decode(String.self, forKey: .weight) {
+            weight = Double(stringWeight.replacingOccurrences(of: ",", with: "."))
+        } else {
+            weight = nil
+        }
         subjectID = try container.decodeIfPresent(String.self, forKey: .subjectID) ?? ""
         isNew = try container.decodeIfPresent(Bool.self, forKey: .isNew) ?? false
         isPoints = try container.decodeIfPresent(Bool.self, forKey: .isPoints) ?? false
@@ -407,7 +413,7 @@ struct Mark: Codable, Equatable, Hashable, Identifiable {
 }
 
 struct AbsenceResponse: Codable, Equatable {
-    let percentageThreshold: Double
+    let percentageThreshold: Double?
     let absences: [AbsenceDay]
     let absencesPerSubject: [AbsencePerSubject]
 
@@ -417,7 +423,7 @@ struct AbsenceResponse: Codable, Equatable {
         case absencesPerSubject = "AbsencesPerSubject"
     }
 
-    init(percentageThreshold: Double, absences: [AbsenceDay], absencesPerSubject: [AbsencePerSubject]) {
+    init(percentageThreshold: Double?, absences: [AbsenceDay], absencesPerSubject: [AbsencePerSubject]) {
         self.percentageThreshold = percentageThreshold
         self.absences = absences
         self.absencesPerSubject = absencesPerSubject
@@ -425,7 +431,7 @@ struct AbsenceResponse: Codable, Equatable {
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        percentageThreshold = try container.decodeIfPresent(Double.self, forKey: .percentageThreshold) ?? 0
+        percentageThreshold = try container.decodeIfPresent(Double.self, forKey: .percentageThreshold)
         absences = try container.decodeIfPresent([AbsenceDay].self, forKey: .absences) ?? []
         absencesPerSubject = try container.decodeIfPresent([AbsencePerSubject].self, forKey: .absencesPerSubject) ?? []
     }

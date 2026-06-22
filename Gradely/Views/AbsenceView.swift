@@ -2,15 +2,17 @@ import SwiftUI
 
 struct AbsenceView: View {
     @State private var viewModel: AbsenceViewModel
+    private let repository: SchoolRepository
     private let supportTipProvider: any SupportTipProviding
     let onSignedOut: () -> Void
 
     init(
-        repository: BakalariRepository,
+        repository: SchoolRepository,
         supportTipProvider: any SupportTipProviding = MockSupportTipService(),
         onSignedOut: @escaping () -> Void
     ) {
         _viewModel = State(initialValue: AbsenceViewModel(repository: repository))
+        self.repository = repository
         self.supportTipProvider = supportTipProvider
         self.onSignedOut = onSignedOut
     }
@@ -40,6 +42,7 @@ struct AbsenceView: View {
                     ToolbarItem(placement: .gradelyTopBarTrailing) {
                         AccountMenu(
                             user: viewModel.user,
+                            repository: repository,
                             supportTipProvider: supportTipProvider,
                             onSignedOut: onSignedOut
                         )

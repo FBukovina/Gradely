@@ -11,12 +11,12 @@ final class SubjectDetailViewModel {
     var theoreticalWeight = 1
     var isPredictingExactAverage = false
 
-    private let repository: BakalariRepository
+    private let repository: SchoolRepository
     private var localTheoreticalAverage: Double?
     private var exactTheoreticalAverage: Double?
     @ObservationIgnored private var predictionTask: Task<Void, Never>?
 
-    init(subject: Subject, absence: AbsencePerSubject?, repository: BakalariRepository) {
+    init(subject: Subject, absence: AbsencePerSubject?, repository: SchoolRepository) {
         self.subject = subject
         self.absence = absence
         self.repository = repository

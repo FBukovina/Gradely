@@ -2,12 +2,12 @@ import SwiftUI
 
 struct SubjectsView: View {
     @State private var viewModel: SubjectsViewModel
-    private let repository: BakalariRepository
+    private let repository: SchoolRepository
     private let supportTipProvider: any SupportTipProviding
     let onSignedOut: () -> Void
 
     init(
-        repository: BakalariRepository,
+        repository: SchoolRepository,
         supportTipProvider: any SupportTipProviding = MockSupportTipService(),
         onSignedOut: @escaping () -> Void
     ) {
@@ -73,6 +73,7 @@ struct SubjectsView: View {
                 ToolbarItem(placement: .gradelyTopBarTrailing) {
                     AccountMenu(
                         user: viewModel.user,
+                        repository: repository,
                         supportTipProvider: supportTipProvider,
                         onSignedOut: onSignedOut
                     )
@@ -270,7 +271,7 @@ private struct SubjectCard: View {
 
 #Preview("Light") {
     SubjectsView(
-        repository: BakalariRepository(
+        repository: SchoolRepository(
             client: MockBakalariClient(),
             sessionStore: InMemorySessionStore(session: PreviewData.expiredSession),
             marksCache: InMemoryMarksCache(cachedMarks: CachedMarks(marksResponse: PreviewData.marksResponse, cachedAt: Date()))
@@ -280,7 +281,7 @@ private struct SubjectCard: View {
 
 #Preview("Dark") {
     SubjectsView(
-        repository: BakalariRepository(
+        repository: SchoolRepository(
             client: MockBakalariClient(),
             sessionStore: InMemorySessionStore(session: PreviewData.expiredSession),
             marksCache: InMemoryMarksCache(cachedMarks: CachedMarks(marksResponse: PreviewData.marksResponse, cachedAt: Date()))

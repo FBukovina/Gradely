@@ -1,5 +1,9 @@
 import SwiftUI
 
+extension Notification.Name {
+    static let gradelySchoolAccountDidChange = Notification.Name("gradelySchoolAccountDidChange")
+}
+
 // MARK: - Card surface
 
 /// Elevated content surface used throughout the app in place of ad-hoc glass.
@@ -112,9 +116,12 @@ struct GitHubIcon: View {
 /// Shared by the Marks and Timetable tabs.
 struct AccountMenu: View {
     let user: UserResponse?
+    let repository: SchoolRepository
     let supportTipProvider: any SupportTipProviding
     let onSignedOut: () -> Void
     @State private var isSupportSheetPresented = false
+    @State private var isStudentPickerPresented = false
+    @State private var studentSwitchError: String?
 
     var body: some View {
         Menu {
@@ -128,6 +135,15 @@ struct AccountMenu: View {
                         Text(className)
                     }
                 }
+            }
+
+            if repository.availableStudents.count > 1 {
+                Button {
+                    isStudentPickerPresented = true
+                } label: {
+                    Label(String(localized: "edupage.children.switch"), systemImage: "person.2")
+                }
+                .accessibilityIdentifier("switchEduPageStudentButton")
             }
 
             Button {
@@ -164,6 +180,39 @@ struct AccountMenu: View {
                     supportTipProvider: supportTipProvider
                 )
             )
+        }
+        .sheet(isPresented: $isStudentPickerPresented) {
+            NavigationStack {
+                List(repository.availableStudents) { student in
+                    Button {
+                        Task {
+                            do {
+                                try await repository.switchEduPageStudent(student.id)
+                                isStudentPickerPresented = false
+                                NotificationCenter.default.post(name: .gradelySchoolAccountDidChange, object: nil)
+                            } catch {
+                                studentSwitchError = error.localizedDescription
+                            }
+                        }
+                    } label: {
+                        VStack(alignment: .leading, spacing: Spacing.xs) {
+                            Text(student.fullName)
+                            if let className = student.className {
+                                Text(className).font(.caption).foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                }
+                .navigationTitle("edupage.children.title")
+            }
+        }
+        .alert(String(localized: "error.title"), isPresented: Binding(
+            get: { studentSwitchError != nil },
+            set: { if !$0 { studentSwitchError = nil } }
+        )) {
+            Button(String(localized: "action.ok"), role: .cancel) { studentSwitchError = nil }
+        } message: {
+            Text(studentSwitchError ?? "")
         }
     }
 }

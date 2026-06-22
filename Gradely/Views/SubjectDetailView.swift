@@ -145,14 +145,20 @@ private struct MarkCard: View {
 
                         if !mark.isPoints, resolvedWeight.source == .explicit, resolvedWeight.value > 1 {
                             StatusChip(
-                                text: String.localizedStringWithFormat(String(localized: "detail.weight"), resolvedWeight.value),
+                                text: String.localizedStringWithFormat(
+                                    String(localized: "detail.weight.decimal"),
+                                    GradeMath.formattedWeight(resolvedWeight.value)
+                                ),
                                 color: Brand.secondary
                             )
                         }
 
                         if !mark.isPoints, resolvedWeight.source == .inferred, resolvedWeight.value > 1 {
                             StatusChip(
-                                text: String.localizedStringWithFormat(String(localized: "detail.weight.estimated"), resolvedWeight.value),
+                                text: String.localizedStringWithFormat(
+                                    String(localized: "detail.weight.estimated.decimal"),
+                                    GradeMath.formattedWeight(resolvedWeight.value)
+                                ),
                                 color: Brand.secondary
                             )
                         }
@@ -292,7 +298,7 @@ private struct ResultView: View {
             viewModel: SubjectDetailViewModel(
                 subject: PreviewData.subjects[0],
                 absence: PreviewData.absenceResponse.absencesPerSubject[0],
-                repository: BakalariRepository(
+                repository: SchoolRepository(
                     client: MockBakalariClient(),
                     sessionStore: InMemorySessionStore(session: PreviewData.expiredSession),
                     marksCache: InMemoryMarksCache()
@@ -308,7 +314,7 @@ private struct ResultView: View {
             viewModel: SubjectDetailViewModel(
                 subject: PreviewData.subjects[0],
                 absence: PreviewData.absenceResponse.absencesPerSubject[0],
-                repository: BakalariRepository(
+                repository: SchoolRepository(
                     client: MockBakalariClient(),
                     sessionStore: InMemorySessionStore(session: PreviewData.expiredSession),
                     marksCache: InMemoryMarksCache()

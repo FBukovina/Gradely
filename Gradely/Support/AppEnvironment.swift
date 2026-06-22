@@ -1,14 +1,14 @@
 import Foundation
 
 struct AppEnvironment {
-    let repository: BakalariRepository
+    let repository: SchoolRepository
     let stravaCZRepository: StravaCZRepository
     let schoolDirectoryProvider: any SchoolDirectoryProviding
     let supportTipProvider: any SupportTipProviding
     let watchSyncService: (any WatchSyncing)?
 
     init(
-        repository: BakalariRepository,
+        repository: SchoolRepository,
         stravaCZRepository: StravaCZRepository = AppEnvironment.makeMockStravaCZRepository(),
         schoolDirectoryProvider: any SchoolDirectoryProviding,
         supportTipProvider: any SupportTipProviding = MockSupportTipService(),
@@ -31,12 +31,14 @@ struct AppEnvironment {
         #if os(macOS)
         let watchSyncService: (any WatchSyncing)? = nil
         let nextLessonWidgetStore: (any NextLessonWidgetStoring)? = NextLessonWidgetStore()
+        let supportTipProvider: any SupportTipProviding = StoreKitSupportTipService()
         #else
         let watchSyncService: (any WatchSyncing)? = LiveWatchSyncService()
         let nextLessonWidgetStore: (any NextLessonWidgetStoring)? = NextLessonWidgetStore()
+        let supportTipProvider: any SupportTipProviding = RevenueCatSupportTipService()
         #endif
         return AppEnvironment(
-            repository: BakalariRepository(
+            repository: SchoolRepository(
                 client: DemoAwareBakalariClient(liveClient: URLSessionBakalariClient()),
                 sessionStore: SessionStore(),
                 marksCache: marksCache,
@@ -53,7 +55,7 @@ struct AppEnvironment {
                 menuCache: (try? StravaCZMenuCache()) ?? InMemoryStravaCZMenuCache()
             ),
             schoolDirectoryProvider: schoolDirectoryProvider,
-            supportTipProvider: RevenueCatSupportTipService(),
+            supportTipProvider: supportTipProvider,
             watchSyncService: watchSyncService
         )
     }
@@ -77,7 +79,7 @@ struct AppEnvironment {
         let schoolDirectoryProvider = MockSchoolDirectoryProvider(refreshResult: PreviewData.schoolDirectorySchools)
 
         return AppEnvironment(
-            repository: BakalariRepository(
+            repository: SchoolRepository(
                 client: MockBakalariClient(
                     refreshedResult: LoginResponse(
                         accessToken: "mock-refreshed-access",

@@ -15,7 +15,7 @@ enum MarkWeightSource: Equatable {
 }
 
 struct ResolvedMarkWeight: Equatable {
-    let value: Int
+    let value: Double
     let source: MarkWeightSource
 }
 
@@ -54,18 +54,18 @@ enum GradeMath {
         for marks: [Mark],
         resolvedWeights: [String: ResolvedMarkWeight]
     ) -> Double? {
-        var totalWeight = 0
+        var totalWeight = 0.0
         var weightedSum = 0.0
 
-        for mark in marks where !mark.isPoints {
+        for mark in marks where isLocallyGradableMark(mark) {
             guard let value = parseMarkValue(mark.markText) else { continue }
             let weight = resolvedWeights[mark.id]?.value ?? 1
             totalWeight += weight
-            weightedSum += value * Double(weight)
+            weightedSum += value * weight
         }
 
         guard totalWeight > 0 else { return nil }
-        return weightedSum / Double(totalWeight)
+        return weightedSum / totalWeight
     }
 
     static func subjectAverage(_ subject: Subject) -> Double? {
@@ -88,18 +88,18 @@ enum GradeMath {
         markValue: Double,
         weight: Int
     ) -> Double {
-        var totalWeight = max(1, weight)
-        var weightedSum = markValue * Double(totalWeight)
+        var totalWeight = Double(max(1, weight))
+        var weightedSum = markValue * totalWeight
         let resolvedWeights = resolvedWeights(for: existingMarks, matchingAverageText: subjectAverageText)
 
-        for mark in existingMarks where !mark.isPoints {
+        for mark in existingMarks where isLocallyGradableMark(mark) {
             guard let value = parseMarkValue(mark.markText) else { continue }
             let markWeight = resolvedWeights[mark.id]?.value ?? 1
             totalWeight += markWeight
-            weightedSum += value * Double(markWeight)
+            weightedSum += value * markWeight
         }
 
-        return weightedSum / Double(totalWeight)
+        return weightedSum / totalWeight
     }
 
     static func resolvedWeight(for mark: Mark, in subject: Subject) -> ResolvedMarkWeight {
@@ -141,7 +141,7 @@ enum GradeMath {
                 else {
                     continue
                 }
-                resolved[mark.id] = ResolvedMarkWeight(value: inferredWeight, source: .inferred)
+                resolved[mark.id] = ResolvedMarkWeight(value: Double(inferredWeight), source: .inferred)
             }
         }
 
@@ -160,6 +160,13 @@ enum GradeMath {
     static func formattedAverage(_ average: Double?) -> String {
         guard let average else { return "-" }
         return String(format: "%.2f", locale: Locale.current, average)
+    }
+
+    static func formattedWeight(_ weight: Double) -> String {
+        if weight.rounded() == weight {
+            return String(Int(weight))
+        }
+        return String(format: "%g", locale: Locale(identifier: "en_US_POSIX"), weight)
     }
 
     static func band(for average: Double?) -> GradeBand {
@@ -188,16 +195,20 @@ enum GradeMath {
         return ResolvedMarkWeight(value: 1, source: .fallback)
     }
 
-    private static func explicitWeightValue(_ weight: Int?) -> Int? {
+    private static func explicitWeightValue(_ weight: Double?) -> Double? {
         guard let weight else { return nil }
-        return max(1, weight)
+        return max(0.0001, weight)
     }
 
     private static func isHiddenGradableMark(_ mark: Mark) -> Bool {
-        mark.weight == nil && !mark.isPoints && parseMarkValue(mark.markText) != nil
+        mark.weight == nil && isLocallyGradableMark(mark) && parseMarkValue(mark.markText) != nil
     }
 
-    private static func sameLabelExplicitWeight(for mark: Mark, in marks: [Mark]) -> Int? {
+    private static func isLocallyGradableMark(_ mark: Mark) -> Bool {
+        !mark.isPoints && mark.type != "unsupported"
+    }
+
+    private static func sameLabelExplicitWeight(for mark: Mark, in marks: [Mark]) -> Double? {
         guard let labelKind = MarkLabelKind.primaryKind(for: mark),
               let label = labelKind.normalizedLabel(for: mark)
         else {
@@ -205,7 +216,7 @@ enum GradeMath {
         }
 
         let matchingWeights = Set(
-            marks.compactMap { candidate -> Int? in
+            marks.compactMap { candidate -> Double? in
                 guard candidate.id != mark.id,
                       !candidate.isPoints,
                       labelKind.normalizedLabel(for: candidate) == label
@@ -221,7 +232,7 @@ enum GradeMath {
 
     private static func averageInferredWeights(
         for marks: [Mark],
-        knownWeightsByID: [String: Int],
+        knownWeightsByID: [String: Double],
         targetAverage: Double
     ) -> [String: Int] {
         let labels = orderedHiddenLabels(for: marks, knownWeightsByID: knownWeightsByID)
@@ -264,7 +275,7 @@ enum GradeMath {
 
     private static func orderedHiddenLabels(
         for marks: [Mark],
-        knownWeightsByID: [String: Int]
+        knownWeightsByID: [String: Double]
     ) -> [String] {
         var seen: Set<String> = []
         var labels: [String] = []
@@ -282,33 +293,33 @@ enum GradeMath {
 
     private static func weightedAverage(
         for marks: [Mark],
-        knownWeightsByID: [String: Int],
+        knownWeightsByID: [String: Double],
         candidateWeightsByLabel: [String: Int]
     ) -> Double? {
-        var totalWeight = 0
+        var totalWeight = 0.0
         var weightedSum = 0.0
 
-        for mark in marks where !mark.isPoints {
+        for mark in marks where isLocallyGradableMark(mark) {
             guard let value = parseMarkValue(mark.markText) else { continue }
 
-            let weight: Int
+            let weight: Double
             if let explicitWeight = explicitWeightValue(mark.weight) {
                 weight = explicitWeight
             } else if let knownWeight = knownWeightsByID[mark.id] {
                 weight = knownWeight
             } else if let label = averageInferenceLabel(for: mark),
                       let candidateWeight = candidateWeightsByLabel[label] {
-                weight = candidateWeight
+                weight = Double(candidateWeight)
             } else {
                 weight = 1
             }
 
             totalWeight += weight
-            weightedSum += value * Double(weight)
+            weightedSum += value * weight
         }
 
         guard totalWeight > 0 else { return nil }
-        return weightedSum / Double(totalWeight)
+        return weightedSum / totalWeight
     }
 
     private static func matchesDisplayedAverage(_ candidateAverage: Double, _ targetAverage: Double) -> Bool {

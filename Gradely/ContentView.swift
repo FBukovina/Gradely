@@ -10,7 +10,7 @@ private enum AppTab: Hashable {
 struct ContentView: View {
     private static let supportPromptVersion = "1.4"
 
-    private let repository: BakalariRepository
+    private let repository: SchoolRepository
     private let stravaCZRepository: StravaCZRepository
     private let schoolDirectoryProvider: any SchoolDirectoryProviding
     private let supportTipProvider: any SupportTipProviding
@@ -25,6 +25,7 @@ struct ContentView: View {
     @State private var isSupportTipSheetPresented = false
     @State private var didForcePresentSupportPrompt = false
     @State private var selectedTab: AppTab = .subjects
+    @State private var schoolAccountRevision = UUID()
 
     init(
         environment: AppEnvironment = .current(),
@@ -85,6 +86,7 @@ struct ContentView: View {
                             StravaCZView(repository: stravaCZRepository)
                         }
                     }
+                    .id(schoolAccountRevision)
                     .tint(Brand.primary)
                     .gradelySidebarAdaptable()
                 }
@@ -103,6 +105,10 @@ struct ContentView: View {
         }
         .onOpenURL { url in
             handleOpenURL(url)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .gradelySchoolAccountDidChange)) { _ in
+            selectedTab = .subjects
+            schoolAccountRevision = UUID()
         }
         .alert(String(localized: "support.updatePrompt.title"), isPresented: $isVersionSupportPromptPresented) {
             Button(String(localized: "support.updatePrompt.later"), role: .cancel) {}
@@ -126,7 +132,7 @@ struct ContentView: View {
     }
 
     private func handleOpenURL(_ url: URL) {
-        guard url.scheme == "gradely" else { return }
+        guard url.scheme == "gradey" || url.scheme == "gradely" else { return }
 
         if url.host == "timetable" || url.path == "/timetable" {
             selectedTab = .timetable
@@ -193,7 +199,7 @@ private struct SplashView: View {
 #Preview("Signed out") {
     ContentView(
         environment: AppEnvironment(
-            repository: BakalariRepository(
+            repository: SchoolRepository(
                 client: MockBakalariClient(),
                 sessionStore: InMemorySessionStore(),
                 marksCache: InMemoryMarksCache()
@@ -206,7 +212,7 @@ private struct SplashView: View {
 #Preview("Signed in") {
     ContentView(
         environment: AppEnvironment(
-            repository: BakalariRepository(
+            repository: SchoolRepository(
                 client: MockBakalariClient(),
                 sessionStore: InMemorySessionStore(session: PreviewData.expiredSession),
                 marksCache: InMemoryMarksCache(cachedMarks: CachedMarks(marksResponse: PreviewData.marksResponse, cachedAt: Date()))

@@ -6,7 +6,7 @@ struct LoginView: View {
     let onSignedIn: () -> Void
 
     init(
-        repository: BakalariRepository,
+        repository: SchoolRepository,
         schoolDirectoryProvider: any SchoolDirectoryProviding,
         onSignedIn: @escaping () -> Void
     ) {
@@ -42,6 +42,12 @@ struct LoginView: View {
         } message: {
             Text(viewModel.errorMessage ?? "")
         }
+        .sheet(isPresented: $viewModel.isTwoFactorPresented) {
+            twoFactorSheet
+        }
+        .sheet(isPresented: $viewModel.isStudentSelectionPresented) {
+            studentSelectionSheet
+        }
         .task {
             await viewModel.loadSchoolDirectoryIfNeeded()
         }
@@ -49,6 +55,10 @@ struct LoginView: View {
             if isFocused {
                 viewModel.isSchoolSearchActive = true
             }
+        }
+        .onChange(of: viewModel.provider) { _, provider in
+            guard provider == .bakalari else { return }
+            Task { await viewModel.loadSchoolDirectoryIfNeeded() }
         }
     }
 
@@ -81,9 +91,16 @@ struct LoginView: View {
     private var form: some View {
         Card {
             VStack(spacing: Spacing.lg) {
-                schoolSearchPicker
+                providerPicker
 
-                TextField(String(localized: "login.schoolURL"), text: $viewModel.schoolURL)
+                if viewModel.provider == .bakalari {
+                    schoolSearchPicker
+                }
+
+                TextField(
+                    String(localized: viewModel.provider == .bakalari ? "login.schoolURL" : "edupage.schoolURL"),
+                    text: $viewModel.schoolURL
+                )
                     .textContentType(.URL)
                     .gradelyKeyboardType(.url)
                     .gradelyTextInputAutocapitalization(.never)
@@ -92,7 +109,11 @@ struct LoginView: View {
                     .brandField()
                     .accessibilityIdentifier("schoolURLField")
 
-                schoolURLManual
+                if viewModel.provider == .bakalari {
+                    schoolURLManual
+                } else {
+                    eduPageURLHint
+                }
 
                 TextField(String(localized: "login.username"), text: $viewModel.username)
                     .textContentType(.username)
@@ -104,16 +125,18 @@ struct LoginView: View {
 
                 passwordField
 
-                Button {
-                    viewModel.fillDemoAccount()
-                } label: {
-                    Label(String(localized: "login.demoAccount"), systemImage: "person.badge.key.fill")
-                        .font(.footnote.weight(.semibold))
-                        .frame(maxWidth: .infinity)
+                if viewModel.provider == .bakalari {
+                    Button {
+                        viewModel.fillDemoAccount()
+                    } label: {
+                        Label(String(localized: "login.demoAccount"), systemImage: "person.badge.key.fill")
+                            .font(.footnote.weight(.semibold))
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(Brand.primary)
+                    .accessibilityIdentifier("demoAccountButton")
                 }
-                .buttonStyle(.plain)
-                .foregroundStyle(Brand.primary)
-                .accessibilityIdentifier("demoAccountButton")
 
                 Button {
                     Task {
@@ -141,6 +164,22 @@ struct LoginView: View {
                 .accessibilityIdentifier("loginButton")
             }
         }
+    }
+
+    private var providerPicker: some View {
+        Picker(
+            String(localized: "login.provider"),
+            selection: Binding(
+                get: { viewModel.provider },
+                set: { viewModel.changeProvider($0) }
+            )
+        ) {
+            ForEach(SchoolProvider.allCases) { provider in
+                Text(provider.displayName).tag(provider)
+            }
+        }
+        .pickerStyle(.segmented)
+        .accessibilityIdentifier("schoolProviderPicker")
     }
 
     private var schoolSearchPicker: some View {
@@ -241,6 +280,93 @@ struct LoginView: View {
                 .fill(Color.gradelyTertiaryFill)
         )
         .accessibilityIdentifier("schoolURLManual")
+    }
+
+    private var eduPageURLHint: some View {
+        Label(String(localized: "edupage.schoolURL.hint"), systemImage: "info.circle")
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(Spacing.md)
+            .background(Color.gradelyTertiaryFill, in: RoundedRectangle(cornerRadius: Radius.sm, style: .continuous))
+    }
+
+    private var twoFactorSheet: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    SecureField(String(localized: "edupage.twoFactor.code"), text: $viewModel.twoFactorCode)
+                        .gradelyKeyboardType(.numberPad)
+                        .accessibilityIdentifier("eduPageTwoFactorCode")
+
+                    Button(String(localized: "edupage.twoFactor.submit")) {
+                        Task {
+                            if await viewModel.completeTwoFactor() {
+                                onSignedIn()
+                            }
+                        }
+                    }
+                    .disabled(viewModel.isLoading || viewModel.twoFactorCode.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    .accessibilityIdentifier("eduPageTwoFactorSubmit")
+                } header: {
+                    Text("edupage.twoFactor.codeSection")
+                }
+
+                Section {
+                    Button {
+                        Task {
+                            if await viewModel.checkDeviceApproval() {
+                                onSignedIn()
+                            }
+                        }
+                    } label: {
+                        if viewModel.isCheckingDeviceApproval {
+                            ProgressView()
+                        } else {
+                            Text("edupage.twoFactor.checkApproval")
+                        }
+                    }
+                    .disabled(viewModel.isCheckingDeviceApproval)
+                    .accessibilityIdentifier("eduPageTwoFactorCheck")
+
+                    Button("edupage.twoFactor.resend") {
+                        Task { await viewModel.resendDeviceApproval() }
+                    }
+                } header: {
+                    Text("edupage.twoFactor.deviceSection")
+                }
+            }
+            .navigationTitle("edupage.twoFactor.title")
+        }
+        .interactiveDismissDisabled(viewModel.isLoading)
+    }
+
+    private var studentSelectionSheet: some View {
+        NavigationStack {
+            List(viewModel.availableStudents) { student in
+                Button {
+                    Task {
+                        if await viewModel.selectStudent(student) {
+                            onSignedIn()
+                        }
+                    }
+                } label: {
+                    VStack(alignment: .leading, spacing: Spacing.xs) {
+                        Text(student.fullName)
+                            .foregroundStyle(.primary)
+                        if let className = student.className {
+                            Text(className)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+                .disabled(viewModel.isLoading)
+                .accessibilityIdentifier("eduPageStudent-\(student.id)")
+            }
+            .navigationTitle("edupage.children.title")
+        }
+        .interactiveDismissDisabled(viewModel.isLoading)
     }
 
     private var githubLink: some View {
@@ -363,7 +489,7 @@ private struct SchoolResultRow: View {
 
 #Preview("Light") {
     LoginView(
-        repository: BakalariRepository(
+        repository: SchoolRepository(
             client: MockBakalariClient(),
             sessionStore: InMemorySessionStore(),
             marksCache: InMemoryMarksCache()
@@ -374,7 +500,7 @@ private struct SchoolResultRow: View {
 
 #Preview("Dark") {
     LoginView(
-        repository: BakalariRepository(
+        repository: SchoolRepository(
             client: MockBakalariClient(),
             sessionStore: InMemorySessionStore(),
             marksCache: InMemoryMarksCache()

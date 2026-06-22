@@ -2892,6 +2892,22 @@
         }
       }
     },
+    "support.tips.error.purchaseUnknown" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nákup se nepodařilo dokončit. Zkuste to prosím znovu."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The purchase could not be completed. Please try again."
+          }
+        }
+      }
+    },
     "support.tips.heading" : {
       "localizations" : {
         "cs" : {
@@ -2968,6 +2984,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Purchase in progress"
+          }
+        }
+      }
+    },
+    "support.tips.purchase.pending" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nákup čeká na schválení."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The purchase is pending approval."
           }
         }
       }
@@ -3452,6 +3484,33 @@
         }
       }
     },
+    "detail.weight.decimal":{"localizations":{"cs":{"stringUnit":{"state":"translated","value":"Váha %@×"}},"en":{"stringUnit":{"state":"translated","value":"Weight %@×"}}}},
+    "detail.weight.estimated.decimal":{"localizations":{"cs":{"stringUnit":{"state":"translated","value":"Odhadovaná váha %@×"}},"en":{"stringUnit":{"state":"translated","value":"Estimated weight %@×"}}}},
+    "edupage.attribution.title":{"localizations":{"cs":{"stringUnit":{"state":"translated","value":"Podpora EduPage"}},"en":{"stringUnit":{"state":"translated","value":"EduPage support"}}}},
+    "edupage.attribution.message":{"localizations":{"cs":{"stringUnit":{"state":"translated","value":"Neoficiální integrace vychází z veřejně zdokumentovaného chování EduPage API. Gradey není produktem EduPage."}},"en":{"stringUnit":{"state":"translated","value":"This unofficial integration follows publicly documented EduPage API behavior. Gradey is not an EduPage product."}}}},
+    "edupage.children.switch":{"localizations":{"cs":{"stringUnit":{"state":"translated","value":"Přepnout dítě"}},"en":{"stringUnit":{"state":"translated","value":"Switch student"}}}},
+    "edupage.children.title":{"localizations":{"cs":{"stringUnit":{"state":"translated","value":"Vyberte dítě"}},"en":{"stringUnit":{"state":"translated","value":"Choose student"}}}},
+    "edupage.error.captcha":{"localizations":{"cs":{"stringUnit":{"state":"translated","value":"EduPage vyžaduje CAPTCHA. Přihlaste se nejprve na webu EduPage a zkuste to znovu později."}},"en":{"stringUnit":{"state":"translated","value":"EduPage requires a CAPTCHA. Sign in on the EduPage website first, then try again later."}}}},
+    "edupage.error.credentials":{"localizations":{"cs":{"stringUnit":{"state":"translated","value":"Nesprávné uživatelské jméno nebo heslo EduPage."}},"en":{"stringUnit":{"state":"translated","value":"Incorrect EduPage username or password."}}}},
+    "edupage.error.invalidChild":{"localizations":{"cs":{"stringUnit":{"state":"translated","value":"Vybrané dítě není pro tento účet dostupné."}},"en":{"stringUnit":{"state":"translated","value":"The selected student is not available for this account."}}}},
+    "edupage.error.noChildren":{"localizations":{"cs":{"stringUnit":{"state":"translated","value":"K tomuto rodičovskému účtu nejsou připojeny žádné děti."}},"en":{"stringUnit":{"state":"translated","value":"No linked students were found for this parent account."}}}},
+    "edupage.error.response":{"localizations":{"cs":{"stringUnit":{"state":"translated","value":"Odpověď EduPage se nepodařilo přečíst. Škola může používat nepodporovanou verzi."}},"en":{"stringUnit":{"state":"translated","value":"The EduPage response could not be read. This school may use an unsupported version."}}}},
+    "edupage.error.schoolURL":{"localizations":{"cs":{"stringUnit":{"state":"translated","value":"Zadejte platnou adresu nebo subdoménu školy EduPage."}},"en":{"stringUnit":{"state":"translated","value":"Enter a valid EduPage school address or subdomain."}}}},
+    "edupage.error.sessionExpired":{"localizations":{"cs":{"stringUnit":{"state":"translated","value":"Relace EduPage vypršela. Přihlaste se znovu."}},"en":{"stringUnit":{"state":"translated","value":"The EduPage session expired. Please sign in again."}}}},
+    "edupage.error.twoFactorCode":{"localizations":{"cs":{"stringUnit":{"state":"translated","value":"Ověřovací kód není platný nebo vypršel."}},"en":{"stringUnit":{"state":"translated","value":"The verification code is invalid or expired."}}}},
+    "edupage.error.twoFactorPending":{"localizations":{"cs":{"stringUnit":{"state":"translated","value":"Přihlášení zatím nebylo potvrzeno."}},"en":{"stringUnit":{"state":"translated","value":"The sign-in has not been approved yet."}}}},
+    "edupage.error.twoFactorRequired":{"localizations":{"cs":{"stringUnit":{"state":"translated","value":"Přihlášení vyžaduje dvoufázové ověření v telefonu."}},"en":{"stringUnit":{"state":"translated","value":"This sign-in requires two-factor authentication on the phone."}}}},
+    "edupage.error.unsupportedAccount":{"localizations":{"cs":{"stringUnit":{"state":"translated","value":"Tento typ účtu EduPage zatím není podporován."}},"en":{"stringUnit":{"state":"translated","value":"This EduPage account type is not supported."}}}},
+    "edupage.schoolURL":{"localizations":{"cs":{"stringUnit":{"state":"translated","value":"Subdoména nebo URL EduPage"}},"en":{"stringUnit":{"state":"translated","value":"EduPage subdomain or URL"}}}},
+    "edupage.schoolURL.hint":{"localizations":{"cs":{"stringUnit":{"state":"translated","value":"Zadejte například moje-skola nebo moje-skola.edupage.org."}},"en":{"stringUnit":{"state":"translated","value":"Enter, for example, my-school or my-school.edupage.org."}}}},
+    "edupage.twoFactor.checkApproval":{"localizations":{"cs":{"stringUnit":{"state":"translated","value":"Zkontrolovat potvrzení"}},"en":{"stringUnit":{"state":"translated","value":"Check approval"}}}},
+    "edupage.twoFactor.code":{"localizations":{"cs":{"stringUnit":{"state":"translated","value":"Ověřovací kód"}},"en":{"stringUnit":{"state":"translated","value":"Verification code"}}}},
+    "edupage.twoFactor.codeSection":{"localizations":{"cs":{"stringUnit":{"state":"translated","value":"Kód z e-mailu nebo aplikace"}},"en":{"stringUnit":{"state":"translated","value":"Email or app code"}}}},
+    "edupage.twoFactor.deviceSection":{"localizations":{"cs":{"stringUnit":{"state":"translated","value":"Potvrzení v zařízení"}},"en":{"stringUnit":{"state":"translated","value":"Device approval"}}}},
+    "edupage.twoFactor.resend":{"localizations":{"cs":{"stringUnit":{"state":"translated","value":"Znovu odeslat oznámení"}},"en":{"stringUnit":{"state":"translated","value":"Resend notification"}}}},
+    "edupage.twoFactor.submit":{"localizations":{"cs":{"stringUnit":{"state":"translated","value":"Ověřit kód"}},"en":{"stringUnit":{"state":"translated","value":"Verify code"}}}},
+    "edupage.twoFactor.title":{"localizations":{"cs":{"stringUnit":{"state":"translated","value":"Dvoufázové ověření"}},"en":{"stringUnit":{"state":"translated","value":"Two-factor authentication"}}}},
+    "login.provider":{"localizations":{"cs":{"stringUnit":{"state":"translated","value":"Školní systém"}},"en":{"stringUnit":{"state":"translated","value":"School system"}}}},
     "timetable.weekend" : {
       "localizations" : {
         "cs" : {

@@ -125,7 +125,7 @@ struct SchoolDirectoryTests {
             refreshError: SchoolDirectoryError.invalidResponse
         )
         let store = InMemorySessionStore()
-        let repository = BakalariRepository(
+        let repository = SchoolRepository(
             client: MockBakalariClient(),
             sessionStore: store,
             marksCache: InMemoryMarksCache()

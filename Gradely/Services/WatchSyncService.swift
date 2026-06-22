@@ -1,5 +1,7 @@
 import Foundation
+#if !os(macOS)
 import GradelyWatchShared
+#endif
 #if canImport(WatchConnectivity) && !os(macOS)
 import WatchConnectivity
 #endif
@@ -9,7 +11,9 @@ protocol WatchSyncing: AnyObject {
     func start()
     func update(session: StoredSession?)
     func update(user: UserResponse?)
+    #if !os(macOS)
     func update(timetable: GradelyWatchTimetable?)
+    #endif
     func publishSignedOut()
 }
 

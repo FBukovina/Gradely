@@ -98,7 +98,7 @@ struct GradelyTests {
             ],
             cachedAt: Date()
         )
-        let repository = BakalariRepository(
+        let repository = SchoolRepository(
             client: MockBakalariClient(
                 userResult: UserResponse(
                     userUID: "student-1",
@@ -198,7 +198,7 @@ struct GradelyTests {
 
     @Test func repositoryParsesWhatIfPredictionAverage() async throws {
         let predictedSubject = testSubject(marks: PreviewData.mathMarks, averageText: "2,59")
-        let repository = BakalariRepository(
+        let repository = SchoolRepository(
             client: MockBakalariClient(predictionResult: predictedSubject),
             sessionStore: InMemorySessionStore(session: validSession()),
             marksCache: InMemoryMarksCache()
@@ -215,7 +215,7 @@ struct GradelyTests {
 
     @Test func subjectDetailViewModelUsesExactPredictionWhenAvailable() async throws {
         let predictedSubject = testSubject(marks: PreviewData.mathMarks, averageText: "1,23")
-        let repository = BakalariRepository(
+        let repository = SchoolRepository(
             client: MockBakalariClient(predictionResult: predictedSubject),
             sessionStore: InMemorySessionStore(session: validSession()),
             marksCache: InMemoryMarksCache()
@@ -233,7 +233,7 @@ struct GradelyTests {
     }
 
     @Test func subjectDetailViewModelKeepsLocalPredictionWhenExactPredictionFails() async throws {
-        let repository = BakalariRepository(
+        let repository = SchoolRepository(
             client: MockBakalariClient(predictionError: BakalariAPIError.httpStatus(403, nil)),
             sessionStore: InMemorySessionStore(session: validSession()),
             marksCache: InMemoryMarksCache()
@@ -263,7 +263,7 @@ struct GradelyTests {
             appVersion: nil,
             userID: "mock-user"
         )
-        let repository = BakalariRepository(
+        let repository = SchoolRepository(
             client: MockBakalariClient(refreshedResult: refreshed),
             sessionStore: store,
             marksCache: InMemoryMarksCache()
@@ -275,11 +275,142 @@ struct GradelyTests {
         #expect(store.session?.refreshToken == "new-refresh")
     }
 
+    @Test func concurrentValidSessionCallsRefreshOnce() async throws {
+        let store = InMemorySessionStore(session: PreviewData.expiredSession)
+        let client = RefreshSpyBakalariClient(
+            refreshResult: LoginResponse(
+                accessToken: "new-access",
+                refreshToken: "new-refresh",
+                tokenType: "Bearer",
+                expiresIn: 3600,
+                apiVersion: nil,
+                appVersion: nil,
+                userID: "mock-user"
+            )
+        )
+        let repository = SchoolRepository(
+            client: client,
+            sessionStore: store,
+            marksCache: InMemoryMarksCache()
+        )
+
+        async let s1 = repository.validSession()
+        async let s2 = repository.validSession()
+        async let s3 = repository.validSession()
+        async let s4 = repository.validSession()
+        async let s5 = repository.validSession()
+        let sessions = try await [s1, s2, s3, s4, s5]
+
+        // The rotating refresh token must be redeemed at most once.
+        #expect(client.refreshCallCount == 1)
+        #expect(client.loginCallCount == 0)
+        #expect(sessions.allSatisfy { $0.accessToken == "new-access" })
+        #expect(store.session?.refreshToken == "new-refresh")
+    }
+
+    @Test func reLoginsWhenRefreshTokenAlreadyRedeemed() async throws {
+        let store = InMemorySessionStore(session: credentialedExpiredSession())
+        let client = RefreshSpyBakalariClient(
+            loginResult: LoginResponse(
+                accessToken: "relogin-access",
+                refreshToken: "relogin-refresh",
+                tokenType: "Bearer",
+                expiresIn: 3600,
+                apiVersion: nil,
+                appVersion: nil,
+                userID: "mock-user"
+            ),
+            refreshError: BakalariAPIError.httpStatus(400, "invalid_grant")
+        )
+        let repository = SchoolRepository(
+            client: client,
+            sessionStore: store,
+            marksCache: InMemoryMarksCache()
+        )
+
+        let session = try await repository.validSession()
+
+        #expect(client.refreshCallCount == 1)
+        #expect(client.loginCallCount == 1)
+        #expect(session.accessToken == "relogin-access")
+        #expect(store.session?.refreshToken == "relogin-refresh")
+        // Credentials survive the re-login so the next failure can self-heal too.
+        #expect(store.session?.bakalari?.username == "student")
+    }
+
+    @Test func propagatesRefreshErrorWhenNoCredentialsStored() async throws {
+        let store = InMemorySessionStore(session: PreviewData.expiredSession) // no credentials
+        let client = RefreshSpyBakalariClient(
+            refreshError: BakalariAPIError.httpStatus(400, "invalid_grant")
+        )
+        let repository = SchoolRepository(
+            client: client,
+            sessionStore: store,
+            marksCache: InMemoryMarksCache()
+        )
+
+        var thrown: Error?
+        do {
+            _ = try await repository.validSession()
+        } catch {
+            thrown = error
+        }
+
+        #expect(thrown is BakalariAPIError)
+        #expect(client.loginCallCount == 0)
+    }
+
+    @Test func retriesMarksFetchWhenAccessTokenRejected() async throws {
+        let store = InMemorySessionStore(session: validSession())
+        let client = RefreshSpyBakalariClient(
+            refreshResult: LoginResponse(
+                accessToken: "refreshed-access",
+                refreshToken: "refreshed-refresh",
+                tokenType: "Bearer",
+                expiresIn: 3600,
+                apiVersion: nil,
+                appVersion: nil,
+                userID: "mock-user"
+            ),
+            marksErrorOnce: BakalariAPIError.httpStatus(401, nil)
+        )
+        let repository = SchoolRepository(
+            client: client,
+            sessionStore: store,
+            marksCache: InMemoryMarksCache()
+        )
+
+        let dashboard = try await repository.loadDashboard()
+
+        #expect(client.marksCallCount == 2)
+        #expect(client.refreshCallCount == 1)
+        #expect(dashboard.marksResponse.subjects.isEmpty == false)
+        #expect(store.session?.accessToken == "refreshed-access")
+    }
+
+    @Test func storedSessionDecodesLegacyBlobWithoutCredentials() throws {
+        let json = """
+        {
+          "accessToken": "a",
+          "refreshToken": "r",
+          "tokenType": "Bearer",
+          "expiresAt": "2026-01-01T00:00:00Z",
+          "baseURL": "https://demo.bakalari.cz/",
+          "provider": "bakalari"
+        }
+        """
+        let data = try #require(json.data(using: .utf8))
+        let session = try JSONDecoder.sessionDecoder.decode(StoredSession.self, from: data)
+
+        #expect(session.bakalari == nil)
+        #expect(session.refreshToken == "r")
+    }
+
     @Test func subjectsViewModelKeepsCachedMarksWhenRefreshFails() async {
         let cache = InMemoryMarksCache(
             cachedMarks: CachedMarks(marksResponse: PreviewData.marksResponse, cachedAt: Date())
         )
-        let repository = BakalariRepository(
+        let repository = SchoolRepository(
             client: MockBakalariClient(marksError: BakalariAPIError.httpStatus(500, nil)),
             sessionStore: InMemorySessionStore(session: PreviewData.expiredSession),
             marksCache: cache
@@ -297,7 +428,7 @@ struct GradelyTests {
 
     @Test func loginViewModelSavesSessionWithNormalizedURL() async {
         let store = InMemorySessionStore()
-        let repository = BakalariRepository(
+        let repository = SchoolRepository(
             client: MockBakalariClient(),
             sessionStore: store,
             marksCache: InMemoryMarksCache()
@@ -319,7 +450,7 @@ struct GradelyTests {
 
     @Test func demoAccountLoadsMockDashboardData() async throws {
         let store = InMemorySessionStore()
-        let repository = BakalariRepository(
+        let repository = SchoolRepository(
             client: DemoAwareBakalariClient(liveClient: MockBakalariClient(marksError: BakalariAPIError.httpStatus(418, nil))),
             sessionStore: store,
             marksCache: InMemoryMarksCache()
@@ -339,7 +470,7 @@ struct GradelyTests {
     }
 
     @Test func demoAccountRejectsWrongCredentials() async {
-        let repository = BakalariRepository(
+        let repository = SchoolRepository(
             client: DemoAwareBakalariClient(liveClient: MockBakalariClient()),
             sessionStore: InMemorySessionStore(),
             marksCache: InMemoryMarksCache()
@@ -432,6 +563,16 @@ struct GradelyTests {
         #expect(viewModel.purchaseErrorMessage == nil)
     }
 
+    @Test func supportTipViewModelShowsPendingPurchaseMessage() async {
+        let service = MockSupportTipService(purchaseResult: .success(.pending))
+        let viewModel = SupportTipViewModel(supportTipProvider: service)
+
+        await viewModel.purchase(MockSupportTipService.previewTips[1])
+
+        #expect(!viewModel.didCompletePurchase)
+        #expect(viewModel.purchaseErrorMessage == String(localized: "support.tips.purchase.pending"))
+    }
+
     @Test func supportTipViewModelShowsPurchaseFailure() async {
         let service = MockSupportTipService(
             purchaseResult: .failure(SupportTipServiceError.purchaseFailed("The purchase could not be completed."))
@@ -449,7 +590,7 @@ struct GradelyTests {
         caption: String? = nil,
         type: String = "written",
         typeNote: String?,
-        weight: Int?,
+        weight: Double?,
         isPoints: Bool = false,
         id: String,
         maxPoints: Int? = nil
@@ -487,6 +628,18 @@ struct GradelyTests {
         )
     }
 
+    private func credentialedExpiredSession() -> StoredSession {
+        StoredSession(
+            accessToken: "expired-access",
+            refreshToken: "old-refresh",
+            tokenType: "Bearer",
+            expiresAt: Date(timeIntervalSince1970: 0),
+            baseURL: URL(string: "https://demo.bakalari.cz/")!,
+            provider: .bakalari,
+            bakalari: BakalariCredentials(username: "student", password: "secret")
+        )
+    }
+
     private func waitForPrediction(_ viewModel: SubjectDetailViewModel, expectedAverage: Double) async throws {
         for _ in 0..<20 {
             if let average = viewModel.theoreticalAverage, abs(average - expectedAverage) < 0.001 {
@@ -507,5 +660,74 @@ struct GradelyTests {
         }
 
         #expect(Bool(false), "Timed out waiting for prediction to finish.")
+    }
+}
+
+/// Reference-type test double that counts token operations and can simulate
+/// auth failures. Used to verify single-flight refresh, re-login fallback, and
+/// 401 retry. Access happens on the MainActor in tests, so the counters are safe.
+final class RefreshSpyBakalariClient: BakalariClient, @unchecked Sendable {
+    private(set) var refreshCallCount = 0
+    private(set) var loginCallCount = 0
+    private(set) var marksCallCount = 0
+
+    private let refreshResult: LoginResponse
+    private let loginResult: LoginResponse
+    private let refreshError: Error?
+    private let marksErrorOnce: Error?
+
+    static let defaultResponse = LoginResponse(
+        accessToken: "spy-access",
+        refreshToken: "spy-refresh",
+        tokenType: "Bearer",
+        expiresIn: 3600,
+        apiVersion: nil,
+        appVersion: nil,
+        userID: "spy-user"
+    )
+
+    init(
+        refreshResult: LoginResponse = RefreshSpyBakalariClient.defaultResponse,
+        loginResult: LoginResponse = RefreshSpyBakalariClient.defaultResponse,
+        refreshError: Error? = nil,
+        marksErrorOnce: Error? = nil
+    ) {
+        self.refreshResult = refreshResult
+        self.loginResult = loginResult
+        self.refreshError = refreshError
+        self.marksErrorOnce = marksErrorOnce
+    }
+
+    func login(baseURL: URL, username: String, password: String) async throws -> LoginResponse {
+        loginCallCount += 1
+        return loginResult
+    }
+
+    func refreshToken(baseURL: URL, refreshToken: String) async throws -> LoginResponse {
+        refreshCallCount += 1
+        if let refreshError { throw refreshError }
+        return refreshResult
+    }
+
+    func fetchMarks(baseURL: URL, accessToken: String) async throws -> MarksResponse {
+        marksCallCount += 1
+        if marksCallCount == 1, let marksErrorOnce { throw marksErrorOnce }
+        return PreviewData.marksResponse
+    }
+
+    func fetchAbsences(baseURL: URL, accessToken: String) async throws -> AbsenceResponse {
+        PreviewData.absenceResponse
+    }
+
+    func fetchUser(baseURL: URL, accessToken: String) async throws -> UserResponse {
+        PreviewData.userResponse
+    }
+
+    func fetchTimetable(baseURL: URL, accessToken: String, date: Date) async throws -> TimetableResponse {
+        PreviewData.timetableResponse
+    }
+
+    func predictSubject(baseURL: URL, accessToken: String, subject: Subject, markText: String, weight: Int) async throws -> Subject {
+        subject
     }
 }

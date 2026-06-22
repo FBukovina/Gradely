@@ -10,12 +10,12 @@ final class AppViewModel {
         case signedIn
     }
 
-    private let repository: BakalariRepository
+    private let repository: SchoolRepository
     private let stravaCZRepository: StravaCZRepository
 
     var phase: Phase = .checking
 
-    init(repository: BakalariRepository, stravaCZRepository: StravaCZRepository) {
+    init(repository: SchoolRepository, stravaCZRepository: StravaCZRepository) {
         self.repository = repository
         self.stravaCZRepository = stravaCZRepository
     }

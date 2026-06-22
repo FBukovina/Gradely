@@ -3,15 +3,17 @@ import SwiftUI
 struct TimetableView: View {
     @State private var viewModel: TimetableViewModel
     @State private var selectedLesson: ScheduledLesson?
+    private let repository: SchoolRepository
     private let supportTipProvider: any SupportTipProviding
     let onSignedOut: () -> Void
 
     init(
-        repository: BakalariRepository,
+        repository: SchoolRepository,
         supportTipProvider: any SupportTipProviding = MockSupportTipService(),
         onSignedOut: @escaping () -> Void
     ) {
         _viewModel = State(initialValue: TimetableViewModel(repository: repository))
+        self.repository = repository
         self.supportTipProvider = supportTipProvider
         self.onSignedOut = onSignedOut
     }
@@ -41,6 +43,7 @@ struct TimetableView: View {
                     ToolbarItem(placement: .gradelyTopBarTrailing) {
                         AccountMenu(
                             user: viewModel.user,
+                            repository: repository,
                             supportTipProvider: supportTipProvider,
                             onSignedOut: onSignedOut
                         )
@@ -580,7 +583,7 @@ private enum LessonClock {
 
 #Preview("Light") {
     TimetableView(
-        repository: BakalariRepository(
+        repository: SchoolRepository(
             client: MockBakalariClient(),
             sessionStore: InMemorySessionStore(session: PreviewData.expiredSession),
             marksCache: InMemoryMarksCache()
@@ -590,7 +593,7 @@ private enum LessonClock {
 
 #Preview("Dark") {
     TimetableView(
-        repository: BakalariRepository(
+        repository: SchoolRepository(
             client: MockBakalariClient(),
             sessionStore: InMemorySessionStore(session: PreviewData.expiredSession),
             marksCache: InMemoryMarksCache()

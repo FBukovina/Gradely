@@ -64,7 +64,7 @@ final class AbsenceViewModel {
     var predictionErrorMessage: String?
     var isLoadingPredictionLessons = false
 
-    private let repository: BakalariRepository
+    private let repository: SchoolRepository
     private let predictionMinimumDay: Date
     private var hasLoaded = false
     @ObservationIgnored private var predictionLessonsByDate: [String: [AbsenceLessonCandidate]] = [:]
@@ -72,7 +72,7 @@ final class AbsenceViewModel {
     @ObservationIgnored private var subjectResolutionTask: Task<Void, Never>?
     @ObservationIgnored private var subjectResolutionToken = UUID()
 
-    init(repository: BakalariRepository, today: Date = Date()) {
+    init(repository: SchoolRepository, today: Date = Date()) {
         self.repository = repository
         predictionMinimumDay = TimetableDates.weekCalendar.startOfDay(for: today)
         predictionSelectedDate = predictionMinimumDay
@@ -404,7 +404,7 @@ final class AbsenceViewModel {
     private func state(
         for absences: [AbsencePerSubject],
         source: AbsenceSubjectResolutionSource,
-        threshold: Double,
+        threshold: Double?,
         stableIDHints: [String],
         warning: String? = nil,
         unresolvedPartialDays: [AbsencePartialDayCandidate] = []

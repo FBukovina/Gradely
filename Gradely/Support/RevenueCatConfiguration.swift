@@ -1,10 +1,13 @@
 import Foundation
+#if canImport(RevenueCat)
 import RevenueCat
+#endif
 
 enum RevenueCatConfiguration {
     private static let publicAppleAPIKey = "appl_KTNbCvFOqwPTWfQKhjDCgSdSANH"
 
     static func configureIfNeeded(bundle: Bundle = .main) {
+        #if canImport(RevenueCat)
         guard !Purchases.isConfigured,
               let apiKey = bundle.revenueCatPlatformAPIKey ?? publicAppleAPIKey.nonEmptyAPIKey
         else {
@@ -16,6 +19,7 @@ enum RevenueCatConfiguration {
         #endif
 
         Purchases.configure(withAPIKey: apiKey)
+        #endif
     }
 }
 

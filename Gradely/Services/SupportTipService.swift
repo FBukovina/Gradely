@@ -1,5 +1,10 @@
 import Foundation
+#if canImport(RevenueCat)
 import RevenueCat
+#endif
+#if canImport(StoreKit)
+import StoreKit
+#endif
 
 struct SupportTipOption: Identifiable, Equatable {
     let id: String
@@ -11,6 +16,7 @@ struct SupportTipOption: Identifiable, Equatable {
 enum SupportTipPurchaseOutcome: Equatable {
     case success
     case cancelled
+    case pending
 }
 
 enum SupportTipServiceError: Error, Equatable {
@@ -53,6 +59,7 @@ enum SupportTipCatalog {
     ]
 }
 
+#if canImport(RevenueCat)
 @MainActor
 final class RevenueCatSupportTipService: SupportTipProviding {
     private var packagesByIdentifier: [String: Package] = [:]
@@ -120,6 +127,103 @@ final class RevenueCatSupportTipService: SupportTipProviding {
             return message
         }
         return error.localizedDescription
+    }
+}
+#endif
+
+#if canImport(StoreKit)
+@MainActor
+final class StoreKitSupportTipService: SupportTipProviding {
+    private var productsByPackageIdentifier: [String: StoreKit.Product] = [:]
+
+    func loadTips() async throws -> [SupportTipOption] {
+        let productIdentifiers = SupportTipCatalog.products.map(\.productIdentifier)
+        let storeProducts = try await StoreKit.Product.products(for: productIdentifiers)
+        let productsByIdentifier = Dictionary(uniqueKeysWithValues: storeProducts.map { ($0.id, $0) })
+        let orderedProducts = SupportTipCatalog.products.compactMap { catalogProduct -> (packageIdentifier: String, product: StoreKit.Product)? in
+            guard let product = productsByIdentifier[catalogProduct.productIdentifier] else {
+                return nil
+            }
+            return (catalogProduct.packageIdentifier, product)
+        }
+
+        guard !orderedProducts.isEmpty else {
+            throw SupportTipServiceError.emptyOffering
+        }
+
+        productsByPackageIdentifier = Dictionary(
+            uniqueKeysWithValues: orderedProducts.map { ($0.packageIdentifier, $0.product) }
+        )
+
+        return orderedProducts.map { packageIdentifier, product in
+            SupportTipOption(
+                id: packageIdentifier,
+                productIdentifier: product.id,
+                title: product.displayName,
+                localizedPrice: product.displayPrice
+            )
+        }
+    }
+
+    func purchase(_ tip: SupportTipOption) async throws -> SupportTipPurchaseOutcome {
+        var product = productsByPackageIdentifier[tip.id]
+        if product == nil {
+            _ = try await loadTips()
+            product = productsByPackageIdentifier[tip.id]
+        }
+
+        guard let product else {
+            throw SupportTipServiceError.productUnavailable
+        }
+
+        do {
+            let result = try await product.purchase()
+            switch result {
+            case .success(let verificationResult):
+                let transaction = try verifiedTransaction(from: verificationResult)
+                await transaction.finish()
+                return .success
+            case .userCancelled:
+                return .cancelled
+            case .pending:
+                return .pending
+            @unknown default:
+                throw SupportTipServiceError.purchaseFailed(String(localized: "support.tips.error.purchaseUnknown"))
+            }
+        } catch let error as SupportTipServiceError {
+            throw error
+        } catch {
+            throw SupportTipServiceError.purchaseFailed(userFacingMessage(for: error))
+        }
+    }
+
+    private func verifiedTransaction(
+        from result: StoreKit.VerificationResult<StoreKit.Transaction>
+    ) throws -> StoreKit.Transaction {
+        switch result {
+        case .verified(let transaction):
+            return transaction
+        case .unverified(_, let error):
+            throw SupportTipServiceError.purchaseFailed(userFacingMessage(for: error))
+        }
+    }
+
+    private func userFacingMessage(for error: Error) -> String {
+        if let localizedError = error as? LocalizedError, let message = localizedError.errorDescription {
+            return message
+        }
+        return error.localizedDescription
+    }
+}
+#endif
+
+final class UnavailableSupportTipService: SupportTipProviding {
+    func loadTips() async throws -> [SupportTipOption] {
+        throw SupportTipServiceError.notConfigured
+    }
+
+    func purchase(_ tip: SupportTipOption) async throws -> SupportTipPurchaseOutcome {
+        throw SupportTipServiceError.notConfigured
     }
 }
 

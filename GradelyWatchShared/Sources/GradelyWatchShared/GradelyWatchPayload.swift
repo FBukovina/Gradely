@@ -12,7 +12,7 @@ public enum GradelyWatchMessageKey {
 }
 
 public struct GradelyWatchSyncPayload: Codable, Equatable, Sendable {
-    public static let currentSchemaVersion = 1
+    public static let currentSchemaVersion = 2
 
     public let schemaVersion: Int
     public let generatedAt: Date
@@ -48,26 +48,51 @@ public struct GradelyWatchSyncPayload: Codable, Equatable, Sendable {
     }
 }
 
+public enum GradelyWatchSchoolProvider: String, Codable, Equatable, Sendable {
+    case bakalari
+    case eduPage
+}
+
 public struct GradelyWatchAuth: Codable, Equatable, Sendable {
     public let baseURL: URL
     public let accessToken: String
     public let refreshToken: String
     public let tokenType: String
     public let expiresAt: Date
+    public let provider: GradelyWatchSchoolProvider?
+    public let username: String?
+    public let password: String?
+    public let sessionID: String?
+    public let selectedStudentID: String?
+    public let gsecHash: String?
 
     public init(
         baseURL: URL,
         accessToken: String,
         refreshToken: String,
         tokenType: String,
-        expiresAt: Date
+        expiresAt: Date,
+        provider: GradelyWatchSchoolProvider? = .bakalari,
+        username: String? = nil,
+        password: String? = nil,
+        sessionID: String? = nil,
+        selectedStudentID: String? = nil,
+        gsecHash: String? = nil
     ) {
         self.baseURL = baseURL
         self.accessToken = accessToken
         self.refreshToken = refreshToken
         self.tokenType = tokenType
         self.expiresAt = expiresAt
+        self.provider = provider
+        self.username = username
+        self.password = password
+        self.sessionID = sessionID
+        self.selectedStudentID = selectedStudentID
+        self.gsecHash = gsecHash
     }
+
+    public var resolvedProvider: GradelyWatchSchoolProvider { provider ?? .bakalari }
 
     public func expiresSoon(now: Date = Date(), leeway: TimeInterval = 60) -> Bool {
         expiresAt <= now.addingTimeInterval(leeway)

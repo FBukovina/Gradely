@@ -9,6 +9,7 @@ struct CreditsView: View {
                 VStack(alignment: .leading, spacing: Spacing.lg) {
                     header
                     team
+                    eduPageAttribution
                 }
                 .padding(Spacing.lg)
             }
@@ -83,6 +84,22 @@ struct CreditsView: View {
                 email: AppLinks.tomasEmailURL,
                 instagram: nil
             )
+        }
+    }
+
+    private var eduPageAttribution: some View {
+        Card {
+            VStack(alignment: .leading, spacing: Spacing.sm) {
+                Text("edupage.attribution.title")
+                    .font(.headline)
+                Text("edupage.attribution.message")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                Link("EdupageAPI/edupage-api", destination: URL(string: "https://github.com/EdupageAPI/edupage-api")!)
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(Brand.primary)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 }

@@ -1,5 +1,7 @@
 import Foundation
+#if !os(macOS)
 import GradelyWatchShared
+#endif
 #if canImport(WidgetKit) && (os(iOS) || os(macOS))
 import WidgetKit
 #endif
@@ -68,8 +70,9 @@ enum AppError: LocalizedError, Equatable {
         }
 }
 
-final class BakalariRepository {
+final class SchoolRepository {
     private let client: any BakalariClient
+    private let eduPageClient: any EduPageClient
     private let sessionStore: any SessionStoring
     private let marksCache: any MarksCaching
     private let absenceCache: any AbsenceCaching
@@ -80,9 +83,14 @@ final class BakalariRepository {
     private let watchSyncService: (any WatchSyncing)?
     private let dateProvider: () -> Date
     private let timetableFetchTimeoutNanoseconds: UInt64
+    private var pendingEduPageBaseURL: URL?
+    /// In-flight Bakaláři token refresh, shared by concurrent callers so the
+    /// rotating refresh token is never redeemed twice in parallel.
+    private var bakalariRefreshTask: Task<StoredSession, Error>?
 
     init(
         client: any BakalariClient,
+        eduPageClient: any EduPageClient = URLSessionEduPageClient(),
         sessionStore: any SessionStoring,
         marksCache: any MarksCaching,
         absenceCache: any AbsenceCaching = InMemoryAbsenceCache(),
@@ -95,6 +103,7 @@ final class BakalariRepository {
         timetableFetchTimeoutNanoseconds: UInt64 = 12_000_000_000
     ) {
         self.client = client
+        self.eduPageClient = eduPageClient
         self.sessionStore = sessionStore
         self.marksCache = marksCache
         self.absenceCache = absenceCache
@@ -118,21 +127,167 @@ final class BakalariRepository {
     }
 
     func login(schoolURL: String, username: String, password: String) async throws -> StoredSession {
+        let step = try await beginLogin(
+            provider: .bakalari,
+            schoolURL: schoolURL,
+            username: username,
+            password: password
+        )
+        guard case .signedIn(let session) = step else {
+            throw AppError.unknown("Unexpected Bakaláři authentication step.")
+        }
+        return session
+    }
+
+    func beginLogin(
+        provider: SchoolProvider,
+        schoolURL: String,
+        username: String,
+        password: String
+    ) async throws -> SchoolLoginStep {
         guard !username.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
               !password.isEmpty
         else {
             throw AppError.missingFields
         }
 
-        let baseURL = try SchoolURLNormalizer.normalizedBaseURL(from: schoolURL)
-        let response = try await client.login(
-            baseURL: baseURL,
-            username: username.trimmingCharacters(in: .whitespacesAndNewlines),
-            password: password
+        switch provider {
+        case .bakalari:
+            let baseURL = try SchoolURLNormalizer.normalizedBaseURL(from: schoolURL)
+            let trimmedUsername = username.trimmingCharacters(in: .whitespacesAndNewlines)
+            let response = try await client.login(
+                baseURL: baseURL,
+                username: trimmedUsername,
+                password: password
+            )
+            try clearSchoolDataCaches()
+            // Persist the credentials so refreshes that hit "token already
+            // redeemed" can silently re-authenticate (see refreshBakalariSession).
+            let session = try persistBakalariSession(
+                from: response,
+                baseURL: baseURL,
+                credentials: BakalariCredentials(username: trimmedUsername, password: password)
+            )
+            return .signedIn(session)
+
+        case .eduPage:
+            let baseURL = try EduPageURLNormalizer.normalizedBaseURL(from: schoolURL)
+            pendingEduPageBaseURL = baseURL
+            return try await mapEduPageLoginResult(
+                eduPageClient.beginLogin(
+                    baseURL: baseURL,
+                    username: username.trimmingCharacters(in: .whitespacesAndNewlines),
+                    password: password
+                ),
+                baseURL: baseURL
+            )
+        }
+    }
+
+    func completeEduPageTwoFactor(code: String) async throws -> SchoolLoginStep {
+        guard let baseURL = pendingEduPageBaseURL else {
+            throw SchoolAuthenticationError.twoFactorRequired
+        }
+        return try await mapEduPageLoginResult(
+            eduPageClient.completeTwoFactor(code: code),
+            baseURL: baseURL
         )
-        let session = try sessionStore.save(loginResponse: response, baseURL: baseURL)
+    }
+
+    func completeApprovedEduPageTwoFactor() async throws -> SchoolLoginStep {
+        guard let baseURL = pendingEduPageBaseURL else {
+            throw SchoolAuthenticationError.twoFactorRequired
+        }
+        return try await mapEduPageLoginResult(
+            eduPageClient.completeApprovedTwoFactor(),
+            baseURL: baseURL
+        )
+    }
+
+    func isEduPageTwoFactorConfirmed() async throws -> Bool {
+        try await eduPageClient.isTwoFactorConfirmed()
+    }
+
+    func resendEduPageTwoFactorNotification() async throws {
+        try await eduPageClient.resendTwoFactorNotification()
+    }
+
+    func selectEduPageStudent(_ studentID: String) async throws -> StoredSession {
+        guard let baseURL = pendingEduPageBaseURL else {
+            throw SchoolAuthenticationError.invalidStudent
+        }
+        let data = try await eduPageClient.selectStudent(studentID)
+        let session = makeEduPageStoredSession(data: data, baseURL: baseURL)
+        try clearSchoolDataCaches()
+        try sessionStore.save(session: session)
+        pendingEduPageBaseURL = nil
         watchSyncService?.update(session: session)
         return session
+    }
+
+    var currentProvider: SchoolProvider? {
+        (try? sessionStore.loadSession())?.provider
+    }
+
+    var availableStudents: [SchoolStudentProfile] {
+        (try? sessionStore.loadSession())?.eduPage?.linkedStudents ?? []
+    }
+
+    func switchEduPageStudent(_ studentID: String) async throws {
+        guard var session = try sessionStore.loadSession(),
+              session.provider == .eduPage,
+              let eduPage = session.eduPage
+        else {
+            throw SchoolAuthenticationError.invalidStudent
+        }
+        session.eduPage = try await eduPageClient.switchStudent(studentID, in: eduPage, baseURL: session.baseURL)
+        session.accessToken = session.eduPage?.sessionID ?? session.accessToken
+        try sessionStore.save(session: session)
+        try marksCache.clear()
+        try absenceCache.clear()
+        try timetableCache.clear()
+        try absenceLessonSelectionStore.clearAll()
+        try? nextLessonWidgetStore?.clear()
+        watchSyncService?.update(session: session)
+    }
+
+    private func mapEduPageLoginResult(
+        _ result: EduPageLoginResult,
+        baseURL: URL
+    ) throws -> SchoolLoginStep {
+        switch result {
+        case .twoFactor(let prompt):
+            return .twoFactor(prompt)
+        case .studentSelection(let students):
+            return .studentSelection(students)
+        case .authenticated(let data):
+            let session = makeEduPageStoredSession(data: data, baseURL: baseURL)
+            try clearSchoolDataCaches()
+            try sessionStore.save(session: session)
+            pendingEduPageBaseURL = nil
+            watchSyncService?.update(session: session)
+            return .signedIn(session)
+        }
+    }
+
+    private func makeEduPageStoredSession(data: EduPageSessionData, baseURL: URL) -> StoredSession {
+        StoredSession(
+            accessToken: data.sessionID,
+            refreshToken: "",
+            tokenType: "Cookie",
+            expiresAt: .distantFuture,
+            baseURL: baseURL,
+            provider: .eduPage,
+            eduPage: data
+        )
+    }
+
+    private func clearSchoolDataCaches() throws {
+        try marksCache.clear()
+        try absenceCache.clear()
+        try timetableCache.clear()
+        try absenceLessonSelectionStore.clearAll()
+        try? nextLessonWidgetStore?.clear()
     }
 
     func logout() throws {
@@ -170,11 +325,7 @@ final class BakalariRepository {
     func loadTimetable(weekContaining date: Date) async throws -> TimetableWeek {
         let monday = TimetableDates.monday(of: date)
         let session = try await validSession()
-        let response = try await client.fetchTimetable(
-            baseURL: session.baseURL,
-            accessToken: session.accessToken,
-            date: monday
-        )
+        let response = try await fetchTimetable(session: session, weekStart: monday)
         try? timetableCache.save(response, weekStart: monday)
         let week = TimetableMapper.makeWeek(from: response, weekStart: monday)
         publishNextLessonWidgetSnapshot(for: week, weekStart: monday)
@@ -194,11 +345,7 @@ final class BakalariRepository {
         if let cached = try? timetableCache.load(weekStart: weekStart) {
             response = cached.response
         } else {
-            response = try await client.fetchTimetable(
-                baseURL: session.baseURL,
-                accessToken: session.accessToken,
-                date: weekStart
-            )
+            response = try await fetchTimetable(session: session, weekStart: weekStart)
             try? timetableCache.save(response, weekStart: weekStart)
         }
 
@@ -213,7 +360,7 @@ final class BakalariRepository {
     /// Best-effort current user, used to populate the account menu on tabs other than Marks.
     func loadUser() async -> UserResponse? {
         guard let session = try? await validSession() else { return nil }
-        guard let user = try? await client.fetchUser(baseURL: session.baseURL, accessToken: session.accessToken) else {
+        guard let user = try? await fetchUser(session: session) else {
             return nil
         }
         let resolved = resolvedUser(user, session: session)
@@ -229,14 +376,11 @@ final class BakalariRepository {
         }
 
         let session = try await validSession()
-        let marksResponse = try await client.fetchMarks(
-            baseURL: session.baseURL,
-            accessToken: session.accessToken
-        )
+        let marksResponse = try await fetchMarks(session: session)
         try marksCache.save(marksResponse)
 
-        async let absenceResponse = optionalAbsenceResponse(baseURL: session.baseURL, accessToken: session.accessToken)
-        async let user = optionalUser(baseURL: session.baseURL, accessToken: session.accessToken)
+        async let absenceResponse = optionalAbsenceResponse(session: session)
+        async let user = optionalUser(session: session)
 
         let absence = await absenceResponse
         if let absence {
@@ -261,12 +405,9 @@ final class BakalariRepository {
         }
 
         let session = try await validSession()
-        async let user = optionalUser(baseURL: session.baseURL, accessToken: session.accessToken)
+        async let user = optionalUser(session: session)
 
-        let response = try await client.fetchAbsences(
-            baseURL: session.baseURL,
-            accessToken: session.accessToken
-        )
+        let response = try await fetchAbsences(session: session)
         try? absenceCache.save(response)
 
         let resolvedAbsenceUser = resolvedUser(await user, session: session)
@@ -361,13 +502,24 @@ final class BakalariRepository {
 
     func predictSubjectAverage(subject: Subject, markText: String, weight: Int) async throws -> Double? {
         let session = try await validSession()
-        let predictedSubject = try await client.predictSubject(
-            baseURL: session.baseURL,
-            accessToken: session.accessToken,
-            subject: subject,
-            markText: markText,
-            weight: weight
-        )
+        if !session.provider.capabilities.supportsRemoteWhatIf {
+            guard let value = GradeMath.parseMarkValue(markText) else { return nil }
+            return GradeMath.theoreticalAverage(
+                existingMarks: subject.marks,
+                subjectAverageText: subject.averageText,
+                markValue: value,
+                weight: weight
+            )
+        }
+        let predictedSubject = try await withBakalariRetry(session: session) { current in
+            try await self.client.predictSubject(
+                baseURL: current.baseURL,
+                accessToken: current.accessToken,
+                subject: subject,
+                markText: markText,
+                weight: weight
+            )
+        }
         return GradeMath.parseAverageText(predictedSubject.averageText)
     }
 
@@ -376,27 +528,214 @@ final class BakalariRepository {
             throw AppError.notLoggedIn
         }
 
-        guard session.isExpired else { return session }
+        guard session.provider == .bakalari, session.isExpired else { return session }
 
-        let response = try await client.refreshToken(
-            baseURL: session.baseURL,
-            refreshToken: session.refreshToken
-        )
-        let refreshedSession = try sessionStore.save(refreshedResponse: response, currentBaseURL: session.baseURL)
-        watchSyncService?.update(session: refreshedSession)
-        return refreshedSession
+        return try await refreshBakalariSession(force: false)
     }
 
-    private func optionalAbsenceResponse(baseURL: URL, accessToken: String) async -> AbsenceResponse? {
+    /// Single-flight wrapper: concurrent callers share one refresh so the
+    /// rotating refresh token is redeemed at most once.
+    private func refreshBakalariSession(force: Bool) async throws -> StoredSession {
+        if let bakalariRefreshTask {
+            return try await bakalariRefreshTask.value
+        }
+
+        let task = Task { try await performBakalariRefresh(force: force) }
+        bakalariRefreshTask = task
+        defer { bakalariRefreshTask = nil }
+        return try await task.value
+    }
+
+    /// Refreshes the Bakaláři access token, re-loading the session first so a
+    /// caller arriving just after another refresh finished does not redeem an
+    /// already-rotated token. If the refresh token is rejected ("token already
+    /// redeemed"), falls back to a full re-login with the stored credentials so
+    /// the user is never forced to sign in again manually.
+    private func performBakalariRefresh(force: Bool) async throws -> StoredSession {
+        guard let session = try sessionStore.loadSession() else {
+            throw AppError.notLoggedIn
+        }
+        guard session.provider == .bakalari else { return session }
+        guard force || session.isExpired else { return session }
+
         do {
-            return try await client.fetchAbsences(baseURL: baseURL, accessToken: accessToken)
+            let response = try await client.refreshToken(
+                baseURL: session.baseURL,
+                refreshToken: session.refreshToken
+            )
+            return try persistBakalariSession(
+                from: response,
+                baseURL: session.baseURL,
+                credentials: session.bakalari
+            )
+        } catch {
+            guard isRefreshTokenRejected(error), let credentials = session.bakalari else {
+                throw error
+            }
+            let response = try await client.login(
+                baseURL: session.baseURL,
+                username: credentials.username,
+                password: credentials.password
+            )
+            return try persistBakalariSession(
+                from: response,
+                baseURL: session.baseURL,
+                credentials: credentials
+            )
+        }
+    }
+
+    private func makeBakalariSession(
+        from response: LoginResponse,
+        baseURL: URL,
+        credentials: BakalariCredentials?
+    ) -> StoredSession {
+        StoredSession(
+            accessToken: response.accessToken,
+            refreshToken: response.refreshToken,
+            tokenType: response.tokenType,
+            expiresAt: dateProvider().addingTimeInterval(TimeInterval(response.expiresIn)),
+            baseURL: baseURL,
+            provider: .bakalari,
+            bakalari: credentials
+        )
+    }
+
+    @discardableResult
+    private func persistBakalariSession(
+        from response: LoginResponse,
+        baseURL: URL,
+        credentials: BakalariCredentials?
+    ) throws -> StoredSession {
+        let session = makeBakalariSession(from: response, baseURL: baseURL, credentials: credentials)
+        try sessionStore.save(session: session)
+        watchSyncService?.update(session: session)
+        return session
+    }
+
+    /// Runs a Bakaláři request and, if the access token is rejected (HTTP 401),
+    /// forces a refresh/re-login and retries the request once.
+    private func withBakalariRetry<Value>(
+        session: StoredSession,
+        operation: (StoredSession) async throws -> Value
+    ) async throws -> Value {
+        do {
+            return try await operation(session)
+        } catch {
+            guard session.provider == .bakalari, isAccessTokenRejected(error) else { throw error }
+            let refreshed = try await refreshBakalariSession(force: true)
+            return try await operation(refreshed)
+        }
+    }
+
+    /// A rejected refresh token surfaces as HTTP 400 (`invalid_grant` /
+    /// "token already redeemed") or 401 from the token endpoint.
+    private func isRefreshTokenRejected(_ error: Error) -> Bool {
+        if case BakalariAPIError.httpStatus(let status, _) = error {
+            return status == 400 || status == 401
+        }
+        return false
+    }
+
+    /// An access token rejected mid-session surfaces as HTTP 401 on a data call.
+    private func isAccessTokenRejected(_ error: Error) -> Bool {
+        if case BakalariAPIError.httpStatus(401, _) = error {
+            return true
+        }
+        return false
+    }
+
+    private func fetchMarks(session: StoredSession) async throws -> MarksResponse {
+        switch session.provider {
+        case .bakalari:
+            return try await withBakalariRetry(session: session) { current in
+                try await self.client.fetchMarks(baseURL: current.baseURL, accessToken: current.accessToken)
+            }
+        case .eduPage:
+            return try await withEduPageSession(session) { data in
+                try await self.eduPageClient.fetchMarks(baseURL: session.baseURL, session: data)
+            }
+        }
+    }
+
+    private func fetchAbsences(session: StoredSession) async throws -> AbsenceResponse {
+        switch session.provider {
+        case .bakalari:
+            return try await withBakalariRetry(session: session) { current in
+                try await self.client.fetchAbsences(baseURL: current.baseURL, accessToken: current.accessToken)
+            }
+        case .eduPage:
+            return try await withEduPageSession(session) { data in
+                try await self.eduPageClient.fetchAbsences(baseURL: session.baseURL, session: data)
+            }
+        }
+    }
+
+    private func fetchUser(session: StoredSession) async throws -> UserResponse {
+        switch session.provider {
+        case .bakalari:
+            return try await withBakalariRetry(session: session) { current in
+                try await self.client.fetchUser(baseURL: current.baseURL, accessToken: current.accessToken)
+            }
+        case .eduPage:
+            return try await withEduPageSession(session) { data in
+                try await self.eduPageClient.fetchUser(baseURL: session.baseURL, session: data)
+            }
+        }
+    }
+
+    private func fetchTimetable(session: StoredSession, weekStart: Date) async throws -> TimetableResponse {
+        switch session.provider {
+        case .bakalari:
+            return try await withBakalariRetry(session: session) { current in
+                try await self.client.fetchTimetable(
+                    baseURL: current.baseURL,
+                    accessToken: current.accessToken,
+                    date: weekStart
+                )
+            }
+        case .eduPage:
+            return try await withEduPageSession(session) { data in
+                try await self.eduPageClient.fetchTimetable(
+                    baseURL: session.baseURL,
+                    session: data,
+                    weekStart: weekStart
+                )
+            }
+        }
+    }
+
+    private func withEduPageSession<Value>(
+        _ stored: StoredSession,
+        operation: (EduPageSessionData) async throws -> Value
+    ) async throws -> Value {
+        guard let data = stored.eduPage else {
+            throw SchoolAuthenticationError.sessionExpired
+        }
+
+        do {
+            return try await operation(data)
+        } catch SchoolAuthenticationError.sessionExpired {
+            let refreshed = try await eduPageClient.restore(data, baseURL: stored.baseURL)
+            var updated = stored
+            updated.accessToken = refreshed.sessionID
+            updated.eduPage = refreshed
+            try sessionStore.save(session: updated)
+            watchSyncService?.update(session: updated)
+            return try await operation(refreshed)
+        }
+    }
+
+    private func optionalAbsenceResponse(session: StoredSession) async -> AbsenceResponse? {
+        do {
+            return try await fetchAbsences(session: session)
         } catch {
             return nil
         }
     }
 
-    private func optionalUser(baseURL: URL, accessToken: String) async -> UserResponse? {
-        try? await client.fetchUser(baseURL: baseURL, accessToken: accessToken)
+    private func optionalUser(session: StoredSession) async -> UserResponse? {
+        try? await fetchUser(session: session)
     }
 
     private func resolvedUser(_ user: UserResponse?, session: StoredSession) -> UserResponse? {
@@ -421,10 +760,7 @@ final class BakalariRepository {
             return cached.marksResponse
         }
 
-        let response = try await client.fetchMarks(
-            baseURL: session.baseURL,
-            accessToken: session.accessToken
-        )
+        let response = try await fetchMarks(session: session)
         try? marksCache.save(response)
         return response
     }
@@ -541,11 +877,7 @@ final class BakalariRepository {
         do {
             let response = try await withThrowingTaskGroup(of: TimetableResponse.self) { group in
                 group.addTask {
-                    try await self.client.fetchTimetable(
-                        baseURL: session.baseURL,
-                        accessToken: session.accessToken,
-                        date: weekStart
-                    )
+                    try await self.fetchTimetable(session: session, weekStart: weekStart)
                 }
                 group.addTask {
                     try await Task.sleep(nanoseconds: self.timetableFetchTimeoutNanoseconds)
@@ -577,7 +909,9 @@ final class BakalariRepository {
     }
 
     private func publishWatchTimetable(for week: TimetableWeek, cachedAt: Date) {
+        #if !os(macOS)
         watchSyncService?.update(timetable: WatchPayloadBuilder.timetable(from: week, cachedAt: cachedAt))
+        #endif
     }
 }
 

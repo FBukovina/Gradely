@@ -212,7 +212,7 @@ private struct WhatIfMarkRequest: Encodable {
             WhatIfMarkRequest(
                 id: mark.id,
                 markText: mark.markText,
-                weight: mark.weight,
+                weight: mark.weight.map { Int($0.rounded()) },
                 maxPoints: mark.maxPoints ?? 0,
                 subjectID: mark.subjectID
             )

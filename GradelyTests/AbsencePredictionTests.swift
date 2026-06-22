@@ -77,7 +77,7 @@ struct AbsencePredictionTests {
             weekStart: weekStart
         )
         let client = CachedPredictionClient()
-        let repository = BakalariRepository(
+        let repository = SchoolRepository(
             client: client,
             sessionStore: InMemorySessionStore(session: Self.validSession()),
             marksCache: InMemoryMarksCache(),
@@ -93,7 +93,7 @@ struct AbsencePredictionTests {
     @Test func viewModelCommitsCancelsAndClearsPredictionSelections() async throws {
         let today = try #require(TimetableDates.weekCalendar.date(from: DateComponents(year: 2026, month: 6, day: 15)))
         let viewModel = AbsenceViewModel(
-            repository: BakalariRepository(
+            repository: SchoolRepository(
                 client: MockBakalariClient(),
                 sessionStore: InMemorySessionStore(session: Self.validSession()),
                 marksCache: InMemoryMarksCache()

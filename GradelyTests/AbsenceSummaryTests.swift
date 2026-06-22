@@ -81,7 +81,7 @@ struct AbsenceSummaryTests {
             absences: [absenceDay("2026-02-10T00:00:00+01:00", ok: 2)],
             absencesPerSubject: []
         )
-        let repository = BakalariRepository(
+        let repository = SchoolRepository(
             client: MockBakalariClient(absenceResult: absence),
             sessionStore: InMemorySessionStore(session: validSession()),
             marksCache: InMemoryMarksCache()

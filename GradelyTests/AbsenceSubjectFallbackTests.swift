@@ -345,7 +345,7 @@ struct AbsenceSubjectFallbackTests {
             absences: [absenceDay(ok: 2)],
             absencesPerSubject: []
         )
-        let repository = BakalariRepository(
+        let repository = SchoolRepository(
             client: MockBakalariClient(
                 marksResult: MarksResponse(subjects: subjects),
                 absenceResult: absence,
@@ -394,7 +394,7 @@ struct AbsenceSubjectFallbackTests {
             absenceResult: absence,
             timetableResult: timetable
         )
-        let repository = BakalariRepository(
+        let repository = SchoolRepository(
             client: client,
             sessionStore: InMemorySessionStore(session: validSession()),
             marksCache: InMemoryMarksCache(),
@@ -422,7 +422,7 @@ struct AbsenceSubjectFallbackTests {
             timetableResult: PreviewData.timetableResponse,
             timetableDelay: 500_000_000
         )
-        let repository = BakalariRepository(
+        let repository = SchoolRepository(
             client: client,
             sessionStore: InMemorySessionStore(session: validSession()),
             marksCache: InMemoryMarksCache(),
@@ -449,7 +449,7 @@ struct AbsenceSubjectFallbackTests {
             absenceResult: absence,
             timetableResult: PreviewData.timetableResponse
         )
-        let repository = BakalariRepository(
+        let repository = SchoolRepository(
             client: client,
             sessionStore: InMemorySessionStore(session: validSession()),
             marksCache: InMemoryMarksCache(),

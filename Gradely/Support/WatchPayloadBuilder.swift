@@ -1,14 +1,24 @@
 import Foundation
+#if !os(macOS)
 import GradelyWatchShared
 
 enum WatchPayloadBuilder {
     static func auth(from session: StoredSession) -> GradelyWatchAuth {
-        GradelyWatchAuth(
+        let eduPage = session.eduPage
+        return GradelyWatchAuth(
             baseURL: session.baseURL,
             accessToken: session.accessToken,
             refreshToken: session.refreshToken,
             tokenType: session.tokenType,
-            expiresAt: session.expiresAt
+            expiresAt: session.provider == .eduPage ? Date().addingTimeInterval(6 * 60 * 60) : session.expiresAt,
+            provider: session.provider == .eduPage ? .eduPage : .bakalari,
+            // Bakaláři credentials let the watch re-login on its own token family
+            // instead of redeeming the refresh token it shares with the phone.
+            username: eduPage?.username ?? session.bakalari?.username,
+            password: eduPage?.password ?? session.bakalari?.password,
+            sessionID: eduPage?.sessionID,
+            selectedStudentID: eduPage?.activeStudent?.id,
+            gsecHash: eduPage?.gsecHash
         )
     }
 
@@ -149,3 +159,4 @@ enum WatchPayloadBuilder {
         return trimmed.isEmpty ? nil : trimmed
     }
 }
+#endif

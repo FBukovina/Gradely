@@ -94,14 +94,14 @@ struct AbsenceSubjectSummary: Identifiable, Equatable {
 
     var id: String { stableID }
 
-    init(absence: AbsencePerSubject, threshold: Double, stableID: String) {
+    init(absence: AbsencePerSubject, threshold: Double?, stableID: String) {
         self.stableID = stableID
         subjectName = absence.subjectName.trimmingCharacters(in: .whitespacesAndNewlines)
         lessonsCount = absence.lessonsCount
         base = absence.base
         absencePercentage = absence.absencePercentage
 
-        let normalizedThreshold = threshold > 0 && threshold <= 1 ? threshold * 100 : threshold
+        let normalizedThreshold = threshold.map { $0 > 0 && $0 <= 1 ? $0 * 100 : $0 } ?? 0
         exceedsThreshold = normalizedThreshold > 0 && absencePercentage >= normalizedThreshold
     }
 }
@@ -167,7 +167,7 @@ enum AbsenceSummary {
 
     static func subjectSummaries(
         for absences: [AbsencePerSubject],
-        threshold: Double,
+        threshold: Double?,
         stableIDHints: [String] = []
     ) -> [AbsenceSubjectSummary] {
         return absences

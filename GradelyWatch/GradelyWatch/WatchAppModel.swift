@@ -97,7 +97,19 @@ final class WatchAppModel: ObservableObject {
                 try sessionStore.save(currentAuth)
             }
 
-            let loaded = try await client.fetchTimetable(auth: currentAuth, weekContaining: Date())
+            let loaded: GradelyWatchTimetable
+            do {
+                loaded = try await client.fetchTimetable(auth: currentAuth, weekContaining: Date())
+            } catch {
+                // Session rejected mid-fetch: re-establish once and retry. EduPage
+                // cookies can expire silently; for Bakaláři a 401 means the shared
+                // access token was invalidated, so re-login onto our own token family.
+                guard currentAuth.resolvedProvider == .eduPage || isAuthFailure(error) else { throw error }
+                currentAuth = try await client.refresh(auth: currentAuth)
+                auth = currentAuth
+                try sessionStore.save(currentAuth)
+                loaded = try await client.fetchTimetable(auth: currentAuth, weekContaining: Date())
+            }
             timetable = loaded
             try timetableCache.save(loaded)
             WidgetCenter.shared.reloadAllTimelines()
@@ -129,6 +141,13 @@ final class WatchAppModel: ObservableObject {
         }
 
         await refreshTimetable()
+    }
+
+    private func isAuthFailure(_ error: Error) -> Bool {
+        if case WatchBakalariError.httpStatus(401, _) = error {
+            return true
+        }
+        return false
     }
 
     private func userFacingMessage(for error: Error) -> String {

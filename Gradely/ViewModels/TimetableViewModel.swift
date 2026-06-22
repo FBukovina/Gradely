@@ -15,11 +15,11 @@ final class TimetableViewModel {
     /// Any date inside the week currently on screen.
     private(set) var weekAnchor: Date
 
-    private let repository: BakalariRepository
+    private let repository: SchoolRepository
     private let today: Date
     private var hasLoaded = false
 
-    init(repository: BakalariRepository, today: Date = Date()) {
+    init(repository: SchoolRepository, today: Date = Date()) {
         self.repository = repository
         self.today = today
         weekAnchor = today

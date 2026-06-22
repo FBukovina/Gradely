@@ -56,6 +56,8 @@ final class SupportTipViewModel {
             let outcome = try await supportTipProvider.purchase(tip)
             if outcome == .success {
                 didCompletePurchase = true
+            } else if outcome == .pending {
+                purchaseErrorMessage = String(localized: "support.tips.purchase.pending")
             }
         } catch {
             purchaseErrorMessage = userFacingMessage(for: error)

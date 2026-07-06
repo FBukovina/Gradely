@@ -9,19 +9,22 @@ struct CachedTimetable: Equatable {
 protocol TimetableCaching {
     /// Returns the cached week only if it matches the requested `weekStart`.
     func load(weekStart: Date) throws -> CachedTimetable?
+    func load(weekStart: Date, scope: SchoolDataScope) throws -> CachedTimetable?
     func save(_ response: TimetableResponse, weekStart: Date) throws
+    func save(_ response: TimetableResponse, weekStart: Date, scope: SchoolDataScope) throws
     func clear() throws
+    func clear(scope: SchoolDataScope) throws
 }
 
 /// File-backed cache that keeps recently loaded weeks so the tab and absence fallback can render
 /// instantly (and offline) before the network refresh lands. Mirrors `MarksCache`.
 final class TimetableCache: TimetableCaching {
-    private let fileURL: URL
+    private let directory: URL
     private let encoder: JSONEncoder
     private let decoder: JSONDecoder
 
     init(fileManager: FileManager = .default) throws {
-        let directory = try fileManager.url(
+        directory = try fileManager.url(
             for: .applicationSupportDirectory,
             in: .userDomainMask,
             appropriateFor: nil,
@@ -31,7 +34,6 @@ final class TimetableCache: TimetableCaching {
 
         try fileManager.createDirectory(at: directory, withIntermediateDirectories: true)
 
-        fileURL = directory.appending(path: "timetable-cache.json")
         encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
         decoder = JSONDecoder()
@@ -39,12 +41,44 @@ final class TimetableCache: TimetableCaching {
     }
 
     func load(weekStart: Date) throws -> CachedTimetable? {
-        guard FileManager.default.fileExists(atPath: fileURL.path) else { return nil }
-        return try loadEntries()[Self.key(for: weekStart)]
+        try load(weekStart: weekStart, from: legacyFileURL)
+    }
+
+    func load(weekStart: Date, scope: SchoolDataScope) throws -> CachedTimetable? {
+        try load(weekStart: weekStart, from: fileURL(for: scope))
     }
 
     func save(_ response: TimetableResponse, weekStart: Date) throws {
-        var entries = (try? loadEntries()) ?? [:]
+        try save(response, weekStart: weekStart, to: legacyFileURL)
+    }
+
+    func save(_ response: TimetableResponse, weekStart: Date, scope: SchoolDataScope) throws {
+        try save(response, weekStart: weekStart, to: fileURL(for: scope))
+    }
+
+    func clear() throws {
+        try clear(legacyFileURL)
+    }
+
+    func clear(scope: SchoolDataScope) throws {
+        try clear(fileURL(for: scope))
+    }
+
+    private var legacyFileURL: URL {
+        directory.appending(path: "timetable-cache.json")
+    }
+
+    private func fileURL(for scope: SchoolDataScope) -> URL {
+        directory.appending(path: scope.filename(prefix: "timetable-cache"))
+    }
+
+    private func load(weekStart: Date, from fileURL: URL) throws -> CachedTimetable? {
+        guard FileManager.default.fileExists(atPath: fileURL.path) else { return nil }
+        return try loadEntries(from: fileURL)[Self.key(for: weekStart)]
+    }
+
+    private func save(_ response: TimetableResponse, weekStart: Date, to fileURL: URL) throws {
+        var entries = (try? loadEntries(from: fileURL)) ?? [:]
         let weekStartKey = Self.key(for: weekStart)
         entries[weekStartKey] = CachedTimetable(response: response, weekStart: weekStart, cachedAt: Date())
 
@@ -60,7 +94,7 @@ final class TimetableCache: TimetableCaching {
         try data.write(to: fileURL, options: [.atomic, .completeFileProtection])
     }
 
-    func clear() throws {
+    private func clear(_ fileURL: URL) throws {
         guard FileManager.default.fileExists(atPath: fileURL.path) else { return }
         try FileManager.default.removeItem(at: fileURL)
     }
@@ -87,7 +121,7 @@ final class TimetableCache: TimetableCaching {
         let cachedAt: Date
     }
 
-    private func loadEntries() throws -> [String: CachedTimetable] {
+    private func loadEntries(from fileURL: URL) throws -> [String: CachedTimetable] {
         let data = try Data(contentsOf: fileURL)
 
         if let payload = try? decoder.decode(Payload.self, from: data) {
@@ -120,6 +154,7 @@ final class TimetableCache: TimetableCaching {
 final class InMemoryTimetableCache: TimetableCaching {
     private(set) var cached: CachedTimetable?
     private var cachedByWeek: [String: CachedTimetable]
+    private var cachedByScopeAndWeek: [SchoolDataScope: [String: CachedTimetable]]
 
     init(cached: CachedTimetable? = nil) {
         self.cached = cached
@@ -128,10 +163,16 @@ final class InMemoryTimetableCache: TimetableCaching {
         } else {
             cachedByWeek = [:]
         }
+        cachedByScopeAndWeek = [:]
     }
 
     func load(weekStart: Date) throws -> CachedTimetable? {
         cachedByWeek[TimetableDates.apiDateString(weekStart)]
+    }
+
+    func load(weekStart: Date, scope: SchoolDataScope) throws -> CachedTimetable? {
+        let key = TimetableDates.apiDateString(weekStart)
+        return cachedByScopeAndWeek[scope]?[key] ?? (cachedByScopeAndWeek.isEmpty ? cachedByWeek[key] : nil)
     }
 
     func save(_ response: TimetableResponse, weekStart: Date) throws {
@@ -140,8 +181,26 @@ final class InMemoryTimetableCache: TimetableCaching {
         cachedByWeek[TimetableDates.apiDateString(weekStart)] = saved
     }
 
+    func save(_ response: TimetableResponse, weekStart: Date, scope: SchoolDataScope) throws {
+        let saved = CachedTimetable(response: response, weekStart: weekStart, cachedAt: Date())
+        cached = saved
+        let key = TimetableDates.apiDateString(weekStart)
+        cachedByWeek[key] = saved
+        var scoped = cachedByScopeAndWeek[scope] ?? [:]
+        scoped[key] = saved
+        cachedByScopeAndWeek[scope] = scoped
+    }
+
     func clear() throws {
         cached = nil
         cachedByWeek = [:]
+    }
+
+    func clear(scope: SchoolDataScope) throws {
+        cachedByScopeAndWeek.removeValue(forKey: scope)
+        if cachedByScopeAndWeek.isEmpty {
+            cached = nil
+            cachedByWeek = [:]
+        }
     }
 }

@@ -5,16 +5,19 @@ struct TimetableView: View {
     @State private var selectedLesson: ScheduledLesson?
     private let repository: SchoolRepository
     private let supportTipProvider: any SupportTipProviding
+    private let accountHub: AnyView?
     let onSignedOut: () -> Void
 
     init(
         repository: SchoolRepository,
         supportTipProvider: any SupportTipProviding = MockSupportTipService(),
+        accountHub: AnyView? = nil,
         onSignedOut: @escaping () -> Void
     ) {
         _viewModel = State(initialValue: TimetableViewModel(repository: repository))
         self.repository = repository
         self.supportTipProvider = supportTipProvider
+        self.accountHub = accountHub
         self.onSignedOut = onSignedOut
     }
 
@@ -45,6 +48,7 @@ struct TimetableView: View {
                             user: viewModel.user,
                             repository: repository,
                             supportTipProvider: supportTipProvider,
+                            accountHub: accountHub,
                             onSignedOut: onSignedOut
                         )
                     }
@@ -98,6 +102,11 @@ struct TimetableView: View {
     private var dayContent: some View {
         ScrollView {
             LazyVStack(spacing: Spacing.sm) {
+                if let summary = viewModel.todaySummary {
+                    TodaySummaryCard(summary: summary)
+                        .padding(.bottom, Spacing.xs)
+                }
+
                 if viewModel.isRefreshing {
                     HStack(spacing: Spacing.sm) {
                         ProgressView()
@@ -128,6 +137,136 @@ struct TimetableView: View {
             await viewModel.refresh()
         }
         .accessibilityIdentifier("timetableList")
+    }
+}
+
+// MARK: - Today summary
+
+private struct TodaySummaryCard: View {
+    let summary: TimetableTodaySummary
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Spacing.md) {
+            HStack(alignment: .top, spacing: Spacing.md) {
+                Image(systemName: icon)
+                    .font(.headline.weight(.bold))
+                    .foregroundStyle(Brand.primary)
+                    .frame(width: 42, height: 42)
+                    .background(Brand.primary.opacity(0.13), in: RoundedRectangle(cornerRadius: Radius.md, style: .continuous))
+
+                VStack(alignment: .leading, spacing: Spacing.xs) {
+                    Text(title)
+                        .font(.headline.weight(.bold))
+                    if let subtitle {
+                        Text(subtitle)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+
+                Spacer(minLength: 0)
+            }
+
+            if let next = summary.nextLesson, summary.currentLesson != nil {
+                Divider()
+                HStack(spacing: Spacing.sm) {
+                    Image(systemName: "forward.fill")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(.secondary)
+                    Text("Next: \(lessonTitle(next))")
+                        .font(.caption.weight(.semibold))
+                        .lineLimit(1)
+                    Spacer(minLength: 0)
+                    Text(timeRange(next))
+                        .font(.caption.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            if summary.hasChanges {
+                HStack(spacing: Spacing.sm) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundStyle(LessonChangeKind.canceled.color)
+                    Text(changeSummary)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(.top, Spacing.xs)
+            }
+        }
+        .padding(Spacing.lg)
+        .background(Color.gradelySecondaryGroupedBackground, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
+                .strokeBorder(Brand.primary.opacity(0.18), lineWidth: 1)
+        }
+        .accessibilityIdentifier("todaySummaryCard")
+    }
+
+    private var title: String {
+        switch summary.state {
+        case .empty:
+            return "No school today"
+        case .beforeSchool:
+            return "School starts soon"
+        case .current:
+            return "Now: \(summary.currentLesson.map(lessonTitle) ?? "Lesson")"
+        case .betweenLessons:
+            return "Between lessons"
+        case .afterSchool:
+            return "Done for today"
+        }
+    }
+
+    private var subtitle: String? {
+        switch summary.state {
+        case .empty:
+            return "There are no lessons in today's timetable."
+        case .beforeSchool, .betweenLessons:
+            guard let next = summary.nextLesson else { return nil }
+            if let minutes = summary.minutesUntilNext {
+                return "\(lessonTitle(next)) starts in \(minutes) min"
+            }
+            return "\(lessonTitle(next)) is next"
+        case .current:
+            if let minutes = summary.minutesRemainingInCurrent {
+                return "\(minutes) min remaining"
+            }
+            return nil
+        case .afterSchool:
+            return summary.hasChanges ? "Check today's changes before you close the day." : "All listed lessons are over."
+        }
+    }
+
+    private var icon: String {
+        switch summary.state {
+        case .empty: "calendar.badge.checkmark"
+        case .beforeSchool: "sunrise.fill"
+        case .current: "play.circle.fill"
+        case .betweenLessons: "pause.circle.fill"
+        case .afterSchool: "checkmark.circle.fill"
+        }
+    }
+
+    private var changeSummary: String {
+        let count = summary.changedLessons.count
+        if count == 1, let lesson = summary.changedLessons.first {
+            return "1 change today: \(lessonTitle(lesson))"
+        }
+        return "\(count) changes today"
+    }
+
+    private func lessonTitle(_ lesson: ScheduledLesson) -> String {
+        lesson.subjectName ?? lesson.subjectAbbrev ?? String(localized: "timetable.lesson.unknown")
+    }
+
+    private func timeRange(_ lesson: ScheduledLesson) -> String {
+        guard !lesson.hour.beginTime.isEmpty, !lesson.hour.endTime.isEmpty else {
+            return lesson.hour.caption
+        }
+        return "\(lesson.hour.beginTime)-\(lesson.hour.endTime)"
     }
 }
 

@@ -11,9 +11,9 @@ final class AbsenceUITests: XCTestCase {
         app.launchArguments = ["-uiTestingMockAPI", "-uiTestingLoggedIn"]
         app.launch()
 
-        XCTAssertTrue(app.collectionViews["subjectsList"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.scrollViews["todayScrollView"].waitForExistence(timeout: 5))
 
-        app.tabBars.buttons.element(boundBy: 1).tap()
+        app.tabBars.buttons.element(boundBy: 2).tap()
 
         XCTAssertTrue(app.scrollViews["absenceList"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.descendants(matching: .any)["absenceSegmentedControl"].exists)
@@ -36,9 +36,9 @@ final class AbsenceUITests: XCTestCase {
         app.launchArguments = ["-uiTestingMockAPI", "-uiTestingLoggedIn", "-uiTestingEmptySubjectAbsence"]
         app.launch()
 
-        XCTAssertTrue(app.collectionViews["subjectsList"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.scrollViews["todayScrollView"].waitForExistence(timeout: 5))
 
-        app.tabBars.buttons.element(boundBy: 1).tap()
+        app.tabBars.buttons.element(boundBy: 2).tap()
         XCTAssertTrue(app.scrollViews["absenceList"].waitForExistence(timeout: 5))
 
         let segment = app.segmentedControls["absenceSegmentedControl"]
@@ -66,9 +66,9 @@ final class AbsenceUITests: XCTestCase {
         app.launchArguments = ["-uiTestingMockAPI", "-uiTestingLoggedIn", "-uiTestingManualSubjectAbsence"]
         app.launch()
 
-        XCTAssertTrue(app.collectionViews["subjectsList"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.scrollViews["todayScrollView"].waitForExistence(timeout: 5))
 
-        app.tabBars.buttons.element(boundBy: 1).tap()
+        app.tabBars.buttons.element(boundBy: 2).tap()
         XCTAssertTrue(app.scrollViews["absenceList"].waitForExistence(timeout: 5))
 
         let segment = app.segmentedControls["absenceSegmentedControl"]
@@ -97,18 +97,31 @@ final class AbsenceUITests: XCTestCase {
         app.launchArguments = ["-uiTestingMockAPI", "-uiTestingLoggedIn"]
         app.launch()
 
-        XCTAssertTrue(app.collectionViews["subjectsList"].waitForExistence(timeout: 5))
-
-        app.tabBars.buttons.element(boundBy: 1).tap()
-        XCTAssertTrue(app.scrollViews["absenceList"].waitForExistence(timeout: 5))
+        // The predictor lives on the Today tab.
+        let scrollView = app.scrollViews["todayScrollView"]
+        XCTAssertTrue(scrollView.waitForExistence(timeout: 5))
 
         let openButton = app.descendants(matching: .any)["absencePredictorOpenButton"]
-        XCTAssertTrue(openButton.waitForExistence(timeout: 3))
+        XCTAssertTrue(openButton.waitForExistence(timeout: 5))
+
+        var scrollAttempts = 0
+        while !openButton.isHittable && scrollAttempts < 8 {
+            scrollView.swipeUp()
+            scrollAttempts += 1
+        }
         openButton.tap()
 
         let lesson = app.descendants(matching: .any)
             .matching(NSPredicate(format: "identifier BEGINSWITH %@", "absencePredictorLesson-"))
             .firstMatch
+
+        // The mock timetable only has lessons Monday-Friday; on weekends the
+        // preselected "today" legitimately offers nothing to plan.
+        let noLessons = app.descendants(matching: .any)["absencePredictorNoLessons"]
+        if noLessons.waitForExistence(timeout: 3), !lesson.exists {
+            throw XCTSkip("No countable lessons for today's date in the mock timetable (weekend).")
+        }
+
         XCTAssertTrue(lesson.waitForExistence(timeout: 8))
         lesson.tap()
 
@@ -125,9 +138,9 @@ final class AbsenceUITests: XCTestCase {
         app.launchArguments = ["-uiTestingMockAPI", "-uiTestingLoggedIn", "-uiTestingLargeAbsenceSubjects"]
         app.launch()
 
-        XCTAssertTrue(app.collectionViews["subjectsList"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.scrollViews["todayScrollView"].waitForExistence(timeout: 5))
 
-        app.tabBars.buttons.element(boundBy: 1).tap()
+        app.tabBars.buttons.element(boundBy: 2).tap()
         XCTAssertTrue(app.scrollViews["absenceList"].waitForExistence(timeout: 5))
 
         let segment = app.segmentedControls["absenceSegmentedControl"]

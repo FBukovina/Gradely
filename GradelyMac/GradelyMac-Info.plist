@@ -36,5 +36,9 @@
 	<string>public.app-category.education</string>
 	<key>NSAccentColorName</key>
 	<string>AccentColor</string>
+	<key>SupabaseAnonKey</key>
+	<string>$(SUPABASE_ANON_KEY)</string>
+	<key>SupabaseURL</key>
+	<string>$(SUPABASE_URL)</string>
 </dict>
 </plist>

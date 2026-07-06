@@ -105,6 +105,7 @@ struct SupportTipView: View {
                     .accessibilityIdentifier("supportTipsPurchaseError")
             }
         }
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("supportTipsList")
     }
 

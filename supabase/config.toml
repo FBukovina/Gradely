@@ -1,0 +1,51 @@
+project_id = "gradey"
+
+[auth]
+enabled = true
+site_url = "gradey://auth"
+additional_redirect_urls = ["gradey://auth"]
+
+[auth.email]
+enable_signup = false
+
+[auth.external.apple]
+enabled = true
+client_id = "com.bukovinafilip.BakalariMarks"
+secret = "env(APPLE_CLIENT_SECRET)"
+redirect_uri = ""
+
+[functions.link-school-account]
+verify_jwt = true
+
+[functions.activate-school-account]
+verify_jwt = true
+
+[functions.grade-history]
+verify_jwt = true
+
+[functions.link-stravacz-account]
+verify_jwt = true
+
+[functions.unlink-account]
+verify_jwt = true
+
+[functions.register-device]
+verify_jwt = true
+
+[functions.update-notification-preferences]
+verify_jwt = true
+
+[functions.request-data-export]
+verify_jwt = true
+
+[functions.delete-account]
+verify_jwt = true
+
+[functions.poll-new-marks]
+verify_jwt = false
+
+[functions.send-apns]
+verify_jwt = false
+
+[functions.mark-action-required]
+verify_jwt = false

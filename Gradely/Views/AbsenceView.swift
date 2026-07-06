@@ -4,16 +4,19 @@ struct AbsenceView: View {
     @State private var viewModel: AbsenceViewModel
     private let repository: SchoolRepository
     private let supportTipProvider: any SupportTipProviding
+    private let accountHub: AnyView?
     let onSignedOut: () -> Void
 
     init(
         repository: SchoolRepository,
         supportTipProvider: any SupportTipProviding = MockSupportTipService(),
+        accountHub: AnyView? = nil,
         onSignedOut: @escaping () -> Void
     ) {
         _viewModel = State(initialValue: AbsenceViewModel(repository: repository))
         self.repository = repository
         self.supportTipProvider = supportTipProvider
+        self.accountHub = accountHub
         self.onSignedOut = onSignedOut
     }
 
@@ -44,6 +47,7 @@ struct AbsenceView: View {
                             user: viewModel.user,
                             repository: repository,
                             supportTipProvider: supportTipProvider,
+                            accountHub: accountHub,
                             onSignedOut: onSignedOut
                         )
                     }
@@ -53,9 +57,6 @@ struct AbsenceView: View {
                 }
                 .sheet(isPresented: $viewModel.isManualSelectionSheetPresented) {
                     ManualAbsenceLessonSelectionSheet(viewModel: viewModel)
-                }
-                .sheet(isPresented: $viewModel.isPredictionSheetPresented) {
-                    AbsencePredictionSheet(viewModel: viewModel)
                 }
         }
     }
@@ -90,17 +91,11 @@ struct AbsenceView: View {
     private var absenceContent: some View {
         ScrollView {
             LazyVStack(spacing: Spacing.md) {
-                AbsenceHeader(user: viewModel.user, totalCounts: viewModel.totalCounts)
-                AbsencePredictorCard(
-                    result: viewModel.predictionResult,
-                    onOpen: {
-                        viewModel.openPredictionSheet()
-                    },
-                    onClear: {
-                        viewModel.clearPredictionSelections()
-                    }
+                AbsenceHeader(
+                    user: viewModel.user,
+                    totalCounts: viewModel.totalCounts,
+                    threshold: viewModel.normalizedThreshold
                 )
-
                 Picker("absence.segment.title", selection: $viewModel.selectedSegment) {
                     ForEach(AbsenceViewModel.Segment.allCases) { segment in
                         Text(segment.localizedTitle).tag(segment)
@@ -124,6 +119,7 @@ struct AbsenceView: View {
                 case .subjects:
                     SubjectAbsenceTable(
                         state: viewModel.subjectAbsenceState,
+                        risk: { viewModel.risk(for: $0) },
                         onRetry: {
                             viewModel.retrySubjectResolution()
                         },
@@ -132,15 +128,16 @@ struct AbsenceView: View {
                         }
                     )
                 case .days:
-                    CountsAbsenceTable(
-                        leadingTitle: String(localized: "absence.column.day"),
+                    AbsenceCountsList(
                         totalTitle: String(localized: "absence.total"),
                         rows: viewModel.dayCountRows,
                         emptyTitle: "absence.days.empty"
                     )
                 case .months:
-                    CountsAbsenceTable(
-                        leadingTitle: String(localized: "absence.column.month"),
+                    if viewModel.monthRows.count >= 2 {
+                        AbsenceMonthsChartCard(months: viewModel.monthRows)
+                    }
+                    AbsenceCountsList(
                         totalTitle: String(localized: "absence.total"),
                         rows: viewModel.monthCountRows,
                         emptyTitle: "absence.months.empty"
@@ -161,224 +158,82 @@ struct AbsenceView: View {
 private struct AbsenceHeader: View {
     let user: UserResponse?
     let totalCounts: AbsenceCounts
+    let threshold: Double?
 
     var body: some View {
         Card(padding: Spacing.lg) {
-            HStack(alignment: .center, spacing: Spacing.md) {
-                Image(systemName: "calendar.badge.exclamationmark")
-                    .font(.title3.weight(.bold))
-                    .foregroundStyle(Brand.primary)
-                    .frame(width: 46, height: 46)
-                    .background(Brand.primary.opacity(0.14), in: RoundedRectangle(cornerRadius: Radius.sm, style: .continuous))
+            VStack(alignment: .leading, spacing: Spacing.md) {
+                HStack(alignment: .center, spacing: Spacing.md) {
+                    Image(systemName: "calendar.badge.exclamationmark")
+                        .font(.title3.weight(.bold))
+                        .foregroundStyle(Brand.primary)
+                        .frame(width: 46, height: 46)
+                        .background(Brand.primary.opacity(0.14), in: RoundedRectangle(cornerRadius: Radius.sm, style: .continuous))
 
-                VStack(alignment: .leading, spacing: Spacing.xs) {
-                    Text("absence.title")
-                        .font(.headline)
+                    VStack(alignment: .leading, spacing: Spacing.xs) {
+                        Text("absence.title")
+                            .font(.headline)
 
-                    if let name = user?.fullName.trimmingCharacters(in: .whitespacesAndNewlines), !name.isEmpty {
-                        Text(name)
-                            .font(.subheadline)
+                        if let name = user?.fullName.trimmingCharacters(in: .whitespacesAndNewlines), !name.isEmpty {
+                            Text(name)
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                        }
+                    }
+
+                    Spacer()
+
+                    VStack(alignment: .trailing, spacing: 2) {
+                        Text("\(totalCounts.total)")
+                            .font(.title2.weight(.bold).monospacedDigit())
+                            .foregroundStyle(Brand.primary)
+                        Text("absence.totalHours")
+                            .font(.caption.weight(.semibold))
                             .foregroundStyle(.secondary)
-                            .lineLimit(1)
                     }
                 }
 
-                Spacer()
+                if !nonzeroCategories.isEmpty {
+                    LazyVGrid(
+                        columns: [GridItem(.adaptive(minimum: 64), spacing: Spacing.xs, alignment: .leading)],
+                        alignment: .leading,
+                        spacing: Spacing.xs
+                    ) {
+                        ForEach(nonzeroCategories) { category in
+                            StatusChip(
+                                text: "\(category.symbol) \(category.value(in: totalCounts))",
+                                color: category.color
+                            )
+                            .accessibilityLabel("\(category.accessibilityLabel): \(category.value(in: totalCounts))")
+                        }
+                    }
+                }
 
-                VStack(alignment: .trailing, spacing: 2) {
-                    Text("\(totalCounts.total)")
-                        .font(.title2.weight(.bold).monospacedDigit())
-                        .foregroundStyle(Brand.primary)
-                    Text("absence.totalHours")
-                        .font(.caption.weight(.semibold))
+                if let threshold {
+                    Text(String(format: String(localized: "absence.threshold.caption"), threshold))
+                        .font(.caption2)
                         .foregroundStyle(.secondary)
                 }
             }
         }
     }
-}
 
-private struct AbsencePredictorCard: View {
-    let result: AbsencePredictionResult
-    let onOpen: () -> Void
-    let onClear: () -> Void
-
-    var body: some View {
-        Card {
-            VStack(alignment: .leading, spacing: Spacing.md) {
-                HStack(alignment: .top, spacing: Spacing.md) {
-                    Image(systemName: "calendar.badge.clock")
-                        .font(.title3.weight(.bold))
-                        .foregroundStyle(Brand.primary)
-                        .frame(width: 42, height: 42)
-                        .background(Brand.primary.opacity(0.14), in: RoundedRectangle(cornerRadius: Radius.sm, style: .continuous))
-
-                    VStack(alignment: .leading, spacing: Spacing.xs) {
-                        Text("absence.predictor.title")
-                            .font(.headline)
-                        Text(messageKey)
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                    }
-
-                    Spacer()
-                }
-
-                if result.hasSelection {
-                    predictionSummary
-                }
-
-                HStack(spacing: Spacing.sm) {
-                    Button(action: onOpen) {
-                        Text(openButtonKey)
-                    }
-                        .buttonStyle(.borderedProminent)
-                        .accessibilityIdentifier("absencePredictorOpenButton")
-
-                    if result.hasSelection {
-                        Button(role: .destructive, action: onClear) {
-                            Text("action.clear")
-                        }
-                        .buttonStyle(.bordered)
-                        .accessibilityIdentifier("absencePredictorClearButton")
-                    }
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-        }
-        .accessibilityIdentifier("absencePredictorCard")
-    }
-
-    private var messageKey: LocalizedStringKey {
-        result.hasSelection ? "absence.predictor.summary.message" : "absence.predictor.empty.message"
-    }
-
-    private var openButtonKey: LocalizedStringKey {
-        result.hasSelection ? "absence.predictor.edit" : "absence.predictor.open"
-    }
-
-    private var predictionSummary: some View {
-        VStack(alignment: .leading, spacing: Spacing.md) {
-            HStack(spacing: Spacing.md) {
-                metricTile(
-                    title: "absence.predictor.total",
-                    value: "\(result.currentTotal.total) -> \(result.projectedTotal.total)"
-                )
-                metricTile(
-                    title: "absence.predictor.okAdded",
-                    value: String.localizedStringWithFormat(
-                        String(localized: "absence.predictor.addedHours"),
-                        result.addedHours
-                    )
-                )
-            }
-
-            if !result.subjectRows.isEmpty {
-                VStack(spacing: 0) {
-                    ForEach(result.subjectRows) { row in
-                        subjectRow(row)
-                    }
-                }
-                .background(Color.gradelyTertiaryGroupedBackground, in: RoundedRectangle(cornerRadius: Radius.md, style: .continuous))
-                .accessibilityIdentifier("absencePredictorSubjectRows")
-            }
-        }
-        .accessibilityIdentifier("absencePredictionTotal")
-    }
-
-    private func metricTile(title: LocalizedStringKey, value: String) -> some View {
-        VStack(alignment: .leading, spacing: Spacing.xs) {
-            Text(title)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.secondary)
-            Text(value)
-                .font(.title3.weight(.bold).monospacedDigit())
-                .foregroundStyle(Brand.primary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(Spacing.md)
-        .background(Color.gradelyTertiaryGroupedBackground, in: RoundedRectangle(cornerRadius: Radius.md, style: .continuous))
-    }
-
-    private func subjectRow(_ row: AbsencePredictionSubjectRow) -> some View {
-        VStack(alignment: .leading, spacing: Spacing.sm) {
-            HStack(alignment: .firstTextBaseline, spacing: Spacing.sm) {
-                Text(row.subjectName)
-                    .font(.subheadline.weight(.semibold))
-                    .lineLimit(2)
-
-                Spacer()
-
-                StatusChip(
-                    text: String.localizedStringWithFormat(
-                        String(localized: "absence.predictor.addedHours"),
-                        row.addedHours
-                    ),
-                    color: row.exceedsThreshold ? GradeBand.poor.foregroundColor : Brand.secondary
-                )
-            }
-
-            if let currentBase = row.currentBase,
-               let projectedBase = row.projectedBase,
-               let currentPercentage = row.currentPercentage,
-               let projectedPercentage = row.projectedPercentage {
-                HStack(spacing: Spacing.md) {
-                    Text(
-                        String.localizedStringWithFormat(
-                            String(localized: "absence.predictor.subject.absentChange"),
-                            currentBase,
-                            projectedBase
-                        )
-                    )
-                    Text(
-                        String.localizedStringWithFormat(
-                            String(localized: "absence.predictor.subject.percentChange"),
-                            currentPercentage,
-                            projectedPercentage
-                        )
-                    )
-                }
-                .font(.caption.monospacedDigit())
-                .foregroundStyle(row.exceedsThreshold ? GradeBand.poor.foregroundColor : .secondary)
-            } else {
-                Text("absence.predictor.baselineUnavailable")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .padding(.horizontal, Spacing.md)
-        .padding(.vertical, Spacing.md)
-        .background(row.exceedsThreshold ? GradeBand.poor.soft : Color.clear)
-        .overlay(alignment: .bottom) {
-            Divider()
-        }
-        .accessibilityIdentifier("absencePredictionRow-\(row.id)")
+    private var nonzeroCategories: [AbsenceCategory] {
+        AbsenceCategory.allCases.filter { $0.value(in: totalCounts) > 0 }
     }
 }
 
-private struct CountsAbsenceTable: View {
-    let leadingTitle: String
+private struct AbsenceCountsList: View {
     let totalTitle: String
     let rows: [AbsenceCountRow]
     let emptyTitle: LocalizedStringKey
-
-    private let leadingWidth: CGFloat = 118
-    private let columnWidth: CGFloat = 54
 
     var body: some View {
         if rows.isEmpty {
             EmptyAbsenceSection(title: emptyTitle)
         } else {
-            table
-        }
-    }
-
-    private var table: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
             LazyVStack(spacing: 0) {
-                header
                 countRow(
                     id: "absenceRow-total",
                     title: totalTitle,
@@ -395,7 +250,6 @@ private struct CountsAbsenceTable: View {
                     )
                 }
             }
-            .frame(minWidth: leadingWidth + columnWidth * CGFloat(AbsenceCategory.allCases.count))
             .background(Color.gradelySecondaryGroupedBackground, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
@@ -404,64 +258,113 @@ private struct CountsAbsenceTable: View {
         }
     }
 
-    private var header: some View {
-        HStack(spacing: 0) {
-            Text(leadingTitle)
-                .font(.caption.weight(.bold))
-                .foregroundStyle(Brand.primary)
-                .frame(width: leadingWidth, alignment: .leading)
-
-            ForEach(AbsenceCategory.allCases) { category in
-                Text(category.symbol)
-                    .font(.subheadline.weight(.bold))
-                    .foregroundStyle(category.color)
-                    .frame(width: columnWidth)
-                    .accessibilityLabel(category.accessibilityLabel)
-            }
-        }
-        .padding(.horizontal, Spacing.md)
-        .padding(.vertical, Spacing.md)
-        .background(Color.gradelyTertiaryGroupedBackground)
-    }
-
     private func countRow(
         id: String,
         title: String,
         counts: AbsenceCounts,
         isTotal: Bool
     ) -> some View {
-        HStack(spacing: 0) {
+        HStack(alignment: .center, spacing: Spacing.sm) {
             Text(title)
                 .font(isTotal ? .subheadline.weight(.bold) : .subheadline.weight(.semibold))
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
-                .frame(width: leadingWidth, alignment: .leading)
 
-            ForEach(AbsenceCategory.allCases) { category in
-                Text("\(category.value(in: counts))")
-                    .font(.body.monospacedDigit())
-                    .foregroundStyle(.primary)
-                    .frame(width: columnWidth)
-            }
+            Spacer(minLength: Spacing.sm)
+
+            categoryChips(for: counts)
+
+            Text("\(counts.total)")
+                .font(.subheadline.weight(.bold).monospacedDigit())
+                .frame(minWidth: 28, alignment: .trailing)
         }
         .padding(.horizontal, Spacing.md)
-        .padding(.vertical, Spacing.lg)
+        .padding(.vertical, Spacing.md)
         .background(isTotal ? Color.gradelyTertiaryGroupedBackground : Color.gradelySecondaryGroupedBackground)
         .overlay(alignment: .bottom) {
             Divider()
         }
         .accessibilityIdentifier(id)
     }
+
+    private func categoryChips(for counts: AbsenceCounts) -> some View {
+        let nonzero = AbsenceCategory.allCases.filter { $0.value(in: counts) > 0 }
+
+        return HStack(spacing: Spacing.xs) {
+            ForEach(Array(nonzero.prefix(4))) { category in
+                StatusChip(
+                    text: "\(category.symbol) \(category.value(in: counts))",
+                    color: category.color
+                )
+                .accessibilityLabel("\(category.accessibilityLabel): \(category.value(in: counts))")
+            }
+
+            if nonzero.count > 4 {
+                StatusChip(
+                    text: String(format: String(localized: "absence.chip.overflow"), nonzero.count - 4),
+                    color: .secondary
+                )
+            }
+        }
+    }
+}
+
+private struct AbsenceMonthsChartCard: View {
+    let months: [AbsenceMonthSummary]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            SectionHeader("absence.months.chart")
+
+            Card {
+                VStack(alignment: .leading, spacing: Spacing.md) {
+                    AbsenceMonthsChart(series: series)
+
+                    LazyVGrid(
+                        columns: [GridItem(.adaptive(minimum: 130), spacing: Spacing.xs, alignment: .leading)],
+                        alignment: .leading,
+                        spacing: Spacing.xs
+                    ) {
+                        ForEach(series) { entry in
+                            StatusChip(text: "\(symbol(for: entry.id)) \(entry.label)", color: entry.color)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private var series: [AbsenceChartSeries] {
+        AbsenceCategory.allCases.compactMap { category in
+            let samples = months.compactMap { month -> AbsenceChartSeries.Sample? in
+                let count = category.value(in: month.counts)
+                guard count > 0 else { return nil }
+                return AbsenceChartSeries.Sample(
+                    id: "\(month.id)-\(category.id)",
+                    month: month.monthDate,
+                    count: count
+                )
+            }
+            guard !samples.isEmpty else { return nil }
+            return AbsenceChartSeries(
+                id: category.id,
+                label: category.accessibilityLabel,
+                color: category.color,
+                samples: samples
+            )
+        }
+    }
+
+    private func symbol(for seriesID: String) -> String {
+        AbsenceCategory.allCases.first { $0.id == seriesID }?.symbol ?? ""
+    }
 }
 
 private struct SubjectAbsenceTable: View {
     let state: AbsenceViewModel.SubjectAbsenceState
+    let risk: (AbsenceSubjectSummary) -> AbsenceRiskSubject
     let onRetry: () -> Void
     let onResolveMissingHours: () -> Void
-
-    private let lessonsWidth: CGFloat = 72
-    private let absentWidth: CGFloat = 68
-    private let percentWidth: CGFloat = 78
 
     var body: some View {
         switch state {
@@ -486,17 +389,16 @@ private struct SubjectAbsenceTable: View {
                     )
                 }
                 if !rows.isEmpty {
-                    table(rows: rows)
+                    riskList(rows: rows)
                 }
             }
         }
     }
 
-    private func table(rows: [AbsenceSubjectSummary]) -> some View {
+    private func riskList(rows: [AbsenceSubjectSummary]) -> some View {
         LazyVStack(spacing: 0) {
-            header
             ForEach(rows, id: \.stableID) { row in
-                subjectRow(row)
+                riskRow(row)
             }
         }
         .background(Color.gradelySecondaryGroupedBackground, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
@@ -506,47 +408,71 @@ private struct SubjectAbsenceTable: View {
         )
     }
 
-    private var header: some View {
-        HStack(spacing: 0) {
-            Text("absence.column.subject")
-                .frame(maxWidth: .infinity, alignment: .leading)
-            Text("absence.column.lessons")
-                .frame(width: lessonsWidth)
-            Text("absence.column.absent")
-                .frame(width: absentWidth)
-            Text("absence.column.percent")
-                .frame(width: percentWidth)
+    private func riskRow(_ row: AbsenceSubjectSummary) -> some View {
+        let risk = risk(row)
+
+        return VStack(alignment: .leading, spacing: Spacing.sm) {
+            HStack(alignment: .firstTextBaseline, spacing: Spacing.sm) {
+                Text(row.subjectName)
+                    .font(.subheadline.weight(.semibold))
+                    .lineLimit(2)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                Text(String(format: "%.1f %%", row.absencePercentage))
+                    .font(.headline.monospacedDigit())
+                    .foregroundStyle(risk.level.color)
+            }
+
+            RiskCapsuleBar(
+                percentage: risk.percentage,
+                threshold: risk.threshold,
+                level: risk.level
+            )
+
+            HStack(spacing: Spacing.xs) {
+                Text(
+                    String(
+                        format: String(localized: "absence.risk.missed"),
+                        risk.missedLessons,
+                        risk.totalLessons
+                    )
+                )
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+                if let status = riskStatus(for: risk) {
+                    Text(verbatim: "·")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    Text(status.text)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(status.color)
+                }
+            }
+            .lineLimit(1)
+            .minimumScaleFactor(0.8)
         }
-        .font(.caption.weight(.bold))
-        .foregroundStyle(Brand.primary)
         .padding(.horizontal, Spacing.md)
         .padding(.vertical, Spacing.md)
-        .background(Color.gradelyTertiaryGroupedBackground)
-    }
-
-    private func subjectRow(_ row: AbsenceSubjectSummary) -> some View {
-        HStack(spacing: 0) {
-            Text(row.subjectName)
-                .font(.subheadline.weight(.semibold))
-                .lineLimit(2)
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-            Text("\(row.lessonsCount)")
-                .frame(width: lessonsWidth)
-            Text("\(row.base)")
-                .frame(width: absentWidth)
-            Text(String(format: "%.1f %%", row.absencePercentage))
-                .frame(width: percentWidth)
-        }
-        .font(.body.monospacedDigit())
-        .foregroundStyle(row.exceedsThreshold ? GradeBand.poor.foregroundColor : .primary)
-        .padding(.horizontal, Spacing.md)
-        .padding(.vertical, Spacing.lg)
-        .background(row.exceedsThreshold ? GradeBand.poor.soft : Color.gradelySecondaryGroupedBackground)
         .overlay(alignment: .bottom) {
             Divider()
         }
         .accessibilityIdentifier("absenceRow-\(row.stableID)")
+    }
+
+    private func riskStatus(for risk: AbsenceRiskSubject) -> (text: String, color: Color)? {
+        guard risk.threshold != nil else {
+            return (String(localized: "absence.risk.noThreshold"), .secondary)
+        }
+        guard let misses = risk.missesUntilLimit else { return nil }
+        if misses == 0 {
+            return (String(localized: "absence.risk.overLimit"), GradeBand.poor.foregroundColor)
+        }
+        return (
+            String(format: String(localized: "absence.risk.untilLimit"), misses),
+            .secondary
+        )
     }
 }
 
@@ -576,6 +502,7 @@ private struct SubjectManualResolutionCallout: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("absenceManualResolutionCallout")
     }
 }
@@ -660,131 +587,8 @@ private struct ManualAbsenceLessonSelectionSheet: View {
                 }
             }
         }
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("absenceManualSelectionSheet")
-    }
-}
-
-private struct AbsencePredictionSheet: View {
-    @Bindable var viewModel: AbsenceViewModel
-
-    var body: some View {
-        NavigationStack {
-            List {
-                Section {
-                    DatePicker(
-                        "absence.predictor.date",
-                        selection: $viewModel.predictionSelectedDate,
-                        in: viewModel.predictionMinimumDate...,
-                        displayedComponents: .date
-                    )
-                    .accessibilityIdentifier("absencePredictorDatePicker")
-                }
-
-                predictionLessonSection
-
-                Section {
-                    Button(role: .destructive) {
-                        viewModel.clearPredictionDraftSelections()
-                    } label: {
-                        Text("action.clear")
-                    }
-                    .disabled(viewModel.predictionDraftSelectedCount == 0)
-                    .accessibilityIdentifier("absencePredictorSheetClearButton")
-                }
-            }
-            .navigationTitle("absence.predictor.sheet.title")
-            .gradelyNavigationTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("action.cancel") {
-                        viewModel.cancelPredictionSheet()
-                    }
-                }
-
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("action.done") {
-                        viewModel.commitPredictionSelections()
-                    }
-                    .accessibilityIdentifier("absencePredictorDoneButton")
-                }
-            }
-            .task {
-                await viewModel.loadPredictionLessonsForSelectedDate()
-            }
-            .onChange(of: viewModel.predictionSelectedDate) {
-                Task { await viewModel.loadPredictionLessonsForSelectedDate() }
-            }
-        }
-        .accessibilityIdentifier("absencePredictionSheet")
-    }
-
-    @ViewBuilder
-    private var predictionLessonSection: some View {
-        if viewModel.isLoadingPredictionLessons {
-            Section {
-                HStack(spacing: Spacing.sm) {
-                    ProgressView()
-                    Text("absence.predictor.loading")
-                        .foregroundStyle(.secondary)
-                }
-            }
-        } else if let message = viewModel.predictionErrorMessage {
-            Section {
-                Label(message, systemImage: "exclamationmark.triangle")
-                    .foregroundStyle(GradeBand.poor.foregroundColor)
-
-                Button("action.retry") {
-                    Task { await viewModel.loadPredictionLessonsForSelectedDate() }
-                }
-            }
-        } else if viewModel.predictionLessons.isEmpty {
-            Section {
-                Label("absence.predictor.noLessons", systemImage: "calendar.badge.checkmark")
-                    .foregroundStyle(.secondary)
-            }
-        } else {
-            Section {
-                ForEach(viewModel.predictionLessons) { lesson in
-                    Button {
-                        viewModel.togglePredictionLesson(lesson)
-                    } label: {
-                        HStack(spacing: Spacing.sm) {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(lesson.displayTitle)
-                                    .font(.subheadline.weight(.semibold))
-                                    .foregroundStyle(.primary)
-
-                                if !lesson.timeRange.isEmpty {
-                                    Text(lesson.timeRange)
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                }
-                            }
-
-                            Spacer()
-
-                            if viewModel.isPredictionLessonSelected(lesson.id) {
-                                Image(systemName: "checkmark.circle.fill")
-                                    .foregroundStyle(Brand.primary)
-                            } else {
-                                Image(systemName: "circle")
-                                    .foregroundStyle(.tertiary)
-                            }
-                        }
-                        .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityIdentifier("absencePredictorLesson-\(lesson.id)")
-                }
-            } header: {
-                Text(
-                    String.localizedStringWithFormat(
-                        String(localized: "absence.predictor.selectedCount"),
-                        viewModel.predictionDraftSelectedCount
-                    )
-                )
-            }
-        }
     }
 }
 
@@ -946,4 +750,31 @@ private extension AbsenceViewModel.Segment {
         case .months: "absence.segment.months"
         }
     }
+}
+
+#Preview("Light") {
+    AbsenceView(
+        repository: SchoolRepository(
+            client: MockBakalariClient(),
+            sessionStore: InMemorySessionStore(session: PreviewData.expiredSession),
+            marksCache: InMemoryMarksCache(),
+            absenceCache: InMemoryAbsenceCache(
+                cachedAbsence: CachedAbsence(response: PreviewData.riskAbsenceResponse, cachedAt: Date())
+            )
+        )
+    ) {}
+}
+
+#Preview("Dark") {
+    AbsenceView(
+        repository: SchoolRepository(
+            client: MockBakalariClient(),
+            sessionStore: InMemorySessionStore(session: PreviewData.expiredSession),
+            marksCache: InMemoryMarksCache(),
+            absenceCache: InMemoryAbsenceCache(
+                cachedAbsence: CachedAbsence(response: PreviewData.riskAbsenceResponse, cachedAt: Date())
+            )
+        )
+    ) {}
+    .preferredColorScheme(.dark)
 }

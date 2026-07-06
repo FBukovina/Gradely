@@ -11,12 +11,15 @@ final class SubjectsViewModel {
     var user: UserResponse?
     var errorMessage: String?
     var lastCacheDate: Date?
+    var trends: [SubjectGradeTrend] = []
 
     private let repository: SchoolRepository
+    private let historyRepository: GradeyHistoryRepository?
     private var hasLoaded = false
 
-    init(repository: SchoolRepository) {
+    init(repository: SchoolRepository, historyRepository: GradeyHistoryRepository? = nil) {
         self.repository = repository
+        self.historyRepository = historyRepository
     }
 
     // MARK: - Overview metrics
@@ -79,10 +82,23 @@ final class SubjectsViewModel {
             absencesPerSubject = dashboard.absencesPerSubject
             user = dashboard.user
             lastCacheDate = Date()
+            await refreshTrends()
         } catch {
             if subjects.isEmpty {
                 errorMessage = userFacingMessage(for: error)
             }
+        }
+    }
+
+    /// Cloud grade history is a best-effort extra: failures keep the last value.
+    private func refreshTrends() async {
+        guard let historyRepository else { return }
+        let linkedAccountID = try? repository.currentStoredSession()?.linkedAccountID
+        if let history = try? await historyRepository.loadGradeHistory(
+            linkedAccountID: linkedAccountID,
+            days: 400
+        ) {
+            trends = history.trends
         }
     }
 

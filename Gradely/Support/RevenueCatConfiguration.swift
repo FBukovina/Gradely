@@ -4,12 +4,10 @@ import RevenueCat
 #endif
 
 enum RevenueCatConfiguration {
-    private static let publicAppleAPIKey = "appl_KTNbCvFOqwPTWfQKhjDCgSdSANH"
-
     static func configureIfNeeded(bundle: Bundle = .main) {
         #if canImport(RevenueCat)
         guard !Purchases.isConfigured,
-              let apiKey = bundle.revenueCatPlatformAPIKey ?? publicAppleAPIKey.nonEmptyAPIKey
+              let apiKey = bundle.revenueCatPlatformAPIKey
         else {
             return
         }
@@ -43,12 +41,5 @@ private extension Bundle {
             return nil
         }
         return trimmed
-    }
-}
-
-private extension String {
-    var nonEmptyAPIKey: String? {
-        let trimmed = trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty ? nil : trimmed
     }
 }

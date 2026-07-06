@@ -41,6 +41,10 @@ final class TimetableViewModel {
         TimetableDates.weekRangeTitle(weekStart: TimetableDates.monday(of: weekAnchor))
     }
 
+    var todaySummary: TimetableTodaySummary? {
+        TimetableTodaySummaryBuilder.make(for: selectedDay)
+    }
+
     /// Whether the displayed week is the one containing today (used to gate the "Today" button).
     var isViewingCurrentWeek: Bool {
         TimetableDates.apiDateString(TimetableDates.monday(of: weekAnchor))

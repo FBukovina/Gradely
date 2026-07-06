@@ -6,19 +6,44 @@ struct AppEnvironment {
     let schoolDirectoryProvider: any SchoolDirectoryProviding
     let supportTipProvider: any SupportTipProviding
     let watchSyncService: (any WatchSyncing)?
+    let gradeyAuthClient: any GradeyAuthClient
+    let linkedAccountRepository: LinkedAccountRepository
+    let historyRepository: GradeyHistoryRepository
+    let devicePushTokenClient: any DevicePushTokenClient
+    let notificationSettingsStore: MarkNotificationSettingsStore
+    let requiresGradeyID: Bool
 
     init(
         repository: SchoolRepository,
         stravaCZRepository: StravaCZRepository = AppEnvironment.makeMockStravaCZRepository(),
         schoolDirectoryProvider: any SchoolDirectoryProviding,
         supportTipProvider: any SupportTipProviding = MockSupportTipService(),
-        watchSyncService: (any WatchSyncing)? = nil
+        watchSyncService: (any WatchSyncing)? = nil,
+        gradeyAuthClient: any GradeyAuthClient = MockGradeyAuthClient(),
+        linkedAccountRepository: LinkedAccountRepository? = nil,
+        historyRepository: GradeyHistoryRepository? = nil,
+        devicePushTokenClient: any DevicePushTokenClient = MockDevicePushTokenClient(),
+        notificationSettingsStore: MarkNotificationSettingsStore = MarkNotificationSettingsStore(userDefaults: .standard),
+        requiresGradeyID: Bool = false
     ) {
         self.repository = repository
         self.stravaCZRepository = stravaCZRepository
         self.schoolDirectoryProvider = schoolDirectoryProvider
         self.supportTipProvider = supportTipProvider
         self.watchSyncService = watchSyncService
+        self.gradeyAuthClient = gradeyAuthClient
+        self.devicePushTokenClient = devicePushTokenClient
+        self.notificationSettingsStore = notificationSettingsStore
+        self.requiresGradeyID = requiresGradeyID
+        self.linkedAccountRepository = linkedAccountRepository ?? LinkedAccountRepository(
+            store: LinkedAccountStore(userDefaults: .standard),
+            client: MockLinkedAccountClient(),
+            authClient: gradeyAuthClient
+        )
+        self.historyRepository = historyRepository ?? GradeyHistoryRepository(
+            client: MockGradeyHistoryClient(),
+            authClient: gradeyAuthClient
+        )
     }
 
     static func live() -> AppEnvironment {
@@ -37,6 +62,18 @@ struct AppEnvironment {
         let nextLessonWidgetStore: (any NextLessonWidgetStoring)? = NextLessonWidgetStore()
         let supportTipProvider: any SupportTipProviding = RevenueCatSupportTipService()
         #endif
+        let gradeyAuthClient = SupabaseGradeyAuthClient()
+        let devicePushTokenClient = SupabaseDevicePushTokenClient()
+        let notificationSettingsStore = MarkNotificationSettingsStore()
+        let linkedAccountRepository = LinkedAccountRepository(
+            client: SupabaseLinkedAccountClient(),
+            authClient: gradeyAuthClient
+        )
+        let historyRepository = GradeyHistoryRepository(
+            client: SupabaseGradeyHistoryClient(),
+            authClient: gradeyAuthClient
+        )
+
         return AppEnvironment(
             repository: SchoolRepository(
                 client: DemoAwareBakalariClient(liveClient: URLSessionBakalariClient()),
@@ -56,7 +93,13 @@ struct AppEnvironment {
             ),
             schoolDirectoryProvider: schoolDirectoryProvider,
             supportTipProvider: supportTipProvider,
-            watchSyncService: watchSyncService
+            watchSyncService: watchSyncService,
+            gradeyAuthClient: gradeyAuthClient,
+            linkedAccountRepository: linkedAccountRepository,
+            historyRepository: historyRepository,
+            devicePushTokenClient: devicePushTokenClient,
+            notificationSettingsStore: notificationSettingsStore,
+            requiresGradeyID: true
         )
     }
 
@@ -77,6 +120,21 @@ struct AppEnvironment {
         let useManualSubjectAbsenceMock = arguments.contains("-uiTestingManualSubjectAbsence")
         let useEmptySubjectAbsenceMock = arguments.contains("-uiTestingEmptySubjectAbsence")
         let schoolDirectoryProvider = MockSchoolDirectoryProvider(refreshResult: PreviewData.schoolDirectorySchools)
+
+        let gradeyAuthClient = MockGradeyAuthClient(
+            session: arguments.contains("-uiTestingGradeyIDSignedOut") ? nil : PreviewData.gradeyAuthSession
+        )
+        let linkedAccountRepository = LinkedAccountRepository(
+            store: LinkedAccountStore(userDefaults: .standard),
+            client: MockLinkedAccountClient(),
+            authClient: gradeyAuthClient
+        )
+        linkedAccountRepository.clearLocalAccounts()
+        if arguments.contains("-uiTestingLinkedAccounts") {
+            linkedAccountRepository.replaceLocalAccounts([PreviewData.linkedSchoolAccount])
+        }
+        let notificationSettingsStore = MarkNotificationSettingsStore(userDefaults: .standard)
+        notificationSettingsStore.preferences = .default
 
         return AppEnvironment(
             repository: SchoolRepository(
@@ -109,7 +167,16 @@ struct AppEnvironment {
                 session: arguments.contains("-uiTestingStravaCZLoggedIn") ? PreviewData.stravaCZSession : nil
             ),
             schoolDirectoryProvider: schoolDirectoryProvider,
-            supportTipProvider: MockSupportTipService()
+            supportTipProvider: MockSupportTipService(),
+            gradeyAuthClient: gradeyAuthClient,
+            linkedAccountRepository: linkedAccountRepository,
+            historyRepository: GradeyHistoryRepository(
+                client: MockGradeyHistoryClient(response: PreviewData.gradeHistoryResponse),
+                authClient: gradeyAuthClient
+            ),
+            devicePushTokenClient: MockDevicePushTokenClient(),
+            notificationSettingsStore: notificationSettingsStore,
+            requiresGradeyID: arguments.contains("-uiTestingRequiresGradeyID")
         )
     }
 

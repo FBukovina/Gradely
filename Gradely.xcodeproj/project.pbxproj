@@ -8,6 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		81EE6CCB2FCDDC4B009D28DE /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = 81EE6CCC2FCDDC4B009D28DE /* RevenueCat */; };
+		920000012FD0000000000001 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 920000022FD0000000000002 /* Supabase */; };
+		920000032FD0000000000003 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 920000042FD0000000000004 /* Supabase */; };
 		A10000032FCE000000000003 /* GradelyWatchShared in Frameworks */ = {isa = PBXBuildFile; productRef = A10000022FCE000000000002 /* GradelyWatchShared */; };
 		A10000042FCE000000000004 /* GradelyWatchShared in Frameworks */ = {isa = PBXBuildFile; productRef = A10000052FCE000000000005 /* GradelyWatchShared */; };
 		A20000072FCE0000000000A7 /* GradelyWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = A20000042FCE0000000000A4 /* GradelyWatch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -101,6 +103,7 @@
 		81EE6CA12FCDDC4A009D28DE /* Gradey.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Gradey.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		81EE6CAE2FCDDC4B009D28DE /* GradelyTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = GradelyTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		81EE6CB82FCDDC4B009D28DE /* GradelyUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = GradelyUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		920000062FD0000000000006 /* Shared.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config/Shared.xcconfig; sourceTree = "<group>"; };
 		A20000012FCE0000000000A1 /* GradelyWatch.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = GradelyWatch.xcodeproj; path = GradelyWatch/GradelyWatch.xcodeproj; sourceTree = "<group>"; };
 		B40000052FCEF10000000005 /* Gradey.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Gradey.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B50000022FCF000000000002 /* GradelyMacWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = GradelyMacWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -158,6 +161,7 @@
 			files = (
 				A10000032FCE000000000003 /* GradelyWatchShared in Frameworks */,
 				81EE6CCB2FCDDC4B009D28DE /* RevenueCat in Frameworks */,
+				920000012FD0000000000001 /* Supabase in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -180,6 +184,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				920000032FD0000000000003 /* Supabase in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -204,6 +209,7 @@
 				81EE6CB12FCDDC4B009D28DE /* GradelyTests */,
 				81EE6CBB2FCDDC4B009D28DE /* GradelyUITests */,
 				A20000012FCE0000000000A1 /* GradelyWatch.xcodeproj */,
+				920000062FD0000000000006 /* Shared.xcconfig */,
 				81EE6CA22FCDDC4A009D28DE /* Products */,
 			);
 			sourceTree = "<group>";
@@ -279,6 +285,7 @@
 			packageProductDependencies = (
 				A10000022FCE000000000002 /* GradelyWatchShared */,
 				81EE6CCC2FCDDC4B009D28DE /* RevenueCat */,
+				920000022FD0000000000002 /* Supabase */,
 			);
 			productName = Gradey;
 			productReference = 81EE6CA12FCDDC4A009D28DE /* Gradey.app */;
@@ -351,6 +358,7 @@
 			);
 			name = GradelyMac;
 			packageProductDependencies = (
+				920000042FD0000000000004 /* Supabase */,
 			);
 			productName = Gradey;
 			productReference = B40000052FCEF10000000005 /* Gradey.app */;
@@ -406,6 +414,12 @@
 							com.apple.InAppPurchase = {
 								enabled = 1;
 							};
+							com.apple.Push = {
+								enabled = 1;
+							};
+							com.apple.SignInWithApple = {
+								enabled = 1;
+							};
 						};
 					};
 					81EE6CAD2FCDDC4B009D28DE = {
@@ -418,6 +432,14 @@
 					};
 					B400000A2FCEF1000000000A = {
 						CreatedOnToolsVersion = 26.5;
+						SystemCapabilities = {
+							com.apple.Push = {
+								enabled = 1;
+							};
+							com.apple.SignInWithApple = {
+								enabled = 1;
+							};
+						};
 					};
 					B500000A2FCF00000000000A = {
 						CreatedOnToolsVersion = 26.5;
@@ -437,6 +459,7 @@
 			packageReferences = (
 				A10000012FCE000000000001 /* XCLocalSwiftPackageReference "GradelyWatchShared" */,
 				81EE6CCD2FCDDC4B009D28DE /* XCRemoteSwiftPackageReference "purchases-ios-spm" */,
+				920000052FD0000000000005 /* XCRemoteSwiftPackageReference "supabase-swift" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 81EE6CA22FCDDC4A009D28DE /* Products */;
@@ -745,6 +768,7 @@
 		};
 		81EE6CC32FCDDC4B009D28DE /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 920000062FD0000000000006 /* Shared.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -770,7 +794,6 @@
 				PRODUCT_MODULE_NAME = Gradely;
 				PRODUCT_NAME = Gradey;
 				REGISTER_APP_GROUPS = YES;
-				REVENUECAT_IOS_API_KEY = appl_KTNbCvFOqwPTWfQKhjDCgSdSANH;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
@@ -787,6 +810,7 @@
 		};
 		81EE6CC42FCDDC4B009D28DE /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 920000062FD0000000000006 /* Shared.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -808,7 +832,6 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.bukovinafilip.BakalariMarks;
 				PRODUCT_MODULE_NAME = Gradely;
 				PRODUCT_NAME = Gradey;
-				REVENUECAT_IOS_API_KEY = appl_KTNbCvFOqwPTWfQKhjDCgSdSANH;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
@@ -909,6 +932,7 @@
 		};
 		B400000B2FCEF1000000000B /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 920000062FD0000000000006 /* Shared.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -931,7 +955,6 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.bukovinafilip.BakalariMarks;
 				PRODUCT_MODULE_NAME = Gradely;
 				PRODUCT_NAME = Gradey;
-				REVENUECAT_MACOS_API_KEY = appl_KTNbCvFOqwPTWfQKhjDCgSdSANH;
 				SDKROOT = macosx;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SUPPORTED_PLATFORMS = macosx;
@@ -947,6 +970,7 @@
 		};
 		B400000C2FCEF1000000000C /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 920000062FD0000000000006 /* Shared.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -969,7 +993,6 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.bukovinafilip.BakalariMarks;
 				PRODUCT_MODULE_NAME = Gradely;
 				PRODUCT_NAME = Gradey;
-				REVENUECAT_MACOS_API_KEY = appl_KTNbCvFOqwPTWfQKhjDCgSdSANH;
 				SDKROOT = macosx;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SUPPORTED_PLATFORMS = macosx;
@@ -1169,6 +1192,14 @@
 				version = 5.77.0;
 			};
 		};
+		920000052FD0000000000005 /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/supabase/supabase-swift.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.48.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -1176,6 +1207,16 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 81EE6CCD2FCDDC4B009D28DE /* XCRemoteSwiftPackageReference "purchases-ios-spm" */;
 			productName = RevenueCat;
+		};
+		920000022FD0000000000002 /* Supabase */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 920000052FD0000000000005 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Supabase;
+		};
+		920000042FD0000000000004 /* Supabase */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 920000052FD0000000000005 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Supabase;
 		};
 		A10000022FCE000000000002 /* GradelyWatchShared */ = {
 			isa = XCSwiftPackageProductDependency;

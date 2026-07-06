@@ -190,7 +190,7 @@ enum PreviewData {
 
     static let userResponse = UserResponse(
         userUID: "mock-user",
-        fullName: "Filip Bukovina",
+        fullName: "Alex Novak",
         userClass: ClassInfo(id: "class-1", abbrev: "4.A", name: "4.A"),
         schoolName: "Demo škola",
         userType: "student",
@@ -553,4 +553,211 @@ enum PreviewData {
         """
         return try! JSONDecoder().decode(StravaCZMenuResponse.self, from: Data(json.utf8))
     }()
+
+    static let gradeHistoryResponse: GradeHistoryResponse = {
+        let now = Date()
+        let calendar = Calendar(identifier: .gregorian)
+        let events = [
+            GradeHistoryEvent(
+                id: "history-math-0a",
+                linkedAccountID: "bakalari-demo.bakalari.cz-default",
+                provider: .bakalari,
+                subjectID: "math",
+                subjectAbbrev: "M",
+                subjectName: "Matematika",
+                averageValue: 2.4,
+                markCount: 1,
+                averageDelta: nil,
+                markCountDelta: 0,
+                eventType: .baseline,
+                capturedAt: calendar.date(byAdding: .day, value: -120, to: now) ?? now
+            ),
+            GradeHistoryEvent(
+                id: "history-math-0b",
+                linkedAccountID: "bakalari-demo.bakalari.cz-default",
+                provider: .bakalari,
+                subjectID: "math",
+                subjectAbbrev: "M",
+                subjectName: "Matematika",
+                averageValue: 2.15,
+                markCount: 1,
+                averageDelta: -0.25,
+                markCountDelta: 0,
+                eventType: .changed,
+                capturedAt: calendar.date(byAdding: .day, value: -90, to: now) ?? now
+            ),
+            GradeHistoryEvent(
+                id: "history-math-0c",
+                linkedAccountID: "bakalari-demo.bakalari.cz-default",
+                provider: .bakalari,
+                subjectID: "math",
+                subjectAbbrev: "M",
+                subjectName: "Matematika",
+                averageValue: 2.3,
+                markCount: 2,
+                averageDelta: 0.15,
+                markCountDelta: 1,
+                eventType: .changed,
+                capturedAt: calendar.date(byAdding: .day, value: -60, to: now) ?? now
+            ),
+            GradeHistoryEvent(
+                id: "history-math-0d",
+                linkedAccountID: "bakalari-demo.bakalari.cz-default",
+                provider: .bakalari,
+                subjectID: "math",
+                subjectAbbrev: "M",
+                subjectName: "Matematika",
+                averageValue: 2.0,
+                markCount: 2,
+                averageDelta: -0.3,
+                markCountDelta: 0,
+                eventType: .changed,
+                capturedAt: calendar.date(byAdding: .day, value: -20, to: now) ?? now
+            ),
+            GradeHistoryEvent(
+                id: "history-math-1",
+                linkedAccountID: "bakalari-demo.bakalari.cz-default",
+                provider: .bakalari,
+                subjectID: "math",
+                subjectAbbrev: "M",
+                subjectName: "Matematika",
+                averageValue: 1.95,
+                markCount: 2,
+                averageDelta: nil,
+                markCountDelta: 0,
+                eventType: .baseline,
+                capturedAt: calendar.date(byAdding: .day, value: -45, to: now) ?? now
+            ),
+            GradeHistoryEvent(
+                id: "history-math-2",
+                linkedAccountID: "bakalari-demo.bakalari.cz-default",
+                provider: .bakalari,
+                subjectID: "math",
+                subjectAbbrev: "M",
+                subjectName: "Matematika",
+                averageValue: 1.78,
+                markCount: 3,
+                averageDelta: -0.17,
+                markCountDelta: 1,
+                eventType: .changed,
+                capturedAt: calendar.date(byAdding: .day, value: -7, to: now) ?? now
+            ),
+            GradeHistoryEvent(
+                id: "history-czech-1",
+                linkedAccountID: "bakalari-demo.bakalari.cz-default",
+                provider: .bakalari,
+                subjectID: "czech",
+                subjectAbbrev: "ČJ",
+                subjectName: "Český jazyk",
+                averageValue: 1.6,
+                markCount: 1,
+                averageDelta: nil,
+                markCountDelta: 0,
+                eventType: .baseline,
+                capturedAt: calendar.date(byAdding: .day, value: -45, to: now) ?? now
+            ),
+            GradeHistoryEvent(
+                id: "history-czech-2",
+                linkedAccountID: "bakalari-demo.bakalari.cz-default",
+                provider: .bakalari,
+                subjectID: "czech",
+                subjectAbbrev: "ČJ",
+                subjectName: "Český jazyk",
+                averageValue: 2.0,
+                markCount: 2,
+                averageDelta: 0.4,
+                markCountDelta: 1,
+                eventType: .changed,
+                capturedAt: calendar.date(byAdding: .day, value: -4, to: now) ?? now
+            )
+        ]
+        return GradeHistoryResponse(events: events, recentNewMarkEvents: [])
+    }()
+
+    static var subjectGradeTrends: [SubjectGradeTrend] {
+        gradeHistoryResponse.trends
+    }
+
+    /// Absence fixture spanning every risk level (threshold 25 %):
+    /// safe ~9.5 %, watch ~18.4 %, high ~23.7 %, over limit 27.5 %.
+    static let riskAbsenceResponse = AbsenceResponse(
+        percentageThreshold: 25,
+        absences: absenceResponse.absences,
+        absencesPerSubject: [
+            AbsencePerSubject(
+                subjectName: "Matematika",
+                lessonsCount: 42,
+                base: 4,
+                late: 1,
+                soon: 0,
+                school: 0,
+                distanceTeaching: 0
+            ),
+            AbsencePerSubject(
+                subjectName: "Český jazyk",
+                lessonsCount: 38,
+                base: 7,
+                late: 0,
+                soon: 0,
+                school: 0,
+                distanceTeaching: 0
+            ),
+            AbsencePerSubject(
+                subjectName: "Fyzika",
+                lessonsCount: 38,
+                base: 9,
+                late: 0,
+                soon: 1,
+                school: 0,
+                distanceTeaching: 0
+            ),
+            AbsencePerSubject(
+                subjectName: "Tělesná výchova",
+                lessonsCount: 40,
+                base: 11,
+                late: 0,
+                soon: 0,
+                school: 2,
+                distanceTeaching: 0
+            )
+        ]
+    )
+
+    /// Subject graded purely in points — the detail chart must hide for it.
+    static let pointsOnlySubject = Subject(
+        marks: [
+            Mark(
+                markDate: "2026-05-20T10:00:00+02:00",
+                caption: "Projekt",
+                theme: nil,
+                markText: "18",
+                type: "points",
+                typeNote: "Body",
+                weight: nil,
+                subjectID: "informatics",
+                isPoints: true,
+                id: "informatics-1",
+                pointsText: "18",
+                maxPoints: 20
+            ),
+            Mark(
+                markDate: "2026-04-12T10:00:00+02:00",
+                caption: "Aktivita",
+                theme: nil,
+                markText: "9",
+                type: "points",
+                typeNote: "Body",
+                weight: nil,
+                subjectID: "informatics",
+                isPoints: true,
+                id: "informatics-2",
+                pointsText: "9",
+                maxPoints: 10
+            )
+        ],
+        subjectInfo: SubjectInfo(id: "informatics", abbrev: "INF", name: "Informatika"),
+        averageText: nil,
+        pointsOnly: true,
+        markPredictionEnabled: false
+    )
 }

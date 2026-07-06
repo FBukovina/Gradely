@@ -1,6 +1,7 @@
 import SwiftUI
 
 private enum AppTab: Hashable {
+    case today
     case subjects
     case absence
     case timetable
@@ -15,6 +16,11 @@ struct ContentView: View {
     private let schoolDirectoryProvider: any SchoolDirectoryProviding
     private let supportTipProvider: any SupportTipProviding
     private let watchSyncService: (any WatchSyncing)?
+    private let gradeyAuthClient: any GradeyAuthClient
+    private let linkedAccountRepository: LinkedAccountRepository
+    private let historyRepository: GradeyHistoryRepository
+    private let devicePushTokenClient: any DevicePushTokenClient
+    private let notificationSettingsStore: MarkNotificationSettingsStore
     private let skipsOnboarding: Bool
     private let suppressesVersionSupportPrompt: Bool
     private let forcesVersionSupportPrompt: Bool
@@ -24,7 +30,7 @@ struct ContentView: View {
     @State private var isVersionSupportPromptPresented = false
     @State private var isSupportTipSheetPresented = false
     @State private var didForcePresentSupportPrompt = false
-    @State private var selectedTab: AppTab = .subjects
+    @State private var selectedTab: AppTab = .today
     @State private var schoolAccountRevision = UUID()
 
     init(
@@ -39,12 +45,20 @@ struct ContentView: View {
         schoolDirectoryProvider = environment.schoolDirectoryProvider
         supportTipProvider = environment.supportTipProvider
         watchSyncService = environment.watchSyncService
+        gradeyAuthClient = environment.gradeyAuthClient
+        linkedAccountRepository = environment.linkedAccountRepository
+        historyRepository = environment.historyRepository
+        devicePushTokenClient = environment.devicePushTokenClient
+        notificationSettingsStore = environment.notificationSettingsStore
         self.skipsOnboarding = skipsOnboarding
         self.suppressesVersionSupportPrompt = suppressesVersionSupportPrompt
         self.forcesVersionSupportPrompt = forcesVersionSupportPrompt
         _appViewModel = State(initialValue: AppViewModel(
             repository: environment.repository,
-            stravaCZRepository: environment.stravaCZRepository
+            stravaCZRepository: environment.stravaCZRepository,
+            gradeyAuthClient: environment.gradeyAuthClient,
+            linkedAccountRepository: environment.linkedAccountRepository,
+            requiresGradeyID: environment.requiresGradeyID
         ))
     }
 
@@ -59,31 +73,66 @@ struct ContentView: View {
                 case .checking:
                     SplashView()
                 case .signedOut:
-                    LoginView(repository: repository, schoolDirectoryProvider: schoolDirectoryProvider) {
-                        appViewModel.markSignedIn()
-                    }
+                    signedOutView
+                case .signedInNeedsSchool:
+                    needsSchoolView
                 case .signedIn:
                     TabView(selection: $selectedTab) {
+                        Tab("Today", systemImage: "sun.max.fill", value: AppTab.today) {
+                            TodayView(
+                                repository: repository,
+                                stravaCZRepository: stravaCZRepository,
+                                linkedAccountRepository: linkedAccountRepository,
+                                historyRepository: historyRepository,
+                                supportTipProvider: supportTipProvider,
+                                accountHub: AnyView(accountHub),
+                                onOpenMarks: {
+                                    selectedTab = .subjects
+                                },
+                                onOpenAbsence: {
+                                    selectedTab = .absence
+                                }
+                            ) {
+                                Task { await appViewModel.signOut() }
+                            }
+                        }
+
                         Tab("subjects.title", systemImage: "checkmark.seal.fill", value: AppTab.subjects) {
-                            SubjectsView(repository: repository, supportTipProvider: supportTipProvider) {
+                            SubjectsView(
+                                repository: repository,
+                                historyRepository: historyRepository,
+                                supportTipProvider: supportTipProvider,
+                                accountHub: AnyView(accountHub)
+                            ) {
                                 Task { await appViewModel.signOut() }
                             }
                         }
 
                         Tab("absence.title", systemImage: "calendar.badge.exclamationmark", value: AppTab.absence) {
-                            AbsenceView(repository: repository, supportTipProvider: supportTipProvider) {
+                            AbsenceView(
+                                repository: repository,
+                                supportTipProvider: supportTipProvider,
+                                accountHub: AnyView(accountHub)
+                            ) {
                                 Task { await appViewModel.signOut() }
                             }
                         }
 
                         Tab("rozvrh.title", systemImage: "calendar", value: AppTab.timetable) {
-                            TimetableView(repository: repository, supportTipProvider: supportTipProvider) {
+                            TimetableView(
+                                repository: repository,
+                                supportTipProvider: supportTipProvider,
+                                accountHub: AnyView(accountHub)
+                            ) {
                                 Task { await appViewModel.signOut() }
                             }
                         }
 
                         Tab("stravacz.title", systemImage: "fork.knife", value: AppTab.stravaCZ) {
-                            StravaCZView(repository: stravaCZRepository)
+                            StravaCZView(
+                                repository: stravaCZRepository,
+                                linkedAccountRepository: linkedAccountRepository
+                            )
                         }
                     }
                     .id(schoolAccountRevision)
@@ -94,6 +143,11 @@ struct ContentView: View {
         }
         .task {
             watchSyncService?.start()
+            PushRegistrationService.shared.configure(
+                client: devicePushTokenClient,
+                authClient: gradeyAuthClient,
+                preferencesStore: notificationSettingsStore
+            )
             await appViewModel.bootstrap()
             presentVersionSupportPromptIfNeeded()
         }
@@ -104,10 +158,10 @@ struct ContentView: View {
             presentVersionSupportPromptIfNeeded()
         }
         .onOpenURL { url in
-            handleOpenURL(url)
+            Task { await handleOpenURL(url) }
         }
         .onReceive(NotificationCenter.default.publisher(for: .gradelySchoolAccountDidChange)) { _ in
-            selectedTab = .subjects
+            selectedTab = .today
             schoolAccountRevision = UUID()
         }
         .alert(String(localized: "support.updatePrompt.title"), isPresented: $isVersionSupportPromptPresented) {
@@ -131,7 +185,55 @@ struct ContentView: View {
         !skipsOnboarding && !hasCompletedOnboarding
     }
 
-    private func handleOpenURL(_ url: URL) {
+    @ViewBuilder
+    private var signedOutView: some View {
+        if appViewModel.usesGradeyIDGate {
+            GradeyIDLoginView(
+                authClient: gradeyAuthClient,
+                onBypassForTesting: {
+                    Task { await appViewModel.bypassGradeyIDForTesting() }
+                }
+            ) {
+                Task { await appViewModel.markGradeySignedIn() }
+            }
+        } else {
+            LoginView(repository: repository, schoolDirectoryProvider: schoolDirectoryProvider) {
+                appViewModel.markSignedIn()
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var needsSchoolView: some View {
+        if appViewModel.usesGradeyIDGate {
+            accountHub
+        } else {
+            LoginView(repository: repository, schoolDirectoryProvider: schoolDirectoryProvider) {
+                appViewModel.markSignedIn()
+            }
+        }
+    }
+
+    private var accountHub: some View {
+        GradeyAccountHubView(
+            account: appViewModel.gradeyAccount,
+            repository: repository,
+            stravaCZRepository: stravaCZRepository,
+            schoolDirectoryProvider: schoolDirectoryProvider,
+            linkedAccountRepository: linkedAccountRepository,
+            notificationClient: devicePushTokenClient,
+            authClient: gradeyAuthClient,
+            preferencesStore: notificationSettingsStore,
+            onSchoolLinked: {
+                appViewModel.markSignedIn()
+            },
+            onSignedOut: {
+                Task { await appViewModel.signOut() }
+            }
+        )
+    }
+
+    private func handleOpenURL(_ url: URL) async {
         guard url.scheme == "gradey" || url.scheme == "gradely" else { return }
 
         if url.host == "timetable" || url.path == "/timetable" {

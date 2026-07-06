@@ -2,9 +2,14 @@ import SwiftUI
 
 struct StravaCZView: View {
     @State private var viewModel: StravaCZViewModel
+    private let repository: StravaCZRepository
 
-    init(repository: StravaCZRepository) {
-        _viewModel = State(initialValue: StravaCZViewModel(repository: repository))
+    init(repository: StravaCZRepository, linkedAccountRepository: LinkedAccountRepository? = nil) {
+        self.repository = repository
+        _viewModel = State(initialValue: StravaCZViewModel(
+            repository: repository,
+            linkedAccountRepository: linkedAccountRepository
+        ))
     }
 
     var body: some View {
@@ -93,111 +98,16 @@ struct StravaCZView: View {
             }
             .accessibilityIdentifier("stravaCZCheckingView")
         case .signedOut:
-            connectView
+            StravaCZConnectView(
+                repository: repository,
+                initialCanteenNumber: viewModel.canteenNumber,
+                initialUsername: viewModel.username
+            ) { session in
+                await viewModel.didConnect(session)
+            }
         case .signedIn:
             menuView
         }
-    }
-
-    private var connectView: some View {
-        ZStack {
-            Color.gradelyGroupedBackground.ignoresSafeArea()
-
-            ScrollView {
-                VStack(alignment: .leading, spacing: Spacing.xl) {
-                    VStack(alignment: .leading, spacing: Spacing.md) {
-                        Image(systemName: "fork.knife")
-                            .font(.system(size: 30, weight: .bold))
-                            .foregroundStyle(Brand.onAccent)
-                            .frame(width: 64, height: 64)
-                            .background(Brand.gradient, in: RoundedRectangle(cornerRadius: Radius.md, style: .continuous))
-                            .shadow(color: Brand.primary.opacity(0.35), radius: 14, x: 0, y: 8)
-                            .accessibilityHidden(true)
-
-                        Text("stravacz.connect.title")
-                            .font(.title.bold())
-                            .foregroundStyle(.primary)
-
-                        Text("stravacz.connect.message")
-                            .font(.callout)
-                            .foregroundStyle(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-
-                    Card {
-                        VStack(spacing: Spacing.lg) {
-                            TextField(String(localized: "stravacz.canteenNumber"), text: $viewModel.canteenNumber)
-                                .gradelyKeyboardType(.numberPad)
-                                .textContentType(.oneTimeCode)
-                                .submitLabel(.next)
-                                .brandField()
-                                .accessibilityIdentifier("stravaCZCanteenField")
-
-                            TextField(String(localized: "stravacz.username"), text: $viewModel.username)
-                                .textContentType(.username)
-                                .gradelyTextInputAutocapitalization(.never)
-                                .autocorrectionDisabled()
-                                .submitLabel(.next)
-                                .brandField()
-                                .accessibilityIdentifier("stravaCZUsernameField")
-
-                            passwordField
-
-                            Button {
-                                Task { await viewModel.connect() }
-                            } label: {
-                                HStack(spacing: Spacing.sm) {
-                                    if viewModel.isConnecting {
-                                        ProgressView()
-                                            .controlSize(.small)
-                                            .tint(Brand.onAccent)
-                                    }
-                                    Text(viewModel.isConnecting ? String(localized: "stravacz.connect.loading") : String(localized: "stravacz.connect.button"))
-                                    if !viewModel.isConnecting {
-                                        Image(systemName: "chevron.right")
-                                            .font(.subheadline.weight(.bold))
-                                    }
-                                }
-                            }
-                            .buttonStyle(PrimaryButtonStyle())
-                            .disabled(viewModel.isConnecting)
-                            .accessibilityIdentifier("stravaCZConnectButton")
-                        }
-                    }
-                }
-                .padding(.horizontal, Spacing.xl)
-                .padding(.vertical, Spacing.xxl)
-                .frame(maxWidth: 560)
-                .frame(maxWidth: .infinity)
-            }
-            .scrollDismissesKeyboard(.interactively)
-        }
-        .accessibilityIdentifier("stravaCZConnectView")
-    }
-
-    private var passwordField: some View {
-        HStack(spacing: Spacing.sm) {
-            Group {
-                if viewModel.isPasswordVisible {
-                    TextField(String(localized: "stravacz.password"), text: $viewModel.password)
-                } else {
-                    SecureField(String(localized: "stravacz.password"), text: $viewModel.password)
-                }
-            }
-            .textContentType(.password)
-            .submitLabel(.done)
-            .accessibilityIdentifier("stravaCZPasswordField")
-
-            Button {
-                viewModel.isPasswordVisible.toggle()
-            } label: {
-                Image(systemName: viewModel.isPasswordVisible ? "eye.slash" : "eye")
-                    .foregroundStyle(.secondary)
-                    .accessibilityLabel(viewModel.isPasswordVisible ? String(localized: "login.hidePassword") : String(localized: "login.showPassword"))
-            }
-            .buttonStyle(.plain)
-        }
-        .brandField()
     }
 
     @ViewBuilder

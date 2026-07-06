@@ -185,4 +185,108 @@ struct StravaCZTests {
         #expect(viewModel.pendingReplacement?.existingMeal.id == 1)
         #expect(viewModel.pendingReplacement?.newMeal.id == 2)
     }
+
+    @Test func didConnectRegistersLinkedStravaCZAccount() async throws {
+        let linkedAccountRepository = LinkedAccountRepository(
+            store: InMemoryLinkedAccountStore(),
+            client: MockLinkedAccountClient(),
+            authClient: MockGradeyAuthClient()
+        )
+        let viewModel = StravaCZViewModel(
+            repository: makeRepository(),
+            linkedAccountRepository: linkedAccountRepository
+        )
+
+        await viewModel.didConnect(PreviewData.stravaCZSession)
+
+        #expect(viewModel.phase == .signedIn)
+        let linked = linkedAccountRepository.loadAccounts()
+        #expect(linked.count == 1)
+        #expect(linked.first?.provider == .stravaCZ)
+    }
+
+    @Test func didConnectWithoutLinkedRepositoryStillSignsIn() async throws {
+        let viewModel = StravaCZViewModel(repository: makeRepository())
+
+        await viewModel.didConnect(PreviewData.stravaCZSession)
+
+        #expect(viewModel.phase == .signedIn)
+        #expect(viewModel.session != nil)
+    }
+
+    @Test func disconnectUnlinksLinkedStravaCZAccountAndLogsOut() async throws {
+        let linkedAccountRepository = LinkedAccountRepository(
+            store: InMemoryLinkedAccountStore(),
+            client: MockLinkedAccountClient(),
+            authClient: MockGradeyAuthClient()
+        )
+        let client = MockStravaCZClient()
+        let sessionStore = InMemoryStravaCZSessionStore(session: PreviewData.stravaCZSession)
+        let viewModel = StravaCZViewModel(
+            repository: StravaCZRepository(
+                client: client,
+                sessionStore: sessionStore,
+                menuCache: InMemoryStravaCZMenuCache()
+            ),
+            linkedAccountRepository: linkedAccountRepository
+        )
+
+        await viewModel.didConnect(PreviewData.stravaCZSession)
+        #expect(!linkedAccountRepository.loadAccounts().isEmpty)
+
+        await viewModel.disconnect()
+
+        #expect(viewModel.phase == .signedOut)
+        #expect(linkedAccountRepository.loadAccounts().isEmpty)
+        #expect(client.didLogout)
+        #expect(try sessionStore.loadSession() == nil)
+    }
+
+    @Test func bootstrapResyncsPhaseWithStoredSessionOnLaterCalls() async throws {
+        let sessionStore = InMemoryStravaCZSessionStore()
+        let viewModel = StravaCZViewModel(
+            repository: StravaCZRepository(
+                client: MockStravaCZClient(),
+                sessionStore: sessionStore,
+                menuCache: InMemoryStravaCZMenuCache()
+            )
+        )
+
+        await viewModel.bootstrap()
+        #expect(viewModel.phase == .signedOut)
+
+        // The account hub can connect behind the tab's back...
+        _ = try sessionStore.save(loginResponse: PreviewData.stravaCZLoginResponse)
+        await viewModel.bootstrap()
+        #expect(viewModel.phase == .signedIn)
+
+        // ...and unlink behind its back too.
+        try sessionStore.clearSession()
+        await viewModel.bootstrap()
+        #expect(viewModel.phase == .signedOut)
+    }
+
+    private func makeRepository() -> StravaCZRepository {
+        StravaCZRepository(
+            client: MockStravaCZClient(),
+            sessionStore: InMemoryStravaCZSessionStore(session: PreviewData.stravaCZSession),
+            menuCache: InMemoryStravaCZMenuCache()
+        )
+    }
+}
+
+private final class InMemoryLinkedAccountStore: LinkedAccountStoring {
+    private var accounts: [LinkedAccount] = []
+
+    func loadAccounts() throws -> [LinkedAccount] {
+        accounts
+    }
+
+    func saveAccounts(_ accounts: [LinkedAccount]) throws {
+        self.accounts = accounts
+    }
+
+    func clearAccounts() throws {
+        accounts = []
+    }
 }

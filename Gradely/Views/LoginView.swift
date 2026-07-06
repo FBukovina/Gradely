@@ -1,19 +1,62 @@
 import SwiftUI
 
 struct LoginView: View {
+    enum PresentationContext: Equatable {
+        case standalone
+        case linking
+
+        var iconName: String {
+            switch self {
+            case .standalone: "graduationcap.fill"
+            case .linking: "link.badge.plus"
+            }
+        }
+
+        var title: LocalizedStringKey {
+            switch self {
+            case .standalone: "app.name"
+            case .linking: "gradey.account.linkSchool.title"
+            }
+        }
+
+        var subtitle: LocalizedStringKey {
+            switch self {
+            case .standalone: "login.subtitle"
+            case .linking: "gradey.account.linkSchool.subtitle"
+            }
+        }
+
+        var buttonTitle: LocalizedStringKey {
+            switch self {
+            case .standalone: "login.button"
+            case .linking: "gradey.account.linkSchool.button"
+            }
+        }
+
+        var showsRepositoryLink: Bool {
+            switch self {
+            case .standalone: true
+            case .linking: false
+            }
+        }
+    }
+
     @State private var viewModel: LoginViewModel
     @FocusState private var isSchoolSearchFocused: Bool
+    private let presentationContext: PresentationContext
     let onSignedIn: () -> Void
 
     init(
         repository: SchoolRepository,
         schoolDirectoryProvider: any SchoolDirectoryProviding,
+        presentationContext: PresentationContext = .standalone,
         onSignedIn: @escaping () -> Void
     ) {
         _viewModel = State(initialValue: LoginViewModel(
             repository: repository,
             schoolDirectoryProvider: schoolDirectoryProvider
         ))
+        self.presentationContext = presentationContext
         self.onSignedIn = onSignedIn
     }
 
@@ -25,7 +68,9 @@ struct LoginView: View {
                 VStack(alignment: .leading, spacing: Spacing.xl) {
                     hero
                     form
-                    githubLink
+                    if presentationContext.showsRepositoryLink {
+                        githubLink
+                    }
                 }
                 .padding(.horizontal, Spacing.xl)
                 .padding(.top, Spacing.xxl)
@@ -64,22 +109,22 @@ struct LoginView: View {
 
     private var hero: some View {
         VStack(alignment: .leading, spacing: Spacing.lg) {
-            Image(systemName: "graduationcap.fill")
-                .font(.system(size: 30, weight: .bold))
+            Image(systemName: presentationContext.iconName)
+                .font(.system(size: presentationContext == .standalone ? 30 : 26, weight: .bold))
                 .foregroundStyle(Brand.onAccent)
                 .frame(width: 64, height: 64)
                 .background(Brand.gradient, in: RoundedRectangle(cornerRadius: Radius.md, style: .continuous))
-                .shadow(color: Brand.primary.opacity(0.45), radius: 18, x: 0, y: 10)
+                .shadow(color: Brand.primary.opacity(presentationContext == .standalone ? 0.45 : 0.24), radius: 16, x: 0, y: 8)
                 .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: Spacing.sm) {
-                Text("app.name")
+                Text(presentationContext.title)
                     .font(.system(size: 36, weight: .bold, design: .rounded))
                     .foregroundStyle(.primary)
                     .lineLimit(2)
                     .minimumScaleFactor(0.7)
 
-                Text("login.subtitle")
+                Text(presentationContext.subtitle)
                     .font(.callout)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -151,7 +196,11 @@ struct LoginView: View {
                                 .controlSize(.small)
                                 .tint(Brand.onAccent)
                         }
-                        Text(viewModel.isLoading ? String(localized: "login.loading") : String(localized: "login.button"))
+                        if viewModel.isLoading {
+                            Text("login.loading")
+                        } else {
+                            Text(presentationContext.buttonTitle)
+                        }
                         if !viewModel.isLoading {
                             Image(systemName: "chevron.right")
                                 .font(.subheadline.weight(.bold))

@@ -18,6 +18,9 @@ struct StoredSession: Codable, Equatable {
     var provider: SchoolProvider
     var eduPage: EduPageSessionData?
     var bakalari: BakalariCredentials?
+    var linkedAccountID: String?
+    var linkedAccountDisplayName: String?
+    var linkedAccountSchoolName: String?
 
     init(
         accessToken: String,
@@ -27,7 +30,10 @@ struct StoredSession: Codable, Equatable {
         baseURL: URL,
         provider: SchoolProvider = .bakalari,
         eduPage: EduPageSessionData? = nil,
-        bakalari: BakalariCredentials? = nil
+        bakalari: BakalariCredentials? = nil,
+        linkedAccountID: String? = nil,
+        linkedAccountDisplayName: String? = nil,
+        linkedAccountSchoolName: String? = nil
     ) {
         self.accessToken = accessToken
         self.refreshToken = refreshToken
@@ -37,6 +43,9 @@ struct StoredSession: Codable, Equatable {
         self.provider = provider
         self.eduPage = eduPage
         self.bakalari = bakalari
+        self.linkedAccountID = linkedAccountID
+        self.linkedAccountDisplayName = linkedAccountDisplayName
+        self.linkedAccountSchoolName = linkedAccountSchoolName
     }
 
     var isExpired: Bool {
@@ -44,6 +53,10 @@ struct StoredSession: Codable, Equatable {
     }
 
     var cacheScope: String {
+        if let linkedAccountID = linkedAccountID?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !linkedAccountID.isEmpty {
+            return "linked-\(linkedAccountID)"
+        }
         let host = baseURL.host?.lowercased() ?? baseURL.absoluteString.lowercased()
         let user = eduPage?.activeStudent?.id ?? eduPage?.userID ?? "default"
         return "\(provider.rawValue)-\(host)-\(user)"
@@ -58,6 +71,9 @@ struct StoredSession: Codable, Equatable {
         case provider
         case eduPage
         case bakalari
+        case linkedAccountID
+        case linkedAccountDisplayName
+        case linkedAccountSchoolName
     }
 
     init(from decoder: Decoder) throws {
@@ -70,6 +86,9 @@ struct StoredSession: Codable, Equatable {
         provider = try container.decodeIfPresent(SchoolProvider.self, forKey: .provider) ?? .bakalari
         eduPage = try container.decodeIfPresent(EduPageSessionData.self, forKey: .eduPage)
         bakalari = try container.decodeIfPresent(BakalariCredentials.self, forKey: .bakalari)
+        linkedAccountID = try container.decodeIfPresent(String.self, forKey: .linkedAccountID)
+        linkedAccountDisplayName = try container.decodeIfPresent(String.self, forKey: .linkedAccountDisplayName)
+        linkedAccountSchoolName = try container.decodeIfPresent(String.self, forKey: .linkedAccountSchoolName)
     }
 }
 

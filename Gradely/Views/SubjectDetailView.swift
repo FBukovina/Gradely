@@ -11,8 +11,9 @@ struct SubjectDetailView: View {
         ScrollView {
             VStack(spacing: Spacing.xl) {
                 AverageHero(viewModel: viewModel)
-                marksSection
+                chartSection
                 calculatorSection
+                marksSection
             }
             .padding(.horizontal, Spacing.lg)
             .padding(.vertical, Spacing.lg)
@@ -29,11 +30,67 @@ struct SubjectDetailView: View {
         VStack(alignment: .leading, spacing: Spacing.md) {
             SectionHeader("detail.marks.section")
 
-            ForEach(viewModel.sortedMarks) { mark in
-                MarkCard(mark: mark, resolvedWeight: viewModel.resolvedWeight(for: mark))
-                    .accessibilityIdentifier("markRow-\(mark.id)")
+            VStack(spacing: 0) {
+                ForEach(Array(viewModel.sortedMarks.enumerated()), id: \.element.id) { index, mark in
+                    MarkRow(mark: mark, resolvedWeight: viewModel.resolvedWeight(for: mark))
+                        .accessibilityIdentifier("markRow-\(mark.id)")
+
+                    if index < viewModel.sortedMarks.count - 1 {
+                        Divider()
+                            .padding(.leading, Spacing.md)
+                    }
+                }
             }
+            .background(
+                RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
+                    .fill(Color.gradelySecondaryGroupedBackground)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
+                    .strokeBorder(Color.primary.opacity(0.06), lineWidth: 1)
+            )
         }
+    }
+
+    @ViewBuilder
+    private var chartSection: some View {
+        if viewModel.chartSource != .none {
+            VStack(alignment: .leading, spacing: Spacing.md) {
+                SectionHeader("detail.chart.title")
+                Card {
+                    VStack(alignment: .leading, spacing: Spacing.md) {
+                        AverageHistoryChart(
+                            points: viewModel.chartPoints,
+                            band: GradeMath.band(for: viewModel.currentAverage),
+                            style: .detail,
+                            overlayMarks: viewModel.averageTimeline
+                        )
+                        .frame(height: 180)
+
+                        HStack {
+                            Text(sourceCaption)
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+
+                            Spacer()
+
+                            if let delta = viewModel.chartDelta {
+                                Text(String(format: "%+.2f", delta))
+                                    .font(.caption.weight(.bold).monospacedDigit())
+                                    .foregroundStyle(delta > 0 ? GradeBand.poor.foregroundColor : Brand.primary)
+                            }
+                        }
+                    }
+                }
+            }
+            .accessibilityIdentifier("subjectGradeTrendSection")
+        }
+    }
+
+    private var sourceCaption: String {
+        viewModel.chartSource == .cloud
+            ? String(localized: "detail.chart.source.cloud")
+            : String(localized: "detail.chart.source.local")
     }
 
     private var calculatorSection: some View {
@@ -86,7 +143,7 @@ private struct AverageHero: View {
         .frame(maxWidth: .infinity)
         .padding(Spacing.xl)
         .background(band.gradient, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
-        .shadow(color: band.foregroundColor.opacity(0.30), radius: 16, x: 0, y: 8)
+        .shadow(color: band.foregroundColor.opacity(0.22), radius: 10, x: 0, y: 6)
     }
 
     private func heroChip(_ text: String, systemImage: String) -> some View {
@@ -103,80 +160,79 @@ private struct AverageHero: View {
     }
 }
 
-// MARK: - Mark card
+// MARK: - Mark row
 
-private struct MarkCard: View {
+private struct MarkRow: View {
     let mark: Mark
     let resolvedWeight: ResolvedMarkWeight
 
     var body: some View {
         let band = GradeMath.band(for: mark)
 
-        Card(padding: Spacing.md) {
-            HStack(alignment: .top, spacing: Spacing.md) {
-                VStack(alignment: .leading, spacing: Spacing.sm) {
-                    Text(mark.displayCaption)
-                        .font(.headline)
+        HStack(alignment: .top, spacing: Spacing.md) {
+            VStack(alignment: .leading, spacing: Spacing.xs) {
+                Text(mark.displayCaption)
+                    .font(.headline)
+                    .lineLimit(2)
+
+                if mark.shouldShowTheme, let theme = mark.theme {
+                    Text(theme.trimmingCharacters(in: .whitespacesAndNewlines))
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
                         .lineLimit(2)
-
-                    if mark.shouldShowTheme, let theme = mark.theme {
-                        Text(theme.trimmingCharacters(in: .whitespacesAndNewlines))
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(2)
-                    }
-
-                    HStack(spacing: Spacing.sm - 1) {
-                        Text(MarkDateFormatter.relativeDate(mark.markDate))
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(Brand.primary)
-
-                        Text(MarkDateFormatter.fullDate(mark.markDate))
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-
-                    HStack(spacing: Spacing.sm) {
-                        StatusChip(
-                            text: (mark.typeNote?.trimmingCharacters(in: .whitespacesAndNewlines)).flatMap { $0.isEmpty ? nil : $0 }
-                                ?? mark.type,
-                            color: .secondary
-                        )
-
-                        if !mark.isPoints, resolvedWeight.source == .explicit, resolvedWeight.value > 1 {
-                            StatusChip(
-                                text: String.localizedStringWithFormat(
-                                    String(localized: "detail.weight.decimal"),
-                                    GradeMath.formattedWeight(resolvedWeight.value)
-                                ),
-                                color: Brand.secondary
-                            )
-                        }
-
-                        if !mark.isPoints, resolvedWeight.source == .inferred, resolvedWeight.value > 1 {
-                            StatusChip(
-                                text: String.localizedStringWithFormat(
-                                    String(localized: "detail.weight.estimated.decimal"),
-                                    GradeMath.formattedWeight(resolvedWeight.value)
-                                ),
-                                color: Brand.secondary
-                            )
-                        }
-
-                        if mark.isPoints, let maxPoints = mark.maxPoints {
-                            StatusChip(
-                                text: "\(mark.markText)/\(maxPoints)",
-                                color: .teal
-                            )
-                        }
-                    }
                 }
 
-                Spacer(minLength: Spacing.sm)
+                HStack(spacing: Spacing.sm - 1) {
+                    Text(MarkDateFormatter.relativeDate(mark.markDate))
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Brand.primary)
 
-                GradeBadge(text: mark.markText, band: band, size: .large)
+                    Text(MarkDateFormatter.fullDate(mark.markDate))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                HStack(spacing: Spacing.sm) {
+                    StatusChip(
+                        text: (mark.typeNote?.trimmingCharacters(in: .whitespacesAndNewlines)).flatMap { $0.isEmpty ? nil : $0 }
+                            ?? mark.type,
+                        color: .secondary
+                    )
+
+                    if !mark.isPoints, resolvedWeight.source == .explicit, resolvedWeight.value > 1 {
+                        StatusChip(
+                            text: String.localizedStringWithFormat(
+                                String(localized: "detail.weight.decimal"),
+                                GradeMath.formattedWeight(resolvedWeight.value)
+                            ),
+                            color: Brand.secondary
+                        )
+                    }
+
+                    if !mark.isPoints, resolvedWeight.source == .inferred, resolvedWeight.value > 1 {
+                        StatusChip(
+                            text: String.localizedStringWithFormat(
+                                String(localized: "detail.weight.estimated.decimal"),
+                                GradeMath.formattedWeight(resolvedWeight.value)
+                            ),
+                            color: Brand.secondary
+                        )
+                    }
+
+                    if mark.isPoints, let maxPoints = mark.maxPoints {
+                        StatusChip(
+                            text: "\(mark.markText)/\(maxPoints)",
+                            color: .teal
+                        )
+                    }
+                }
             }
+
+            Spacer(minLength: Spacing.sm)
+
+            GradeBadge(text: mark.markText, band: band, size: .regular)
         }
+        .padding(Spacing.md)
     }
 }
 
@@ -292,7 +348,7 @@ private struct ResultView: View {
     }
 }
 
-#Preview("Light") {
+#Preview("Cloud trend") {
     NavigationStack {
         SubjectDetailView(
             viewModel: SubjectDetailViewModel(
@@ -302,13 +358,14 @@ private struct ResultView: View {
                     client: MockBakalariClient(),
                     sessionStore: InMemorySessionStore(session: PreviewData.expiredSession),
                     marksCache: InMemoryMarksCache()
-                )
+                ),
+                trend: PreviewData.subjectGradeTrends.first
             )
         )
     }
 }
 
-#Preview("Dark") {
+#Preview("Marks-derived chart") {
     NavigationStack {
         SubjectDetailView(
             viewModel: SubjectDetailViewModel(
@@ -323,4 +380,20 @@ private struct ResultView: View {
         )
     }
     .preferredColorScheme(.dark)
+}
+
+#Preview("Points only") {
+    NavigationStack {
+        SubjectDetailView(
+            viewModel: SubjectDetailViewModel(
+                subject: PreviewData.pointsOnlySubject,
+                absence: nil,
+                repository: SchoolRepository(
+                    client: MockBakalariClient(),
+                    sessionStore: InMemorySessionStore(session: PreviewData.expiredSession),
+                    marksCache: InMemoryMarksCache()
+                )
+            )
+        )
+    }
 }

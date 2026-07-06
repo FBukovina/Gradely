@@ -1,0 +1,7 @@
+// Public defaults. Put real local values in Config/Secrets.xcconfig.
+REVENUECAT_IOS_API_KEY =
+REVENUECAT_MACOS_API_KEY =
+SUPABASE_URL =
+SUPABASE_ANON_KEY =
+
+#include? "Secrets.xcconfig"

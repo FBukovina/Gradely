@@ -126,6 +126,10 @@ final class SchoolRepository {
         return session
     }
 
+    func currentStoredSession() throws -> StoredSession? {
+        try sessionStore.loadSession()
+    }
+
     func login(schoolURL: String, username: String, password: String) async throws -> StoredSession {
         let step = try await beginLogin(
             provider: .bakalari,
@@ -243,12 +247,20 @@ final class SchoolRepository {
         session.eduPage = try await eduPageClient.switchStudent(studentID, in: eduPage, baseURL: session.baseURL)
         session.accessToken = session.eduPage?.sessionID ?? session.accessToken
         try sessionStore.save(session: session)
-        try marksCache.clear()
-        try absenceCache.clear()
-        try timetableCache.clear()
-        try absenceLessonSelectionStore.clearAll()
+        let scope = SchoolDataScope(session: session)
+        try marksCache.clear(scope: scope)
+        try absenceCache.clear(scope: scope)
+        try timetableCache.clear(scope: scope)
         try? nextLessonWidgetStore?.clear()
         watchSyncService?.update(session: session)
+    }
+
+    func activateLinkedSchoolAccount(_ activation: LinkedSchoolAccountActivation) throws -> StoredSession {
+        let session = activation.makeStoredSession()
+        try sessionStore.save(session: session)
+        watchSyncService?.update(session: session)
+        NotificationCenter.default.post(name: .gradelySchoolAccountDidChange, object: nil)
+        return session
     }
 
     private func mapEduPageLoginResult(
@@ -283,9 +295,16 @@ final class SchoolRepository {
     }
 
     private func clearSchoolDataCaches() throws {
-        try marksCache.clear()
-        try absenceCache.clear()
-        try timetableCache.clear()
+        if let session = try? sessionStore.loadSession() {
+            let scope = SchoolDataScope(session: session)
+            try marksCache.clear(scope: scope)
+            try absenceCache.clear(scope: scope)
+            try timetableCache.clear(scope: scope)
+        } else {
+            try marksCache.clear()
+            try absenceCache.clear()
+            try timetableCache.clear()
+        }
         try absenceLessonSelectionStore.clearAll()
         try? nextLessonWidgetStore?.clear()
     }
@@ -304,17 +323,30 @@ final class SchoolRepository {
     }
 
     func loadCachedMarks() throws -> CachedMarks? {
-        try marksCache.load()
+        guard let session = try sessionStore.loadSession() else {
+            return try marksCache.load()
+        }
+        return try marksCache.load(scope: SchoolDataScope(session: session))
     }
 
     func loadCachedAbsence() throws -> CachedAbsence? {
-        try absenceCache.load()
+        guard let session = try sessionStore.loadSession() else {
+            return try absenceCache.load()
+        }
+        return try absenceCache.load(scope: SchoolDataScope(session: session))
     }
 
     /// Cached week for instant/offline display, if it matches the requested week.
     func loadCachedTimetable(weekContaining date: Date) -> TimetableWeek? {
         let monday = TimetableDates.monday(of: date)
-        guard let cached = try? timetableCache.load(weekStart: monday) else { return nil }
+        let scope = (try? sessionStore.loadSession()).map(SchoolDataScope.init(session:))
+        let cached: CachedTimetable?
+        if let scope {
+            cached = try? timetableCache.load(weekStart: monday, scope: scope)
+        } else {
+            cached = try? timetableCache.load(weekStart: monday)
+        }
+        guard let cached else { return nil }
         let week = TimetableMapper.makeWeek(from: cached.response, weekStart: monday)
         publishNextLessonWidgetSnapshot(for: week, weekStart: monday)
         publishWatchTimetable(for: week, cachedAt: cached.cachedAt)
@@ -326,7 +358,7 @@ final class SchoolRepository {
         let monday = TimetableDates.monday(of: date)
         let session = try await validSession()
         let response = try await fetchTimetable(session: session, weekStart: monday)
-        try? timetableCache.save(response, weekStart: monday)
+        try? timetableCache.save(response, weekStart: monday, scope: SchoolDataScope(session: session))
         let week = TimetableMapper.makeWeek(from: response, weekStart: monday)
         publishNextLessonWidgetSnapshot(for: week, weekStart: monday)
         publishWatchTimetable(for: week, cachedAt: dateProvider())
@@ -340,13 +372,14 @@ final class SchoolRepository {
         _ = user
         let weekStart = TimetableDates.monday(of: date)
         let session = try await validSession()
+        let scope = SchoolDataScope(session: session)
 
         let response: TimetableResponse
-        if let cached = try? timetableCache.load(weekStart: weekStart) {
+        if let cached = try? timetableCache.load(weekStart: weekStart, scope: scope) {
             response = cached.response
         } else {
             response = try await fetchTimetable(session: session, weekStart: weekStart)
-            try? timetableCache.save(response, weekStart: weekStart)
+            try? timetableCache.save(response, weekStart: weekStart, scope: scope)
         }
 
         let marksResponse = try? await marksResponseForAbsenceFallback(session: session)
@@ -372,19 +405,24 @@ final class SchoolRepository {
 
     func loadDashboard(forceRefresh: Bool = false) async throws -> DashboardData {
         if forceRefresh {
-            try marksCache.clear()
+            if let session = try? sessionStore.loadSession() {
+                try marksCache.clear(scope: SchoolDataScope(session: session))
+            } else {
+                try marksCache.clear()
+            }
         }
 
         let session = try await validSession()
         let marksResponse = try await fetchMarks(session: session)
-        try marksCache.save(marksResponse)
+        let scope = SchoolDataScope(session: session)
+        try marksCache.save(marksResponse, scope: scope)
 
         async let absenceResponse = optionalAbsenceResponse(session: session)
         async let user = optionalUser(session: session)
 
         let absence = await absenceResponse
         if let absence {
-            try? absenceCache.save(absence)
+            try? absenceCache.save(absence, scope: scope)
         }
 
         let resolvedDashboardUser = resolvedUser(await user, session: session)
@@ -401,14 +439,19 @@ final class SchoolRepository {
 
     func loadAbsence(forceRefresh: Bool = false) async throws -> AbsenceData {
         if forceRefresh {
-            try absenceCache.clear()
+            if let session = try? sessionStore.loadSession() {
+                try absenceCache.clear(scope: SchoolDataScope(session: session))
+            } else {
+                try absenceCache.clear()
+            }
         }
 
         let session = try await validSession()
+        let scope = SchoolDataScope(session: session)
         async let user = optionalUser(session: session)
 
         let response = try await fetchAbsences(session: session)
-        try? absenceCache.save(response)
+        try? absenceCache.save(response, scope: scope)
 
         let resolvedAbsenceUser = resolvedUser(await user, session: session)
         if let resolvedAbsenceUser {
@@ -756,12 +799,13 @@ final class SchoolRepository {
     }
 
     private func marksResponseForAbsenceFallback(session: StoredSession) async throws -> MarksResponse {
-        if let cached = try? marksCache.load() {
+        let scope = SchoolDataScope(session: session)
+        if let cached = try? marksCache.load(scope: scope) {
             return cached.marksResponse
         }
 
         let response = try await fetchMarks(session: session)
-        try? marksCache.save(response)
+        try? marksCache.save(response, scope: scope)
         return response
     }
 
@@ -805,7 +849,7 @@ final class SchoolRepository {
         }
 
         for weekStart in weekStarts {
-            if let cached = try? timetableCache.load(weekStart: weekStart) {
+            if let cached = try? timetableCache.load(weekStart: weekStart, scope: SchoolDataScope(session: session)) {
                 loaded.append(LoadedTimetableWeek(weekStart: weekStart, response: cached.response))
             } else {
                 missingWeekStarts.append(weekStart)
@@ -891,7 +935,7 @@ final class SchoolRepository {
                 group.cancelAll()
                 return response
             }
-            try? self.timetableCache.save(response, weekStart: weekStart)
+            try? self.timetableCache.save(response, weekStart: weekStart, scope: SchoolDataScope(session: session))
             return TimetableWeekLoadOutcome(weekStart: weekStart, response: response)
         } catch {
             return TimetableWeekLoadOutcome(weekStart: weekStart, response: nil)

@@ -272,6 +272,20 @@ extension GradeBand {
     }
 }
 
+// MARK: - Absence risk styling
+
+extension AbsenceRiskLevel {
+    /// Accent color for risk bars and percentages, reusing the grade palette.
+    var color: Color {
+        switch self {
+        case .overLimit, .high: GradeBand.poor.foregroundColor
+        case .watch: .gradelySystemOrange
+        case .safe: Brand.primary
+        case .unavailable: .secondary
+        }
+    }
+}
+
 // MARK: - Lesson change styling
 
 extension LessonChangeKind {

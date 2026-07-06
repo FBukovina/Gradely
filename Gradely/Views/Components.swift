@@ -95,6 +95,43 @@ struct StatusChip: View {
     }
 }
 
+// MARK: - Risk capsule bar
+
+/// Thin progress capsule showing absence percentage relative to the school
+/// threshold; falls back to a 0–100 % scale when no threshold is known.
+struct RiskCapsuleBar: View {
+    let percentage: Double
+    let threshold: Double?
+    let level: AbsenceRiskLevel
+
+    private var fraction: Double {
+        if let threshold, threshold > 0 {
+            return min(max(percentage / threshold, 0), 1)
+        }
+        return min(max(percentage / 100, 0), 1)
+    }
+
+    private var fillColor: Color {
+        threshold == nil ? Color.secondary.opacity(0.5) : level.color
+    }
+
+    var body: some View {
+        GeometryReader { geo in
+            ZStack(alignment: .leading) {
+                Capsule()
+                    .fill(Color.gradelyTertiaryFill)
+                if fraction > 0 {
+                    Capsule()
+                        .fill(fillColor)
+                        .frame(width: max(geo.size.width * fraction, 6))
+                }
+            }
+        }
+        .frame(height: 6)
+        .accessibilityHidden(true)
+    }
+}
+
 // MARK: - GitHub mark
 
 struct GitHubIcon: View {
@@ -118,8 +155,10 @@ struct AccountMenu: View {
     let user: UserResponse?
     let repository: SchoolRepository
     let supportTipProvider: any SupportTipProviding
+    var accountHub: AnyView?
     let onSignedOut: () -> Void
     @State private var isSupportSheetPresented = false
+    @State private var isAccountHubPresented = false
     @State private var isStudentPickerPresented = false
     @State private var studentSwitchError: String?
 
@@ -144,6 +183,15 @@ struct AccountMenu: View {
                     Label(String(localized: "edupage.children.switch"), systemImage: "person.2")
                 }
                 .accessibilityIdentifier("switchEduPageStudentButton")
+            }
+
+            if accountHub != nil {
+                Button {
+                    isAccountHubPresented = true
+                } label: {
+                    Label(String(localized: "account.menu"), systemImage: "person.crop.circle")
+                }
+                .accessibilityIdentifier("openAccountHubButton")
             }
 
             Button {
@@ -174,6 +222,13 @@ struct AccountMenu: View {
         }
         .accessibilityLabel(String(localized: "account.menu"))
         .accessibilityIdentifier("accountMenuButton")
+        .sheet(isPresented: $isAccountHubPresented) {
+            if let accountHub {
+                accountHub
+            } else {
+                EmptyView()
+            }
+        }
         .sheet(isPresented: $isSupportSheetPresented) {
             SupportTipView(
                 viewModel: SupportTipViewModel(

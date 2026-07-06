@@ -7,3 +7,30 @@ xcuserdata/
 *.xcuserstate
 *.xcscmblueprint
 *.xcresult
+
+# Local environment and API keys
+.env
+.env.*
+!.env.example
+.envrc
+supabase/.temp/
+supabase/.branches/
+supabase/.env
+supabase/.env.*
+!supabase/.env.example
+
+# Local Xcode secret configuration
+Config/Secrets.xcconfig
+**/*.local.xcconfig
+**/*.private.xcconfig
+
+# Private signing, push, and service credentials
+*.p8
+*.pem
+*.key
+*.p12
+*.cer
+*.mobileprovision
+*.provisionprofile
+GoogleService-Info.plist
+Firebase*.plist

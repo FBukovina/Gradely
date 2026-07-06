@@ -113,6 +113,16 @@ final class AbsenceViewModel {
         )
     }
 
+    /// School threshold as a percentage (the API sometimes reports a 0…1 fraction).
+    var normalizedThreshold: Double? {
+        guard let threshold = response?.percentageThreshold, threshold > 0 else { return nil }
+        return threshold <= 1 ? threshold * 100 : threshold
+    }
+
+    func risk(for row: AbsenceSubjectSummary) -> AbsenceRiskSubject {
+        .make(summary: row, threshold: response?.percentageThreshold)
+    }
+
     func loadIfNeeded() async {
         guard !hasLoaded else { return }
         hasLoaded = true

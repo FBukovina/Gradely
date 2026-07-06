@@ -6,6 +6,7 @@ import Observation
 final class SubjectDetailViewModel {
     let subject: Subject
     let absence: AbsencePerSubject?
+    let trend: SubjectGradeTrend?
 
     var theoreticalMark = ""
     var theoreticalWeight = 1
@@ -15,11 +16,13 @@ final class SubjectDetailViewModel {
     private var localTheoreticalAverage: Double?
     private var exactTheoreticalAverage: Double?
     @ObservationIgnored private var predictionTask: Task<Void, Never>?
+    @ObservationIgnored private var cachedAverageTimeline: [AverageTimelineEntry]?
 
-    init(subject: Subject, absence: AbsencePerSubject?, repository: SchoolRepository) {
+    init(subject: Subject, absence: AbsencePerSubject?, repository: SchoolRepository, trend: SubjectGradeTrend? = nil) {
         self.subject = subject
         self.absence = absence
         self.repository = repository
+        self.trend = trend
     }
 
     var currentAverage: Double? {
@@ -34,6 +37,62 @@ final class SubjectDetailViewModel {
         subject.marks.sorted { lhs, rhs in
             (MarkDateFormatter.date(from: lhs.markDate) ?? .distantPast) > (MarkDateFormatter.date(from: rhs.markDate) ?? .distantPast)
         }
+    }
+
+    // MARK: - Average chart
+
+    enum ChartSource {
+        case cloud
+        case local
+        case none
+    }
+
+    /// Running-average series derived from the subject's own marks; empty for
+    /// points-only subjects. Cached — the subject never changes per detail push.
+    var averageTimeline: [AverageTimelineEntry] {
+        if let cachedAverageTimeline {
+            return cachedAverageTimeline
+        }
+        let timeline = AverageTimeline.entries(for: subject)
+        cachedAverageTimeline = timeline
+        return timeline
+    }
+
+    var chartSource: ChartSource {
+        if let trend, trend.events.filter({ $0.averageValue != nil }).count >= 2 {
+            return .cloud
+        }
+        return averageTimeline.isEmpty ? .none : .local
+    }
+
+    var chartPoints: [AveragePoint] {
+        switch chartSource {
+        case .cloud:
+            return (trend?.events ?? [])
+                .compactMap { event in
+                    event.averageValue.map {
+                        AveragePoint(id: event.id, date: event.capturedAt, value: $0)
+                    }
+                }
+                .sorted { $0.date < $1.date }
+        case .local:
+            return averageTimeline.map {
+                AveragePoint(id: $0.markID, date: $0.date, value: $0.runningAverage)
+            }
+        case .none:
+            return []
+        }
+    }
+
+    /// Movement over the charted window; cloud trends carry their own delta.
+    var chartDelta: Double? {
+        if chartSource == .cloud, let delta = trend?.averageDelta {
+            return delta
+        }
+        guard let first = chartPoints.first, let last = chartPoints.last, chartPoints.count > 1 else {
+            return nil
+        }
+        return last.value - first.value
     }
 
     var theoreticalAverage: Double? {

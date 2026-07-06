@@ -8,6 +8,12 @@
 	<array>
 		<string>group.com.bukovinafilip.BakalariMarks</string>
 	</array>
+	<key>aps-environment</key>
+	<string>development</string>
+	<key>com.apple.developer.applesignin</key>
+	<array>
+		<string>Default</string>
+	</array>
 	<key>com.apple.security.network.client</key>
 	<true/>
 </dict>

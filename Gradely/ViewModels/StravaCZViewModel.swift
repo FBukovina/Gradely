@@ -13,9 +13,6 @@ final class StravaCZViewModel {
     var phase: Phase = .checking
     var canteenNumber = ""
     var username = ""
-    var password = ""
-    var isPasswordVisible = false
-    var isConnecting = false
     var isLoading = false
     var isRefreshing = false
     var submittingMealID: Int?
@@ -26,18 +23,23 @@ final class StravaCZViewModel {
     var pendingReplacement: StravaCZReplacementConfirmation?
 
     private let repository: StravaCZRepository
+    private let linkedAccountRepository: LinkedAccountRepository?
     private var hasBootstrapped = false
 
-    init(repository: StravaCZRepository) {
+    init(repository: StravaCZRepository, linkedAccountRepository: LinkedAccountRepository? = nil) {
         self.repository = repository
+        self.linkedAccountRepository = linkedAccountRepository
     }
 
     var isBusy: Bool {
-        isConnecting || isLoading || isRefreshing || submittingMealID != nil
+        isLoading || isRefreshing || submittingMealID != nil
     }
 
     func bootstrap() async {
-        guard !hasBootstrapped else { return }
+        guard !hasBootstrapped else {
+            resyncWithStoredSession()
+            return
+        }
         hasBootstrapped = true
 
         do {
@@ -62,22 +64,41 @@ final class StravaCZViewModel {
         }
     }
 
-    func connect() async {
-        errorMessage = nil
-        isConnecting = true
-        defer { isConnecting = false }
+    func didConnect(_ session: StravaCZStoredSession) async {
+        self.session = session
+        canteenNumber = session.canteenNumber
+        username = session.username
+        phase = .signedIn
 
-        do {
-            session = try await repository.login(
-                canteenNumber: canteenNumber,
-                username: username,
-                password: password
-            )
-            password = ""
+        // Best effort: without a Gradey session (gate off) the meals
+        // connection must still work locally.
+        if let linkedAccountRepository {
+            _ = try? await linkedAccountRepository.linkCurrentStravaCZAccount(session: session)
+        }
+
+        await refresh(forceRefresh: true)
+    }
+
+    /// The account hub can connect or unlink Strava.cz behind this tab's back;
+    /// `.task` re-fires when the tab reappears, so realign phase with the
+    /// keychain session instead of trusting the first bootstrap forever.
+    private func resyncWithStoredSession() {
+        let storedSession = try? repository.bootstrapSession()
+
+        switch (phase, storedSession) {
+        case (.signedOut, .some(let stored)):
+            session = stored
+            canteenNumber = stored.canteenNumber
+            username = stored.username
             phase = .signedIn
-            await refresh(forceRefresh: true)
-        } catch {
-            errorMessage = userFacingMessage(for: error)
+            if let cached = try? repository.loadCachedMenu() {
+                menu = cached.menu
+                lastCacheDate = cached.cachedAt
+            }
+        case (.signedIn, .none):
+            resetSignedOutState()
+        default:
+            break
         }
     }
 
@@ -128,6 +149,11 @@ final class StravaCZViewModel {
     }
 
     func disconnect() async {
+        if let linkedAccountRepository {
+            for account in linkedAccountRepository.loadAccounts() where account.provider == .stravaCZ {
+                try? await linkedAccountRepository.unlinkAccount(id: account.id)
+            }
+        }
         await repository.logout()
         resetSignedOutState()
     }
@@ -177,7 +203,6 @@ final class StravaCZViewModel {
         lastCacheDate = nil
         pendingReplacement = nil
         submittingMealID = nil
-        password = ""
     }
 
     private func userFacingMessage(for error: Error) -> String {

@@ -34,7 +34,9 @@ final class GradelyUITests: XCTestCase {
 
         app.buttons["loginButton"].tap()
 
-        XCTAssertTrue(app.collectionViews["subjectsList"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.scrollViews["todayScrollView"].waitForExistence(timeout: 5))
+        app.tabBars.buttons.element(boundBy: 1).tap()
+        XCTAssertTrue(app.scrollViews["subjectsList"].waitForExistence(timeout: 5))
     }
 
     @MainActor
@@ -58,7 +60,9 @@ final class GradelyUITests: XCTestCase {
 
         app.buttons["loginButton"].tap()
 
-        XCTAssertTrue(app.collectionViews["subjectsList"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.scrollViews["todayScrollView"].waitForExistence(timeout: 5))
+        app.tabBars.buttons.element(boundBy: 1).tap()
+        XCTAssertTrue(app.scrollViews["subjectsList"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.descendants(matching: .any)["subjectRow-math"].exists)
 
         app.descendants(matching: .any)["subjectRow-math"].tap()
@@ -76,7 +80,9 @@ final class GradelyUITests: XCTestCase {
         app.launchArguments = ["-uiTestingMockAPI", "-uiTestingLoggedIn"]
         app.launch()
 
-        XCTAssertTrue(app.collectionViews["subjectsList"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.scrollViews["todayScrollView"].waitForExistence(timeout: 5))
+        app.tabBars.buttons.element(boundBy: 1).tap()
+        XCTAssertTrue(app.scrollViews["subjectsList"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.descendants(matching: .any)["subjectRow-math"].exists)
     }
 
@@ -86,11 +92,11 @@ final class GradelyUITests: XCTestCase {
         app.launchArguments = ["-uiTestingMockAPI", "-uiTestingLoggedIn"]
         app.launch()
 
-        // Starts on the Marks tab.
-        XCTAssertTrue(app.collectionViews["subjectsList"].waitForExistence(timeout: 5))
+        // Starts on the Today tab.
+        XCTAssertTrue(app.scrollViews["todayScrollView"].waitForExistence(timeout: 5))
 
-        // Switch to the Timetable tab (third tab).
-        app.tabBars.buttons.element(boundBy: 2).tap()
+        // Switch to the Timetable tab (fourth tab).
+        app.tabBars.buttons.element(boundBy: 3).tap()
 
         XCTAssertTrue(app.scrollViews["timetableList"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["weekNext"].exists)
@@ -109,7 +115,7 @@ final class GradelyUITests: XCTestCase {
         app.launchArguments = ["-uiTestingMockAPI", "-uiTestingLoggedIn"]
         app.launch()
 
-        XCTAssertTrue(app.collectionViews["subjectsList"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.scrollViews["todayScrollView"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["accountMenuButton"].waitForExistence(timeout: 5))
         app.buttons["accountMenuButton"].tap()
 
@@ -139,9 +145,9 @@ final class GradelyUITests: XCTestCase {
         app.launchArguments = ["-uiTestingMockAPI", "-uiTestingLoggedIn"]
         app.launch()
 
-        XCTAssertTrue(app.collectionViews["subjectsList"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.scrollViews["todayScrollView"].waitForExistence(timeout: 5))
 
-        app.tabBars.buttons.element(boundBy: 3).tap()
+        app.tabBars.buttons.element(boundBy: 4).tap()
         XCTAssertTrue(app.descendants(matching: .any)["stravaCZConnectView"].waitForExistence(timeout: 5))
 
         app.textFields["stravaCZCanteenField"].tap()
@@ -187,8 +193,8 @@ final class GradelyUITests: XCTestCase {
         app.buttons["demoAccountButton"].tap()
         app.buttons["loginButton"].tap()
 
-        XCTAssertTrue(app.collectionViews["subjectsList"].waitForExistence(timeout: 5))
-        app.tabBars.buttons.element(boundBy: 3).tap()
+        XCTAssertTrue(app.scrollViews["todayScrollView"].waitForExistence(timeout: 5))
+        app.tabBars.buttons.element(boundBy: 4).tap()
         XCTAssertTrue(app.descendants(matching: .any)["stravaCZConnectView"].waitForExistence(timeout: 5))
     }
 
@@ -211,11 +217,129 @@ final class GradelyUITests: XCTestCase {
     }
 
     @MainActor
+    func testGradeyIDSignedOutShowsAppleAndDebugBypassOnly() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-uiTestingMockAPI", "-uiTestingRequiresGradeyID", "-uiTestingGradeyIDSignedOut"]
+        app.launch()
+
+        XCTAssertTrue(app.buttons["gradeyIDAppleButton"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["gradeyIDBypassButton"].waitForExistence(timeout: 2))
+        XCTAssertFalse(app.textFields["gradeyIDEmailField"].exists)
+        XCTAssertFalse(app.buttons["gradeyIDMagicLinkButton"].exists)
+        XCTAssertFalse(app.textFields["schoolURLField"].exists)
+    }
+
+    @MainActor
+    func testGradeyAccountHubEmptyStateShowsLinkActions() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-uiTestingMockAPI", "-uiTestingRequiresGradeyID"]
+        app.launch()
+
+        let scrollView = app.scrollViews["accountHubScroll"]
+        XCTAssertTrue(scrollView.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["accountLinkSchoolButton"].exists)
+        XCTAssertTrue(app.buttons["accountLinkStravaCZButton"].exists)
+        XCTAssertTrue(app.descendants(matching: .any)["linkedAccountsEmptyState"].exists)
+        let emptyLinkButton = app.descendants(matching: .any)["accountEmptyLinkSchoolButton"]
+        scroll(scrollView, untilExists: emptyLinkButton)
+        XCTAssertTrue(emptyLinkButton.exists)
+    }
+
+    @MainActor
+    func testGradeyAccountNotificationToggleDisablesLockScreenPicker() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-uiTestingMockAPI", "-uiTestingRequiresGradeyID"]
+        app.launch()
+
+        let scrollView = app.scrollViews["accountHubScroll"]
+        XCTAssertTrue(scrollView.waitForExistence(timeout: 5))
+        if !app.descendants(matching: .any)["lockScreenDetailPicker"].waitForExistence(timeout: 1) {
+            scrollView.swipeUp()
+        }
+
+        let toggle = waitForAny([
+            app.switches["newMarkNotificationsToggle"],
+            app.descendants(matching: .any)["newMarkNotificationsToggle"]
+        ])
+        let picker = waitForAny([
+            app.segmentedControls["lockScreenDetailPicker"],
+            app.descendants(matching: .any)["lockScreenDetailPicker"]
+        ])
+
+        XCTAssertTrue(toggle.exists)
+        XCTAssertTrue(picker.exists)
+        XCTAssertTrue(picker.isEnabled)
+
+        toggle.tap()
+
+        XCTAssertFalse(picker.isEnabled)
+        XCTAssertTrue(app.staticTexts["lockScreenDetailSummary"].waitForExistence(timeout: 2))
+    }
+
+    @MainActor
+    func testGradeyAccountUnlinkRequiresConfirmation() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-uiTestingMockAPI", "-uiTestingRequiresGradeyID", "-uiTestingLinkedAccounts"]
+        app.launch()
+
+        let row = app.descendants(matching: .any)["linkedAccountRow-preview-school"]
+        XCTAssertTrue(row.waitForExistence(timeout: 5))
+
+        let unlinkMenu = waitForAny([
+            app.buttons["linkedAccountUnlinkMenu-preview-school"],
+            app.buttons["More actions"],
+            app.buttons["Další akce"],
+            app.images["linkedAccountUnlinkMenu-preview-school"],
+            app.descendants(matching: .any)["linkedAccountUnlinkMenu-preview-school"]
+        ])
+        XCTAssertTrue(unlinkMenu.exists)
+        XCTAssertTrue(unlinkMenu.isHittable)
+        unlinkMenu.tap()
+
+        let unlinkAction = waitForAny([
+            app.buttons["linkedAccountUnlinkAction-preview-school"],
+            app.buttons["Unlink"],
+            app.buttons["Odpojit"],
+            app.descendants(matching: .any)["linkedAccountUnlinkAction-preview-school"]
+        ])
+        XCTAssertTrue(unlinkAction.exists)
+        unlinkAction.tap()
+
+        let confirmButton = waitForAny([
+            app.buttons["accountUnlinkConfirmButton"],
+            app.buttons["Unlink account"],
+            app.buttons["Odpojit účet"],
+            app.descendants(matching: .any)["accountUnlinkConfirmButton"]
+        ])
+        XCTAssertTrue(confirmButton.exists)
+        XCTAssertTrue(row.exists)
+    }
+
+    @MainActor
     func testLaunchPerformance() throws {
         measure(metrics: [XCTApplicationLaunchMetric()]) {
             let app = XCUIApplication()
             app.launchArguments = ["-uiTestingMockAPI"]
             app.launch()
+        }
+    }
+
+    private func waitForAny(_ candidates: [XCUIElement], timeout: TimeInterval = 5) -> XCUIElement {
+        let deadline = Date().addingTimeInterval(timeout)
+        repeat {
+            if let element = candidates.first(where: { $0.exists }) {
+                return element
+            }
+            RunLoop.current.run(until: Date(timeIntervalSinceNow: 0.1))
+        } while Date() < deadline
+        return candidates[0]
+    }
+
+    private func scroll(_ scrollView: XCUIElement, untilExists element: XCUIElement, attempts: Int = 4) {
+        guard scrollView.exists else { return }
+        for _ in 0..<attempts where !element.exists {
+            scrollView.swipeUp()
+            RunLoop.current.run(until: Date(timeIntervalSinceNow: 0.2))
         }
     }
 }

@@ -9,6 +9,12 @@ import SwiftUI
 
 @main
 struct GradelyApp: App {
+    #if os(iOS)
+    @UIApplicationDelegateAdaptor(GradeyAppDelegate.self) private var appDelegate
+    #elseif os(macOS)
+    @NSApplicationDelegateAdaptor(GradeyMacAppDelegate.self) private var appDelegate
+    #endif
+
     init() {
         RevenueCatConfiguration.configureIfNeeded()
     }

@@ -2,22 +2,17 @@ import SwiftUI
 
 struct AbsenceView: View {
     @State private var viewModel: AbsenceViewModel
-    private let repository: SchoolRepository
-    private let supportTipProvider: any SupportTipProviding
     private let accountHub: AnyView?
-    let onSignedOut: () -> Void
+    private let onOpenGradeyAI: () -> Void
 
     init(
         repository: SchoolRepository,
-        supportTipProvider: any SupportTipProviding = MockSupportTipService(),
         accountHub: AnyView? = nil,
-        onSignedOut: @escaping () -> Void
+        onOpenGradeyAI: @escaping () -> Void = {}
     ) {
         _viewModel = State(initialValue: AbsenceViewModel(repository: repository))
-        self.repository = repository
-        self.supportTipProvider = supportTipProvider
         self.accountHub = accountHub
-        self.onSignedOut = onSignedOut
+        self.onOpenGradeyAI = onOpenGradeyAI
     }
 
     var body: some View {
@@ -27,14 +22,14 @@ struct AbsenceView: View {
                 .gradelyNavigationTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .gradelyTopBarLeading) {
-                        CreditsToolbarButton()
+                        GradeyAIToolbarButton(onOpen: onOpenGradeyAI)
                     }
 
                     ToolbarItem(placement: .gradelyTopBarTrailing) {
                         Button {
                             Task { await viewModel.refresh(forceRefresh: true) }
                         } label: {
-                            Image(systemName: "arrow.clockwise")
+                            GradelyIcon(systemName: "arrow.clockwise")
                                 .symbolEffect(.rotate, options: .repeating, isActive: viewModel.isRefreshing)
                         }
                         .disabled(viewModel.isLoading || viewModel.isRefreshing)
@@ -43,13 +38,7 @@ struct AbsenceView: View {
                     }
 
                     ToolbarItem(placement: .gradelyTopBarTrailing) {
-                        AccountMenu(
-                            user: viewModel.user,
-                            repository: repository,
-                            supportTipProvider: supportTipProvider,
-                            accountHub: accountHub,
-                            onSignedOut: onSignedOut
-                        )
+                        AccountSettingsButton(accountHub: accountHub)
                     }
                 }
                 .task {
@@ -57,6 +46,9 @@ struct AbsenceView: View {
                 }
                 .sheet(isPresented: $viewModel.isManualSelectionSheetPresented) {
                     ManualAbsenceLessonSelectionSheet(viewModel: viewModel)
+                }
+                .sheet(isPresented: $viewModel.isPredictionSheetPresented) {
+                    AbsencePredictionSheet(viewModel: viewModel)
                 }
         }
     }
@@ -73,7 +65,7 @@ struct AbsenceView: View {
             .accessibilityIdentifier("absenceLoadingView")
         } else if let errorMessage = viewModel.errorMessage, viewModel.response == nil {
             ContentUnavailableView {
-                Label(String(localized: "error.title"), systemImage: "exclamationmark.triangle")
+                GradelyLabel(String(localized: "error.title"), systemImage: "exclamationmark.triangle")
             } description: {
                 Text(errorMessage)
             } actions: {
@@ -95,6 +87,15 @@ struct AbsenceView: View {
                     user: viewModel.user,
                     totalCounts: viewModel.totalCounts,
                     threshold: viewModel.normalizedThreshold
+                )
+                AbsencePredictorCard(
+                    result: viewModel.predictionResult,
+                    onOpen: {
+                        viewModel.openPredictionSheet()
+                    },
+                    onClear: {
+                        viewModel.clearPredictionSelections()
+                    }
                 )
                 Picker("absence.segment.title", selection: $viewModel.selectedSegment) {
                     ForEach(AbsenceViewModel.Segment.allCases) { segment in
@@ -150,7 +151,7 @@ struct AbsenceView: View {
         .refreshable {
             await viewModel.refresh(forceRefresh: true)
         }
-        .background(Color.gradelyGroupedBackground.ignoresSafeArea())
+        .gradelyScreenBackground()
         .accessibilityIdentifier("absenceList")
     }
 }
@@ -164,7 +165,7 @@ private struct AbsenceHeader: View {
         Card(padding: Spacing.lg) {
             VStack(alignment: .leading, spacing: Spacing.md) {
                 HStack(alignment: .center, spacing: Spacing.md) {
-                    Image(systemName: "calendar.badge.exclamationmark")
+                    GradelyIcon(systemName: "calendar.badge.exclamationmark")
                         .font(.title3.weight(.bold))
                         .foregroundStyle(Brand.primary)
                         .frame(width: 46, height: 46)
@@ -483,7 +484,7 @@ private struct SubjectManualResolutionCallout: View {
     var body: some View {
         Card {
             VStack(alignment: .leading, spacing: Spacing.sm) {
-                Label("absence.manual.callout.title", systemImage: "hand.tap")
+                GradelyLabel("absence.manual.callout.title", systemImage: "hand.tap")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(Brand.primary)
 
@@ -515,7 +516,7 @@ private struct ManualAbsenceLessonSelectionSheet: View {
             List {
                 if let message = viewModel.manualSelectionErrorMessage {
                     Section {
-                        Label(message, systemImage: "exclamationmark.triangle")
+                        GradelyLabel(message, systemImage: "exclamationmark.triangle")
                             .foregroundStyle(GradeBand.poor.foregroundColor)
                     }
                 }
@@ -542,10 +543,10 @@ private struct ManualAbsenceLessonSelectionSheet: View {
                                     Spacer()
 
                                     if viewModel.isManualLessonSelected(lesson.id, dateKey: day.dateKey) {
-                                        Image(systemName: "checkmark.circle.fill")
+                                        GradelyIcon(systemName: "checkmark.circle.fill")
                                             .foregroundStyle(Brand.primary)
                                     } else {
-                                        Image(systemName: "circle")
+                                        GradelyIcon(systemName: "circle")
                                             .foregroundStyle(.tertiary)
                                     }
                                 }
@@ -629,7 +630,7 @@ private struct SubjectResolutionWarningView: View {
 
     var body: some View {
         Card {
-            Label(message, systemImage: "exclamationmark.triangle")
+            GradelyLabel(message, systemImage: "exclamationmark.triangle")
                 .font(.subheadline)
                 .foregroundStyle(GradeBand.average.foregroundColor)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -645,7 +646,7 @@ private struct SubjectResolutionErrorView: View {
     var body: some View {
         Card {
             VStack(alignment: .leading, spacing: Spacing.sm) {
-                Label(String(localized: "absence.subjects.error.title"), systemImage: "exclamationmark.triangle")
+                GradelyLabel(String(localized: "absence.subjects.error.title"), systemImage: "exclamationmark.triangle")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(GradeBand.poor.foregroundColor)
 
@@ -668,7 +669,7 @@ private struct EmptyAbsenceSection: View {
     var body: some View {
         Card {
             HStack(spacing: Spacing.sm) {
-                Image(systemName: "calendar.badge.checkmark")
+                GradelyIcon(systemName: "calendar.badge.checkmark")
                     .foregroundStyle(Brand.primary)
                 Text(title)
                     .font(.subheadline)
@@ -762,7 +763,7 @@ private extension AbsenceViewModel.Segment {
                 cachedAbsence: CachedAbsence(response: PreviewData.riskAbsenceResponse, cachedAt: Date())
             )
         )
-    ) {}
+    )
 }
 
 #Preview("Dark") {
@@ -775,6 +776,6 @@ private extension AbsenceViewModel.Segment {
                 cachedAbsence: CachedAbsence(response: PreviewData.riskAbsenceResponse, cachedAt: Date())
             )
         )
-    ) {}
+    )
     .preferredColorScheme(.dark)
 }

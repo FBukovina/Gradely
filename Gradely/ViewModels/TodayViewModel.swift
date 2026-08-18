@@ -1,6 +1,27 @@
 import Foundation
 import Observation
 
+struct TodayNewMark: Equatable, Identifiable {
+    let id: String
+    let markText: String
+    let subjectName: String
+    let detectedAt: Date?
+
+    init(event: NewMarkEvent) {
+        id = "history-\(event.id)"
+        markText = event.markText
+        subjectName = event.subjectAbbrev ?? event.subjectName ?? "school"
+        detectedAt = event.createdAt
+    }
+
+    init(mark: Mark, subject: Subject) {
+        id = "mark-\(mark.id)"
+        markText = mark.displayText
+        subjectName = subject.trimmedAbbrev.isEmpty ? subject.trimmedName : subject.trimmedAbbrev
+        detectedAt = MarkDateFormatter.date(from: mark.markDate)
+    }
+}
+
 struct TodaySnapshot: Equatable {
     var activeAccount: LinkedAccount?
     var linkedSchoolAccounts: [LinkedAccount]
@@ -37,6 +58,21 @@ struct TodaySnapshot: Equatable {
     var topTrends: [SubjectGradeTrend] {
         gradeHistory.trends.filter { ($0.averageDelta ?? 0) != 0 }.prefix(4).map { $0 }
     }
+
+    /// The school API's `IsNew` flag is available before the cloud polling
+    /// service has enough snapshots to produce new-mark events or trends.
+    var newMarks: [TodayNewMark] {
+        let cloudMarks = gradeHistory.recentNewMarkEvents.map(TodayNewMark.init(event:))
+        guard cloudMarks.isEmpty else { return cloudMarks }
+
+        return subjects
+            .flatMap { subject in
+                subject.marks
+                    .filter(\.isNew)
+                    .map { TodayNewMark(mark: $0, subject: subject) }
+            }
+            .sorted { ($0.detectedAt ?? .distantPast) > ($1.detectedAt ?? .distantPast) }
+    }
 }
 
 @MainActor
@@ -47,23 +83,39 @@ final class TodayViewModel {
     var isRefreshing = false
     var isActivatingAccountID: String?
     var errorMessage: String?
+    private(set) var hasCheckedLinkedAccountStatus = false
 
     private let repository: SchoolRepository
     private let stravaCZRepository: StravaCZRepository
     private let linkedAccountRepository: LinkedAccountRepository
     private let historyRepository: GradeyHistoryRepository
+    private let accountSettingsClient: (any GradeyAccountSettingsClient)?
+    private let gradeyAuthClient: (any GradeyAuthClient)?
     private var hasLoaded = false
 
     init(
         repository: SchoolRepository,
         stravaCZRepository: StravaCZRepository,
         linkedAccountRepository: LinkedAccountRepository,
-        historyRepository: GradeyHistoryRepository
+        historyRepository: GradeyHistoryRepository,
+        accountSettingsClient: (any GradeyAccountSettingsClient)? = nil,
+        gradeyAuthClient: (any GradeyAuthClient)? = nil
     ) {
         self.repository = repository
         self.stravaCZRepository = stravaCZRepository
         self.linkedAccountRepository = linkedAccountRepository
         self.historyRepository = historyRepository
+        self.accountSettingsClient = accountSettingsClient
+        self.gradeyAuthClient = gradeyAuthClient
+    }
+
+    var accountRequiringReconnect: LinkedAccount? {
+        guard hasCheckedLinkedAccountStatus else { return nil }
+        let candidates = snapshot.linkedSchoolAccounts.filter {
+            $0.status == .actionRequired || $0.status == .failed
+        }
+        return candidates.first(where: { $0.id == snapshot.activeAccount?.id })
+            ?? candidates.first
     }
 
     func loadIfNeeded() async {
@@ -85,6 +137,7 @@ final class TodayViewModel {
             isRefreshing = false
         }
 
+        await refreshLinkedAccountStatus()
         snapshot.linkedSchoolAccounts = linkedSchoolAccounts()
         snapshot.activeAccount = activeLinkedAccount()
 
@@ -122,6 +175,38 @@ final class TodayViewModel {
         }
     }
 
+    func reconnect(_ account: LinkedAccount) async -> Bool {
+        errorMessage = nil
+
+        do {
+            let session = try await repository.validSession()
+            let user = await repository.loadUser()
+            let reconnectedAccount = try await linkedAccountRepository.reconnectSchoolAccount(
+                id: account.id,
+                session: session,
+                user: user
+            )
+            try repository.associateCurrentSession(with: reconnectedAccount)
+            snapshot.linkedSchoolAccounts = linkedSchoolAccounts()
+            snapshot.activeAccount = activeLinkedAccount()
+            return true
+        } catch {
+            errorMessage = userFacingMessage(for: error)
+            return false
+        }
+    }
+
+    func loginPrefill(for account: LinkedAccount) -> SchoolLoginPrefill? {
+        guard let session = try? repository.currentStoredSession() else {
+            return nil
+        }
+        return SchoolLoginPrefill(
+            session: session,
+            account: account,
+            allowsUnscopedSession: snapshot.linkedSchoolAccounts.count == 1
+        )
+    }
+
     func clearError() {
         errorMessage = nil
     }
@@ -150,7 +235,7 @@ final class TodayViewModel {
             snapshot.stravaSession = session
         }
         if let menu = try? stravaCZRepository.loadCachedMenu()?.menu {
-            snapshot.orderedMeal = preferredMeal(from: menu)
+            snapshot.orderedMeal = Self.preferredMeal(from: menu)
         }
     }
 
@@ -181,7 +266,7 @@ final class TodayViewModel {
         do {
             let data = try await stravaCZRepository.loadMenu(forceRefresh: false)
             snapshot.stravaSession = data.session
-            snapshot.orderedMeal = preferredMeal(from: data.menu)
+            snapshot.orderedMeal = Self.preferredMeal(from: data.menu)
         } catch {
             if let session = try? stravaCZRepository.bootstrapSession() {
                 snapshot.stravaSession = session
@@ -200,6 +285,22 @@ final class TodayViewModel {
         }
     }
 
+    private func refreshLinkedAccountStatus() async {
+        defer { hasCheckedLinkedAccountStatus = true }
+        guard let accountSettingsClient, let gradeyAuthClient else { return }
+
+        do {
+            let gradeySession = try await gradeyAuthClient.validSession()
+            let settings = try await accountSettingsClient.fetchAccountSettings(
+                gradeySession: gradeySession
+            )
+            linkedAccountRepository.replaceLocalAccounts(settings.linkedAccounts)
+        } catch {
+            // Account recovery should still work from the last cached status
+            // while the Gradey account service is temporarily unavailable.
+        }
+    }
+
     private func linkedSchoolAccounts() -> [LinkedAccount] {
         linkedAccountRepository.loadAccounts()
             .filter { $0.provider.isSchoolProvider }
@@ -215,8 +316,9 @@ final class TodayViewModel {
         return accounts.first
     }
 
-    private func preferredMeal(from menu: StravaCZMenu) -> StravaCZMeal? {
-        menu.days.first(where: \.ordered)?.orderedMainMeal ?? menu.orderedMeals.first
+    static func preferredMeal(from menu: StravaCZMenu, on date: Date = Date()) -> StravaCZMeal? {
+        let todayKey = TimetableDates.apiDateString(date)
+        return menu.days.first(where: { $0.dateKey == todayKey })?.orderedMainMeal
     }
 
     private func userFacingMessage(for error: Error) -> String {

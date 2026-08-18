@@ -2,6 +2,7 @@ import Foundation
 import Testing
 @testable import Gradely
 
+@Suite(.serialized)
 @MainActor
 struct SchoolDirectoryTests {
     @Test func providerDecodesMunicipalityAndSchoolPayloads() async throws {
@@ -64,6 +65,120 @@ struct SchoolDirectoryTests {
         #expect(try cache.load()?.schools == schools)
     }
 
+    @Test func providerMergesPartialRefreshWithoutReplacingCachedDirectory() async throws {
+        let serviceURL = URL(string: "https://example.test/api/v1/municipality")!
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [SchoolDirectoryURLProtocol.self]
+        let urlSession = URLSession(configuration: configuration)
+
+        SchoolDirectoryURLProtocol.responses = [
+            "https://example.test/api/v1/municipality": """
+            [
+              { "name": "Praha", "schoolCount": 1 },
+              { "name": "Brno", "schoolCount": 1 }
+            ]
+            """,
+            "https://example.test/api/v1/municipality?name=Praha": """
+            {
+              "name": "Praha",
+              "schools": [
+                {
+                  "id": "new-school",
+                  "name": "New School",
+                  "schoolUrl": "https://new-school.bakalari.cz"
+                }
+              ]
+            }
+            """
+        ].compactMapValues { $0.data(using: .utf8) }
+
+        let cachedSchools = PreviewData.schoolDirectorySchools
+        let cache = InMemorySchoolDirectoryCache()
+        try cache.save(cachedSchools)
+        let provider = URLSessionSchoolDirectoryProvider(
+            urlSession: urlSession,
+            cache: cache,
+            serviceURL: serviceURL,
+            maxConcurrentTownRequests: 1
+        )
+
+        let refreshedSchools = try await provider.refreshDirectory()
+
+        #expect(refreshedSchools.count == cachedSchools.count + 1)
+        #expect(refreshedSchools.contains { $0.id == "new-school" })
+        #expect(try cache.load()?.schools == cachedSchools)
+    }
+
+    @Test func providerReturnsLowCoverageResultsWithoutCachingThem() async throws {
+        let serviceURL = URL(string: "https://example.test/api/v1/municipality")!
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [SchoolDirectoryURLProtocol.self]
+        let urlSession = URLSession(configuration: configuration)
+
+        SchoolDirectoryURLProtocol.responses = [
+            "https://example.test/api/v1/municipality": """
+            [
+              { "name": "Praha", "schoolCount": 1 },
+              { "name": "Brno", "schoolCount": 9 }
+            ]
+            """,
+            "https://example.test/api/v1/municipality?name=Praha": """
+            {
+              "name": "Praha",
+              "schools": [
+                {
+                  "id": "available",
+                  "name": "Available School",
+                  "schoolUrl": "https://available.bakalari.cz"
+                }
+              ]
+            }
+            """
+        ].compactMapValues { $0.data(using: .utf8) }
+
+        let cache = InMemorySchoolDirectoryCache()
+        let provider = URLSessionSchoolDirectoryProvider(
+            urlSession: urlSession,
+            cache: cache,
+            serviceURL: serviceURL,
+            maxConcurrentTownRequests: 1,
+            maximumTownRequestAttempts: 1
+        )
+
+        let schools = try await provider.refreshDirectory()
+
+        #expect(schools.map(\.id) == ["available"])
+        #expect(try cache.load() == nil)
+    }
+
+    @Test func providerReturnsCachedDirectoryWhenTownBatchTimesOut() async throws {
+        let serviceURL = URL(string: "https://slow.example.test/api/v1/municipality")!
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [SlowSchoolDirectoryURLProtocol.self]
+        let urlSession = URLSession(configuration: configuration)
+        let cachedSchools = PreviewData.schoolDirectorySchools
+        let cache = InMemorySchoolDirectoryCache()
+        try cache.save(cachedSchools)
+        let provider = URLSessionSchoolDirectoryProvider(
+            urlSession: urlSession,
+            cache: cache,
+            serviceURL: serviceURL,
+            maxConcurrentTownRequests: 1,
+            requestTimeout: 5,
+            townBatchTimeout: .milliseconds(100),
+            maximumTownRequestAttempts: 1
+        )
+
+        let clock = ContinuousClock()
+        let startedAt = clock.now
+        let schools = try await provider.refreshDirectory()
+        let elapsed = startedAt.duration(to: clock.now)
+
+        #expect(schools.sorted { $0.id < $1.id } == cachedSchools.sorted { $0.id < $1.id })
+        #expect(elapsed < .seconds(2))
+        #expect(try cache.load()?.schools == cachedSchools)
+    }
+
     @Test func schoolDirectoryCacheSavesLoadsAndReportsStaleData() throws {
         let directory = FileManager.default.temporaryDirectory
             .appending(path: UUID().uuidString, directoryHint: .isDirectory)
@@ -113,6 +228,106 @@ struct SchoolDirectoryTests {
 
         let urlResults = SchoolDirectorySearch.results(for: "zseden", in: schools)
         #expect(urlResults.map(\.id) == ["eden"])
+    }
+
+    @Test func searchMatchesCzechSchoolAcronyms() {
+        let sssvt = SchoolDirectorySchool(
+            id: "sssvt",
+            name: "Soukromá střední škola výpočetní techniky Praha",
+            town: "Praha 9",
+            schoolURL: "https://school.example.cz"
+        )
+        let unrelated = SchoolDirectorySchool(
+            id: "unrelated",
+            name: "Střední průmyslová škola elektrotechnická",
+            town: "Praha 10",
+            schoolURL: "https://other.example.cz"
+        )
+
+        #expect(SchoolDirectorySearch.results(for: "SSSVT", in: [unrelated, sssvt]).map(\.id) == ["sssvt"])
+        #expect(SchoolDirectorySearch.results(for: "SSŠVT", in: [unrelated, sssvt]).map(\.id) == ["sssvt"])
+    }
+
+    @Test func loginViewModelRefreshesLegacyPartialDirectory() async {
+        let partialSchool = SchoolDirectorySchool(
+            id: "partial",
+            name: "Soukromá střední odborná škola Břeclav, s.r.o.",
+            town: "Břeclav",
+            schoolURL: "https://ssos-bv.bakalari.cz"
+        )
+        let legacyDirectory = CachedSchoolDirectory(
+            schools: [partialSchool],
+            cachedAt: Date(),
+            formatVersion: nil
+        )
+        let refreshedSchools = PreviewData.schoolDirectorySchools
+        let provider = MockSchoolDirectoryProvider(
+            cachedDirectory: legacyDirectory,
+            refreshResult: refreshedSchools
+        )
+        let repository = SchoolRepository(
+            client: MockBakalariClient(),
+            sessionStore: InMemorySessionStore(),
+            marksCache: InMemoryMarksCache()
+        )
+        let viewModel = LoginViewModel(repository: repository, schoolDirectoryProvider: provider)
+
+        await viewModel.loadSchoolDirectoryIfNeeded()
+
+        #expect(provider.didRefresh)
+        #expect(viewModel.directorySchools == refreshedSchools)
+    }
+
+    @Test func loginViewModelKeepsLegacyCacheWhenRefreshFails() async {
+        let partialSchool = SchoolDirectorySchool(
+            id: "partial",
+            name: "Soukromá střední odborná škola Břeclav, s.r.o.",
+            town: "Břeclav",
+            schoolURL: "https://ssos-bv.bakalari.cz"
+        )
+        let provider = MockSchoolDirectoryProvider(
+            cachedDirectory: CachedSchoolDirectory(
+                schools: [partialSchool],
+                cachedAt: Date(),
+                formatVersion: nil
+            ),
+            refreshError: SchoolDirectoryError.invalidResponse
+        )
+        let repository = SchoolRepository(
+            client: MockBakalariClient(),
+            sessionStore: InMemorySessionStore(),
+            marksCache: InMemoryMarksCache()
+        )
+        let viewModel = LoginViewModel(repository: repository, schoolDirectoryProvider: provider)
+
+        await viewModel.loadSchoolDirectoryIfNeeded()
+
+        #expect(provider.didRefresh)
+        #expect(viewModel.directorySchools == [partialSchool])
+        #expect(viewModel.schoolLookupErrorMessage == nil)
+    }
+
+    @Test func loginViewModelCanRetryAfterInitialDirectoryFailure() async {
+        let provider = MockSchoolDirectoryProvider(
+            refreshError: SchoolDirectoryError.invalidResponse
+        )
+        let repository = SchoolRepository(
+            client: MockBakalariClient(),
+            sessionStore: InMemorySessionStore(),
+            marksCache: InMemoryMarksCache()
+        )
+        let viewModel = LoginViewModel(repository: repository, schoolDirectoryProvider: provider)
+
+        await viewModel.loadSchoolDirectoryIfNeeded()
+        #expect(viewModel.directorySchools.isEmpty)
+        #expect(viewModel.schoolLookupErrorMessage != nil)
+
+        provider.refreshError = nil
+        provider.refreshResult = PreviewData.schoolDirectorySchools
+        await viewModel.retrySchoolDirectory()
+
+        #expect(viewModel.directorySchools == PreviewData.schoolDirectorySchools)
+        #expect(viewModel.schoolLookupErrorMessage == nil)
     }
 
     @Test func loginViewModelSelectsSchoolAndKeepsManualFallbackWhenRefreshFails() async {
@@ -188,4 +403,69 @@ private final class SchoolDirectoryURLProtocol: URLProtocol {
     }
 
     override func stopLoading() {}
+}
+
+private final class SlowSchoolDirectoryURLProtocol: URLProtocol {
+    private var delayedResponse: DispatchWorkItem?
+
+    override class func canInit(with request: URLRequest) -> Bool {
+        true
+    }
+
+    override class func canonicalRequest(for request: URLRequest) -> URLRequest {
+        request
+    }
+
+    override func startLoading() {
+        guard let url = request.url else {
+            client?.urlProtocol(self, didFailWithError: SchoolDirectoryError.invalidResponse)
+            return
+        }
+
+        if URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems == nil {
+            let data = """
+            [
+              { "name": "Praha", "schoolCount": 1 }
+            ]
+            """.data(using: .utf8)!
+            send(data: data, for: url)
+            return
+        }
+
+        let workItem = DispatchWorkItem { [weak self] in
+            guard let self else { return }
+            let data = """
+            {
+              "name": "Praha",
+              "schools": [
+                {
+                  "id": "delayed",
+                  "name": "Delayed School",
+                  "schoolUrl": "https://delayed.bakalari.cz"
+                }
+              ]
+            }
+            """.data(using: .utf8)!
+            self.send(data: data, for: url)
+        }
+        delayedResponse = workItem
+        DispatchQueue.global().asyncAfter(deadline: .now() + 5, execute: workItem)
+    }
+
+    override func stopLoading() {
+        delayedResponse?.cancel()
+        delayedResponse = nil
+    }
+
+    private func send(data: Data, for url: URL) {
+        let response = HTTPURLResponse(
+            url: url,
+            statusCode: 200,
+            httpVersion: nil,
+            headerFields: ["Content-Type": "application/json"]
+        )!
+        client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
+        client?.urlProtocol(self, didLoad: data)
+        client?.urlProtocolDidFinishLoading(self)
+    }
 }

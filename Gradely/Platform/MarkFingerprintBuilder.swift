@@ -90,18 +90,50 @@ enum NewMarkNotificationFormatter {
         "New mark"
     }
 
+    static func title(for events: [NewMarkEvent]) -> String {
+        events.count == 1 ? "New mark" : "\(events.count) new marks"
+    }
+
     static func body(for event: NewMarkEvent, preferences: NotificationPreferences) -> String {
         switch preferences.lockScreenDetail {
         case .privateSummary:
             return "Open Gradey to view it"
         case .markAndSubject:
-            return "\(event.markText) from \(subjectLabel(for: event))"
+            return "\(event.markText) from \(abbreviatedSubjectLabel(for: event))"
         case .fullDetails:
-            return "\(event.markText) from \(subjectLabel(for: event))"
+            return "\(event.markText) from \(fullSubjectLabel(for: event))"
         }
     }
 
-    private static func subjectLabel(for event: NewMarkEvent) -> String {
+    static func summaryBody(for events: [NewMarkEvent], preferences: NotificationPreferences) -> String {
+        guard !events.isEmpty else { return "Open Gradey to view your marks" }
+        if events.count == 1, let event = events.first {
+            return body(for: event, preferences: preferences)
+        }
+
+        switch preferences.lockScreenDetail {
+        case .privateSummary:
+            return "Open Gradey to view them"
+        case .markAndSubject:
+            return summaryBody(for: events, label: abbreviatedSubjectLabel)
+        case .fullDetails:
+            return summaryBody(for: events, label: fullSubjectLabel)
+        }
+    }
+
+    private static func summaryBody(
+        for events: [NewMarkEvent],
+        label: (NewMarkEvent) -> String
+    ) -> String {
+        var seen = Set<String>()
+        let subjects = events.map(label).filter { seen.insert($0).inserted }
+        let visibleSubjects = subjects.prefix(3).joined(separator: ", ")
+        guard !visibleSubjects.isEmpty else { return "\(events.count) new marks are ready" }
+        let suffix = subjects.count > 3 ? " +\(subjects.count - 3)" : ""
+        return "\(events.count) new marks in \(visibleSubjects)\(suffix)"
+    }
+
+    private static func abbreviatedSubjectLabel(for event: NewMarkEvent) -> String {
         if let abbrev = event.subjectAbbrev?.trimmingCharacters(in: .whitespacesAndNewlines), !abbrev.isEmpty {
             return abbrev
         }
@@ -109,6 +141,13 @@ enum NewMarkNotificationFormatter {
             return name
         }
         return "school"
+    }
+
+    private static func fullSubjectLabel(for event: NewMarkEvent) -> String {
+        if let name = event.subjectName?.trimmingCharacters(in: .whitespacesAndNewlines), !name.isEmpty {
+            return name
+        }
+        return abbreviatedSubjectLabel(for: event)
     }
 }
 

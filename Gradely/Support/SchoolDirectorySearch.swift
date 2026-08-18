@@ -38,6 +38,14 @@ enum SchoolDirectorySearch {
             .lowercased()
     }
 
+    private static func acronym(for value: String) -> String {
+        normalized(value)
+            .split { !$0.isLetter && !$0.isNumber }
+            .compactMap(\.first)
+            .map(String.init)
+            .joined()
+    }
+
     private static func score(
         _ school: SchoolDirectorySchool,
         query: String,
@@ -46,11 +54,13 @@ enum SchoolDirectorySearch {
         let name = normalized(school.name)
         let town = normalized(school.town)
         let url = normalized(school.schoolURL)
-        let searchable = [name, town, url].joined(separator: " ")
+        let nameAcronym = acronym(for: name)
+        let searchable = [name, town, url, nameAcronym].joined(separator: " ")
 
         guard tokens.allSatisfy({ searchable.contains($0) }) else { return nil }
 
         if name == query { return 0 }
+        if nameAcronym == query || nameAcronym.hasPrefix(query) { return 5 }
         if name.hasPrefix(query) { return 10 }
         if town.hasPrefix(query) { return 20 }
         if name.contains(query) { return 30 }

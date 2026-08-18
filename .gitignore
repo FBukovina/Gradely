@@ -34,3 +34,6 @@ Config/Secrets.xcconfig
 *.provisionprofile
 GoogleService-Info.plist
 Firebase*.plist
+
+# Local editor/tooling
+.commandcode/

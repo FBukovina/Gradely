@@ -36,7 +36,7 @@ struct AbsenceRiskSummary: Codable, Equatable, Sendable {
     }
 
     static func make(response: AbsenceResponse, subjects: [AbsencePerSubject]) -> AbsenceRiskSummary {
-        let threshold = response.percentageThreshold
+        let threshold = normalizedThreshold(response.percentageThreshold)
         let risks = subjects.map { subject in
             let percentage = subject.absencePercentage
             let level = level(for: percentage, threshold: threshold)
@@ -60,6 +60,11 @@ struct AbsenceRiskSummary: Codable, Equatable, Sendable {
         }
 
         return AbsenceRiskSummary(threshold: threshold, subjects: risks)
+    }
+
+    static func normalizedThreshold(_ threshold: Double?) -> Double? {
+        guard let threshold, threshold > 0 else { return nil }
+        return threshold <= 1 ? threshold * 100 : threshold
     }
 
     static func level(for percentage: Double, threshold: Double?) -> AbsenceRiskLevel {
@@ -108,10 +113,7 @@ extension AbsenceRiskSubject {
     /// thresholds (0…1) to percentages the same way `AbsenceSubjectSummary` does
     /// so the bar, percentage tint, and `exceedsThreshold` never disagree.
     static func make(summary: AbsenceSubjectSummary, threshold: Double?) -> AbsenceRiskSubject {
-        let normalizedThreshold = threshold.flatMap { value -> Double? in
-            guard value > 0 else { return nil }
-            return value <= 1 ? value * 100 : value
-        }
+        let normalizedThreshold = AbsenceRiskSummary.normalizedThreshold(threshold)
         return AbsenceRiskSubject(
             subjectName: summary.subjectName,
             missedLessons: summary.base,

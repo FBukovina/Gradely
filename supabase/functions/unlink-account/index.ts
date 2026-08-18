@@ -6,23 +6,21 @@ Deno.serve(async (req) => {
   if (options) return options;
 
   try {
+    if (req.method !== "POST") {
+      return json({ error: "Method not allowed" }, 405);
+    }
     const { supabase, user } = await requireUser(req);
     const { id } = await req.json();
-    if (!id) return json({ error: "Missing linked account id" }, 422);
+    if (typeof id !== "string" || id.length === 0) {
+      return json({ error: "Missing linked account id" }, 422);
+    }
 
-    const { error } = await supabase
-      .from("linked_accounts")
-      .delete()
-      .eq("id", id)
-      .eq("user_id", user.id);
-    if (error) throw error;
-
-    await supabase.from("account_audit_logs").insert({
-      user_id: user.id,
-      linked_account_id: id,
-      event_name: "unlinked_account",
-      metadata: {},
+    const { data, error } = await supabase.rpc("unlink_owned_account", {
+      p_user_id: user.id,
+      p_account_id: id,
     });
+    if (error) throw error;
+    if (!data) return json({ error: "Linked account not found" }, 404);
 
     return json({});
   } catch (error) {

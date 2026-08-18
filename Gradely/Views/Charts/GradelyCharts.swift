@@ -51,7 +51,6 @@ struct AverageHistoryChart: View {
                         yStart: .value("Baseline", yDomain[0]),
                         yEnd: .value("Average", point.value)
                     )
-                    .interpolationMethod(.monotone)
                     .foregroundStyle(
                         LinearGradient(
                             colors: [lineColor.opacity(0.22), .clear],

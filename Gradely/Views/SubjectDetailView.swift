@@ -20,7 +20,7 @@ struct SubjectDetailView: View {
             .frame(maxWidth: 640)
             .frame(maxWidth: .infinity)
         }
-        .background(Color.gradelyGroupedBackground.ignoresSafeArea())
+        .gradelyScreenBackground()
         .scrollDismissesKeyboard(.interactively)
         .navigationTitle(viewModel.subject.trimmedName)
         .gradelyNavigationTitleDisplayMode(.large)
@@ -148,7 +148,7 @@ private struct AverageHero: View {
 
     private func heroChip(_ text: String, systemImage: String) -> some View {
         HStack(spacing: Spacing.xs) {
-            Image(systemName: systemImage)
+            GradelyIcon(systemName: systemImage)
                 .font(.caption2.weight(.bold))
             Text(text)
                 .font(.caption.weight(.semibold))
@@ -290,7 +290,7 @@ private struct TheoreticalCalculatorView: View {
 
     private func stepButton(systemImage: String, disabled: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Image(systemName: systemImage)
+            GradelyIcon(systemName: systemImage)
                 .font(.headline.weight(.bold))
                 .foregroundStyle(disabled ? AnyShapeStyle(.tertiary) : AnyShapeStyle(Brand.primary))
                 .frame(width: 36, height: 32)

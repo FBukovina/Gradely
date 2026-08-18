@@ -263,6 +263,22 @@ final class SchoolRepository {
         return session
     }
 
+    /// Keeps a freshly authenticated local provider session associated with its
+    /// existing Gradey cloud account after a reconnect.
+    func associateCurrentSession(with account: LinkedAccount) throws {
+        guard var session = try sessionStore.loadSession(),
+              account.provider == LinkedAccountProvider(schoolProvider: session.provider)
+        else {
+            throw AppError.notLoggedIn
+        }
+
+        session.linkedAccountID = account.id
+        session.linkedAccountDisplayName = account.displayName
+        session.linkedAccountSchoolName = account.schoolName
+        try sessionStore.save(session: session)
+        watchSyncService?.update(session: session)
+    }
+
     private func mapEduPageLoginResult(
         _ result: EduPageLoginResult,
         baseURL: URL
@@ -309,16 +325,20 @@ final class SchoolRepository {
         try? nextLessonWidgetStore?.clear()
     }
 
-    func logout() throws {
-        try sessionStore.clearSession()
+    func clearLocalCaches() throws {
         try marksCache.clear()
         try absenceCache.clear()
         try timetableCache.clear()
         try? nextLessonWidgetStore?.clear()
+        try absenceLessonSelectionStore.clearAll()
         #if canImport(WidgetKit) && (os(iOS) || os(macOS))
         WidgetCenter.shared.reloadTimelines(ofKind: NextLessonWidgetConstants.widgetKind)
         #endif
-        try absenceLessonSelectionStore.clearAll()
+    }
+
+    func logout() throws {
+        try sessionStore.clearSession()
+        try clearLocalCaches()
         watchSyncService?.publishSignedOut()
     }
 
@@ -609,7 +629,8 @@ final class SchoolRepository {
             return try persistBakalariSession(
                 from: response,
                 baseURL: session.baseURL,
-                credentials: session.bakalari
+                credentials: session.bakalari,
+                metadataFrom: session
             )
         } catch {
             guard isRefreshTokenRejected(error), let credentials = session.bakalari else {
@@ -623,7 +644,8 @@ final class SchoolRepository {
             return try persistBakalariSession(
                 from: response,
                 baseURL: session.baseURL,
-                credentials: credentials
+                credentials: credentials,
+                metadataFrom: session
             )
         }
     }
@@ -631,7 +653,8 @@ final class SchoolRepository {
     private func makeBakalariSession(
         from response: LoginResponse,
         baseURL: URL,
-        credentials: BakalariCredentials?
+        credentials: BakalariCredentials?,
+        metadataFrom existing: StoredSession? = nil
     ) -> StoredSession {
         StoredSession(
             accessToken: response.accessToken,
@@ -640,7 +663,10 @@ final class SchoolRepository {
             expiresAt: dateProvider().addingTimeInterval(TimeInterval(response.expiresIn)),
             baseURL: baseURL,
             provider: .bakalari,
-            bakalari: credentials
+            bakalari: credentials,
+            linkedAccountID: existing?.linkedAccountID,
+            linkedAccountDisplayName: existing?.linkedAccountDisplayName,
+            linkedAccountSchoolName: existing?.linkedAccountSchoolName
         )
     }
 
@@ -648,9 +674,15 @@ final class SchoolRepository {
     private func persistBakalariSession(
         from response: LoginResponse,
         baseURL: URL,
-        credentials: BakalariCredentials?
+        credentials: BakalariCredentials?,
+        metadataFrom existing: StoredSession? = nil
     ) throws -> StoredSession {
-        let session = makeBakalariSession(from: response, baseURL: baseURL, credentials: credentials)
+        let session = makeBakalariSession(
+            from: response,
+            baseURL: baseURL,
+            credentials: credentials,
+            metadataFrom: existing
+        )
         try sessionStore.save(session: session)
         watchSyncService?.update(session: session)
         return session

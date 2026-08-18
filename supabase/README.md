@@ -5,7 +5,8 @@ This folder contains the Gradey ID platform backend:
 - Auth uses Supabase Auth with Sign in with Apple.
 - Linked provider sessions are stored as encrypted payloads through `store_provider_secret`; school and canteen passwords are intentionally not accepted by the app payloads.
 - `poll-new-marks` baselines marks on first link, then inserts new mark events only for unseen fingerprints.
-- `send-apns` delivers APNs alert pushes and invalidates rejected device tokens.
+- `send-apns` atomically claims due events, enforces global and per-school switches, defers quiet-hours events, summarizes one complete quiet-window group, applies lock-screen privacy, and tracks acceptance, retry, or suppression independently for every target device.
+- Authenticated settings functions return canonical account state, update preferences, reconnect an owned school account in place, export user-owned data, and delete the Gradey ID account.
 
 ## Remote project
 
@@ -14,7 +15,7 @@ This folder contains the Gradey ID platform backend:
 - Region: `eu-central-1`
 - App redirect URL: `gradey://auth`
 
-As of 2026-07-01, the remote project is active, migrations have been applied, all Edge Functions are deployed, Apple auth is enabled, email signups are disabled, APNs secrets are configured, and the `gradey-poll-new-marks` cron job runs every five minutes through `pg_cron` + `pg_net`.
+As of 2026-07-19, the remote project is active, migrations through `20260718225228` have been applied, all Edge Functions are deployed, Apple auth is enabled, email signups are disabled, APNs secrets are configured, `gradey-poll-new-marks` runs every five minutes, and `gradey-send-apns` runs every minute through `pg_cron` + `pg_net`.
 
 Required project secrets:
 
@@ -36,7 +37,13 @@ supabase functions deploy send-apns --no-verify-jwt
 
 Run `poll-new-marks` every few minutes and pass `x-cron-secret: $CRON_SECRET`; the function chooses the next per-account poll time using the 15-minute daytime / hourly overnight rule.
 
-The remote schedule is managed by `migrations/202607010001_gradey_scheduled_polling.sql`. It stores the project URL and cron secret in Supabase Vault, then calls `/functions/v1/poll-new-marks` every five minutes.
+The polling schedule is managed by `migrations/202607010001_gradey_scheduled_polling.sql`. The settings/notification migration also calls `/functions/v1/send-apns` every minute so deferred and retryable events are recovered. Both schedules reuse the project URL and cron secret stored in Supabase Vault.
+
+The nested `poll-new-marks` → `send-apns` request is latency-only and best effort; the one-minute Cron dispatcher is the correctness and recovery path, including when the platform rate-limits nested Edge Function calls.
+
+Before deploying the client, apply migrations and deploy the backward-compatible functions. The notification migration suppresses pre-migration undelivered events so an old-notification burst cannot occur. Verify `cron.job_run_details` for both `gradey-poll-new-marks` and `gradey-send-apns`, and inspect dispatcher logs for claimed, sent, rescheduled, suppressed, retried, and invalidated-token counts.
+
+APNs delivery is intentionally at-least-once. Each event/device target persists its `apns-id`; quiet summaries derive a stable request and collapse identity from the persisted quiet-window key and device ID. If a worker stops after APNs accepts a request but before the database commit, the retry therefore reuses the same identity so APNs can collapse the duplicate. A successful target is terminal and is never retried merely because a different device failed.
 
 ## Apple auth maintenance
 

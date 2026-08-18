@@ -1,6 +1,7 @@
 import { adminClient, providerSecretKey } from "../_shared/client.ts";
 import { errorResponse, handleOptions, json } from "../_shared/http.ts";
 import { markFingerprint, notificationBody } from "../_shared/marks.ts";
+import { requireSafeProviderURL } from "../_shared/provider-url.ts";
 
 Deno.serve(async (req) => {
   const options = handleOptions(req);
@@ -41,7 +42,7 @@ async function pollAccount(supabase: ReturnType<typeof adminClient>, account: Re
     });
     if (secretError) throw secretError;
 
-    const marksResponse = await fetchMarks(account.provider, secret);
+    const marksResponse = await fetchMarks(supabase, account, secret);
     const newEvents = [];
     const isBaseline = !account.last_polled_at;
 
@@ -105,20 +106,24 @@ async function pollAccount(supabase: ReturnType<typeof adminClient>, account: Re
       })
       .eq("id", account.id);
 
-    if (newEvents.length > 0 && account.notifications_enabled) {
+    if (newEvents.length > 0) {
       await invokeSendAPNS(newEvents.map((event) => event.id));
     }
 
     return { accountID: account.id, newMarks: newEvents.length, baseline: isBaseline };
   } catch (error) {
     const failureCount = (account.failure_count ?? 0) + 1;
+    const authenticationFailure = isProviderAuthenticationError(error);
+    const requiresAction = authenticationFailure && failureCount >= 3;
     await supabase
       .from("linked_accounts")
       .update({
         failure_count: failureCount,
         next_poll_at: backoffDate(failureCount).toISOString(),
-        status: failureCount >= 3 ? "action_required" : account.status,
-        action_required_reason: failureCount >= 3 ? "Provider session expired. Re-link this account in Gradey." : account.action_required_reason,
+        status: requiresAction ? "action_required" : account.status,
+        action_required_reason: requiresAction
+          ? "Provider session expired. Reconnect this account in Gradey."
+          : account.action_required_reason,
       })
       .eq("id", account.id);
 
@@ -126,21 +131,133 @@ async function pollAccount(supabase: ReturnType<typeof adminClient>, account: Re
   }
 }
 
-async function fetchMarks(provider: string, secret: Record<string, any>) {
-  if (provider === "bakalari") {
-    const response = await fetch(new URL("api/3/marks", secret.baseURL).toString(), {
-      headers: { Authorization: `${secret.tokenType || "Bearer"} ${secret.accessToken}`, Accept: "application/json" },
-    });
-    if (response.status === 401) throw new Error("bakalari_auth_failed");
-    if (!response.ok) throw new Error(`bakalari_status_${response.status}`);
-    return await response.json();
+async function fetchMarks(
+  supabase: ReturnType<typeof adminClient>,
+  account: Record<string, any>,
+  secret: Record<string, any>,
+) {
+  const baseURL = requireSafeProviderURL(secret.baseURL, "Stored school URL");
+
+  if (account.provider === "bakalari") {
+    return await fetchBakalariMarks(supabase, account, secret, baseURL);
   }
 
-  if (provider === "eduPage") {
-    return await fetchEduPageMarks(secret);
+  if (account.provider === "eduPage") {
+    return await fetchEduPageMarks(secret, baseURL);
   }
 
-  throw new Error(`unsupported_provider_${provider}`);
+  throw new Error(`unsupported_provider_${account.provider}`);
+}
+
+async function fetchBakalariMarks(
+  supabase: ReturnType<typeof adminClient>,
+  account: Record<string, any>,
+  secret: Record<string, any>,
+  baseURL: string,
+) {
+  let activeSecret = secret;
+  let didRefresh = false;
+
+  // The app and background poller cannot safely rotate the same refresh-token
+  // chain. Refresh once on the first poll to establish a poller-owned chain,
+  // then renew that chain shortly before its access token expires.
+  if (shouldRefreshBakalariSecret(activeSecret)) {
+    activeSecret = await refreshBakalariSecret(supabase, account, activeSecret, baseURL);
+    didRefresh = true;
+  }
+
+  let response = await requestBakalariMarks(activeSecret, baseURL);
+  if (response.status === 401 && !didRefresh) {
+    activeSecret = await refreshBakalariSecret(supabase, account, activeSecret, baseURL);
+    response = await requestBakalariMarks(activeSecret, baseURL);
+  }
+
+  if (response.status === 401) throw new ProviderAuthenticationError("bakalari_auth_failed");
+  if (!response.ok) throw new Error(`bakalari_status_${response.status}`);
+  return await response.json();
+}
+
+function requestBakalariMarks(secret: Record<string, any>, baseURL: string) {
+  return fetch(new URL("api/3/marks", baseURL).toString(), {
+    headers: {
+      Authorization: `${secret.tokenType || "Bearer"} ${secret.accessToken}`,
+      Accept: "application/json",
+    },
+    redirect: "error",
+  });
+}
+
+function shouldRefreshBakalariSecret(secret: Record<string, any>) {
+  if (!secret.pollingSessionEstablishedAt) return true;
+  const expiresAt = Date.parse(String(secret.expiresAt ?? ""));
+  return !Number.isFinite(expiresAt) || expiresAt <= Date.now() + 5 * 60 * 1000;
+}
+
+async function refreshBakalariSecret(
+  supabase: ReturnType<typeof adminClient>,
+  account: Record<string, any>,
+  secret: Record<string, any>,
+  baseURL: string,
+) {
+  const refreshToken = stringValue(secret.refreshToken);
+  if (!refreshToken) {
+    throw new ProviderAuthenticationError("bakalari_refresh_token_missing");
+  }
+
+  const body = new URLSearchParams({
+    client_id: "ANDR",
+    grant_type: "refresh_token",
+    refresh_token: refreshToken,
+  });
+  const response = await fetch(new URL("api/login", baseURL).toString(), {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/x-www-form-urlencoded; charset=utf-8",
+    },
+    body,
+    redirect: "error",
+  });
+
+  if (response.status === 400 || response.status === 401) {
+    throw new ProviderAuthenticationError("bakalari_refresh_rejected");
+  }
+  if (!response.ok) throw new Error(`bakalari_refresh_status_${response.status}`);
+
+  const tokens = await response.json();
+  const accessToken = stringValue(tokens?.access_token);
+  const rotatedRefreshToken = stringValue(tokens?.refresh_token);
+  const expiresIn = numberValue(tokens?.expires_in);
+  if (!accessToken || !rotatedRefreshToken || expiresIn == null || expiresIn <= 0) {
+    throw new Error("bakalari_refresh_response_invalid");
+  }
+
+  const now = new Date();
+  const refreshedSecret = {
+    ...secret,
+    accessToken,
+    refreshToken: rotatedRefreshToken,
+    tokenType: stringValue(tokens?.token_type) || "Bearer",
+    expiresAt: new Date(now.getTime() + expiresIn * 1000).toISOString(),
+    pollingSessionEstablishedAt: now.toISOString(),
+  };
+  const { data: updated, error } = await supabase.rpc("update_provider_secret", {
+    p_secret_id: account.secret_id,
+    p_user_id: account.user_id,
+    p_payload: refreshedSecret,
+    p_key: providerSecretKey(),
+  });
+  if (error) throw error;
+  if (updated !== true) throw new Error("provider_secret_update_failed");
+
+  return refreshedSecret;
+}
+
+class ProviderAuthenticationError extends Error {}
+
+function isProviderAuthenticationError(error: unknown) {
+  return error instanceof ProviderAuthenticationError ||
+    (error instanceof Error && error.message === "edupage_auth_failed");
 }
 
 async function recordGradeHistory(
@@ -210,24 +327,27 @@ function numbersEqual(first: number | null, second: number | null) {
   return Math.abs(first - second) < 0.0001;
 }
 
-async function fetchEduPageMarks(secret: Record<string, any>) {
+async function fetchEduPageMarks(secret: Record<string, any>, baseURL: string) {
   const eduPage = secret.eduPage;
-  if (!eduPage?.sessionID) throw new Error("edupage_auth_failed");
+  if (!eduPage?.sessionID) throw new ProviderAuthenticationError("edupage_auth_failed");
 
-  const url = new URL("znamky/", secret.baseURL);
+  const url = new URL("znamky/", baseURL);
   url.searchParams.set("barNoSkin", "1");
   const response = await fetch(url, {
     headers: {
       Accept: "text/html,application/xhtml+xml",
       Cookie: `PHPSESSID=${eduPage.sessionID}`,
     },
+    redirect: "error",
   });
-  if (response.status === 401 || response.status === 403) throw new Error("edupage_auth_failed");
+  if (response.status === 401 || response.status === 403) {
+    throw new ProviderAuthenticationError("edupage_auth_failed");
+  }
   if (!response.ok) throw new Error(`edupage_status_${response.status}`);
 
   const text = await response.text();
   if (text.includes("cmd=MainLogin") || (text.includes('name="username"') && text.includes('name="password"'))) {
-    throw new Error("edupage_auth_failed");
+    throw new ProviderAuthenticationError("edupage_auth_failed");
   }
 
   const root = firstJSONObject(text, "vsetkyZnamky");
@@ -311,20 +431,32 @@ function backoffDate(failureCount: number) {
 }
 
 async function invokeSendAPNS(eventIDs: string[]) {
-  const url = `${Deno.env.get("SUPABASE_URL")}/functions/v1/send-apns`;
-  await fetch(url, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ eventIDs }),
-  });
+  try {
+    const url = `${Deno.env.get("SUPABASE_URL")}/functions/v1/send-apns`;
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ eventIDs }),
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (!response.ok) {
+      console.error(JSON.stringify({ event: "send_apns_immediate_failed", status: response.status, eventIDs }));
+    }
+  } catch (error) {
+    console.error(JSON.stringify({
+      event: "send_apns_immediate_failed",
+      error: error instanceof Error ? error.message : "request_failed",
+      eventIDs,
+    }));
+  }
 }
 
 function assertCronSecret(req: Request) {
   const expected = Deno.env.get("CRON_SECRET");
-  if (!expected) return;
+  if (!expected) throw new Error("Missing CRON_SECRET");
   if (req.headers.get("x-cron-secret") !== expected) {
     throw new Response("Invalid cron secret", { status: 401 });
   }

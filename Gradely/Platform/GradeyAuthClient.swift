@@ -80,6 +80,9 @@ final class GradeyAuthSessionStore: GradeyAuthSessionStoring {
 
 protocol GradeyAuthClient {
     func bootstrapSession() throws -> GradeyAuthSession?
+    func validSession() async throws -> GradeyAuthSession
+    func refreshAccount() async throws -> GradeyAccount
+    func updateFullName(_ fullName: String) async throws -> GradeyAccount
     func signInWithApple(identityToken: String, nonce: String?, fullName: String?) async throws -> GradeyAuthSession
     func signOut() async
 }
@@ -90,15 +93,20 @@ final class SupabaseGradeyAuthClient: GradeyAuthClient {
     private let urlSession: URLSession
     private let encoder: JSONEncoder
     private let decoder: JSONDecoder
+    private let dateProvider: () -> Date
+    private let refreshLock = NSLock()
+    private var refreshTask: Task<GradeyAuthSession, Error>?
 
     init(
         configuration: SupabaseConfiguration? = .fromBundle(),
         sessionStore: any GradeyAuthSessionStoring = GradeyAuthSessionStore(),
-        urlSession: URLSession = .shared
+        urlSession: URLSession = .shared,
+        dateProvider: @escaping () -> Date = Date.init
     ) {
         self.configuration = configuration
         self.sessionStore = sessionStore
         self.urlSession = urlSession
+        self.dateProvider = dateProvider
         encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
         decoder = JSONDecoder()
@@ -109,26 +117,71 @@ final class SupabaseGradeyAuthClient: GradeyAuthClient {
         try sessionStore.loadSession()
     }
 
+    func validSession() async throws -> GradeyAuthSession {
+        guard let session = try sessionStore.loadSession() else {
+            throw AppError.notLoggedIn
+        }
+        guard needsRefresh(session) else { return session }
+
+        let task = sharedRefreshTask()
+        defer { clearRefreshTask() }
+        return try await task.value
+    }
+
+    func refreshAccount() async throws -> GradeyAccount {
+        let session = try await validSession()
+        let response: SupabaseUserResponse = try await send(
+            path: "auth/v1/user",
+            method: "GET",
+            authorization: session.authorizationHeader,
+            body: Optional<EmptyBody>.none
+        )
+        return try persistAccount(from: response, preserving: session)
+    }
+
+    func updateFullName(_ fullName: String) async throws -> GradeyAccount {
+        let session = try await validSession()
+        let response: SupabaseUserResponse = try await send(
+            path: "auth/v1/user",
+            method: "PUT",
+            authorization: session.authorizationHeader,
+            body: UpdateUserRequest(
+                data: UpdateUserMetadata(fullName: fullName)
+            )
+        )
+        return try persistAccount(from: response, preserving: session)
+    }
+
     func signInWithApple(identityToken: String, nonce: String?, fullName: String?) async throws -> GradeyAuthSession {
         guard !identityToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             throw GradeyAuthError.missingIdentityToken
         }
 
+        cancelRefreshTask()
         let response: SupabaseTokenResponse = try await send(
             path: "auth/v1/token",
             query: ["grant_type": "id_token"],
             method: "POST",
             body: SignInWithIDTokenRequest(provider: "apple", idToken: identityToken, nonce: nonce)
         )
-        var session = response.makeSession()
-        if let fullName, !fullName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            session.account.fullName = fullName
+        var session = response.makeSession(now: dateProvider())
+        let normalizedFullName = fullName?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        if let normalizedFullName, !normalizedFullName.isEmpty {
+            session.account.fullName = normalizedFullName
         }
         try sessionStore.save(session: session)
-        return session
+
+        // Apple only supplies a name on the first authorization. Keep the
+        // successful auth session even if the follow-up metadata write fails.
+        if let normalizedFullName, !normalizedFullName.isEmpty {
+            _ = try? await updateFullName(normalizedFullName)
+        }
+        return (try? sessionStore.loadSession()) ?? session
     }
 
     func signOut() async {
+        cancelRefreshTask()
         if let session = try? sessionStore.loadSession() {
             try? await sendEmpty(
                 path: "auth/v1/logout",
@@ -138,6 +191,69 @@ final class SupabaseGradeyAuthClient: GradeyAuthClient {
             )
         }
         try? sessionStore.clearSession()
+    }
+
+    private func needsRefresh(_ session: GradeyAuthSession) -> Bool {
+        guard let expiresAt = session.expiresAt else { return false }
+        return expiresAt <= dateProvider().addingTimeInterval(60)
+    }
+
+    private func sharedRefreshTask() -> Task<GradeyAuthSession, Error> {
+        refreshLock.lock()
+        defer { refreshLock.unlock() }
+        if let refreshTask { return refreshTask }
+
+        let task = Task { try await self.performRefresh() }
+        refreshTask = task
+        return task
+    }
+
+    private func clearRefreshTask() {
+        refreshLock.lock()
+        refreshTask = nil
+        refreshLock.unlock()
+    }
+
+    private func cancelRefreshTask() {
+        refreshLock.lock()
+        let task = refreshTask
+        refreshTask = nil
+        refreshLock.unlock()
+        task?.cancel()
+    }
+
+    private func performRefresh() async throws -> GradeyAuthSession {
+        guard let current = try sessionStore.loadSession() else {
+            throw AppError.notLoggedIn
+        }
+        guard needsRefresh(current) else { return current }
+        guard let refreshToken = current.refreshToken?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !refreshToken.isEmpty
+        else {
+            throw GradeyAuthError.server("Your Gradey ID session has expired. Sign in again.")
+        }
+
+        let response: SupabaseTokenResponse = try await send(
+            path: "auth/v1/token",
+            query: ["grant_type": "refresh_token"],
+            method: "POST",
+            body: RefreshTokenRequest(refreshToken: refreshToken)
+        )
+        try Task.checkCancellation()
+        let refreshed = response.makeSession(previous: current, now: dateProvider())
+        try sessionStore.save(session: refreshed)
+        return refreshed
+    }
+
+    private func persistAccount(
+        from response: SupabaseUserResponse,
+        preserving session: GradeyAuthSession
+    ) throws -> GradeyAccount {
+        let account = try response.merging(into: session.account)
+        var updatedSession = session
+        updatedSession.account = account
+        try sessionStore.save(session: updatedSession)
+        return account
     }
 
     private func send<Response: Decodable, Body: Encodable>(
@@ -223,18 +339,71 @@ final class SupabaseGradeyAuthClient: GradeyAuthClient {
 
 final class MockGradeyAuthClient: GradeyAuthClient {
     var session: GradeyAuthSession?
+    var remoteAccount: GradeyAccount?
+    var signInError: Error?
+    var refreshAccountError: Error?
+    var updateFullNameError: Error?
 
-    init(session: GradeyAuthSession? = PreviewData.gradeyAuthSession) {
+    init(
+        session: GradeyAuthSession? = PreviewData.gradeyAuthSession,
+        remoteAccount: GradeyAccount? = nil,
+        signInError: Error? = nil,
+        refreshAccountError: Error? = nil,
+        updateFullNameError: Error? = nil
+    ) {
         self.session = session
+        self.remoteAccount = remoteAccount
+        self.signInError = signInError
+        self.refreshAccountError = refreshAccountError
+        self.updateFullNameError = updateFullNameError
     }
 
     func bootstrapSession() throws -> GradeyAuthSession? {
         session
     }
 
+    func validSession() async throws -> GradeyAuthSession {
+        guard let session else { throw AppError.notLoggedIn }
+        return session
+    }
+
+    func refreshAccount() async throws -> GradeyAccount {
+        if let refreshAccountError {
+            throw refreshAccountError
+        }
+        guard var updatedSession = session else { throw AppError.notLoggedIn }
+        if let remoteAccount {
+            guard remoteAccount.id == updatedSession.account.id else {
+                throw GradeyAuthError.server(String(localized: "gradey.auth.error.invalidResponse"))
+            }
+            updatedSession.account = remoteAccount
+            session = updatedSession
+        }
+        return updatedSession.account
+    }
+
+    func updateFullName(_ fullName: String) async throws -> GradeyAccount {
+        if let updateFullNameError {
+            throw updateFullNameError
+        }
+        guard var updatedSession = session else { throw AppError.notLoggedIn }
+        updatedSession.account.fullName = fullName
+        session = updatedSession
+        remoteAccount = updatedSession.account
+        return updatedSession.account
+    }
+
     func signInWithApple(identityToken: String, nonce: String?, fullName: String?) async throws -> GradeyAuthSession {
-        let signedIn = PreviewData.gradeyAuthSession
+        if let signInError {
+            throw signInError
+        }
+        var signedIn = PreviewData.gradeyAuthSession
+        if let fullName = fullName?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !fullName.isEmpty {
+            signedIn.account.fullName = fullName
+        }
         session = signedIn
+        remoteAccount = signedIn.account
         return signedIn
     }
 
@@ -255,6 +424,26 @@ private struct SignInWithIDTokenRequest: Encodable {
     }
 }
 
+private struct RefreshTokenRequest: Encodable {
+    let refreshToken: String
+
+    enum CodingKeys: String, CodingKey {
+        case refreshToken = "refresh_token"
+    }
+}
+
+private struct UpdateUserRequest: Encodable {
+    let data: UpdateUserMetadata
+}
+
+private struct UpdateUserMetadata: Encodable {
+    let fullName: String
+
+    enum CodingKeys: String, CodingKey {
+        case fullName = "full_name"
+    }
+}
+
 private struct EmptyBody: Encodable {}
 
 private struct SupabaseTokenResponse: Decodable {
@@ -272,13 +461,18 @@ private struct SupabaseTokenResponse: Decodable {
         case user
     }
 
-    func makeSession() -> GradeyAuthSession {
-        GradeyAuthSession(
+    func makeSession(previous: GradeyAuthSession? = nil, now: Date) -> GradeyAuthSession {
+        let refreshedAccount = user.makeAccount()
+        var account = refreshedAccount
+        if account.fullName?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty != false {
+            account.fullName = previous?.account.fullName
+        }
+        return GradeyAuthSession(
             accessToken: accessToken,
-            refreshToken: refreshToken,
+            refreshToken: refreshToken ?? previous?.refreshToken,
             tokenType: tokenType ?? "Bearer",
-            expiresAt: expiresIn.map { Date().addingTimeInterval($0) },
-            account: user.makeAccount()
+            expiresAt: expiresIn.map { now.addingTimeInterval($0) },
+            account: account
         )
     }
 }
@@ -286,7 +480,7 @@ private struct SupabaseTokenResponse: Decodable {
 private struct SupabaseUserResponse: Decodable {
     let id: String
     let email: String?
-    let userMetadata: [String: String]?
+    let userMetadata: SupabaseUserMetadata?
     let createdAt: Date?
 
     enum CodingKeys: String, CodingKey {
@@ -296,14 +490,105 @@ private struct SupabaseUserResponse: Decodable {
         case createdAt = "created_at"
     }
 
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+
+        // Profile fields are optional context, not part of the authentication
+        // proof. A provider-specific value must not invalidate a valid token.
+        email = try? container.decode(String.self, forKey: .email)
+        userMetadata = try? container.decode(SupabaseUserMetadata.self, forKey: .userMetadata)
+
+        let rawCreatedAt = try? container.decode(String.self, forKey: .createdAt)
+        createdAt = rawCreatedAt.flatMap(Self.parseTimestamp)
+    }
+
     func makeAccount() -> GradeyAccount {
         GradeyAccount(
             id: id,
             email: email,
-            fullName: userMetadata?["full_name"] ?? userMetadata?["name"],
-            avatarURL: userMetadata?["avatar_url"].flatMap(URL.init(string:)),
+            fullName: userMetadata?.fullName ?? userMetadata?.name,
+            avatarURL: userMetadata?.avatarURL.flatMap(URL.init(string:)),
             createdAt: createdAt ?? Date()
         )
+    }
+
+    func merging(into account: GradeyAccount) throws -> GradeyAccount {
+        guard !id.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+              id == account.id
+        else {
+            throw GradeyAuthError.server(String(localized: "gradey.auth.error.invalidResponse"))
+        }
+
+        var merged = account
+        if let email = Self.nonEmpty(email) {
+            merged.email = email
+        }
+        if let fullName = Self.nonEmpty(userMetadata?.fullName)
+            ?? Self.nonEmpty(userMetadata?.name) {
+            merged.fullName = fullName
+        }
+        if let avatarURL = Self.validAvatarURL(userMetadata?.avatarURL) {
+            merged.avatarURL = avatarURL
+        }
+        if let createdAt {
+            merged.createdAt = createdAt
+        }
+        return merged
+    }
+
+    private static func nonEmpty(_ value: String?) -> String? {
+        guard let value = value?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !value.isEmpty
+        else {
+            return nil
+        }
+        return value
+    }
+
+    private static func validAvatarURL(_ value: String?) -> URL? {
+        guard let rawValue = nonEmpty(value),
+              let url = URL(string: rawValue),
+              let scheme = url.scheme?.lowercased(),
+              scheme == "https" || scheme == "http"
+        else {
+            return nil
+        }
+        return url
+    }
+
+    private static func parseTimestamp(_ value: String) -> Date? {
+        let fractionalFormatter = ISO8601DateFormatter()
+        fractionalFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let date = fractionalFormatter.date(from: value) {
+            return date
+        }
+
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime]
+        return formatter.date(from: value)
+    }
+}
+
+/// Supabase metadata is an arbitrary JSON object. Decode only the display
+/// fields Gradey uses so provider-specific booleans and nested objects do not
+/// make an otherwise valid auth response fail.
+private struct SupabaseUserMetadata: Decodable {
+    let fullName: String?
+    let name: String?
+    let avatarURL: String?
+
+    enum CodingKeys: String, CodingKey {
+        case fullName = "full_name"
+        case name
+        case avatarURL = "avatar_url"
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        fullName = try? container.decode(String.self, forKey: .fullName)
+        name = try? container.decode(String.self, forKey: .name)
+        avatarURL = try? container.decode(String.self, forKey: .avatarURL)
     }
 }
 

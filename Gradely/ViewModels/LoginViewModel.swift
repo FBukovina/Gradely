@@ -1,6 +1,44 @@
 import Foundation
 import Observation
 
+struct SchoolLoginPrefill: Equatable {
+    let provider: SchoolProvider
+    let schoolURL: String
+    let schoolName: String
+    let username: String
+
+    init?(
+        session: StoredSession,
+        account: LinkedAccount,
+        allowsUnscopedSession: Bool = false
+    ) {
+        guard account.provider.isSchoolProvider else { return nil }
+        guard session.linkedAccountID == account.id
+                || (allowsUnscopedSession && session.linkedAccountID == nil)
+        else {
+            return nil
+        }
+
+        let accountProvider = LinkedAccountProvider(schoolProvider: session.provider)
+        guard account.provider == accountProvider else { return nil }
+
+        let username: String
+        switch session.provider {
+        case .bakalari:
+            username = session.bakalari?.username ?? ""
+        case .eduPage:
+            username = session.eduPage?.username ?? ""
+        }
+
+        self.provider = session.provider
+        schoolURL = session.baseURL.absoluteString
+        schoolName = account.schoolName
+            ?? session.linkedAccountSchoolName
+            ?? account.subtitle
+        self.username = username
+    }
+}
+
 @MainActor
 @Observable
 final class LoginViewModel {
@@ -29,10 +67,17 @@ final class LoginViewModel {
 
     init(
         repository: SchoolRepository,
-        schoolDirectoryProvider: any SchoolDirectoryProviding
+        schoolDirectoryProvider: any SchoolDirectoryProviding,
+        prefill: SchoolLoginPrefill? = nil
     ) {
         self.repository = repository
         self.schoolDirectoryProvider = schoolDirectoryProvider
+        if let prefill {
+            provider = prefill.provider
+            schoolURL = prefill.schoolURL
+            schoolSearchText = prefill.schoolName
+            username = prefill.username
+        }
     }
 
     var schoolSearchResults: [SchoolDirectorySchool] {
@@ -144,9 +189,13 @@ final class LoginViewModel {
         let cachedDirectory = try? schoolDirectoryProvider.loadCachedDirectory()
         if let cachedDirectory {
             directorySchools = cachedDirectory.schools
+        } else {
+            directorySchools = []
         }
 
-        let shouldRefresh = cachedDirectory?.isStale() ?? true
+        let shouldRefresh = cachedDirectory.map {
+            $0.isStale() || !$0.isCurrentFormat
+        } ?? true
         guard shouldRefresh else { return }
 
         isSchoolDirectoryLoading = directorySchools.isEmpty
@@ -156,10 +205,17 @@ final class LoginViewModel {
             directorySchools = try await schoolDirectoryProvider.refreshDirectory()
             schoolLookupErrorMessage = nil
         } catch {
+            hasLoadedSchoolDirectory = false
             if directorySchools.isEmpty {
                 schoolLookupErrorMessage = String(localized: "schoolDirectory.error")
             }
         }
+    }
+
+    func retrySchoolDirectory() async {
+        guard !isSchoolDirectoryLoading else { return }
+        hasLoadedSchoolDirectory = false
+        await loadSchoolDirectoryIfNeeded()
     }
 
     func updateSchoolSearch(_ text: String) {

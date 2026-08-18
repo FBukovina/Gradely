@@ -4,25 +4,22 @@ struct SubjectsView: View {
     @State private var viewModel: SubjectsViewModel
     @State private var sortMode: SubjectSortMode = .focus
     private let repository: SchoolRepository
-    private let supportTipProvider: any SupportTipProviding
     private let accountHub: AnyView?
-    let onSignedOut: () -> Void
+    private let onOpenGradeyAI: () -> Void
 
     init(
         repository: SchoolRepository,
         historyRepository: GradeyHistoryRepository? = nil,
-        supportTipProvider: any SupportTipProviding = MockSupportTipService(),
         trends: [SubjectGradeTrend] = [],
         accountHub: AnyView? = nil,
-        onSignedOut: @escaping () -> Void
+        onOpenGradeyAI: @escaping () -> Void = {}
     ) {
         self.repository = repository
-        self.supportTipProvider = supportTipProvider
         self.accountHub = accountHub
+        self.onOpenGradeyAI = onOpenGradeyAI
         let model = SubjectsViewModel(repository: repository, historyRepository: historyRepository)
         model.trends = trends
         _viewModel = State(initialValue: model)
-        self.onSignedOut = onSignedOut
     }
 
     var body: some View {
@@ -38,7 +35,7 @@ struct SubjectsView: View {
                     .accessibilityIdentifier("subjectsLoadingView")
                 } else if let errorMessage = viewModel.errorMessage, viewModel.subjects.isEmpty {
                     ContentUnavailableView {
-                        Label(String(localized: "error.title"), systemImage: "exclamationmark.triangle")
+                        GradelyLabel(String(localized: "error.title"), systemImage: "exclamationmark.triangle")
                     } description: {
                         Text(errorMessage)
                     } actions: {
@@ -49,11 +46,15 @@ struct SubjectsView: View {
                     }
                     .accessibilityIdentifier("subjectsErrorView")
                 } else if viewModel.subjects.isEmpty {
-                    ContentUnavailableView(
-                        String(localized: "subjects.empty.title"),
-                        systemImage: "list.bullet.rectangle",
-                        description: Text("subjects.empty.message")
-                    )
+                    ContentUnavailableView {
+                        GradelyLabel(
+                            String(localized: "subjects.empty.title"),
+                            systemImage: "list.bullet.rectangle",
+                            iconSize: 28
+                        )
+                    } description: {
+                        Text("subjects.empty.message")
+                    }
                     .accessibilityIdentifier("subjectsEmptyView")
                 } else {
                     marksDashboard
@@ -63,14 +64,14 @@ struct SubjectsView: View {
             .gradelyNavigationTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .gradelyTopBarLeading) {
-                    CreditsToolbarButton()
+                    GradeyAIToolbarButton(onOpen: onOpenGradeyAI)
                 }
 
                 ToolbarItem(placement: .gradelyTopBarTrailing) {
                     Button {
                         Task { await viewModel.refresh(forceRefresh: true) }
                     } label: {
-                        Image(systemName: "arrow.clockwise")
+                        GradelyIcon(systemName: "arrow.clockwise")
                             .symbolEffect(.rotate, options: .repeating, isActive: viewModel.isRefreshing)
                     }
                     .disabled(viewModel.isLoading || viewModel.isRefreshing)
@@ -79,13 +80,7 @@ struct SubjectsView: View {
                 }
 
                 ToolbarItem(placement: .gradelyTopBarTrailing) {
-                    AccountMenu(
-                        user: viewModel.user,
-                        repository: repository,
-                        supportTipProvider: supportTipProvider,
-                        accountHub: accountHub,
-                        onSignedOut: onSignedOut
-                    )
+                    AccountSettingsButton(accountHub: accountHub)
                 }
             }
             .task {
@@ -127,7 +122,7 @@ struct SubjectsView: View {
             .frame(maxWidth: 760)
             .frame(maxWidth: .infinity)
         }
-        .background(Color.gradelyGroupedBackground.ignoresSafeArea())
+        .gradelyScreenBackground()
         .refreshable {
             await viewModel.refresh(forceRefresh: true)
         }
@@ -429,7 +424,7 @@ private struct SubjectRow: View {
 
                     if let delta = trendDelta {
                         HStack(spacing: 2) {
-                            Image(systemName: delta < 0 ? "arrow.down.right" : "arrow.up.right")
+                            GradelyIcon(systemName: delta < 0 ? "arrow.down.right" : "arrow.up.right")
                             Text(String(format: "%+.2f", delta))
                         }
                         .font(.caption.weight(.bold).monospacedDigit())
@@ -459,7 +454,7 @@ private struct SubjectRow: View {
                 }
             }
 
-            Image(systemName: "chevron.right")
+            GradelyIcon(systemName: "chevron.right")
                 .font(.caption.weight(.bold))
                 .foregroundStyle(.tertiary)
         }
@@ -524,7 +519,7 @@ private struct InlineMark: View {
             marksCache: InMemoryMarksCache(cachedMarks: CachedMarks(marksResponse: PreviewData.marksResponse, cachedAt: Date()))
         ),
         trends: PreviewData.subjectGradeTrends
-    ) {}
+    )
 }
 
 #Preview("Dark") {
@@ -535,6 +530,6 @@ private struct InlineMark: View {
             marksCache: InMemoryMarksCache(cachedMarks: CachedMarks(marksResponse: PreviewData.marksResponse, cachedAt: Date()))
         ),
         trends: PreviewData.subjectGradeTrends
-    ) {}
+    )
     .preferredColorScheme(.dark)
 }

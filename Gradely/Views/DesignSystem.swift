@@ -1,4 +1,6 @@
 import SwiftUI
+import HugeiconsCore
+import HugeiconsStrokeRounded
 #if os(macOS)
 import AppKit
 #endif
@@ -147,8 +149,7 @@ extension View {
         #endif
     }
 
-    /// iOS-style circular tinted chip for toolbar icon buttons; a plain, system-tinted
-    /// template icon on macOS where chips look out of place in the window toolbar.
+    /// Brand-tinted toolbar icons with a consistent visual size on every platform.
     @ViewBuilder
     func gradelyToolbarIconButton() -> some View {
         #if os(macOS)
@@ -158,7 +159,6 @@ extension View {
             .font(.footnote.weight(.bold))
             .foregroundStyle(Brand.primary)
             .frame(width: 30, height: 30)
-            .background(Brand.primary.opacity(0.15), in: Circle())
         #endif
     }
 }
@@ -237,6 +237,186 @@ enum Radius {
     static let md: CGFloat = 16
     static let card: CGFloat = 20
     static let xl: CGFloat = 28
+}
+
+extension Font {
+    /// Space Grotesk is Gradely's display face. Keep screen titles on one token
+    /// so onboarding and standalone setup surfaces cannot drift apart.
+    static func gradelyDisplay(
+        size: CGFloat = 38,
+        relativeTo textStyle: Font.TextStyle = .largeTitle
+    ) -> Font {
+        .custom("SpaceGrotesk-Bold", size: size, relativeTo: textStyle)
+    }
+}
+
+// MARK: - Iconography
+
+/// Gradely's app-wide icon face. Like `Font.gradelyDisplay`, this is the single
+/// design-system entry point for a bundled visual family—in this case
+/// Hugeicons Stroke Rounded.
+struct GradelyIcon: View {
+    private let iconName: String
+    private let size: CGFloat
+
+    init(_ iconName: String, size: CGFloat = 18) {
+        self.iconName = iconName
+        self.size = size
+    }
+
+    /// Compatibility initializer for semantic icon names that previously came
+    /// from SF Symbols. Rendering is always performed by Hugeicons.
+    init(systemName: String, size: CGFloat = 18) {
+        iconName = GradelyIconCatalog.hugeiconName(for: systemName)
+        self.size = size
+    }
+
+    var body: some View {
+        Text(attributedIconName)
+        .font(HugeiconsStrokeRounded.font(size: size))
+        .frame(width: size, height: size)
+        .accessibilityHidden(true)
+    }
+
+    private var attributedIconName: AttributedString {
+        let value = NSMutableAttributedString(string: iconName)
+        value.addAttribute(
+            .ligature,
+            value: 2,
+            range: NSRange(location: 0, length: value.length)
+        )
+        return AttributedString(value)
+    }
+}
+
+/// A native SwiftUI label whose icon is always rendered by Hugeicons.
+struct GradelyLabel: View {
+    private let title: Text
+    private let iconName: String
+    private let iconSize: CGFloat
+
+    init(
+        _ title: LocalizedStringKey,
+        systemImage: String,
+        iconSize: CGFloat = 16
+    ) {
+        self.title = Text(title)
+        iconName = GradelyIconCatalog.hugeiconName(for: systemImage)
+        self.iconSize = iconSize
+    }
+
+    init(
+        _ title: String,
+        systemImage: String,
+        iconSize: CGFloat = 16
+    ) {
+        self.title = Text(LocalizedStringKey(title))
+        iconName = GradelyIconCatalog.hugeiconName(for: systemImage)
+        self.iconSize = iconSize
+    }
+
+    var body: some View {
+        Label {
+            title
+        } icon: {
+            GradelyIcon(iconName, size: iconSize)
+        }
+    }
+}
+
+/// Central migration map from the app's semantic icon vocabulary to Hugeicons.
+/// Keeping it here prevents individual screens from drifting back to SF Symbols.
+enum GradelyIconCatalog {
+    static func hugeiconName(for semanticName: String) -> String {
+        if let stepNumber = semanticName.first,
+           semanticName.hasSuffix(".circle.fill"),
+           stepNumber.isNumber {
+            return "\(stepNumber)-circle"
+        }
+
+        let mapped = switch semanticName {
+        case "apple.logo": "apple"
+        case "arrow.clockwise": "refresh-04"
+        case "arrow.down.right": "arrow-down-right-01"
+        case "arrow.right", "arrow.right.circle", "arrow.right.circle.fill", "chevron.right":
+            "arrow-right-01"
+        case "arrow.up": "arrow-up-01"
+        case "arrow.up.right": "arrow-up-right-01"
+        case "bell.and.waves.left.and.right.fill", "bell.badge.fill":
+            "notification-bubble"
+        case "bell.fill": "notification-02"
+        case "bubble.left.and.bubble.right.fill": "message-multiple-01"
+        case "chart.bar.doc.horizontal": "analytics-01"
+        case "clock": "clock-01"
+        case "clock.arrow.circlepath": "reload"
+        case "cloud.fill": "cloud"
+        case "building.2.fill": "building-02"
+        case "building.columns.fill": "university"
+        case "calendar": "calendar-03"
+        case "calendar.badge.checkmark": "calendar-check-in-02"
+        case "calendar.badge.clock": "time-schedule"
+        case "calendar.badge.exclamationmark": "calendar-remove-02"
+        case "camera.fill": "camera-01"
+        case "chart.line.uptrend.xyaxis": "chart-line-data-01"
+        case "checklist": "check-list"
+        case "checkmark": "tick-02"
+        case "checkmark.circle.fill": "checkmark-circle-02"
+        case "checkmark.seal.fill": "checkmark-badge-02"
+        case "checkmark.shield.fill": "security-check"
+        case "chevron.left": "arrow-left-01"
+        case "chevron.up.chevron.down": "arrow-data-transfer-vertical"
+        case "circle": "circle"
+        case "clock.fill": "clock-01"
+        case "creditcard.fill": "credit-card"
+        case "door.left.hand.open": "door-open"
+        case "ellipsis.circle": "more-horizontal-circle-01"
+        case "envelope.fill": "mail-01"
+        case "exclamationmark.circle.fill": "alert-circle"
+        case "exclamationmark.triangle", "exclamationmark.triangle.fill": "alert-02"
+        case "eye": "view"
+        case "eye.slash": "view-off"
+        case "fork.knife", "fork.knife.circle", "fork.knife.circle.fill": "restaurant-02"
+        case "forward.fill": "forward-01"
+        case "gearshape.fill": "settings-01"
+        case "graduationcap.fill": "graduation-scroll"
+        case "hand.raised.slash": "security-block"
+        case "hand.tap": "touch-interaction-01"
+        case "heart.circle.fill", "heart.fill": "favourite"
+        case "info.circle", "info.circle.fill": "information-circle"
+        case "key.fill": "key-01"
+        case "link": "link-04"
+        case "link.badge.plus": "link-circle-02"
+        case "list.bullet.rectangle": "left-to-right-list-bullet"
+        case "lock.shield.fill": "security-lock"
+        case "magnifyingglass": "search-01"
+        case "minus": "minus-sign"
+        case "pause.circle.fill": "pause-circle"
+        case "person.2.fill": "user-group"
+        case "person.3.fill": "students"
+        case "person.badge.key.fill": "user"
+        case "person.crop.circle.badge.checkmark": "user-check-02"
+        case "person.fill": "user"
+        case "play.circle.fill": "play-circle"
+        case "plus": "add-01"
+        case "questionmark.circle": "help-circle"
+        case "rectangle.portrait.and.arrow.right": "logout-01"
+        case "sparkles": "sparkles"
+        case "square.and.pencil": "edit-02"
+        case "stop.fill": "stop"
+        case "sun.max.fill": "sun-01"
+        case "text.book.closed.fill": "book-02"
+        case "trash": "delete-02"
+        case "trash.slash": "delete-03"
+        default: semanticName
+        }
+
+        // SF Symbol-style names that miss the map would otherwise be drawn as
+        // raw text because Hugeicons only ligates its own kebab-case names.
+        if mapped.contains(".") {
+            return "help-circle"
+        }
+        return mapped
+    }
 }
 
 // MARK: - Grade band styling

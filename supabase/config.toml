@@ -20,6 +20,9 @@ verify_jwt = true
 [functions.activate-school-account]
 verify_jwt = true
 
+[functions.account-settings]
+verify_jwt = true
+
 [functions.grade-history]
 verify_jwt = true
 
@@ -33,6 +36,12 @@ verify_jwt = true
 verify_jwt = true
 
 [functions.update-notification-preferences]
+verify_jwt = true
+
+[functions.update-linked-account-preferences]
+verify_jwt = true
+
+[functions.relink-school-account]
 verify_jwt = true
 
 [functions.request-data-export]

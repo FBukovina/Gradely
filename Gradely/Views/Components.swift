@@ -1,3 +1,4 @@
+import AuthenticationServices
 import SwiftUI
 
 extension Notification.Name {
@@ -9,20 +10,230 @@ extension Notification.Name {
 /// Elevated content surface used throughout the app in place of ad-hoc glass.
 struct Card<Content: View>: View {
     var padding: CGFloat = Spacing.lg
+    var backgroundOpacity: Double = 1
+    var cornerRadius: CGFloat = Radius.card
     @ViewBuilder var content: Content
 
     var body: some View {
         content
             .padding(padding)
             .background(
-                RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
-                    .fill(Color.gradelySecondaryGroupedBackground)
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .fill(Color.gradelySecondaryGroupedBackground.opacity(backgroundOpacity))
             )
             .overlay(
-                RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                     .strokeBorder(Color.primary.opacity(0.06), lineWidth: 1)
             )
             .shadow(color: .black.opacity(0.06), radius: 12, x: 0, y: 6)
+    }
+}
+
+// MARK: - Settings-local presentation
+
+/// Quiet teal-tinted background shared by Settings and the modal surfaces
+/// launched from it. This stays separate from the app-wide card treatment.
+struct SettingsModalBackground: View {
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        (colorScheme == .dark
+            ? Color(.sRGB, red: 0.008, green: 0.045, blue: 0.046, opacity: 1)
+            : Color.gradelyGroupedBackground)
+            .overlay {
+                if colorScheme == .light {
+                    Brand.primary.opacity(0.018)
+                }
+            }
+            .ignoresSafeArea()
+    }
+}
+
+private struct SettingsModalSurfaceShape: View {
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: Radius.xl, style: .continuous)
+            .fill(
+                colorScheme == .dark
+                    ? Color(.sRGB, red: 0.045, green: 0.140, blue: 0.130, opacity: 1)
+                    : Color.gradelySecondaryGroupedBackground
+            )
+            .overlay {
+                if colorScheme == .light {
+                    RoundedRectangle(cornerRadius: Radius.xl, style: .continuous)
+                        .fill(Brand.primary.opacity(0.035))
+                }
+            }
+            .overlay {
+                RoundedRectangle(cornerRadius: Radius.xl, style: .continuous)
+                    .strokeBorder(
+                        colorScheme == .dark
+                            ? Color.white.opacity(0.025)
+                            : Brand.primary.opacity(0.075),
+                        lineWidth: 1
+                    )
+            }
+            .shadow(
+                color: .black.opacity(colorScheme == .dark ? 0.06 : 0.035),
+                radius: 2,
+                x: 0,
+                y: 1
+            )
+    }
+}
+
+/// The flat 28-point surface used inside Settings-adjacent sheets.
+struct SettingsModalSurface<Content: View>: View {
+    var padding: CGFloat = 20
+    @ViewBuilder var content: Content
+
+    var body: some View {
+        content
+            .padding(padding)
+            .background {
+                SettingsModalSurfaceShape()
+            }
+    }
+}
+
+/// Large Settings-style title with a compact Hugeicons close glyph in the
+/// existing 48-point dismissal target.
+struct SettingsModalHeader: View {
+    let title: LocalizedStringKey
+    let onDismiss: () -> Void
+
+    var body: some View {
+        ZStack(alignment: .trailing) {
+            Text(title)
+                .font(.gradelyDisplay(size: 36))
+                .foregroundStyle(.primary)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.trailing, 60)
+                .accessibilityAddTraits(.isHeader)
+
+            Button(action: onDismiss) {
+                GradelyIcon("cancel-01", size: 15)
+                    .foregroundStyle(.primary)
+                    .frame(width: 48, height: 48)
+                    .background(Brand.primary.opacity(0.10), in: Circle())
+                    .overlay {
+                        Circle()
+                            .strokeBorder(Color.primary.opacity(0.09), lineWidth: 1)
+                    }
+                    .contentShape(Circle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(String(localized: "action.ok"))
+            .accessibilityIdentifier("modalDismissButton")
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+/// Compact, unboxed Settings icon. The visible glyph is intentionally small;
+/// the consuming row remains responsible for its full interactive target.
+struct SettingsModalIcon: View {
+    static let frameSize: CGFloat = 32
+
+    let name: String
+    var color: Color = Brand.primary.opacity(0.88)
+    var size: CGFloat = 17
+
+    var body: some View {
+        GradelyIcon(name, size: size)
+            .foregroundStyle(color)
+            .frame(width: Self.frameSize, height: Self.frameSize)
+    }
+}
+
+/// Compact semantic icon for flows that already use SF Symbol-style names.
+/// `GradelyIcon` resolves these through the app's Hugeicons mapping.
+struct SettingsModalSystemIcon: View {
+    let systemName: String
+    var color: Color = Brand.primary.opacity(0.88)
+    var size: CGFloat = 17
+
+    var body: some View {
+        GradelyIcon(systemName: systemName, size: size)
+            .foregroundStyle(color)
+            .frame(width: SettingsModalIcon.frameSize, height: SettingsModalIcon.frameSize)
+    }
+}
+
+/// Settings-style heading used by authentication and onboarding flows.
+struct SettingsModalFlowHero: View {
+    let icon: String
+    let title: LocalizedStringKey
+    let message: LocalizedStringKey
+    var titleSize: CGFloat = 36
+
+    var body: some View {
+        HStack(alignment: .top, spacing: Spacing.md) {
+            SettingsModalSystemIcon(systemName: icon)
+                .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: Spacing.xs) {
+                Text(title)
+                    .font(.gradelyDisplay(size: titleSize))
+                    .lineLimit(3)
+                    .minimumScaleFactor(0.72)
+                    .accessibilityAddTraits(.isHeader)
+
+                Text(message)
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+struct SettingsModalDisclosureIcon: View {
+    var body: some View {
+        GradelyIcon("arrow-right-01", size: 14)
+            .foregroundStyle(Color.secondary.opacity(0.58))
+            .frame(width: 24, height: 24)
+    }
+}
+
+struct SettingsModalRowDivider: View {
+    var leadingInset: CGFloat = 20 + SettingsModalIcon.frameSize + Spacing.md
+
+    var body: some View {
+        Divider()
+            .padding(.leading, leadingInset)
+    }
+}
+
+struct SettingsModalSectionHeader: View {
+    let title: LocalizedStringKey
+
+    var body: some View {
+        Text(title)
+            .font(.footnote.weight(.bold))
+            .textCase(.uppercase)
+            .foregroundStyle(.secondary)
+            .kerning(0.6)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, Spacing.xs)
+            .accessibilityAddTraits(.isHeader)
+    }
+}
+
+extension View {
+    @ViewBuilder
+    func settingsModalNavigationChrome() -> some View {
+        #if os(iOS)
+        self
+            .navigationTitle("")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar(.hidden, for: .navigationBar)
+        #else
+        self.navigationTitle("")
+        #endif
     }
 }
 
@@ -147,148 +358,71 @@ struct GitHubIcon: View {
     }
 }
 
-// MARK: - Account menu
+// MARK: - Account & Settings entry
 
-/// Toolbar menu showing the signed-in user plus the repository link and logout action.
-/// Shared by the Marks and Timetable tabs.
-struct AccountMenu: View {
-    let user: UserResponse?
-    let repository: SchoolRepository
-    let supportTipProvider: any SupportTipProviding
+/// Toolbar button that opens the unified Account & Settings sheet.
+/// Shared by every primary tab, including Meals.
+struct AccountSettingsButton: View {
     var accountHub: AnyView?
-    let onSignedOut: () -> Void
-    @State private var isSupportSheetPresented = false
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var isAccountHubPresented = false
-    @State private var isStudentPickerPresented = false
-    @State private var studentSwitchError: String?
 
+    @ViewBuilder
     var body: some View {
-        Menu {
-            if let user {
-                Section {
-                    Text(user.fullName)
-                    if let schoolName = user.displaySchoolName {
-                        Text(schoolName)
-                    }
-                    if let className = user.userClass?.abbrev {
-                        Text(className)
-                    }
+        #if os(macOS)
+        trigger
+            .sheet(isPresented: $isAccountHubPresented) {
+                presentedAccountHub
+            }
+        #else
+        if horizontalSizeClass == .regular {
+            trigger
+                .fullScreenCover(isPresented: $isAccountHubPresented) {
+                    presentedAccountHub
                 }
-            }
-
-            if repository.availableStudents.count > 1 {
-                Button {
-                    isStudentPickerPresented = true
-                } label: {
-                    Label(String(localized: "edupage.children.switch"), systemImage: "person.2")
+        } else {
+            trigger
+                .sheet(isPresented: $isAccountHubPresented) {
+                    presentedAccountHub
                 }
-                .accessibilityIdentifier("switchEduPageStudentButton")
-            }
+        }
+        #endif
+    }
 
-            if accountHub != nil {
-                Button {
-                    isAccountHubPresented = true
-                } label: {
-                    Label(String(localized: "account.menu"), systemImage: "person.crop.circle")
-                }
-                .accessibilityIdentifier("openAccountHubButton")
-            }
-
-            Button {
-                isSupportSheetPresented = true
-            } label: {
-                Label(String(localized: "support.tips.menu"), systemImage: "heart.fill")
-            }
-            .accessibilityIdentifier("supportGradelyButton")
-
-            Link(destination: AppLinks.githubRepositoryURL) {
-                Label {
-                    Text("github.repository")
-                } icon: {
-                    GitHubIcon()
-                }
-            }
-            .accessibilityIdentifier("githubRepositoryLink")
-
-            Button(role: .destructive) {
-                onSignedOut()
-            } label: {
-                Label(String(localized: "action.logout"), systemImage: "rectangle.portrait.and.arrow.right")
-            }
-            .accessibilityIdentifier("logoutButton")
+    private var trigger: some View {
+        Button {
+            isAccountHubPresented = true
         } label: {
-            Image(systemName: "person.fill")
+            GradelyIcon(systemName: "gearshape.fill")
                 .gradelyToolbarIconButton()
         }
-        .accessibilityLabel(String(localized: "account.menu"))
-        .accessibilityIdentifier("accountMenuButton")
-        .sheet(isPresented: $isAccountHubPresented) {
-            if let accountHub {
-                accountHub
-            } else {
-                EmptyView()
-            }
-        }
-        .sheet(isPresented: $isSupportSheetPresented) {
-            SupportTipView(
-                viewModel: SupportTipViewModel(
-                    supportTipProvider: supportTipProvider
-                )
-            )
-        }
-        .sheet(isPresented: $isStudentPickerPresented) {
-            NavigationStack {
-                List(repository.availableStudents) { student in
-                    Button {
-                        Task {
-                            do {
-                                try await repository.switchEduPageStudent(student.id)
-                                isStudentPickerPresented = false
-                                NotificationCenter.default.post(name: .gradelySchoolAccountDidChange, object: nil)
-                            } catch {
-                                studentSwitchError = error.localizedDescription
-                            }
-                        }
-                    } label: {
-                        VStack(alignment: .leading, spacing: Spacing.xs) {
-                            Text(student.fullName)
-                            if let className = student.className {
-                                Text(className).font(.caption).foregroundStyle(.secondary)
-                            }
-                        }
-                    }
-                }
-                .navigationTitle("edupage.children.title")
-            }
-        }
-        .alert(String(localized: "error.title"), isPresented: Binding(
-            get: { studentSwitchError != nil },
-            set: { if !$0 { studentSwitchError = nil } }
-        )) {
-            Button(String(localized: "action.ok"), role: .cancel) { studentSwitchError = nil }
-        } message: {
-            Text(studentSwitchError ?? "")
+        .disabled(accountHub == nil)
+        .accessibilityLabel(String(localized: "settings.title"))
+        .accessibilityIdentifier("openAccountHubButton")
+    }
+
+    @ViewBuilder
+    private var presentedAccountHub: some View {
+        if let accountHub {
+            accountHub
+        } else {
+            EmptyView()
         }
     }
 }
 
-// MARK: - Credits toolbar button
+// MARK: - Gradey AI entry
 
-struct CreditsToolbarButton: View {
-    @State private var isPresented = false
+struct GradeyAIToolbarButton: View {
+    let onOpen: () -> Void
 
     var body: some View {
-        Button {
-            isPresented = true
-        } label: {
-            Image(systemName: "person.2.fill")
+        Button(action: onOpen) {
+            GradelyIcon(systemName: "sparkles")
                 .gradelyToolbarIconButton()
         }
-        .accessibilityLabel(String(localized: "credits.title"))
-        .accessibilityIdentifier("creditsButton")
-        .sheet(isPresented: $isPresented) {
-            CreditsView()
-        }
+        .accessibilityLabel(String(localized: "gradey.ai.title"))
+        .accessibilityIdentifier("gradeyAIButton")
     }
 }
 
@@ -304,7 +438,7 @@ struct StatTile: View {
         VStack(alignment: .leading, spacing: Spacing.xs) {
             HStack(spacing: Spacing.xs) {
                 if let systemImage {
-                    Image(systemName: systemImage)
+                    GradelyIcon(systemName: systemImage)
                         .font(.caption2.weight(.bold))
                 }
                 Text(title)
@@ -340,6 +474,7 @@ struct SectionHeader: View {
             .foregroundStyle(.secondary)
             .kerning(0.6)
             .frame(maxWidth: .infinity, alignment: .leading)
+            .accessibilityAddTraits(.isHeader)
     }
 }
 
@@ -347,6 +482,8 @@ struct SectionHeader: View {
 
 /// Full-width gradient CTA used for the primary action on a screen.
 struct PrimaryButtonStyle: ButtonStyle {
+    @Environment(\.isEnabled) private var isEnabled
+
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.headline)
@@ -354,10 +491,63 @@ struct PrimaryButtonStyle: ButtonStyle {
             .frame(maxWidth: .infinity)
             .padding(.vertical, Spacing.md + 2)
             .background(Brand.gradient, in: RoundedRectangle(cornerRadius: Radius.md, style: .continuous))
-            .shadow(color: Brand.primary.opacity(0.45), radius: 16, x: 0, y: 8)
-            .opacity(configuration.isPressed ? 0.85 : 1)
-            .scaleEffect(configuration.isPressed ? 0.98 : 1)
+            .shadow(
+                color: Brand.primary.opacity(isEnabled ? 0.45 : 0),
+                radius: 16,
+                x: 0,
+                y: 8
+            )
+            .saturation(isEnabled ? 1 : 0.25)
+            .opacity(isEnabled ? (configuration.isPressed ? 0.85 : 1) : 0.45)
+            .scaleEffect(isEnabled && configuration.isPressed ? 0.98 : 1)
             .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
+            .animation(.easeOut(duration: 0.15), value: isEnabled)
+    }
+}
+
+// MARK: - Sign in with Apple
+
+/// A single Apple sign-in control in every build configuration. UI tests swap
+/// the system authorization sheet for the mock action without adding a second
+/// visible button to the screen.
+struct GradelyAppleSignInButton: View {
+    let isLoading: Bool
+    let onCompletion: (Result<ASAuthorization, Error>) -> Void
+    let onMockSignIn: () -> Void
+
+    var body: some View {
+        Group {
+            #if DEBUG
+            if ProcessInfo.processInfo.arguments.contains("-uiTestingMockAPI") {
+                Button(action: onMockSignIn) {
+                    GradelyLabel("gradey.auth.signInWithApple", systemImage: "apple.logo")
+                        .font(.headline)
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 50)
+                        .background(.black, in: RoundedRectangle(cornerRadius: Radius.sm, style: .continuous))
+                }
+                .buttonStyle(.plain)
+            } else {
+                nativeButton
+            }
+            #else
+            nativeButton
+            #endif
+        }
+        .disabled(isLoading)
+        .accessibilityIdentifier("gradeyIDAppleButton")
+    }
+
+    private var nativeButton: some View {
+        SignInWithAppleButton(.signIn) { request in
+            request.requestedScopes = [.email, .fullName]
+        } onCompletion: { result in
+            onCompletion(result)
+        }
+        .signInWithAppleButtonStyle(.black)
+        .frame(height: 50)
+        .clipShape(RoundedRectangle(cornerRadius: Radius.sm, style: .continuous))
     }
 }
 
@@ -418,29 +608,75 @@ extension View {
 
 // MARK: - Aurora background
 
-/// Layered teal "aurora" glow backdrop used on the sign-in screen (Quipee-style).
+/// Layered teal "aurora" glow backdrop used app-wide (login, tabs, settings).
 struct AuroraBackground: View {
+    enum Style {
+        case standard
+        case accountSettings
+    }
+
+    @Environment(\.colorScheme) private var colorScheme
+
+    var style: Style = .standard
+
     var body: some View {
         ZStack {
             Color.gradelyGroupedBackground
             GeometryReader { geo in
-                ZStack {
-                    glow(Brand.auroraGlows[0], size: geo.size.width * 1.6)
-                        .position(x: geo.size.width * 0.52, y: geo.size.height * 0.02)
-                    glow(Brand.auroraGlows[1], size: geo.size.width * 1.15)
-                        .position(x: geo.size.width * 1.05, y: geo.size.height * 0.26)
-                    glow(Brand.auroraGlows[2], size: geo.size.width * 1.05)
-                        .position(x: -geo.size.width * 0.08, y: geo.size.height * 0.62)
+                switch style {
+                case .standard:
+                    ZStack {
+                        glow(Brand.auroraGlows[0], size: geo.size.width * 1.6)
+                            .position(x: geo.size.width * 0.52, y: geo.size.height * 0.02)
+                        glow(Brand.auroraGlows[1], size: geo.size.width * 1.15)
+                            .position(x: geo.size.width * 1.05, y: geo.size.height * 0.26)
+                        glow(Brand.auroraGlows[2], size: geo.size.width * 1.05)
+                            .position(x: -geo.size.width * 0.08, y: geo.size.height * 0.62)
+                    }
+                case .accountSettings:
+                    ZStack {
+                        glow(
+                            Brand.primary.opacity(colorScheme == .dark ? 0.15 : 0.10),
+                            size: geo.size.width * 0.92,
+                            blurRadius: 42
+                        )
+                        .position(x: geo.size.width * 0.68, y: geo.size.height * 0.08)
+
+                        glow(
+                            Brand.secondary.opacity(colorScheme == .dark ? 0.09 : 0.07),
+                            size: geo.size.width * 0.72,
+                            blurRadius: 38
+                        )
+                        .position(x: geo.size.width * 0.12, y: geo.size.height * 0.28)
+
+                        glow(
+                            Brand.primary.opacity(colorScheme == .dark ? 0.06 : 0.05),
+                            size: geo.size.width * 0.78,
+                            blurRadius: 44
+                        )
+                        .position(x: geo.size.width * 0.98, y: geo.size.height * 0.52)
+                    }
                 }
             }
         }
         .ignoresSafeArea()
     }
 
-    private func glow(_ color: Color, size: CGFloat) -> some View {
+    private func glow(
+        _ color: Color,
+        size: CGFloat,
+        blurRadius: CGFloat = 55
+    ) -> some View {
         Circle()
             .fill(RadialGradient(colors: [color, .clear], center: .center, startRadius: 0, endRadius: size / 2))
             .frame(width: size, height: size)
-            .blur(radius: 55)
+            .blur(radius: blurRadius)
+    }
+}
+
+extension View {
+    /// Applies the app-wide aurora gradient behind content.
+    func gradelyScreenBackground() -> some View {
+        background { AuroraBackground() }
     }
 }

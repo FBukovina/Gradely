@@ -53,7 +53,7 @@ final class AbsenceCache: AbsenceCaching {
     }
 
     func clear() throws {
-        try clear(legacyFileURL)
+        try clearMatchingFiles(prefix: "absence-cache")
     }
 
     func clear(scope: SchoolDataScope) throws {
@@ -84,6 +84,16 @@ final class AbsenceCache: AbsenceCaching {
     private func clear(_ fileURL: URL) throws {
         guard FileManager.default.fileExists(atPath: fileURL.path) else { return }
         try FileManager.default.removeItem(at: fileURL)
+    }
+
+    private func clearMatchingFiles(prefix: String) throws {
+        let contents = try FileManager.default.contentsOfDirectory(
+            at: directory,
+            includingPropertiesForKeys: nil
+        )
+        for fileURL in contents where fileURL.lastPathComponent.hasPrefix(prefix) {
+            try FileManager.default.removeItem(at: fileURL)
+        }
     }
 
     private struct Payload: Codable {
@@ -121,6 +131,7 @@ final class InMemoryAbsenceCache: AbsenceCaching {
 
     func clear() throws {
         cachedAbsence = nil
+        cachedAbsenceByScope = [:]
     }
 
     func clear(scope: SchoolDataScope) throws {

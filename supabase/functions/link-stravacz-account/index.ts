@@ -1,5 +1,6 @@
 import { errorResponse, handleOptions, json } from "../_shared/http.ts";
 import { providerSecretKey, requireUser } from "../_shared/client.ts";
+import { requireSafeProviderURL } from "../_shared/provider-url.ts";
 
 Deno.serve(async (req) => {
   const options = handleOptions(req);
@@ -8,12 +9,13 @@ Deno.serve(async (req) => {
   try {
     const { supabase, user } = await requireUser(req);
     const body = await req.json();
+    const serviceURL = requireSafeProviderURL(body.service_url, "StravaCZ service URL");
 
     const { data: secretID, error: secretError } = await supabase.rpc("store_provider_secret", {
       p_user_id: user.id,
       p_payload: {
         provider: "stravaCZ",
-        serviceURL: body.service_url,
+        serviceURL,
         sessionID: body.session_id,
         canteenNumber: body.canteen_number,
         username: body.username,

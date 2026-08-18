@@ -35,6 +35,17 @@ protocol LinkedAccountClient {
     func linkSchoolAccount(session: StoredSession, user: UserResponse?, gradeySession: GradeyAuthSession) async throws -> LinkedAccount
     func linkStravaCZAccount(session: StravaCZStoredSession, gradeySession: GradeyAuthSession) async throws -> LinkedAccount
     func activateSchoolAccount(id: String, gradeySession: GradeyAuthSession) async throws -> LinkedSchoolAccountActivation
+    func relinkSchoolAccount(
+        id: String,
+        session: StoredSession,
+        user: UserResponse?,
+        gradeySession: GradeyAuthSession
+    ) async throws -> LinkedAccount
+    func updateNotificationsEnabled(
+        id: String,
+        enabled: Bool,
+        gradeySession: GradeyAuthSession
+    ) async throws -> LinkedAccount
     func unlinkAccount(id: String, gradeySession: GradeyAuthSession) async throws
 }
 
@@ -58,28 +69,55 @@ final class LinkedAccountRepository {
     }
 
     func linkCurrentSchoolAccount(session: StoredSession, user: UserResponse?) async throws -> LinkedAccount {
-        let gradeySession = try requireGradeySession()
+        let gradeySession = try await requireGradeySession()
         let account = try await client.linkSchoolAccount(session: session, user: user, gradeySession: gradeySession)
         try upsert(account)
         return account
     }
 
     func linkCurrentStravaCZAccount(session: StravaCZStoredSession) async throws -> LinkedAccount {
-        let gradeySession = try requireGradeySession()
+        let gradeySession = try await requireGradeySession()
         let account = try await client.linkStravaCZAccount(session: session, gradeySession: gradeySession)
         try upsert(account)
         return account
     }
 
     func activateSchoolAccount(id: String) async throws -> LinkedSchoolAccountActivation {
-        let gradeySession = try requireGradeySession()
+        let gradeySession = try await requireGradeySession()
         let activation = try await client.activateSchoolAccount(id: id, gradeySession: gradeySession)
         try upsert(activation.account)
         return activation
     }
 
+    func reconnectSchoolAccount(
+        id: String,
+        session: StoredSession,
+        user: UserResponse?
+    ) async throws -> LinkedAccount {
+        let gradeySession = try await requireGradeySession()
+        let account = try await client.relinkSchoolAccount(
+            id: id,
+            session: session,
+            user: user,
+            gradeySession: gradeySession
+        )
+        try upsert(account)
+        return account
+    }
+
+    func updateNotificationsEnabled(id: String, enabled: Bool) async throws -> LinkedAccount {
+        let gradeySession = try await requireGradeySession()
+        let account = try await client.updateNotificationsEnabled(
+            id: id,
+            enabled: enabled,
+            gradeySession: gradeySession
+        )
+        try upsert(account)
+        return account
+    }
+
     func unlinkAccount(id: String) async throws {
-        let gradeySession = try requireGradeySession()
+        let gradeySession = try await requireGradeySession()
         try await client.unlinkAccount(id: id, gradeySession: gradeySession)
         let updated = loadAccounts().filter { $0.id != id }
         try store.saveAccounts(updated)
@@ -93,11 +131,8 @@ final class LinkedAccountRepository {
         try? store.clearAccounts()
     }
 
-    private func requireGradeySession() throws -> GradeyAuthSession {
-        guard let session = try authClient.bootstrapSession() else {
-            throw AppError.notLoggedIn
-        }
-        return session
+    private func requireGradeySession() async throws -> GradeyAuthSession {
+        try await authClient.validSession()
     }
 
     private func upsert(_ account: LinkedAccount) throws {
@@ -113,7 +148,7 @@ final class SupabaseLinkedAccountClient: LinkedAccountClient {
     private let configuration: SupabaseConfiguration?
     private let urlSession: URLSession
     private let encoder = JSONEncoder.sessionEncoder
-    private let decoder = JSONDecoder.sessionDecoder
+    private let decoder = JSONDecoder.gradeyAPIDecoder
 
     init(configuration: SupabaseConfiguration? = .fromBundle(), urlSession: URLSession = .shared) {
         self.configuration = configuration
@@ -161,6 +196,42 @@ final class SupabaseLinkedAccountClient: LinkedAccountClient {
             method: "POST",
             gradeySession: gradeySession,
             body: ActivateSchoolAccountRequest(id: id)
+        )
+    }
+
+    func relinkSchoolAccount(
+        id: String,
+        session: StoredSession,
+        user: UserResponse?,
+        gradeySession: GradeyAuthSession
+    ) async throws -> LinkedAccount {
+        let sanitized = ProviderSecretSanitizer.schoolPayload(from: session)
+        return try await send(
+            function: "relink-school-account",
+            method: "POST",
+            gradeySession: gradeySession,
+            body: RelinkSchoolAccountRequest(
+                id: id,
+                provider: sanitized.provider,
+                baseURL: sanitized.baseURL,
+                displayName: user?.fullName ?? sanitized.provider.displayName,
+                schoolName: user?.displaySchoolName,
+                providerUserID: user?.userUID,
+                tokenPayload: sanitized
+            )
+        )
+    }
+
+    func updateNotificationsEnabled(
+        id: String,
+        enabled: Bool,
+        gradeySession: GradeyAuthSession
+    ) async throws -> LinkedAccount {
+        try await send(
+            function: "update-linked-account-preferences",
+            method: "POST",
+            gradeySession: gradeySession,
+            body: UpdateLinkedAccountPreferencesRequest(id: id, notificationsEnabled: enabled)
         )
     }
 
@@ -233,8 +304,32 @@ final class SupabaseLinkedAccountClient: LinkedAccountClient {
 
 final class MockLinkedAccountClient: LinkedAccountClient {
     private var schoolPayloads: [String: ProviderSecretSanitizer.SchoolPayload] = [:]
+    private var accountsByID: [String: LinkedAccount] = [:]
+    private let schoolLinkError: Error?
+    private let stravaCZLinkError: Error?
+    private let activationError: Error?
+    private let reconnectError: Error?
+    private let preferencesError: Error?
+    private let unlinkError: Error?
+
+    init(
+        schoolLinkError: Error? = nil,
+        stravaCZLinkError: Error? = nil,
+        activationError: Error? = nil,
+        reconnectError: Error? = nil,
+        preferencesError: Error? = nil,
+        unlinkError: Error? = nil
+    ) {
+        self.schoolLinkError = schoolLinkError
+        self.stravaCZLinkError = stravaCZLinkError
+        self.activationError = activationError
+        self.reconnectError = reconnectError
+        self.preferencesError = preferencesError
+        self.unlinkError = unlinkError
+    }
 
     func linkSchoolAccount(session: StoredSession, user: UserResponse?, gradeySession: GradeyAuthSession) async throws -> LinkedAccount {
+        if let schoolLinkError { throw schoolLinkError }
         let account = LinkedAccount(
             id: session.cacheScope,
             provider: LinkedAccountProvider(schoolProvider: session.provider),
@@ -249,11 +344,13 @@ final class MockLinkedAccountClient: LinkedAccountClient {
             actionRequiredReason: nil
         )
         schoolPayloads[account.id] = ProviderSecretSanitizer.schoolPayload(from: session)
+        accountsByID[account.id] = account
         return account
     }
 
     func linkStravaCZAccount(session: StravaCZStoredSession, gradeySession: GradeyAuthSession) async throws -> LinkedAccount {
-        LinkedAccount(
+        if let stravaCZLinkError { throw stravaCZLinkError }
+        let account = LinkedAccount(
             id: "stravacz-\(session.canteenNumber)-\(session.username)",
             provider: .stravaCZ,
             providerUserID: session.username,
@@ -266,13 +363,20 @@ final class MockLinkedAccountClient: LinkedAccountClient {
             lastSyncedAt: Date(),
             actionRequiredReason: nil
         )
+        accountsByID[account.id] = account
+        return account
     }
 
-    func unlinkAccount(id: String, gradeySession: GradeyAuthSession) async throws {}
+    func unlinkAccount(id: String, gradeySession: GradeyAuthSession) async throws {
+        if let unlinkError { throw unlinkError }
+        accountsByID[id] = nil
+        schoolPayloads[id] = nil
+    }
 
     func activateSchoolAccount(id: String, gradeySession: GradeyAuthSession) async throws -> LinkedSchoolAccountActivation {
+        if let activationError { throw activationError }
         let payload = schoolPayloads[id] ?? ProviderSecretSanitizer.schoolPayload(from: PreviewData.expiredSession)
-        let account = LinkedAccount(
+        let account = accountsByID[id] ?? LinkedAccount(
             id: id,
             provider: payload.provider,
             providerUserID: nil,
@@ -286,6 +390,45 @@ final class MockLinkedAccountClient: LinkedAccountClient {
             actionRequiredReason: nil
         )
         return LinkedSchoolAccountActivation(account: account, tokenPayload: payload)
+    }
+
+    func relinkSchoolAccount(
+        id: String,
+        session: StoredSession,
+        user: UserResponse?,
+        gradeySession: GradeyAuthSession
+    ) async throws -> LinkedAccount {
+        if let reconnectError { throw reconnectError }
+        let previous = accountsByID[id]
+        let account = LinkedAccount(
+            id: id,
+            provider: LinkedAccountProvider(schoolProvider: session.provider),
+            providerUserID: user?.userUID ?? previous?.providerUserID,
+            displayName: user?.fullName ?? previous?.displayName ?? session.provider.displayName,
+            schoolName: user?.displaySchoolName ?? previous?.schoolName,
+            canteenName: nil,
+            status: .active,
+            notificationsEnabled: previous?.notificationsEnabled ?? true,
+            lastPolledAt: previous?.lastPolledAt,
+            lastSyncedAt: Date(),
+            actionRequiredReason: nil
+        )
+        schoolPayloads[id] = ProviderSecretSanitizer.schoolPayload(from: session)
+        accountsByID[id] = account
+        return account
+    }
+
+    func updateNotificationsEnabled(
+        id: String,
+        enabled: Bool,
+        gradeySession: GradeyAuthSession
+    ) async throws -> LinkedAccount {
+        if let preferencesError { throw preferencesError }
+        var account = accountsByID[id] ?? PreviewData.linkedSchoolAccount
+        account.id = id
+        account.notificationsEnabled = enabled
+        accountsByID[id] = account
+        return account
     }
 }
 
@@ -323,6 +466,31 @@ private struct LinkStravaCZAccountRequest: Encodable {
         case serviceURL = "service_url"
         case sessionID = "session_id"
     }
+}
+
+private struct RelinkSchoolAccountRequest: Encodable {
+    let id: String
+    let provider: LinkedAccountProvider
+    let baseURL: URL
+    let displayName: String
+    let schoolName: String?
+    let providerUserID: String?
+    let tokenPayload: ProviderSecretSanitizer.SchoolPayload
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case provider
+        case baseURL = "base_url"
+        case displayName = "display_name"
+        case schoolName = "school_name"
+        case providerUserID = "provider_user_id"
+        case tokenPayload = "token_payload"
+    }
+}
+
+private struct UpdateLinkedAccountPreferencesRequest: Encodable {
+    let id: String
+    let notificationsEnabled: Bool
 }
 
 private struct UnlinkAccountRequest: Encodable {

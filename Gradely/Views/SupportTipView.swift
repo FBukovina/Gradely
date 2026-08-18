@@ -10,47 +10,67 @@ struct SupportTipView: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: Spacing.lg) {
-                    header
-                    content
+            ZStack {
+                SettingsModalBackground()
+
+                ScrollView {
+                    VStack(alignment: .leading, spacing: Spacing.xl) {
+                        SettingsModalHeader(
+                            title: "support.tips.title",
+                            onDismiss: dismiss.callAsFunction
+                        )
+
+                        header
+                        SupportTipOptionsContent(
+                            viewModel: viewModel,
+                            onThankYouDone: dismiss.callAsFunction
+                        )
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 20)
+                    .padding(.top, Spacing.lg)
+                    .padding(.bottom, Spacing.xxl)
                 }
-                .padding(Spacing.lg)
+                .scrollIndicators(.hidden)
+                .accessibilityIdentifier("supportTipsScreen")
             }
-            .background(Color.gradelyGroupedBackground.ignoresSafeArea())
-            .navigationTitle(String(localized: "support.tips.title"))
-            .gradelyNavigationTitleDisplayMode(.inline)
-            .task {
-                await viewModel.loadIfNeeded()
-            }
-        }
-        .gradelyModalDismissButton {
-            dismiss()
+            .settingsModalNavigationChrome()
         }
     }
 
     private var header: some View {
-        Card {
-            VStack(alignment: .leading, spacing: Spacing.md) {
-                Image(systemName: "heart.fill")
-                    .font(.title2.weight(.bold))
-                    .foregroundStyle(Brand.onAccent)
-                    .frame(width: 48, height: 48)
-                    .background(Brand.gradient, in: RoundedRectangle(cornerRadius: Radius.md, style: .continuous))
+        SettingsModalSurface {
+            HStack(alignment: .top, spacing: Spacing.md) {
+                SettingsModalIcon(name: "favourite")
 
                 VStack(alignment: .leading, spacing: Spacing.xs) {
                     Text("support.tips.heading")
-                        .font(.title3.weight(.bold))
+                        .font(.headline)
                         .foregroundStyle(.primary)
 
                     Text("support.tips.message")
-                        .font(.subheadline)
+                        .font(.footnote)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
+        .accessibilityIdentifier("supportTipsHeader")
+    }
+}
+
+/// Shared tip states used by Settings and returning-user onboarding.
+struct SupportTipOptionsContent: View {
+    @Bindable var viewModel: SupportTipViewModel
+    var onThankYouDone: (() -> Void)?
+
+    var body: some View {
+        content
+            .task {
+                await viewModel.loadIfNeeded()
+            }
     }
 
     @ViewBuilder
@@ -72,7 +92,7 @@ struct SupportTipView: View {
     }
 
     private var loading: some View {
-        Card {
+        SettingsModalSurface {
             HStack(spacing: Spacing.md) {
                 ProgressView()
                     .tint(Brand.primary)
@@ -86,14 +106,22 @@ struct SupportTipView: View {
     }
 
     private var tipsList: some View {
-        VStack(spacing: Spacing.md) {
-            ForEach(viewModel.tips) { tip in
-                SupportTipRow(
-                    tip: tip,
-                    isPurchasing: viewModel.purchasingTipID == tip.id,
-                    isDisabled: viewModel.purchasingTipID != nil
-                ) {
-                    Task { await viewModel.purchase(tip) }
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            SettingsModalSurface(padding: 0) {
+                VStack(spacing: 0) {
+                    ForEach(Array(viewModel.tips.enumerated()), id: \.element.id) { index, tip in
+                        SupportTipRow(
+                            tip: tip,
+                            isPurchasing: viewModel.purchasingTipID == tip.id,
+                            isDisabled: viewModel.purchasingTipID != nil
+                        ) {
+                            Task { await viewModel.purchase(tip) }
+                        }
+
+                        if index < viewModel.tips.count - 1 {
+                            SettingsModalRowDivider()
+                        }
+                    }
                 }
             }
 
@@ -110,24 +138,32 @@ struct SupportTipView: View {
     }
 
     private func unavailable(message: String, canRetry: Bool) -> some View {
-        Card {
+        SettingsModalSurface {
             VStack(alignment: .leading, spacing: Spacing.md) {
-                Label {
+                HStack(alignment: .top, spacing: Spacing.md) {
+                    SettingsModalIcon(
+                        name: "alert-circle",
+                        color: .secondary,
+                        size: 15
+                    )
+
                     Text(message)
-                } icon: {
-                    Image(systemName: "exclamationmark.circle.fill")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
 
                 if canRetry {
                     Button {
                         Task { await viewModel.load() }
                     } label: {
-                        Label(String(localized: "action.retry"), systemImage: "arrow.clockwise")
+                        HStack(spacing: Spacing.sm) {
+                            GradelyIcon("refresh-04", size: 15)
+                            Text("action.retry")
+                        }
+                        .frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(.borderedProminent)
-                    .tint(Brand.primary)
+                    .buttonStyle(PrimaryButtonStyle())
                     .accessibilityIdentifier("supportTipsRetryButton")
                 }
             }
@@ -137,29 +173,29 @@ struct SupportTipView: View {
     }
 
     private var thankYou: some View {
-        Card {
+        SettingsModalSurface {
             VStack(alignment: .leading, spacing: Spacing.md) {
-                Image(systemName: "checkmark.seal.fill")
-                    .font(.largeTitle.weight(.bold))
-                    .foregroundStyle(Brand.primary)
+                HStack(alignment: .top, spacing: Spacing.md) {
+                    SettingsModalIcon(name: "checkmark-badge-02")
 
-                VStack(alignment: .leading, spacing: Spacing.xs) {
-                    Text("support.tips.thankYou.title")
-                        .font(.title3.weight(.bold))
+                    VStack(alignment: .leading, spacing: Spacing.xs) {
+                        Text("support.tips.thankYou.title")
+                            .font(.headline)
 
-                    Text("support.tips.thankYou.message")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
+                        Text("support.tips.thankYou.message")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                 }
 
-                Button {
-                    dismiss()
-                } label: {
-                    Text("action.ok")
+                if let onThankYouDone {
+                    Button(action: onThankYouDone) {
+                        Text("action.ok")
+                    }
+                    .buttonStyle(PrimaryButtonStyle())
+                    .accessibilityIdentifier("supportTipsDoneButton")
                 }
-                .buttonStyle(PrimaryButtonStyle())
-                .accessibilityIdentifier("supportTipsDoneButton")
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
@@ -175,31 +211,33 @@ private struct SupportTipRow: View {
 
     var body: some View {
         Button(action: onPurchase) {
-            Card(padding: Spacing.md) {
-                HStack(spacing: Spacing.md) {
-                    VStack(alignment: .leading, spacing: Spacing.xs) {
-                        Text(tip.title)
-                            .font(.headline)
-                            .foregroundStyle(.primary)
+            HStack(spacing: Spacing.md) {
+                SettingsModalIcon(name: "favourite")
 
-                        Text(tip.localizedPrice)
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(Brand.primary)
-                    }
+                VStack(alignment: .leading, spacing: Spacing.xs) {
+                    Text(tip.title)
+                        .font(.headline)
+                        .foregroundStyle(.primary)
+                        .fixedSize(horizontal: false, vertical: true)
 
-                    Spacer(minLength: Spacing.md)
+                    Text(tip.localizedPrice)
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(Brand.primary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
 
-                    if isPurchasing {
-                        ProgressView()
-                            .tint(Brand.primary)
-                            .accessibilityLabel(String(localized: "support.tips.purchase.progress"))
-                    } else {
-                        Image(systemName: "heart.circle.fill")
-                            .font(.title2.weight(.semibold))
-                            .foregroundStyle(Brand.primary)
-                    }
+                if isPurchasing {
+                    ProgressView()
+                        .tint(Brand.primary)
+                        .accessibilityLabel(String(localized: "support.tips.purchase.progress"))
+                } else {
+                    SettingsModalDisclosureIcon()
                 }
             }
+            .padding(.horizontal, 20)
+            .padding(.vertical, Spacing.md)
+            .frame(maxWidth: .infinity, minHeight: 84, alignment: .leading)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .disabled(isDisabled)

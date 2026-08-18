@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import HugeiconsStrokeRounded
 
 @main
 struct GradelyApp: App {
@@ -16,6 +17,8 @@ struct GradelyApp: App {
     #endif
 
     init() {
+        _ = HugeiconsStrokeRounded.load()
+        GradeyFirebaseConfiguration.configureIfNeeded()
         RevenueCatConfiguration.configureIfNeeded()
     }
 

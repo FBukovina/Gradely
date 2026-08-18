@@ -219,6 +219,57 @@ enum PreviewData {
         )
     ]
 
+    static let broadSchoolDirectorySearchFixture = [
+        SchoolDirectorySchool(
+            id: "private-breclav",
+            name: "Soukromá střední odborná škola Břeclav, s.r.o.",
+            town: "Břeclav",
+            schoolURL: "https://ssos-bv.bakalari.cz"
+        ),
+        SchoolDirectorySchool(
+            id: "private-viva",
+            name: "Soukromá základní škola a mateřská škola Viva Bambin",
+            town: "České Budějovice",
+            schoolURL: "https://montessoricb.bakalari.cz"
+        ),
+        SchoolDirectorySchool(
+            id: "private-jihlava",
+            name: "Soukromá vyšší odborná škola sociální, o.p.s.",
+            town: "Jihlava",
+            schoolURL: "https://svoss.bakalari.cz"
+        ),
+        SchoolDirectorySchool(
+            id: "private-karlovy-vary",
+            name: "Soukromá obchodní akademie Podnikatel, s.r.o.",
+            town: "Karlovy Vary",
+            schoolURL: "https://soap.bakalari.cz"
+        ),
+        SchoolDirectorySchool(
+            id: "private-litomerice",
+            name: "Soukromá střední odborná škola (1. KŠPA), s.r.o.",
+            town: "Litoměřice",
+            schoolURL: "https://1kspa.bakalari.cz"
+        ),
+        SchoolDirectorySchool(
+            id: "private-melnik",
+            name: "Soukromá SZdŠ Mělník",
+            town: "Mělník",
+            schoolURL: "https://zdravkamk.bakalari.cz"
+        ),
+        SchoolDirectorySchool(
+            id: "private-opava-academy",
+            name: "Soukromá obchodní akademie Opava s.r.o.",
+            town: "Opava",
+            schoolURL: "https://soa-opava.bakalari.cz"
+        ),
+        SchoolDirectorySchool(
+            id: "private-opava-business",
+            name: "Soukromá střední škola podnikatelská, s.r.o. Opava",
+            town: "Opava",
+            schoolURL: "https://podnikatelskaskola.bakalari.cz"
+        )
+    ]
+
     // MARK: - Timetable
 
     static let timetableHours = [

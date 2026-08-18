@@ -1,8 +1,21 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "" : {
+
+    },
     "-" : {
 
+    },
+    "%@ · %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ · %2$@"
+          }
+        }
+      }
     },
     "%@, %@" : {
       "localizations" : {
@@ -27,6 +40,9 @@
     "%lld" : {
 
     },
+    "%lld / 2" : {
+
+    },
     "%lld → %lld" : {
       "localizations" : {
         "en" : {
@@ -38,19 +54,64 @@
       }
     },
     "%lld marks" : {
-
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld známek"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld marks"
+          }
+        }
+      }
     },
     "%lld subjects" : {
-
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld předmětů"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld subjects"
+          }
+        }
+      }
     },
     "%lld." : {
+
+    },
+    "%lld/2000" : {
+
+    },
+    "•" : {
 
     },
     "90 days" : {
 
     },
     "Absence risk" : {
-
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Riziko absence"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Absence risk"
+          }
+        }
+      }
     },
     "absence.category.distanceTeaching" : {
       "extractionState" : "stale",
@@ -1061,6 +1122,7 @@
       }
     },
     "account.menu" : {
+      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
@@ -1205,6 +1267,7 @@
       }
     },
     "app.name" : {
+      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
@@ -1227,7 +1290,20 @@
 
     },
     "Cloud trends start after Gradey records grade snapshots." : {
-
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cloudové trendy se objeví, až Gradey zaznamená snímky známek."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cloud trends start after Gradey records grade snapshots."
+          }
+        }
+      }
     },
     "credits.madeBy" : {
       "localizations" : {
@@ -1311,7 +1387,532 @@
       }
     },
     "Date" : {
-
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Datum"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Date"
+          }
+        }
+      }
+    },
+    "debug.clearCache" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Smazat cache"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete cache"
+          }
+        }
+      }
+    },
+    "debug.clearCache.confirm.message" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Smaže místní známky, absence, rozvrh a jídelníček. Účty zůstanou přihlášené."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deletes local marks, absences, timetable, and meals. Accounts stay signed in."
+          }
+        }
+      }
+    },
+    "debug.clearCache.confirm.title" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Smazat místní cache?"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete local cache?"
+          }
+        }
+      }
+    },
+    "debug.copied" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zkopírováno: %@"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copied: %@"
+          }
+        }
+      }
+    },
+    "debug.disable" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vypnout režim ladění"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Turn off debug mode"
+          }
+        }
+      }
+    },
+    "debug.guestMode" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Režim hosta"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Guest mode"
+          }
+        }
+      }
+    },
+    "debug.linkedAccountID" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ID propojené školy"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Linked school ID"
+          }
+        }
+      }
+    },
+    "debug.message" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Identifikátory a restart průvodce. Školní účet ani Gradey ID se neodhlásí."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Identifiers and onboarding restarts. School and Gradey ID stay signed in."
+          }
+        }
+      }
+    },
+    "debug.no" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ne"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No"
+          }
+        }
+      }
+    },
+    "debug.none" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Žádný"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "None"
+          }
+        }
+      }
+    },
+    "debug.onboardingProgress" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Uložený krok"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saved step"
+          }
+        }
+      }
+    },
+    "debug.onboardingV1" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dokončené onboardování v1"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "v1 onboarding completed"
+          }
+        }
+      }
+    },
+    "debug.onboardingV2" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dokončené onboardování v2"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "v2 onboarding completed"
+          }
+        }
+      }
+    },
+    "debug.resetAsNewUser" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Začít jako nový uživatel"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Start as new user"
+          }
+        }
+      }
+    },
+    "debug.resetAsNewUser.confirm.message" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Odhlásí Gradey ID, školu i jídlo, smaže místní cache a spustí první nastavení pro nové uživatele."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Signs out of Gradey ID, school, and meals, deletes local cache, and starts first-run setup."
+          }
+        }
+      }
+    },
+    "debug.resetAsNewUser.confirm.title" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Začít jako nový uživatel?"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Start as a new user?"
+          }
+        }
+      }
+    },
+    "debug.restart.confirm" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Restartovat"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Restart"
+          }
+        }
+      }
+    },
+    "debug.restartNewUser" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Restartovat onboardování nového uživatele"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Restart new-user onboarding"
+          }
+        }
+      }
+    },
+    "debug.restartNewUser.confirm.message" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Znovu se zobrazí první nastavení pro nové uživatele. Škola a Gradey ID zůstanou přihlášené."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Replay the first-run setup. Your school and Gradey ID stay signed in."
+          }
+        }
+      }
+    },
+    "debug.restartNewUser.confirm.title" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Restartovat onboardování nového uživatele?"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Restart new-user onboarding?"
+          }
+        }
+      }
+    },
+    "debug.restartUpgrade" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Restartovat onboardování při upgradu"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Restart upgrade onboarding"
+          }
+        }
+      }
+    },
+    "debug.restartUpgrade.confirm.message" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Znovu se zobrazí nastavení pro uživatele z verze 1. Škola a Gradey ID zůstanou přihlášené."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Replay the 2.0 upgrade setup. Your school and Gradey ID stay signed in."
+          }
+        }
+      }
+    },
+    "debug.restartUpgrade.confirm.title" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Restartovat onboardování při upgradu?"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Restart upgrade onboarding?"
+          }
+        }
+      }
+    },
+    "debug.revenueCatID" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "RevenueCat ID"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "RevenueCat ID"
+          }
+        }
+      }
+    },
+    "debug.revenueCatOriginalID" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Původní RevenueCat ID"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "RevenueCat original ID"
+          }
+        }
+      }
+    },
+    "debug.signOut" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Odhlásit vše"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sign out"
+          }
+        }
+      }
+    },
+    "debug.signOut.confirm.message" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Odhlásí Gradey ID, školní účet i jídlo na tomto zařízení."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Signs out of Gradey ID, school, and meals on this device."
+          }
+        }
+      }
+    },
+    "debug.signOut.confirm.title" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Odhlásit vše?"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sign out everywhere?"
+          }
+        }
+      }
+    },
+    "debug.supabaseID" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Supabase ID"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Supabase ID"
+          }
+        }
+      }
+    },
+    "debug.title" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Režim ladění"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Debug mode"
+          }
+        }
+      }
+    },
+    "debug.unavailable" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nedostupné"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unavailable"
+          }
+        }
+      }
+    },
+    "debug.yes" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ano"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yes"
+          }
+        }
+      }
     },
     "detail.absence.percent" : {
       "localizations" : {
@@ -2295,9 +2896,23 @@
       }
     },
     "Grade trends" : {
-
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vývoj známek"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Grade trends"
+          }
+        }
+      }
     },
     "gradey.account.alerts.off" : {
+      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
@@ -2314,6 +2929,7 @@
       }
     },
     "gradey.account.alerts.on" : {
+      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
@@ -2346,6 +2962,7 @@
       }
     },
     "gradey.account.connect.title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
@@ -2362,6 +2979,7 @@
       }
     },
     "gradey.account.empty.message" : {
+      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
@@ -2378,6 +2996,7 @@
       }
     },
     "gradey.account.empty.title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
@@ -2410,6 +3029,7 @@
       }
     },
     "gradey.account.error.pushSettingsFailed" : {
+      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
@@ -2442,6 +3062,7 @@
       }
     },
     "gradey.account.header.subtitle" : {
+      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
@@ -2458,6 +3079,7 @@
       }
     },
     "gradey.account.linked.title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
@@ -2490,6 +3112,7 @@
       }
     },
     "gradey.account.linkSchool.short" : {
+      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
@@ -2506,17 +3129,18 @@
       }
     },
     "gradey.account.linkSchool.subtitle" : {
+      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Přihlaste se jednou do Bakalářů nebo EduPage. Gradey uloží tokeny poskytovatele, ne vaše heslo."
+            "value" : "Přihlaste se jednou. Hesla zůstávají v Klíčence tohoto zařízení; Gradey ID synchronizuje jen očištěné tokeny poskytovatele Bakaláři nebo EduPage."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sign in to Bakaláři or EduPage once. Gradey stores provider tokens, not your password."
+            "value" : "Sign in once. Passwords stay in this device’s Keychain; Gradey ID synchronizes only sanitized Bakaláři or EduPage provider tokens."
           }
         }
       }
@@ -2538,6 +3162,7 @@
       }
     },
     "gradey.account.linkStrava.short" : {
+      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
@@ -2570,6 +3195,7 @@
       }
     },
     "gradey.account.moreActions" : {
+      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
@@ -2762,6 +3388,7 @@
       }
     },
     "gradey.account.stat.alerts" : {
+      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
@@ -2778,6 +3405,7 @@
       }
     },
     "gradey.account.stat.linked" : {
+      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
@@ -2922,6 +3550,7 @@
       }
     },
     "gradey.account.unlink.message" : {
+      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
@@ -2965,6 +3594,840 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Unlink account?"
+          }
+        }
+      }
+    },
+    "gradey.ai.availability.paused.message" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stále si můžete prohlížet chaty a spravovat nastavení Gradey AI. Odesílání nových zpráv bude brzy znovu dostupné."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You can still view chats and manage Gradey AI settings. Sending new messages will be available again soon."
+          }
+        }
+      }
+    },
+    "gradey.ai.availability.paused.title" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Odpovědi AI jsou dočasně pozastavené"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI replies are temporarily paused"
+          }
+        }
+      }
+    },
+    "gradey.ai.chat.empty.message" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zeptejte se na své známky nebo rozvrh."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ask anything about your marks or timetable."
+          }
+        }
+      }
+    },
+    "gradey.ai.chat.empty.title" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "S čím vám můžu pomoct?"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "What would you like help with?"
+          }
+        }
+      }
+    },
+    "gradey.ai.composer.placeholder" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zeptejte se na známky nebo rozvrh…"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ask about your marks or timetable…"
+          }
+        }
+      }
+    },
+    "gradey.ai.consent.action" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Souhlasit a pokračovat"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Agree and continue"
+          }
+        }
+      }
+    },
+    "gradey.ai.consent.azure.message" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vaše dotazy, nedávná historie chatu a omezený školní kontext se bezpečně odesílají přes Firebase Functions do Microsoft Azure AI. Vaše přihlašovací údaje ke škole ani původní odpovědi školního systému se nikdy neodesílají."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your prompts, recent chat history, and limited school context are sent securely through Firebase Functions to Microsoft Azure AI. Your school credentials and raw school-provider payloads are never sent."
+          }
+        }
+      }
+    },
+    "gradey.ai.consent.azure.title" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zpracování službou Azure AI"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Processed by Azure AI"
+          }
+        }
+      }
+    },
+    "gradey.ai.consent.retention.message" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chaty hostů se smažou po 30 dnech neaktivity. Chaty můžete kdykoli smazat nebo odvolat souhlas."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Guest chats are deleted after 30 days of inactivity. You can delete chats or revoke consent at any time."
+          }
+        }
+      }
+    },
+    "gradey.ai.consent.retention.title" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Data máte pod kontrolou"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You stay in control"
+          }
+        }
+      }
+    },
+    "gradey.ai.consent.schoolData.message" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gradey sdílí jen omezený přehled známek a rozvrhu potřebný k odpovědi. Vaše školní heslo nikdy nesdílí."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gradey shares only a limited snapshot of your marks and timetable needed to answer. It never shares your school password."
+          }
+        }
+      }
+    },
+    "gradey.ai.consent.schoolData.title" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Omezený školní kontext"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Limited school context"
+          }
+        }
+      }
+    },
+    "gradey.ai.consent.subtitle" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Než začnete, podívejte se, jak Gradey nakládá s vašimi údaji."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Before you start, review how Gradey handles your information."
+          }
+        }
+      }
+    },
+    "gradey.ai.consent.title" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Používat Gradey AI?"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Use Gradey AI?"
+          }
+        }
+      }
+    },
+    "gradey.ai.context.partial" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Školní kontext nemusí být úplný"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "School context may be incomplete"
+          }
+        }
+      }
+    },
+    "gradey.ai.context.ready" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Školní kontext je připravený"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "School context is ready"
+          }
+        }
+      }
+    },
+    "gradey.ai.context.refresh" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Obnovit školní kontext"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Refresh school context"
+          }
+        }
+      }
+    },
+    "gradey.ai.context.refreshing" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Obnovuji školní kontext…"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Refreshing school context…"
+          }
+        }
+      }
+    },
+    "gradey.ai.context.unavailable" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Školní kontext není dostupný"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "School context is unavailable"
+          }
+        }
+      }
+    },
+    "gradey.ai.conversation.delete.action" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Smazat chat"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete chat"
+          }
+        }
+      }
+    },
+    "gradey.ai.conversation.delete.message" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tento chat a všechny jeho zprávy budou trvale smazány."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This chat and all of its messages will be permanently deleted."
+          }
+        }
+      }
+    },
+    "gradey.ai.conversation.delete.title" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Smazat tento chat?"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete this chat?"
+          }
+        }
+      }
+    },
+    "gradey.ai.conversations.back" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zpět na chaty"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Back to chats"
+          }
+        }
+      }
+    },
+    "gradey.ai.conversations.title" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chaty"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chats"
+          }
+        }
+      }
+    },
+    "gradey.ai.deleteAll.action" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Smazat všechny chaty"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete all chats"
+          }
+        }
+      }
+    },
+    "gradey.ai.deleteAll.message" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tímto trvale smažete všechny své chaty a zprávy v Gradey AI."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This permanently deletes all of your Gradey AI chats and messages."
+          }
+        }
+      }
+    },
+    "gradey.ai.deleteAll.title" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Smazat všechny chaty?"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete all chats?"
+          }
+        }
+      }
+    },
+    "gradey.ai.disclaimer" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gradey AI může dělat chyby. Odpovědi berte jako studijní doporučení a důležité informace si ověřte."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gradey AI can make mistakes. Treat its answers as study guidance and verify important information."
+          }
+        }
+      }
+    },
+    "gradey.ai.empty.message" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Založte nový chat nebo vyberte některý z návrhů níže."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Start a new chat or choose a suggestion below."
+          }
+        }
+      }
+    },
+    "gradey.ai.empty.title" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zatím žádné chaty"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No chats yet"
+          }
+        }
+      }
+    },
+    "gradey.ai.error.noContext" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zatím nejsou dostupné žádné známky ani rozvrh. Obnovte školní data a zkuste to znovu."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No marks or timetable are available yet. Refresh your school data and try again."
+          }
+        }
+      }
+    },
+    "gradey.ai.limit.remaining" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zbývající odpovědi dnes: %1$lld z %2$lld"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Replies remaining today: %1$lld of %2$lld"
+          }
+        }
+      }
+    },
+    "gradey.ai.limit.resets" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Obnoví se %@"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Resets %@"
+          }
+        }
+      }
+    },
+    "gradey.ai.loadFailed.message" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zkontrolujte připojení a zkuste to znovu."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Check your connection and try again."
+          }
+        }
+      }
+    },
+    "gradey.ai.loadFailed.title" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gradey AI se nepodařilo načíst"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn’t load Gradey AI"
+          }
+        }
+      }
+    },
+    "gradey.ai.loading" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Načítám Gradey AI…"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Loading Gradey AI…"
+          }
+        }
+      }
+    },
+    "gradey.ai.newChat" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nový chat"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "New chat"
+          }
+        }
+      }
+    },
+    "gradey.ai.options" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Možnosti Gradey AI"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gradey AI options"
+          }
+        }
+      }
+    },
+    "gradey.ai.privacy.footnote" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dotazy, historie chatu a omezený školní kontext zpracovávají Firebase Functions a Microsoft Azure AI."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prompts, chat history, and limited school context are processed by Firebase Functions and Microsoft Azure AI."
+          }
+        }
+      }
+    },
+    "gradey.ai.privacy.revoke.action" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Odvolat souhlas a smazat data"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Revoke consent and delete data"
+          }
+        }
+      }
+    },
+    "gradey.ai.privacy.revoke.message" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tímto trvale smažete všechny chaty v Gradey AI i svůj souhlas s AI. Chcete-li Gradey AI znovu používat, budete muset souhlasit znovu."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This permanently deletes every Gradey AI chat and your AI consent. You’ll need to consent again to use Gradey AI."
+          }
+        }
+      }
+    },
+    "gradey.ai.privacy.revoke.title" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Odvolat souhlas?"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Revoke consent?"
+          }
+        }
+      }
+    },
+    "gradey.ai.responding" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gradey AI odpovídá"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gradey AI is responding"
+          }
+        }
+      }
+    },
+    "gradey.ai.response.cancelled" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Odpověď zastavena"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Response stopped"
+          }
+        }
+      }
+    },
+    "gradey.ai.send" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Odeslat zprávu"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Send message"
+          }
+        }
+      }
+    },
+    "gradey.ai.stop" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zastavit odpověď"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stop response"
+          }
+        }
+      }
+    },
+    "gradey.ai.title" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gradey AI"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gradey AI"
+          }
+        }
+      }
+    },
+    "gradey.ai.unavailable.message" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gradey AI je dočasně nedostupná. Zkuste to prosím znovu později."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gradey AI is temporarily unavailable. Please try again later."
+          }
+        }
+      }
+    },
+    "gradey.ai.unavailable.title" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gradey AI není dostupná"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gradey AI is unavailable"
+          }
+        }
+      }
+    },
+    "gradey.ai.welcome.message" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ptejte se na poslední známky, na co se zaměřit nebo co vás čeká v rozvrhu."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ask about recent marks, where to focus, or what’s coming up in your timetable."
+          }
+        }
+      }
+    },
+    "gradey.ai.welcome.title" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Váš osobní studijní asistent"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your personal study assistant"
+          }
+        }
+      }
+    },
+    "gradey.auth.continueWithoutAccount" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pokračovat bez účtu"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Continue without an account"
           }
         }
       }
@@ -3038,13 +4501,13 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Gradey nikdy neukládá vaše školní ani jídelní heslo. Připojené účty používají tokeny a při potřebě hesla vás požádají o nové připojení."
+            "value" : "Školní a jídelní hesla zůstávají v Klíčence tohoto zařízení. Gradey ID synchronizuje jen očištěné tokeny poskytovatelů a při potřebě hesla vás požádá o nové připojení."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Gradey never stores your school or canteen password. Linked accounts use provider tokens and ask you to re-link when a password is needed again."
+            "value" : "School and canteen passwords stay in this device’s Keychain. Gradey ID synchronizes only sanitized provider tokens and asks you to re-link when a password is needed again."
           }
         }
       }
@@ -3082,6 +4545,7 @@
       }
     },
     "gradey.auth.signInHeading" : {
+      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
@@ -3093,6 +4557,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Continue with Apple"
+          }
+        }
+      }
+    },
+    "gradey.auth.signInWithApple" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Přihlásit se přes Apple"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sign in with Apple"
           }
         }
       }
@@ -3146,6 +4627,118 @@
         }
       }
     },
+    "gradey.guest.accountSection.action" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Přihlásit se ke Gradey ID"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sign in to Gradey ID"
+          }
+        }
+      }
+    },
+    "gradey.guest.accountSection.heading" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chcete používat Gradey ID?"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Want to use Gradey ID?"
+          }
+        }
+      }
+    },
+    "gradey.guest.accountSection.message" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vraťte se k přihlášení přes Gradey ID a zapněte synchronizované funkce účtu. Váš školní účet zůstane v tomto zařízení připojený."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Return to Gradey ID sign-in to enable synced account features. Your school account remains connected on this device."
+          }
+        }
+      }
+    },
+    "gradey.guest.accountSection.title" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Účet Gradey"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gradey account"
+          }
+        }
+      }
+    },
+    "gradey.guest.profile.message" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Školní data zůstávají v tomto zařízení"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "School data stays on this device"
+          }
+        }
+      }
+    },
+    "gradey.guest.profile.title" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Používáte Gradey jako host"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Using Gradey as a guest"
+          }
+        }
+      }
+    },
+    "gradey.guest.schoolLogout" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Odhlásit školní účet"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sign out of school account"
+          }
+        }
+      }
+    },
     "Hours" : {
 
     },
@@ -3156,7 +4749,20 @@
 
     },
     "Loading today..." : {
-
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Načítám Dnes…"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Loading today..."
+          }
+        }
+      }
     },
     "login.button" : {
       "localizations" : {
@@ -3287,6 +4893,7 @@
       }
     },
     "login.subtitle" : {
+      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
@@ -3336,7 +4943,20 @@
       }
     },
     "Lunch" : {
-
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Oběd"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lunch"
+          }
+        }
+      }
     },
     "Mark" : {
 
@@ -3780,19 +5400,168 @@
 
     },
     "New marks and trends" : {
-
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nové známky a trendy"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "New marks and trends"
+          }
+        }
+      }
     },
     "Next: %@" : {
-
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Další: %@"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Next: %@"
+          }
+        }
+      }
     },
     "No grade history" : {
-
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Žádná historie známek"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No grade history"
+          }
+        }
+      }
     },
     "Now and next" : {
-
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Teď a další"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Now and next"
+          }
+        }
+      }
     },
     "OK" : {
 
+    },
+    "onboarding.account.body" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vytvořte si soukromé Gradey ID přes Apple, synchronizujte nastavení mezi zařízeními a zapněte oznámení. Nemusíte si pamatovat žádné další heslo."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Create your private Gradey ID with Apple to sync settings across devices and enable notifications. There is no separate password to remember."
+          }
+        }
+      }
+    },
+    "onboarding.account.login.body" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Přihlaste se stejným Apple ID, které jste použili při vytváření Gradey ID. Žádné další heslo nepotřebujete."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sign in with the same Apple ID you used to create Gradey ID. There is no separate password."
+          }
+        }
+      }
+    },
+    "onboarding.account.login.title" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Přihlaste se do Gradey"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Log in to Gradey"
+          }
+        }
+      }
+    },
+    "onboarding.account.title" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vytvořte si Gradey ID"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Create your Gradey ID"
+          }
+        }
+      }
+    },
+    "onboarding.back" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zpět"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Back"
+          }
+        }
+      }
+    },
+    "onboarding.continue" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pokračovat"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Continue"
+          }
+        }
+      }
     },
     "onboarding.getStarted" : {
       "localizations" : {
@@ -3810,7 +5579,41 @@
         }
       }
     },
+    "onboarding.guest.notificationsNote" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Upozornění na nové známky vyžadují Gradey ID. Později je můžete zapnout v Účtu a nastavení."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "New-mark notifications require Gradey ID. You can enable them later in Account & Settings."
+          }
+        }
+      }
+    },
+    "onboarding.logIn" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Přihlásit se"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Log in"
+          }
+        }
+      }
+    },
     "onboarding.marks.body" : {
+      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
@@ -3827,6 +5630,7 @@
       }
     },
     "onboarding.marks.title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
@@ -3842,7 +5646,108 @@
         }
       }
     },
+    "onboarding.meals.body" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Volitelně připojte Strava.cz a mějte jídelníček po ruce."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Optionally connect Strava.cz to keep your meal plan close at hand."
+          }
+        }
+      }
+    },
+    "onboarding.meals.connect" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Připojit Strava.cz"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connect Strava.cz"
+          }
+        }
+      }
+    },
+    "onboarding.meals.connect.body" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Přihlaste se údaji ke Strava.cz. Heslo zůstane v Klíčence zařízení a neposílá se na servery Gradey."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sign in with your Strava.cz credentials. Your password stays in the device Keychain and is not sent to Gradey servers."
+          }
+        }
+      }
+    },
+    "onboarding.meals.connect.title" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Připojit Strava.cz"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connect Strava.cz"
+          }
+        }
+      }
+    },
+    "onboarding.meals.notNow" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Teď ne"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not now"
+          }
+        }
+      }
+    },
+    "onboarding.meals.title" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Školní obědy"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "School meals"
+          }
+        }
+      }
+    },
     "onboarding.next" : {
+      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
@@ -3858,23 +5763,491 @@
         }
       }
     },
-    "onboarding.school.body" : {
+    "onboarding.notifications.body" : {
       "localizations" : {
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Použijte školní URL Bakaláři a přihlaste se stejnými údaji jako ve škole."
+            "value" : "S Gradey ID můžete dostat upozornění, když přijde nová známka. Nastavení lze kdykoli změnit v Účtu a nastavení."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Use your school's Bakalari URL and sign in with the same school credentials."
+            "value" : "With Gradey ID, you can get an alert when a new mark arrives. Change this anytime in Account & Settings."
+          }
+        }
+      }
+    },
+    "onboarding.notifications.disabled" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vypnuto"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Off"
+          }
+        }
+      }
+    },
+    "onboarding.notifications.enable" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zapnout upozornění"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enable notifications"
+          }
+        }
+      }
+    },
+    "onboarding.notifications.enabled" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zapnuto"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enabled"
+          }
+        }
+      }
+    },
+    "onboarding.notifications.notNow" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Teď ne"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not now"
+          }
+        }
+      }
+    },
+    "onboarding.notifications.title" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mějte přehled"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stay up to date"
+          }
+        }
+      }
+    },
+    "onboarding.notifications.unavailable" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vyžaduje Gradey ID"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Requires Gradey ID"
+          }
+        }
+      }
+    },
+    "onboarding.progress" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Krok %lld z %lld"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Step %lld of %lld"
+          }
+        }
+      }
+    },
+    "onboarding.ready.account" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Účet"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Account"
+          }
+        }
+      }
+    },
+    "onboarding.ready.body" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zkontrolujte připojené služby a otevřete Gradey."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Review your connections, then open Gradey."
+          }
+        }
+      }
+    },
+    "onboarding.ready.connected" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Připojeno"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connected"
+          }
+        }
+      }
+    },
+    "onboarding.ready.gradeyID" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gradey ID"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gradey ID"
+          }
+        }
+      }
+    },
+    "onboarding.ready.localOnly" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pouze v tomto zařízení"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Only on this device"
+          }
+        }
+      }
+    },
+    "onboarding.ready.meals" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Obědy"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Meals"
+          }
+        }
+      }
+    },
+    "onboarding.ready.notConnected" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nepřipojeno"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not connected"
+          }
+        }
+      }
+    },
+    "onboarding.ready.notifications" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Upozornění"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Notifications"
+          }
+        }
+      }
+    },
+    "onboarding.ready.open" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Otevřít Gradey"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open Gradey"
+          }
+        }
+      }
+    },
+    "onboarding.ready.school" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Škola"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "School"
+          }
+        }
+      }
+    },
+    "onboarding.ready.title" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Všechno je připraveno"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You're ready"
+          }
+        }
+      }
+    },
+    "onboarding.school.body" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vyberte poskytovatele a přihlaste se stejnými údaji jako ve škole. Heslo zůstane v Klíčence tohoto zařízení."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose your provider and use the same sign-in details as at school. Your password stays in this device’s Keychain."
+          }
+        }
+      }
+    },
+    "onboarding.school.change" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Změnit"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Change"
+          }
+        }
+      }
+    },
+    "onboarding.school.choose.body" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nejprve vyberte poskytovatele a vyhledejte svou školu. Pokud ji nenajdete, můžete zadat adresu ručně."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "First choose your provider and find your school. If it is not listed, enter its address manually."
+          }
+        }
+      }
+    },
+    "onboarding.school.choose.title" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vyberte svou školu"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose your school"
+          }
+        }
+      }
+    },
+    "onboarding.school.connect" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Připojit školu"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connect school"
+          }
+        }
+      }
+    },
+    "onboarding.school.continue" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pokračovat k přihlášení"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Continue to sign in"
+          }
+        }
+      }
+    },
+    "onboarding.school.credentials.body" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Použijte stejné uživatelské jméno a heslo jako ve škole. Heslo zůstane v Klíčence tohoto zařízení."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Use the same username and password as at school. Your password stays in this device’s Keychain."
+          }
+        }
+      }
+    },
+    "onboarding.school.credentials.title" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Přihlaste se do školy"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sign in to your school"
+          }
+        }
+      }
+    },
+    "onboarding.school.manual.label" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nebo zadejte adresu školy ručně"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Or enter the school address manually"
+          }
+        }
+      }
+    },
+    "onboarding.school.stage.credentials" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Přihlášení"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sign in"
+          }
+        }
+      }
+    },
+    "onboarding.school.stage.school" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Škola"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "School"
           }
         }
       }
     },
     "onboarding.school.title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
@@ -3891,6 +6264,7 @@
       }
     },
     "onboarding.skip" : {
+      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
@@ -3906,18 +6280,325 @@
         }
       }
     },
-    "onboarding.welcome.body" : {
+    "onboarding.skipIntro" : {
+      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Čistější způsob, jak mít školní známky, průměry a absenci po ruce."
+            "value" : "Přeskočit úvod"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "A cleaner way to keep school marks, averages, and absences close."
+            "value" : "Skip intro"
+          }
+        }
+      }
+    },
+    "onboarding.sync.warning.meals" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Strava.cz je v tomto zařízení připojená, ale nepodařilo se ji propojit s Gradey ID."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Strava.cz is connected on this device, but could not be linked to Gradey ID."
+          }
+        }
+      }
+    },
+    "onboarding.sync.warning.notifications" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Volbu oznámení se nepodařilo synchronizovat s Gradey ID. Nastavení zůstalo uložené v tomto zařízení."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your notification choice could not be synced to Gradey ID. It remains saved on this device."
+          }
+        }
+      }
+    },
+    "onboarding.sync.warning.retry" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zkusit znovu"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Try again"
+          }
+        }
+      }
+    },
+    "onboarding.sync.warning.retrying" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Probíhá další pokus…"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Retrying…"
+          }
+        }
+      }
+    },
+    "onboarding.sync.warning.school" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Škola je v tomto zařízení připojená, ale nepodařilo se ji propojit s Gradey ID."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your school is connected on this device, but could not be linked to Gradey ID."
+          }
+        }
+      }
+    },
+    "onboarding.sync.warning.title" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Některá připojení jsou pouze v zařízení"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Some connections are only on this device"
+          }
+        }
+      }
+    },
+    "onboarding.upgrade.account.body" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vytvořte si Gradey ID přes Apple, synchronizujte nastavení mezi zařízeními a zapněte upozornění na nové známky. Můžete také pokračovat a Gradey ID si vytvořit později v Nastavení."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Create a Gradey ID with Apple to sync settings across devices and enable new-mark notifications. You can also continue now and create it later in Settings."
+          }
+        }
+      }
+    },
+    "onboarding.upgrade.account.continueWithout" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pokračovat bez Gradey ID"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Continue without Gradey ID"
+          }
+        }
+      }
+    },
+    "onboarding.upgrade.account.title" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Připojte Gradey ID"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connect your Gradey ID"
+          }
+        }
+      }
+    },
+    "onboarding.upgrade.support.body" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Děkujeme, že Gradey používáte. Vývoj i provoz něco stojí; jen cloudové a API služby nás dosud vyšly na více než 700 dolarů. Podpora je zcela dobrovolná a Gradey můžete dál používat bez ohledu na své rozhodnutí. Pokud vám aplikace pomáhá, jednorázovým příspěvkem podpoříte její další vývoj."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Thank you for using Gradey. Building and running it has real costs; cloud and API services alone have already cost more than $700. Supporting us is completely optional, and you can keep using Gradey either way. If the app helps you, a one-time tip supports its continued development."
+          }
+        }
+      }
+    },
+    "onboarding.upgrade.support.continue" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pokračovat do Gradey"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Continue to Gradey"
+          }
+        }
+      }
+    },
+    "onboarding.upgrade.support.title" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Podpořte další kapitolu Gradey"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Support Gradey’s next chapter"
+          }
+        }
+      }
+    },
+    "onboarding.welcome.benefit.extras.body" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ptejte se Gradey AI na známky nebo rozvrh a zůstaňte v obraze díky oznámením a widgetům."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ask Gradey AI about your marks or timetable, then stay informed with notifications and widgets."
+          }
+        }
+      }
+    },
+    "onboarding.welcome.benefit.extras.title" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pomoc a upozornění"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Help and alerts"
+          }
+        }
+      }
+    },
+    "onboarding.welcome.benefit.insights.body" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sledujte průměry a vývoj, zkoušejte si možné známky a plánujte absenci."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Follow averages and trends, try possible marks, and plan future absences."
+          }
+        }
+      }
+    },
+    "onboarding.welcome.benefit.insights.title" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rozumějte svému pokroku"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Understand your progress"
+          }
+        }
+      }
+    },
+    "onboarding.welcome.benefit.today.body" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mějte rozvrh, nové známky a absenci na jednom místě."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "See your timetable, new marks, and absences in one place."
+          }
+        }
+      }
+    },
+    "onboarding.welcome.benefit.today.title" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dnešek na první pohled"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your day at a glance"
+          }
+        }
+      }
+    },
+    "onboarding.welcome.body" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Známky, rozvrh, absence i chytřejší školní přehledy na jednom místě."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Marks, timetable, absences, and smarter school insights in one place."
           }
         }
       }
@@ -3939,13 +6620,39 @@
       }
     },
     "Open" : {
-
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Otevřít"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open"
+          }
+        }
+      }
     },
     "openside.tech" : {
 
     },
     "Overall average" : {
-
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Celkový průměr"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Overall average"
+          }
+        }
+      }
     },
     "overview.best" : {
       "extractionState" : "stale",
@@ -4068,8 +6775,37 @@
         }
       }
     },
+    "School connection needs attention" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Školní účet potřebuje pozornost"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "School connection needs attention"
+          }
+        }
+      }
+    },
     "School limit unavailable. Current percentages are shown without guessing a threshold." : {
-
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Školní limit není k dispozici. Aktuální procenta se zobrazují bez odhadu limitu."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "School limit unavailable. Current percentages are shown without guessing a threshold."
+          }
+        }
+      }
     },
     "schoolDirectory.error" : {
       "localizations" : {
@@ -4211,6 +6947,1933 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "How to set the school URL"
+          }
+        }
+      }
+    },
+    "settings.about.build" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sestavení"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Build"
+          }
+        }
+      }
+    },
+    "settings.about.credits.message" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lidé, kteří stojí za Gradey."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The people behind Gradey."
+          }
+        }
+      }
+    },
+    "settings.about.message" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Údaje o verzi, autoři a poděkování."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Version details, credits, and acknowledgements."
+          }
+        }
+      }
+    },
+    "settings.about.title" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O aplikaci a podpora"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "About & support"
+          }
+        }
+      }
+    },
+    "settings.about.unknown" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Neznámé"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unknown"
+          }
+        }
+      }
+    },
+    "settings.about.version" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verze"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Version"
+          }
+        }
+      }
+    },
+    "settings.account.appleID.title" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "E-mail Apple ID"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple ID email"
+          }
+        }
+      }
+    },
+    "settings.account.children.message" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vyberte, údaje kterého dítěte mají být právě aktivní."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose which child's school data is active."
+          }
+        }
+      }
+    },
+    "settings.account.name.caption" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Takto se vaše jméno zobrazuje v Gradely."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This is how your name appears in Gradely."
+          }
+        }
+      }
+    },
+    "settings.account.name.placeholder" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vaše jméno"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your name"
+          }
+        }
+      }
+    },
+    "settings.account.name.save" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Uložit jméno"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Save name"
+          }
+        }
+      }
+    },
+    "settings.account.name.title" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jméno"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Name"
+          }
+        }
+      }
+    },
+    "settings.account.name.tooLong" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jméno může mít nejvýše 80 znaků."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Name must be 80 characters or fewer."
+          }
+        }
+      }
+    },
+    "settings.account.profile.message" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vaše identita pro synchronizaci a obnovení účtu."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your identity for sync and account recovery."
+          }
+        }
+      }
+    },
+    "settings.account.profile.title" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Profil Gradey"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gradey profile"
+          }
+        }
+      }
+    },
+    "settings.account.session.guestMessage" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ukončete režim hosta a odstraňte místní školní data z tohoto zařízení."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Leave guest mode and remove local school data from this device."
+          }
+        }
+      }
+    },
+    "settings.account.session.message" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Odhlaste se z Gradey a odstraňte školní i jídelní relace z tohoto zařízení."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sign out of Gradey and remove school and canteen sessions from this device."
+          }
+        }
+      }
+    },
+    "settings.account.session.title" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Relace"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Session"
+          }
+        }
+      }
+    },
+    "settings.account.signOut.confirm.message" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tímto se z tohoto zařízení odstraní relace Gradey, školy i jídelny a data v mezipaměti."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This removes Gradey, school, and canteen sessions and cached data from this device."
+          }
+        }
+      }
+    },
+    "settings.account.signOut.confirm.title" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Odhlásit všechny účty v tomto zařízení?"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sign out everywhere on this device?"
+          }
+        }
+      }
+    },
+    "settings.account.signOut.guest.message" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Odhlásí se jen místní školní a jídelní účet. Režim hosta zůstane zapnutý."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Only the local school and meals accounts will be signed out. Guest mode stays on."
+          }
+        }
+      }
+    },
+    "settings.account.signOut.guest.title" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Odhlásit školní účet?"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sign out of school account?"
+          }
+        }
+      }
+    },
+    "settings.back" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zpět"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Back"
+          }
+        }
+      }
+    },
+    "settings.connected.accountNotifications.message" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Povolit upozornění na nové známky z této školy."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Allow new-mark alerts from this school."
+          }
+        }
+      }
+    },
+    "settings.connected.accountNotifications.title" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Upozornění na známky"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mark notifications"
+          }
+        }
+      }
+    },
+    "settings.connected.activate" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Použít v tomto zařízení"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Use on this device"
+          }
+        }
+      }
+    },
+    "settings.connected.canteen.empty.message" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Propojte Strava.cz, aby zůstala záložka Jídelna připojená."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Link Strava.cz to keep the Meals tab connected."
+          }
+        }
+      }
+    },
+    "settings.connected.canteen.empty.title" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jídelna není propojena"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No canteen linked"
+          }
+        }
+      }
+    },
+    "settings.connected.canteen.guest.message" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Před propojením jídelny se přihlaste k účtu Gradey."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sign in to a Gradey account before linking a canteen."
+          }
+        }
+      }
+    },
+    "settings.connected.canteen.message" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Synchronizace jídelny a místní relace Jídelny se spravují společně."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Canteen sync and the local Meals session are managed together."
+          }
+        }
+      }
+    },
+    "settings.connected.canteen.title" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jídelna"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Canteen"
+          }
+        }
+      }
+    },
+    "settings.connected.guest.explanation" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Propojené služby vyžadují účet Gradey. Aktuální místní školní relace zůstává v režimu hosta dostupná."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connected services need a Gradey account. Your current local school session stays available in guest mode."
+          }
+        }
+      }
+    },
+    "settings.connected.lastChecked" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Poslední kontrola"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Last checked"
+          }
+        }
+      }
+    },
+    "settings.connected.lastSync" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Poslední synchronizace"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Last sync"
+          }
+        }
+      }
+    },
+    "settings.connected.reconnect" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Znovu připojit"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reconnect"
+          }
+        }
+      }
+    },
+    "settings.connected.school.addAnother" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Propojit další školu"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Link another school"
+          }
+        }
+      }
+    },
+    "settings.connected.school.empty.message" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Propojte školní účet pro synchronizaci známek a upozornění."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Link a school account to sync marks and enable alerts."
+          }
+        }
+      }
+    },
+    "settings.connected.school.empty.title" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Škola není propojena"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No school linked"
+          }
+        }
+      }
+    },
+    "settings.connected.school.guest.message" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Před propojením školy se přihlaste k účtu Gradey."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sign in to a Gradey account before linking a school."
+          }
+        }
+      }
+    },
+    "settings.connected.school.message" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Přepínejte školy, obnovujte připojení a spravujte upozornění pro každou školu."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Switch schools, recover a connection, and control alerts per school."
+          }
+        }
+      }
+    },
+    "settings.connected.school.title" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Školní účty"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "School accounts"
+          }
+        }
+      }
+    },
+    "settings.connected.unlink.canteen.message" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Odstranit %@ z Gradey? Tím se v tomto zařízení odpojí také místní relace Jídelny."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Remove %@ from Gradey? This also disconnects the local Meals session on this device."
+          }
+        }
+      }
+    },
+    "settings.connected.unlink.school.message" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Odstranit %@ z cloudové synchronizace Gradey? Místní školní relace zůstane v tomto zařízení přihlášená."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Remove %@ from Gradey cloud sync? The local school session stays signed in on this device."
+          }
+        }
+      }
+    },
+    "settings.destination.account.subtitle" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Profil a přihlášení"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Profile & login"
+          }
+        }
+      }
+    },
+    "settings.destination.account.title" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Účet"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Account"
+          }
+        }
+      }
+    },
+    "settings.destination.connected.subtitle" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Připojení školy a jídelny"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "School and canteen connections"
+          }
+        }
+      }
+    },
+    "settings.destination.connected.title" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Propojené služby"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connected services"
+          }
+        }
+      }
+    },
+    "settings.destination.notifications.subtitle" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Upozornění, soukromí a klidový režim"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alerts, privacy & quiet hours"
+          }
+        }
+      }
+    },
+    "settings.destination.notifications.title" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Upozornění"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Notifications"
+          }
+        }
+      }
+    },
+    "settings.destination.preferences.subtitle" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Záložka Jídelna a chování aplikace"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Meals tab and app behavior"
+          }
+        }
+      }
+    },
+    "settings.destination.preferences.title" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Předvolby aplikace"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "App preferences"
+          }
+        }
+      }
+    },
+    "settings.destination.privacy.subtitle" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vaše data v bezpečí"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your data, safely"
+          }
+        }
+      }
+    },
+    "settings.destination.privacy.title" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Soukromí a data"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Privacy & Data"
+          }
+        }
+      }
+    },
+    "settings.destination.support.subtitle" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pomoc, zpětná vazba a informace"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Help, feedback & app info"
+          }
+        }
+      }
+    },
+    "settings.destination.support.title" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Podpora a informace"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Support & About"
+          }
+        }
+      }
+    },
+    "settings.detail.select.message" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vyberte položku z přehledu nastavení."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose a destination from the settings overview."
+          }
+        }
+      }
+    },
+    "settings.detail.select.title" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vyberte nastavení"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose a setting"
+          }
+        }
+      }
+    },
+    "settings.group.app" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aplikace"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "App"
+          }
+        }
+      }
+    },
+    "settings.group.gradey" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vaše Gradey"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your Gradey"
+          }
+        }
+      }
+    },
+    "settings.notifications.device.message" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Systémové oprávnění platí jen pro toto zařízení."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "System permission is specific to this device."
+          }
+        }
+      }
+    },
+    "settings.notifications.device.title" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Toto zařízení"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This device"
+          }
+        }
+      }
+    },
+    "settings.notifications.permission.authorized" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Povoleno"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Allowed"
+          }
+        }
+      }
+    },
+    "settings.notifications.permission.denied" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Blokováno v nastavení systému"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Blocked in System Settings"
+          }
+        }
+      }
+    },
+    "settings.notifications.permission.enable" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Povolit"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enable"
+          }
+        }
+      }
+    },
+    "settings.notifications.permission.notDetermined" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zatím nevyžádáno"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not requested yet"
+          }
+        }
+      }
+    },
+    "settings.notifications.permission.openSettings" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Otevřít Nastavení"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open Settings"
+          }
+        }
+      }
+    },
+    "settings.notifications.permission.title" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Oprávnění k upozorněním"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Notification permission"
+          }
+        }
+      }
+    },
+    "settings.notifications.quietHours.end" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Končí"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ends"
+          }
+        }
+      }
+    },
+    "settings.notifications.quietHours.message" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Známky přijaté v tomto intervalu počkají do jeho konce. Více známek se sloučí do jednoho souhrnu."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Marks received during this window wait until it ends. Multiple marks become one summary."
+          }
+        }
+      }
+    },
+    "settings.notifications.quietHours.start" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Začíná"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Starts"
+          }
+        }
+      }
+    },
+    "settings.notifications.quietHours.title" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Klidový režim"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quiet hours"
+          }
+        }
+      }
+    },
+    "settings.notifications.quietHours.toggle" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Odložit upozornění během klidového režimu"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delay alerts during quiet hours"
+          }
+        }
+      }
+    },
+    "settings.notifications.timeZone" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Časové pásmo: %@"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Time zone: %@"
+          }
+        }
+      }
+    },
+    "settings.notifications.unavailable.guest" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Přihlaste se do Gradey pro synchronizaci předvoleb upozornění. Ovládací prvky zůstávají viditelné, abyste věděli, co bude dostupné."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sign in to Gradey to sync notification preferences. These controls stay visible so you can review what becomes available."
+          }
+        }
+      }
+    },
+    "settings.notifications.unavailable.school" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Propojte školní účet, abyste mohli zapnout upozornění na známky. Oprávnění zařízení se spravuje samostatně."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Link a school account to enable mark alerts. Device permission remains separate."
+          }
+        }
+      }
+    },
+    "settings.overview.canteen.connected" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jídelna připojena"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Canteen connected"
+          }
+        }
+      }
+    },
+    "settings.overview.canteen.notConnected" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jídelna nepřipojena"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Canteen not connected"
+          }
+        }
+      }
+    },
+    "settings.overview.meals.hidden" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Záložka Jídelna skryta"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Meals tab hidden"
+          }
+        }
+      }
+    },
+    "settings.overview.meals.shown" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Záložka Jídelna zobrazena"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Meals tab shown"
+          }
+        }
+      }
+    },
+    "settings.overview.notifications.off" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vypnuto"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Off"
+          }
+        }
+      }
+    },
+    "settings.overview.notifications.on" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zapnuto"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "On"
+          }
+        }
+      }
+    },
+    "settings.overview.notifications.quietUntil" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zapnuto · Klid do %@"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "On · Quiet until %@"
+          }
+        }
+      }
+    },
+    "settings.overview.notifications.unavailable" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pro zapnutí propojte školu"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Link a school to enable"
+          }
+        }
+      }
+    },
+    "settings.overview.school.active" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Škola aktivní"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "School active"
+          }
+        }
+      }
+    },
+    "settings.overview.school.notConnected" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Škola nepřipojena"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "School not connected"
+          }
+        }
+      }
+    },
+    "settings.preferences.message" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zvolte, které funkce aplikace zůstanou na liště záložek."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose which app features stay in your tab bar."
+          }
+        }
+      }
+    },
+    "settings.preferences.title" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Předvolby"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Preferences"
+          }
+        }
+      }
+    },
+    "settings.privacy.delete.action" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Smazat účet Gradey"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete Gradey account"
+          }
+        }
+      }
+    },
+    "settings.privacy.delete.caption" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Smazání účtu je trvalé a nelze je vrátit zpět."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Account deletion is permanent and cannot be undone."
+          }
+        }
+      }
+    },
+    "settings.privacy.delete.final.action" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Trvale smazat"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Permanently delete"
+          }
+        }
+      }
+    },
+    "settings.privacy.delete.final.message" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Váš profil Gradey, propojené účty, předvolby a vlastní historie budou smazány. Přihlašovací údaje poskytovatelů a místní relace se poté odstraní z tohoto zařízení."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your Gradey profile, linked accounts, preferences, and owned history will be deleted. Provider credentials and local sessions are then cleared from this device."
+          }
+        }
+      }
+    },
+    "settings.privacy.delete.final.title" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Toto je poslední potvrzení"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This is your final confirmation"
+          }
+        }
+      }
+    },
+    "settings.privacy.delete.first.action" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pokračovat ke smazání"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Continue to deletion"
+          }
+        }
+      }
+    },
+    "settings.privacy.delete.first.message" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Před smazáním budete ještě jednou požádáni o potvrzení."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You will be asked once more before anything is deleted."
+          }
+        }
+      }
+    },
+    "settings.privacy.delete.first.title" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Smazat váš účet Gradey?"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete your Gradey account?"
+          }
+        }
+      }
+    },
+    "settings.privacy.delete.message" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Trvale odstraňte účet Gradey a všechna vlastní data v cloudu."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Permanently remove the Gradey account and all user-owned cloud data."
+          }
+        }
+      }
+    },
+    "settings.privacy.delete.title" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Smazat účet"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete account"
+          }
+        }
+      }
+    },
+    "settings.privacy.export.action" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Export dat Gradey"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gradey data export"
+          }
+        }
+      }
+    },
+    "settings.privacy.export.caption" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Obsahuje profil, metadata propojených účtů, předvolby, události známek a historii známek. Tajné údaje a push tokeny jsou vyloučeny."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Includes your profile, linked-account metadata, preferences, mark events, and grade history. Secrets and push tokens are excluded."
+          }
+        }
+      }
+    },
+    "settings.privacy.export.message" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Připravte přenositelnou kopii dat vašeho účtu Gradey ve formátu JSON."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prepare a portable JSON copy of data owned by your Gradey account."
+          }
+        }
+      }
+    },
+    "settings.privacy.export.prepare" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Připravit export JSON"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prepare JSON export"
+          }
+        }
+      }
+    },
+    "settings.privacy.export.share" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sdílet export"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Share export"
+          }
+        }
+      }
+    },
+    "settings.privacy.export.title" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Exportovat data"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Export your data"
+          }
+        }
+      }
+    },
+    "settings.privacy.guest.explanation" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Export dat a smazání účtu budou dostupné po přihlášení k účtu Gradey."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Data export and account deletion become available after you sign in to a Gradey account."
+          }
+        }
+      }
+    },
+    "settings.profile.actionRequired" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vyžaduje pozornost"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Action required"
+          }
+        }
+      }
+    },
+    "settings.profile.addName.message" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Přizpůsobte si profil v Gradely"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Personalize your Gradely profile"
+          }
+        }
+      }
+    },
+    "settings.profile.addName.title" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Přidat jméno"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add your name"
+          }
+        }
+      }
+    },
+    "settings.profile.gradeyID" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gradely ID"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gradely ID"
+          }
+        }
+      }
+    },
+    "settings.profile.local" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "V tomto zařízení"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "On this device"
+          }
+        }
+      }
+    },
+    "settings.profile.saved" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Uložená data"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saved data"
+          }
+        }
+      }
+    },
+    "settings.profile.setupNeeded" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Je třeba nastavit"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Setup needed"
+          }
+        }
+      }
+    },
+    "settings.profile.synced" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Synchronizováno"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Synced"
+          }
+        }
+      }
+    },
+    "settings.profile.title" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Profil"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Profile"
+          }
+        }
+      }
+    },
+    "settings.showMealsTab" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zobrazit záložku Jídelna"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show Meals tab"
+          }
+        }
+      }
+    },
+    "settings.showMealsTab.message" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Skryje záložku jídelny z lišty, pokud neobjednáváte jídlo."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hide the canteen tab from the tab bar if you do not use meals ordering."
+          }
+        }
+      }
+    },
+    "settings.support.contact" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kontaktovat vývojáře"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Contact the developer"
+          }
+        }
+      }
+    },
+    "settings.support.github.message" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zdrojový kód, hlášení problémů a poznámky k vydání."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Source code, issues, and release notes."
+          }
+        }
+      }
+    },
+    "settings.support.message" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Získejte pomoc, pošlete zpětnou vazbu nebo podpořte další vývoj."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Get help, send feedback, or support continued development."
+          }
+        }
+      }
+    },
+    "settings.support.title" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pomoc a zpětná vazba"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Help & feedback"
+          }
+        }
+      }
+    },
+    "settings.title" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nastavení"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Settings"
           }
         }
       }
@@ -5145,6 +9808,7 @@
       }
     },
     "support.updatePrompt.later" : {
+      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
@@ -5161,6 +9825,7 @@
       }
     },
     "support.updatePrompt.message" : {
+      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
@@ -5177,6 +9842,7 @@
       }
     },
     "support.updatePrompt.support" : {
+      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
@@ -5193,6 +9859,7 @@
       }
     },
     "support.updatePrompt.title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
@@ -5545,7 +10212,20 @@
       }
     },
     "Today" : {
-
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dnes"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Today"
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

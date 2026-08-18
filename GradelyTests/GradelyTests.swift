@@ -2,6 +2,31 @@ import Foundation
 import Testing
 @testable import Gradely
 
+struct GradelyIconCatalogTests {
+    @Test func onboardingAndAIConsentIconsResolveToHugeiconsNames() {
+        let names = [
+            "bell.badge.fill",
+            "sparkles",
+            "chart.bar.doc.horizontal",
+            "cloud.fill",
+            "clock.arrow.circlepath",
+            "lock.shield.fill",
+            "graduationcap.fill"
+        ]
+
+        for name in names {
+            let mapped = GradelyIconCatalog.hugeiconName(for: name)
+            #expect(!mapped.contains("."), "Unmapped SF name leaked through: \(name) → \(mapped)")
+        }
+
+        #expect(GradelyIconCatalog.hugeiconName(for: "bell.badge.fill") == "notification-bubble")
+        #expect(GradelyIconCatalog.hugeiconName(for: "chart.bar.doc.horizontal") == "analytics-01")
+        #expect(GradelyIconCatalog.hugeiconName(for: "cloud.fill") == "cloud")
+        #expect(GradelyIconCatalog.hugeiconName(for: "clock.arrow.circlepath") == "reload")
+        #expect(GradelyIconCatalog.hugeiconName(for: "sparkles") == "sparkles")
+    }
+}
+
 @MainActor
 struct GradelyTests {
     @Test func decodesMarksResponseFixture() throws {
@@ -40,6 +65,17 @@ struct GradelyTests {
         #expect(response.subjects[0].trimmedName == "Matematika")
         #expect(response.subjects[0].marks[0].markText == "1-")
         #expect(response.subjects[0].marks[0].weight == 3)
+    }
+
+    @Test func todayUsesSchoolNewMarksBeforeCloudHistoryExists() {
+        var snapshot = TodaySnapshot.empty
+        snapshot.subjects = PreviewData.subjects
+
+        let newMark = snapshot.newMarks.first
+
+        #expect(newMark?.id == "mark-math-1")
+        #expect(newMark?.markText == "1-")
+        #expect(newMark?.subjectName == "M")
     }
 
     @Test func normalizesAndRequiresHTTPSBaseURL() throws {

@@ -6,6 +6,9 @@ Deno.serve(async (req) => {
   if (options) return options;
 
   try {
+    if (req.method !== "POST") {
+      return json({ error: "Method not allowed" }, 405);
+    }
     const { supabase, user } = await requireUser(req);
     const { error } = await supabase.auth.admin.deleteUser(user.id);
     if (error) throw error;

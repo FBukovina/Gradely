@@ -21,9 +21,7 @@ final class GradeyHistoryRepository {
     }
 
     func loadGradeHistory(linkedAccountID: String?, days: Int? = 90) async throws -> GradeHistoryResponse {
-        guard let gradeySession = try authClient.bootstrapSession() else {
-            throw AppError.notLoggedIn
-        }
+        let gradeySession = try await authClient.validSession()
         return try await client.loadGradeHistory(
             linkedAccountID: linkedAccountID,
             days: days,

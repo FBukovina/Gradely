@@ -30,17 +30,26 @@ final class URLSessionSchoolDirectoryProvider: SchoolDirectoryProviding {
     private let cache: any SchoolDirectoryCaching
     private let serviceURL: URL
     private let maxConcurrentTownRequests: Int
+    private let requestTimeout: TimeInterval
+    private let townBatchTimeout: Duration
+    private let maximumTownRequestAttempts: Int
 
     init(
         urlSession: URLSession = .shared,
         cache: any SchoolDirectoryCaching,
         serviceURL: URL = URL(string: "https://sluzby.bakalari.cz/api/v1/municipality")!,
-        maxConcurrentTownRequests: Int = 12
+        maxConcurrentTownRequests: Int = 8,
+        requestTimeout: TimeInterval = 12,
+        townBatchTimeout: Duration = .seconds(25),
+        maximumTownRequestAttempts: Int = 2
     ) {
         self.urlSession = urlSession
         self.cache = cache
         self.serviceURL = serviceURL
         self.maxConcurrentTownRequests = max(1, maxConcurrentTownRequests)
+        self.requestTimeout = max(1, requestTimeout)
+        self.townBatchTimeout = townBatchTimeout
+        self.maximumTownRequestAttempts = max(1, maximumTownRequestAttempts)
     }
 
     func loadCachedDirectory() throws -> CachedSchoolDirectory? {
@@ -50,34 +59,51 @@ final class URLSessionSchoolDirectoryProvider: SchoolDirectoryProviding {
     func refreshDirectory() async throws -> [SchoolDirectorySchool] {
         let municipalities = try await Self.fetchMunicipalities(
             serviceURL: serviceURL,
-            urlSession: urlSession
+            urlSession: urlSession,
+            requestTimeout: requestTimeout
         )
         .filter {
             !$0.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                 && $0.schoolCount > 0
         }
+        guard !municipalities.isEmpty else { throw SchoolDirectoryError.emptyDirectory }
 
-        let schools = try await Self.fetchSchools(
+        let batch = await Self.fetchSchools(
             for: municipalities,
             serviceURL: serviceURL,
             urlSession: urlSession,
-            maxConcurrentTownRequests: maxConcurrentTownRequests
+            maxConcurrentTownRequests: maxConcurrentTownRequests,
+            requestTimeout: requestTimeout,
+            batchTimeout: townBatchTimeout,
+            maximumAttempts: maximumTownRequestAttempts
         )
 
-        guard !schools.isEmpty else { throw SchoolDirectoryError.emptyDirectory }
+        let freshSchools = Self.uniqueSortedSchools(batch.schools)
+        let cachedDirectory = try? cache.load()
+        let cachedSchools = cachedDirectory?.schools ?? []
+        let mergedSchools = Self.uniqueSortedSchools(cachedSchools + freshSchools)
 
-        let uniqueSchools = Self.uniqueSortedSchools(schools)
-        try cache.save(uniqueSchools)
-        return uniqueSchools
+        guard !mergedSchools.isEmpty else { throw SchoolDirectoryError.emptyDirectory }
+
+        // A refresh may span hundreds of municipality requests. Keep useful
+        // results in memory, but only replace the durable cache when the
+        // response covers nearly the whole directory. Merging also prevents a
+        // transient outage in one town from deleting schools we already know.
+        if batch.isHealthyForCaching(hasTrustedCache: cachedDirectory?.isCurrentFormat == true) {
+            try cache.save(mergedSchools)
+        }
+        return mergedSchools
     }
 
     nonisolated private static func fetchMunicipalities(
         serviceURL: URL,
-        urlSession: URLSession
+        urlSession: URLSession,
+        requestTimeout: TimeInterval
     ) async throws -> [SchoolDirectoryMunicipality] {
         var request = URLRequest(url: serviceURL)
         request.httpMethod = "GET"
         request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.timeoutInterval = requestTimeout
         return try await send(request, urlSession: urlSession)
     }
 
@@ -85,50 +111,123 @@ final class URLSessionSchoolDirectoryProvider: SchoolDirectoryProviding {
         for municipalities: [SchoolDirectoryMunicipality],
         serviceURL: URL,
         urlSession: URLSession,
-        maxConcurrentTownRequests: Int
-    ) async throws -> [SchoolDirectorySchool] {
+        maxConcurrentTownRequests: Int,
+        requestTimeout: TimeInterval,
+        batchTimeout: Duration,
+        maximumAttempts: Int
+    ) async -> SchoolFetchBatch {
         var allSchools: [SchoolDirectorySchool] = []
+        var successfulExpectedSchoolCount = 0
         var nextIndex = 0
+        var completedTownCount = 0
 
-        await withTaskGroup(of: Result<[SchoolDirectorySchool], Error>.self) { group in
+        await withTaskGroup(of: SchoolFetchEvent.self) { group in
             func enqueueNextTown() {
                 guard nextIndex < municipalities.count else { return }
-                let townName = municipalities[nextIndex].name
+                let municipality = municipalities[nextIndex]
                 nextIndex += 1
 
                 group.addTask {
                     do {
-                        let schools = try await fetchSchools(
-                            in: townName,
+                        let schools = try await fetchSchoolsWithRetry(
+                            in: municipality.name,
                             serviceURL: serviceURL,
-                            urlSession: urlSession
+                            urlSession: urlSession,
+                            requestTimeout: requestTimeout,
+                            maximumAttempts: maximumAttempts
                         )
-                        return .success(schools)
+                        return .town(TownFetchResult(
+                            municipality: municipality,
+                            schools: schools,
+                            succeeded: true
+                        ))
                     } catch {
-                        return .failure(error)
+                        return .town(TownFetchResult(
+                            municipality: municipality,
+                            schools: [],
+                            succeeded: false
+                        ))
                     }
                 }
+            }
+
+            group.addTask {
+                try? await Task.sleep(for: batchTimeout)
+                return .deadline
             }
 
             for _ in 0..<min(maxConcurrentTownRequests, municipalities.count) {
                 enqueueNextTown()
             }
 
-            while let result = await group.next() {
-                if case .success(let schools) = result {
-                    allSchools.append(contentsOf: schools)
+            fetchLoop: while let event = await group.next() {
+                if Task.isCancelled {
+                    group.cancelAll()
+                    break fetchLoop
                 }
-                enqueueNextTown()
+
+                switch event {
+                case .deadline:
+                    group.cancelAll()
+                    break fetchLoop
+                case .town(let result):
+                    completedTownCount += 1
+                    if result.succeeded {
+                        successfulExpectedSchoolCount += result.municipality.schoolCount
+                        allSchools.append(contentsOf: result.schools)
+                    }
+
+                    if completedTownCount == municipalities.count {
+                        group.cancelAll()
+                        break fetchLoop
+                    }
+                    enqueueNextTown()
+                }
             }
         }
 
-        return allSchools
+        return SchoolFetchBatch(
+            schools: allSchools,
+            expectedSchoolCount: municipalities.reduce(0) { $0 + $1.schoolCount },
+            successfulExpectedSchoolCount: successfulExpectedSchoolCount
+        )
+    }
+
+    nonisolated private static func fetchSchoolsWithRetry(
+        in townName: String,
+        serviceURL: URL,
+        urlSession: URLSession,
+        requestTimeout: TimeInterval,
+        maximumAttempts: Int
+    ) async throws -> [SchoolDirectorySchool] {
+        var mostRecentError: Error?
+
+        for attempt in 1...maximumAttempts {
+            try Task.checkCancellation()
+            do {
+                return try await fetchSchools(
+                    in: townName,
+                    serviceURL: serviceURL,
+                    urlSession: urlSession,
+                    requestTimeout: requestTimeout
+                )
+            } catch is CancellationError {
+                throw CancellationError()
+            } catch {
+                mostRecentError = error
+                guard attempt < maximumAttempts else { break }
+                try await Task.sleep(for: .milliseconds(attempt * 250))
+            }
+        }
+
+        throw mostRecentError ?? SchoolDirectoryError.invalidResponse
     }
 
     nonisolated private static func fetchSchools(
         in townName: String,
         serviceURL: URL,
-        urlSession: URLSession
+        urlSession: URLSession,
+        requestTimeout: TimeInterval
     ) async throws -> [SchoolDirectorySchool] {
         guard var components = URLComponents(url: serviceURL, resolvingAgainstBaseURL: false) else {
             throw SchoolDirectoryError.invalidResponse
@@ -142,6 +241,7 @@ final class URLSessionSchoolDirectoryProvider: SchoolDirectoryProviding {
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
         request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.timeoutInterval = requestTimeout
 
         let response: TownSchoolsResponse = try await send(request, urlSession: urlSession)
         return response.schools.compactMap { school in
@@ -193,6 +293,34 @@ final class URLSessionSchoolDirectoryProvider: SchoolDirectoryProviding {
                 seenKeys.insert(key)
                 return true
             }
+    }
+
+    private struct TownFetchResult: Sendable {
+        let municipality: SchoolDirectoryMunicipality
+        let schools: [SchoolDirectorySchool]
+        let succeeded: Bool
+    }
+
+    private enum SchoolFetchEvent: Sendable {
+        case town(TownFetchResult)
+        case deadline
+    }
+
+    private struct SchoolFetchBatch: Sendable {
+        let schools: [SchoolDirectorySchool]
+        let expectedSchoolCount: Int
+        let successfulExpectedSchoolCount: Int
+
+        func isHealthyForCaching(hasTrustedCache: Bool) -> Bool {
+            guard expectedSchoolCount > 0 else { return false }
+            let expected = Double(expectedSchoolCount)
+            let requestCoverage = Double(successfulExpectedSchoolCount) / expected
+            let responseCoverage = Double(schools.count) / expected
+            if hasTrustedCache {
+                return requestCoverage >= 0.90 && responseCoverage >= 0.70
+            }
+            return requestCoverage >= 0.98 && responseCoverage >= 0.90
+        }
     }
 
     private struct TownSchoolsResponse: Decodable {

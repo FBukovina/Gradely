@@ -3,22 +3,17 @@ import SwiftUI
 struct TimetableView: View {
     @State private var viewModel: TimetableViewModel
     @State private var selectedLesson: ScheduledLesson?
-    private let repository: SchoolRepository
-    private let supportTipProvider: any SupportTipProviding
     private let accountHub: AnyView?
-    let onSignedOut: () -> Void
+    private let onOpenGradeyAI: () -> Void
 
     init(
         repository: SchoolRepository,
-        supportTipProvider: any SupportTipProviding = MockSupportTipService(),
         accountHub: AnyView? = nil,
-        onSignedOut: @escaping () -> Void
+        onOpenGradeyAI: @escaping () -> Void = {}
     ) {
         _viewModel = State(initialValue: TimetableViewModel(repository: repository))
-        self.repository = repository
-        self.supportTipProvider = supportTipProvider
         self.accountHub = accountHub
-        self.onSignedOut = onSignedOut
+        self.onOpenGradeyAI = onOpenGradeyAI
     }
 
     var body: some View {
@@ -28,14 +23,14 @@ struct TimetableView: View {
                 .gradelyNavigationTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .gradelyTopBarLeading) {
-                        CreditsToolbarButton()
+                        GradeyAIToolbarButton(onOpen: onOpenGradeyAI)
                     }
 
                     ToolbarItem(placement: .gradelyTopBarTrailing) {
                         Button {
                             Task { await viewModel.refresh() }
                         } label: {
-                            Image(systemName: "arrow.clockwise")
+                            GradelyIcon(systemName: "arrow.clockwise")
                                 .symbolEffect(.rotate, options: .repeating, isActive: viewModel.isRefreshing)
                         }
                         .disabled(viewModel.isLoading || viewModel.isRefreshing)
@@ -44,13 +39,7 @@ struct TimetableView: View {
                     }
 
                     ToolbarItem(placement: .gradelyTopBarTrailing) {
-                        AccountMenu(
-                            user: viewModel.user,
-                            repository: repository,
-                            supportTipProvider: supportTipProvider,
-                            accountHub: accountHub,
-                            onSignedOut: onSignedOut
-                        )
+                        AccountSettingsButton(accountHub: accountHub)
                     }
                 }
                 .task {
@@ -74,7 +63,7 @@ struct TimetableView: View {
             .accessibilityIdentifier("timetableLoadingView")
         } else if let errorMessage = viewModel.errorMessage, viewModel.week == nil {
             ContentUnavailableView {
-                Label(String(localized: "error.title"), systemImage: "exclamationmark.triangle")
+                GradelyLabel(String(localized: "error.title"), systemImage: "exclamationmark.triangle")
             } description: {
                 Text(errorMessage)
             } actions: {
@@ -96,7 +85,7 @@ struct TimetableView: View {
             Divider()
             dayContent
         }
-        .background(Color.gradelyGroupedBackground.ignoresSafeArea())
+        .gradelyScreenBackground()
     }
 
     private var dayContent: some View {
@@ -148,11 +137,7 @@ private struct TodaySummaryCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.md) {
             HStack(alignment: .top, spacing: Spacing.md) {
-                Image(systemName: icon)
-                    .font(.headline.weight(.bold))
-                    .foregroundStyle(Brand.primary)
-                    .frame(width: 42, height: 42)
-                    .background(Brand.primary.opacity(0.13), in: RoundedRectangle(cornerRadius: Radius.md, style: .continuous))
+                SettingsModalSystemIcon(systemName: icon)
 
                 VStack(alignment: .leading, spacing: Spacing.xs) {
                     Text(title)
@@ -171,7 +156,7 @@ private struct TodaySummaryCard: View {
             if let next = summary.nextLesson, summary.currentLesson != nil {
                 Divider()
                 HStack(spacing: Spacing.sm) {
-                    Image(systemName: "forward.fill")
+                    GradelyIcon(systemName: "forward.fill")
                         .font(.caption.weight(.bold))
                         .foregroundStyle(.secondary)
                     Text("Next: \(lessonTitle(next))")
@@ -186,7 +171,7 @@ private struct TodaySummaryCard: View {
 
             if summary.hasChanges {
                 HStack(spacing: Spacing.sm) {
-                    Image(systemName: "exclamationmark.triangle.fill")
+                    GradelyIcon(systemName: "exclamationmark.triangle.fill")
                         .foregroundStyle(LessonChangeKind.canceled.color)
                     Text(changeSummary)
                         .font(.caption.weight(.semibold))
@@ -196,11 +181,11 @@ private struct TodaySummaryCard: View {
                 .padding(.top, Spacing.xs)
             }
         }
-        .padding(Spacing.lg)
-        .background(Color.gradelySecondaryGroupedBackground, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+        .padding(20)
+        .background(Color.gradelySecondaryGroupedBackground, in: RoundedRectangle(cornerRadius: Radius.xl, style: .continuous))
         .overlay {
-            RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
-                .strokeBorder(Brand.primary.opacity(0.18), lineWidth: 1)
+            RoundedRectangle(cornerRadius: Radius.xl, style: .continuous)
+                .strokeBorder(Brand.primary.opacity(0.10), lineWidth: 1)
         }
         .accessibilityIdentifier("todaySummaryCard")
     }
@@ -319,11 +304,9 @@ private struct WeekNavBar: View {
         Button {
             Task { await action() }
         } label: {
-            Image(systemName: systemImage)
-                .font(.headline.weight(.bold))
+            GradelyIcon(systemName: systemImage, size: 14)
                 .foregroundStyle(Brand.primary)
-                .frame(width: 40, height: 40)
-                .background(Brand.primary.opacity(0.12), in: Circle())
+                .frame(width: 44, height: 44)
         }
         .accessibilityLabel(String(localized: label))
         .accessibilityIdentifier(id)
@@ -441,9 +424,9 @@ private struct LessonCard: View {
 
     var body: some View {
         HStack(spacing: Spacing.md) {
-            RoundedRectangle(cornerRadius: Radius.sm, style: .continuous)
+            RoundedRectangle(cornerRadius: Radius.md, style: .continuous)
                 .fill(accent.opacity(0.14))
-                .frame(width: 46, height: 46)
+                .frame(width: 40, height: 40)
                 .overlay {
                     Text(lesson.title)
                         .font(.subheadline.weight(.bold))
@@ -489,14 +472,13 @@ private struct LessonCard: View {
         .padding(Spacing.md)
         .opacity(lesson.isCanceled ? 0.6 : 1)
         .background(
-            RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
+            RoundedRectangle(cornerRadius: Radius.xl, style: .continuous)
                 .fill(Color.gradelySecondaryGroupedBackground)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
+            RoundedRectangle(cornerRadius: Radius.xl, style: .continuous)
                 .strokeBorder(borderColor, lineWidth: isCurrent ? 2 : 1)
         )
-        .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 4)
     }
 
     private var accent: Color {
@@ -516,7 +498,7 @@ private struct LessonCard: View {
     }
 
     private func inlineLabel(_ text: String, systemImage: String) -> some View {
-        Label(text, systemImage: systemImage)
+        GradelyLabel(text, systemImage: systemImage)
             .labelStyle(.titleAndIcon)
             .imageScale(.small)
             .lineLimit(1)
@@ -530,8 +512,7 @@ private struct EmptyDayView: View {
 
     var body: some View {
         VStack(spacing: Spacing.md) {
-            Image(systemName: icon)
-                .font(.system(size: 40, weight: .semibold))
+            GradelyIcon(systemName: icon, size: 20)
                 .foregroundStyle(Brand.primary.opacity(0.6))
             Text(title)
                 .font(.headline)
@@ -586,7 +567,7 @@ private struct LessonDetailSheet: View {
                 VStack(alignment: .leading, spacing: Spacing.lg) {
                     header
 
-                    Card {
+                    SettingsModalSurface {
                         VStack(alignment: .leading, spacing: Spacing.md) {
                             if let teacher = lesson.teacherName ?? lesson.teacherAbbrev {
                                 DetailRow(systemImage: "person.fill", title: "timetable.detail.teacher", value: teacher)
@@ -622,7 +603,9 @@ private struct LessonDetailSheet: View {
                 .frame(maxWidth: 640)
                 .frame(maxWidth: .infinity)
             }
-            .background(Color.gradelyGroupedBackground.ignoresSafeArea())
+            .background {
+                SettingsModalBackground()
+            }
             .navigationTitle(lesson.subjectName ?? lesson.title)
             .gradelyNavigationTitleDisplayMode(.inline)
         }
@@ -646,15 +629,14 @@ private struct LessonDetailSheet: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(Spacing.xl)
-        .background(Brand.gradient, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
-        .shadow(color: Brand.primary.opacity(0.3), radius: 16, x: 0, y: 8)
+        .background(Brand.gradient, in: RoundedRectangle(cornerRadius: Radius.xl, style: .continuous))
     }
 
     private func changeCard(_ change: TimetableChange) -> some View {
-        Card {
+        SettingsModalSurface {
             VStack(alignment: .leading, spacing: Spacing.sm) {
                 HStack(spacing: Spacing.sm) {
-                    Image(systemName: "exclamationmark.triangle.fill")
+                    GradelyIcon(systemName: "exclamationmark.triangle.fill")
                     Text(lesson.changeKind.localizedLabel ?? String(localized: "timetable.detail.change"))
                         .font(.headline)
                 }
@@ -679,7 +661,7 @@ private struct DetailRow: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: Spacing.md) {
-            Image(systemName: systemImage)
+            GradelyIcon(systemName: systemImage)
                 .font(.subheadline)
                 .foregroundStyle(Brand.primary)
                 .frame(width: 24)
@@ -727,7 +709,7 @@ private enum LessonClock {
             sessionStore: InMemorySessionStore(session: PreviewData.expiredSession),
             marksCache: InMemoryMarksCache()
         )
-    ) {}
+    )
 }
 
 #Preview("Dark") {
@@ -737,6 +719,6 @@ private enum LessonClock {
             sessionStore: InMemorySessionStore(session: PreviewData.expiredSession),
             marksCache: InMemoryMarksCache()
         )
-    ) {}
+    )
     .preferredColorScheme(.dark)
 }

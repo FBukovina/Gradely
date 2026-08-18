@@ -3,9 +3,18 @@ import SwiftUI
 struct StravaCZView: View {
     @State private var viewModel: StravaCZViewModel
     private let repository: StravaCZRepository
+    private let accountHub: AnyView?
+    private let onOpenGradeyAI: () -> Void
 
-    init(repository: StravaCZRepository, linkedAccountRepository: LinkedAccountRepository? = nil) {
+    init(
+        repository: StravaCZRepository,
+        linkedAccountRepository: LinkedAccountRepository? = nil,
+        accountHub: AnyView? = nil,
+        onOpenGradeyAI: @escaping () -> Void = {}
+    ) {
         self.repository = repository
+        self.accountHub = accountHub
+        self.onOpenGradeyAI = onOpenGradeyAI
         _viewModel = State(initialValue: StravaCZViewModel(
             repository: repository,
             linkedAccountRepository: linkedAccountRepository
@@ -19,7 +28,11 @@ struct StravaCZView: View {
                 .gradelyNavigationTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .gradelyTopBarLeading) {
-                        CreditsToolbarButton()
+                        GradeyAIToolbarButton(onOpen: onOpenGradeyAI)
+                    }
+
+                    ToolbarItem(placement: .gradelyTopBarTrailing) {
+                        AccountSettingsButton(accountHub: accountHub)
                     }
 
                     if viewModel.phase == .signedIn {
@@ -27,7 +40,7 @@ struct StravaCZView: View {
                             Button {
                                 Task { await viewModel.refresh(forceRefresh: true) }
                             } label: {
-                                Image(systemName: "arrow.clockwise")
+                                GradelyIcon(systemName: "arrow.clockwise")
                                     .symbolEffect(.rotate, options: .repeating, isActive: viewModel.isRefreshing)
                             }
                             .disabled(viewModel.isBusy)
@@ -40,11 +53,11 @@ struct StravaCZView: View {
                                 Button(role: .destructive) {
                                     Task { await viewModel.disconnect() }
                                 } label: {
-                                    Label(String(localized: "stravacz.disconnect"), systemImage: "rectangle.portrait.and.arrow.right")
+                                    GradelyLabel(String(localized: "stravacz.disconnect"), systemImage: "rectangle.portrait.and.arrow.right")
                                 }
                                 .accessibilityIdentifier("stravaCZDisconnectButton")
                             } label: {
-                                Image(systemName: "fork.knife.circle.fill")
+                                GradelyIcon(systemName: "fork.knife.circle.fill")
                                     .font(.title3)
                                     .foregroundStyle(Brand.primary)
                             }
@@ -121,11 +134,15 @@ struct StravaCZView: View {
             }
             .accessibilityIdentifier("stravaCZLoadingView")
         } else if let menu = viewModel.menu, menu.days.isEmpty {
-            ContentUnavailableView(
-                String(localized: "stravacz.menu.empty.title"),
-                systemImage: "fork.knife",
-                description: Text("stravacz.menu.empty.message")
-            )
+            ContentUnavailableView {
+                GradelyLabel(
+                    String(localized: "stravacz.menu.empty.title"),
+                    systemImage: "fork.knife",
+                    iconSize: 28
+                )
+            } description: {
+                Text("stravacz.menu.empty.message")
+            }
             .accessibilityIdentifier("stravaCZEmptyView")
         } else {
             List {
@@ -163,7 +180,7 @@ struct StravaCZView: View {
             }
             .listStyle(.plain)
             .scrollContentBackground(.hidden)
-            .background(Color.gradelyGroupedBackground.ignoresSafeArea())
+            .gradelyScreenBackground()
             .refreshable {
                 await viewModel.refresh(forceRefresh: true)
             }
@@ -195,6 +212,8 @@ struct StravaCZView: View {
 }
 
 private struct StravaCZHeader: View {
+    @ScaledMetric(relativeTo: .largeTitle) private var balanceFontSize: CGFloat = 42
+
     let session: StravaCZStoredSession
     let orderedCount: Int
 
@@ -207,7 +226,7 @@ private struct StravaCZHeader: View {
                         .foregroundStyle(Brand.onAccent.opacity(0.75))
 
                     Text(session.formattedBalance)
-                        .font(.system(size: 42, weight: .bold, design: .rounded).monospacedDigit())
+                        .font(.system(size: balanceFontSize, weight: .bold, design: .rounded).monospacedDigit())
                         .foregroundStyle(Brand.onAccent)
                         .minimumScaleFactor(0.65)
                         .lineLimit(1)
@@ -216,8 +235,7 @@ private struct StravaCZHeader: View {
 
                 Spacer()
 
-                Image(systemName: "fork.knife")
-                    .font(.system(size: 28, weight: .semibold))
+                GradelyIcon(systemName: "fork.knife", size: 28)
                     .foregroundStyle(Brand.onAccent.opacity(0.45))
             }
 
@@ -333,9 +351,9 @@ private struct StravaCZMealRow: View {
                     .fixedSize(horizontal: false, vertical: true)
 
                 HStack(spacing: Spacing.sm) {
-                    Label(meal.formattedPrice, systemImage: "creditcard.fill")
+                    GradelyLabel(meal.formattedPrice, systemImage: "creditcard.fill")
                     if !meal.allergenText.isEmpty {
-                        Label(meal.allergenText, systemImage: "exclamationmark.triangle.fill")
+                        GradelyLabel(meal.allergenText, systemImage: "exclamationmark.triangle.fill")
                     }
                 }
                 .font(.caption)
@@ -384,13 +402,13 @@ private struct StravaCZMealSelectionButton: View {
                         .controlSize(.small)
                         .tint(meal.ordered ? Brand.onAccent : Brand.primary)
                 } else if meal.ordered {
-                    Image(systemName: "checkmark")
-                        .font(.system(size: 15, weight: .bold))
+                    GradelyIcon(systemName: "checkmark", size: 15)
                         .foregroundStyle(Brand.onAccent)
                 }
             }
             .frame(width: 36, height: 36)
-            .contentShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .frame(width: 44, height: 44)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .disabled(isSubmitting)
@@ -403,8 +421,7 @@ private struct StravaCZMealOrderedIndicator: View {
     let mealID: Int
 
     var body: some View {
-        Image(systemName: "checkmark.circle.fill")
-            .font(.system(size: 28, weight: .semibold))
+        GradelyIcon(systemName: "checkmark.circle.fill", size: 28)
             .foregroundStyle(Brand.primary)
             .frame(width: 40, height: 40)
             .accessibilityLabel(String(localized: "stravacz.meal.ordered"))

@@ -9,8 +9,6 @@ private enum AppTab: Hashable {
 }
 
 struct ContentView: View {
-    private static let supportPromptVersion = "1.4"
-
     private let repository: SchoolRepository
     private let stravaCZRepository: StravaCZRepository
     private let schoolDirectoryProvider: any SchoolDirectoryProviding
@@ -21,25 +19,46 @@ struct ContentView: View {
     private let historyRepository: GradeyHistoryRepository
     private let devicePushTokenClient: any DevicePushTokenClient
     private let notificationSettingsStore: MarkNotificationSettingsStore
+    private let notificationAuthorizer: any NotificationAuthorizing
+    private let onboardingProgressStore: OnboardingProgressStore
     private let skipsOnboarding: Bool
-    private let suppressesVersionSupportPrompt: Bool
-    private let forcesVersionSupportPrompt: Bool
-    @AppStorage("onboarding.completed.v1") private var hasCompletedOnboarding = false
-    @AppStorage("supportPrompt.presentedVersion") private var presentedSupportPromptVersion = ""
+    @AppStorage(OnboardingProgressStore.completionKey) private var hasCompletedOnboardingV2 = false
+    @AppStorage("settings.showMealsTab") private var showMealsTab = true
     @State private var appViewModel: AppViewModel
-    @State private var isVersionSupportPromptPresented = false
-    @State private var isSupportTipSheetPresented = false
-    @State private var didForcePresentSupportPrompt = false
+    @State private var gradeyAIViewModel: GradeyAIViewModel
+    @State private var onboardingJourney: OnboardingJourney?
+    @State private var isGradeyAIPresented = false
     @State private var selectedTab: AppTab = .today
     @State private var schoolAccountRevision = UUID()
+    @State private var isOnboardingForced = false
 
     init(
         environment: AppEnvironment = .current(),
-        skipsOnboarding: Bool = ProcessInfo.processInfo.arguments.contains("-uiTestingMockAPI"),
-        suppressesVersionSupportPrompt: Bool = ProcessInfo.processInfo.arguments.contains("-uiTestingMockAPI")
-            && !ProcessInfo.processInfo.arguments.contains("-uiTestingShowSupportPrompt"),
-        forcesVersionSupportPrompt: Bool = ProcessInfo.processInfo.arguments.contains("-uiTestingShowSupportPrompt")
+        skipsOnboarding: Bool = ProcessInfo.processInfo.arguments.contains("-uiTestingMockAPI")
+            && !ProcessInfo.processInfo.arguments.contains("-uiTestingShowOnboarding")
+            && !ProcessInfo.processInfo.arguments.contains("-uiTestingShowUpgradeOnboarding"),
+        notificationAuthorizer: (any NotificationAuthorizing)? = nil
     ) {
+        let arguments = ProcessInfo.processInfo.arguments
+        let defaults = UserDefaults.standard
+        let progressStore = OnboardingProgressStore(userDefaults: defaults)
+        if arguments.contains("-uiTestingResetOnboarding") {
+            defaults.removeObject(forKey: OnboardingProgressStore.legacyCompletionKey)
+            defaults.removeObject(forKey: OnboardingProgressStore.completionKey)
+            progressStore.clear()
+        }
+        if arguments.contains("-uiTestingShowUpgradeOnboarding") {
+            defaults.set(true, forKey: OnboardingProgressStore.legacyCompletionKey)
+            defaults.removeObject(forKey: OnboardingProgressStore.completionKey)
+            progressStore.clear()
+        }
+        if arguments.contains("-uiTestingRestoreMealsTab") {
+            defaults.set(true, forKey: "settings.showMealsTab")
+        }
+        if arguments.contains(GradeyDebugModeStore.launchArgument) {
+            defaults.set(true, forKey: GradeyDebugModeStore.storageKey)
+        }
+
         repository = environment.repository
         stravaCZRepository = environment.stravaCZRepository
         schoolDirectoryProvider = environment.schoolDirectoryProvider
@@ -50,23 +69,67 @@ struct ContentView: View {
         historyRepository = environment.historyRepository
         devicePushTokenClient = environment.devicePushTokenClient
         notificationSettingsStore = environment.notificationSettingsStore
+        onboardingProgressStore = progressStore
+        if let notificationAuthorizer {
+            self.notificationAuthorizer = notificationAuthorizer
+        } else if arguments.contains("-uiTestingMockAPI") {
+            let isDenied = arguments.contains("-uiTestingNotificationsDenied")
+            let isAlreadyAuthorized = arguments.contains("-uiTestingNotificationsAuthorized")
+            self.notificationAuthorizer = MockNotificationAuthorizer(
+                status: isAlreadyAuthorized ? .authorized : .notDetermined,
+                requestResult: isDenied ? .denied : .authorized
+            )
+        } else {
+            self.notificationAuthorizer = PushRegistrationService.shared
+        }
         self.skipsOnboarding = skipsOnboarding
-        self.suppressesVersionSupportPrompt = suppressesVersionSupportPrompt
-        self.forcesVersionSupportPrompt = forcesVersionSupportPrompt
+        let hasLegacySchoolSession = (try? environment.repository.bootstrapSession()) != nil
+        let resolvedJourney = skipsOnboarding
+            ? nil
+            : OnboardingRouteResolver.resolve(
+                hasCompletedV2: defaults.bool(forKey: OnboardingProgressStore.completionKey),
+                hasCompletedV1: defaults.bool(forKey: OnboardingProgressStore.legacyCompletionKey),
+                hasLegacySchoolSession: hasLegacySchoolSession,
+                progressStore: progressStore
+            )
+        _onboardingJourney = State(initialValue: resolvedJourney)
         _appViewModel = State(initialValue: AppViewModel(
             repository: environment.repository,
             stravaCZRepository: environment.stravaCZRepository,
             gradeyAuthClient: environment.gradeyAuthClient,
             linkedAccountRepository: environment.linkedAccountRepository,
+            accountSettingsClient: environment.devicePushTokenClient,
+            notificationSettingsStore: environment.notificationSettingsStore,
+            guestModeStore: environment.guestModeStore,
             requiresGradeyID: environment.requiresGradeyID
+        ))
+        _gradeyAIViewModel = State(initialValue: GradeyAIViewModel(
+            client: environment.gradeyAIClient,
+            contextBuilder: environment.gradeyAIContextBuilder
         ))
     }
 
     var body: some View {
         Group {
-            if shouldShowOnboarding {
-                OnboardingView {
-                    hasCompletedOnboarding = true
+            if shouldShowOnboarding, let onboardingJourney {
+                OnboardingView(
+                    journey: onboardingJourney,
+                    appViewModel: appViewModel,
+                    repository: repository,
+                    stravaCZRepository: stravaCZRepository,
+                    schoolDirectoryProvider: schoolDirectoryProvider,
+                    gradeyAuthClient: gradeyAuthClient,
+                    linkedAccountRepository: linkedAccountRepository,
+                    devicePushTokenClient: devicePushTokenClient,
+                    notificationSettingsStore: notificationSettingsStore,
+                    notificationAuthorizer: notificationAuthorizer,
+                    supportTipProvider: supportTipProvider,
+                    progressStore: onboardingProgressStore
+                ) {
+                    onboardingProgressStore.clear()
+                    hasCompletedOnboardingV2 = true
+                    isOnboardingForced = false
+                    self.onboardingJourney = nil
                 }
             } else {
                 switch appViewModel.phase {
@@ -78,61 +141,57 @@ struct ContentView: View {
                     needsSchoolView
                 case .signedIn:
                     TabView(selection: $selectedTab) {
-                        Tab("Today", systemImage: "sun.max.fill", value: AppTab.today) {
+                        Tab("Today", image: "TabToday", value: AppTab.today) {
                             TodayView(
                                 repository: repository,
                                 stravaCZRepository: stravaCZRepository,
                                 linkedAccountRepository: linkedAccountRepository,
                                 historyRepository: historyRepository,
-                                supportTipProvider: supportTipProvider,
-                                accountHub: AnyView(accountHub),
-                                onOpenMarks: {
-                                    selectedTab = .subjects
-                                },
+                                schoolDirectoryProvider: schoolDirectoryProvider,
+                                accountSettingsClient: devicePushTokenClient,
+                                gradeyAuthClient: gradeyAuthClient,
+                                accountHub: AnyView(accountHub(presentationContext: .modal)),
+                                onOpenGradeyAI: presentGradeyAI,
                                 onOpenAbsence: {
                                     selectedTab = .absence
                                 }
-                            ) {
-                                Task { await appViewModel.signOut() }
-                            }
+                            )
                         }
 
-                        Tab("subjects.title", systemImage: "checkmark.seal.fill", value: AppTab.subjects) {
+                        Tab("subjects.title", image: "TabSubjects", value: AppTab.subjects) {
                             SubjectsView(
                                 repository: repository,
                                 historyRepository: historyRepository,
-                                supportTipProvider: supportTipProvider,
-                                accountHub: AnyView(accountHub)
-                            ) {
-                                Task { await appViewModel.signOut() }
-                            }
+                                accountHub: AnyView(accountHub(presentationContext: .modal)),
+                                onOpenGradeyAI: presentGradeyAI
+                            )
                         }
 
-                        Tab("absence.title", systemImage: "calendar.badge.exclamationmark", value: AppTab.absence) {
+                        Tab("absence.title", image: "TabAbsence", value: AppTab.absence) {
                             AbsenceView(
                                 repository: repository,
-                                supportTipProvider: supportTipProvider,
-                                accountHub: AnyView(accountHub)
-                            ) {
-                                Task { await appViewModel.signOut() }
-                            }
+                                accountHub: AnyView(accountHub(presentationContext: .modal)),
+                                onOpenGradeyAI: presentGradeyAI
+                            )
                         }
 
-                        Tab("rozvrh.title", systemImage: "calendar", value: AppTab.timetable) {
+                        Tab("rozvrh.title", image: "TabTimetable", value: AppTab.timetable) {
                             TimetableView(
                                 repository: repository,
-                                supportTipProvider: supportTipProvider,
-                                accountHub: AnyView(accountHub)
-                            ) {
-                                Task { await appViewModel.signOut() }
-                            }
+                                accountHub: AnyView(accountHub(presentationContext: .modal)),
+                                onOpenGradeyAI: presentGradeyAI
+                            )
                         }
 
-                        Tab("stravacz.title", systemImage: "fork.knife", value: AppTab.stravaCZ) {
-                            StravaCZView(
-                                repository: stravaCZRepository,
-                                linkedAccountRepository: linkedAccountRepository
-                            )
+                        if showMealsTab {
+                            Tab("stravacz.title", image: "TabMeals", value: AppTab.stravaCZ) {
+                                StravaCZView(
+                                    repository: stravaCZRepository,
+                                    linkedAccountRepository: linkedAccountRepository,
+                                    accountHub: AnyView(accountHub(presentationContext: .modal)),
+                                    onOpenGradeyAI: presentGradeyAI
+                                )
+                            }
                         }
                     }
                     .id(schoolAccountRevision)
@@ -145,44 +204,44 @@ struct ContentView: View {
             watchSyncService?.start()
             PushRegistrationService.shared.configure(
                 client: devicePushTokenClient,
-                authClient: gradeyAuthClient,
-                preferencesStore: notificationSettingsStore
+                authClient: gradeyAuthClient
             )
             await appViewModel.bootstrap()
-            presentVersionSupportPromptIfNeeded()
+            await PushRegistrationService.shared.refreshRegistrationIfAuthorized()
         }
         .onChange(of: appViewModel.phase) {
-            presentVersionSupportPromptIfNeeded()
+            if appViewModel.phase == .signedIn {
+                selectedTab = .today
+            } else {
+                isGradeyAIPresented = false
+                gradeyAIViewModel.reset()
+            }
         }
-        .onChange(of: hasCompletedOnboarding) {
-            presentVersionSupportPromptIfNeeded()
+        .onChange(of: showMealsTab) { _, isVisible in
+            if !isVisible, selectedTab == .stravaCZ {
+                selectedTab = .today
+            }
         }
         .onOpenURL { url in
             Task { await handleOpenURL(url) }
         }
         .onReceive(NotificationCenter.default.publisher(for: .gradelySchoolAccountDidChange)) { _ in
+            isGradeyAIPresented = false
+            gradeyAIViewModel.reset()
             selectedTab = .today
             schoolAccountRevision = UUID()
         }
-        .alert(String(localized: "support.updatePrompt.title"), isPresented: $isVersionSupportPromptPresented) {
-            Button(String(localized: "support.updatePrompt.later"), role: .cancel) {}
-            Button(String(localized: "support.updatePrompt.support")) {
-                isSupportTipSheetPresented = true
-            }
-        } message: {
-            Text("support.updatePrompt.message")
-        }
-        .sheet(isPresented: $isSupportTipSheetPresented) {
-            SupportTipView(
-                viewModel: SupportTipViewModel(
-                    supportTipProvider: supportTipProvider
-                )
-            )
+        .sheet(isPresented: $isGradeyAIPresented, onDismiss: {
+            gradeyAIViewModel.stop()
+        }) {
+            GradeyAIView(viewModel: gradeyAIViewModel)
         }
     }
 
     private var shouldShowOnboarding: Bool {
-        !skipsOnboarding && !hasCompletedOnboarding
+        (!skipsOnboarding || isOnboardingForced)
+            && !hasCompletedOnboardingV2
+            && onboardingJourney != nil
     }
 
     @ViewBuilder
@@ -190,8 +249,8 @@ struct ContentView: View {
         if appViewModel.usesGradeyIDGate {
             GradeyIDLoginView(
                 authClient: gradeyAuthClient,
-                onBypassForTesting: {
-                    Task { await appViewModel.bypassGradeyIDForTesting() }
+                onContinueWithoutAccount: {
+                    Task { await appViewModel.continueWithoutAccount() }
                 }
             ) {
                 Task { await appViewModel.markGradeySignedIn() }
@@ -206,7 +265,7 @@ struct ContentView: View {
     @ViewBuilder
     private var needsSchoolView: some View {
         if appViewModel.usesGradeyIDGate {
-            accountHub
+            accountHub(presentationContext: .requiredSetup)
         } else {
             LoginView(repository: repository, schoolDirectoryProvider: schoolDirectoryProvider) {
                 appViewModel.markSignedIn()
@@ -214,9 +273,13 @@ struct ContentView: View {
         }
     }
 
-    private var accountHub: some View {
+    private func accountHub(
+        presentationContext: GradelyAccountHubPresentationContext
+    ) -> some View {
         GradeyAccountHubView(
             account: appViewModel.gradeyAccount,
+            isGuestMode: appViewModel.isGuestMode,
+            presentationContext: presentationContext,
             repository: repository,
             stravaCZRepository: stravaCZRepository,
             schoolDirectoryProvider: schoolDirectoryProvider,
@@ -224,11 +287,47 @@ struct ContentView: View {
             notificationClient: devicePushTokenClient,
             authClient: gradeyAuthClient,
             preferencesStore: notificationSettingsStore,
+            supportTipProvider: supportTipProvider,
+            notificationAuthorizer: notificationAuthorizer,
             onSchoolLinked: {
                 appViewModel.markSignedIn()
             },
             onSignedOut: {
-                Task { await appViewModel.signOut() }
+                Task {
+                    if appViewModel.isGuestMode {
+                        await appViewModel.signOutOfSchool()
+                    } else {
+                        await appViewModel.signOut()
+                    }
+                }
+            },
+            onLeaveGuestMode: {
+                appViewModel.leaveGuestMode()
+            },
+            onAccountUpdated: { account in
+                appViewModel.updateGradeyAccount(account)
+            },
+            onRestartOnboarding: { journey in
+                restartOnboarding(journey)
+            },
+            onDebugSignOut: {
+                Task {
+                    await appViewModel.signOut()
+                    gradeyAIViewModel.reset()
+                }
+            },
+            onDebugClearCache: {
+                appViewModel.clearLocalCaches()
+                gradeyAIViewModel.reset()
+                schoolAccountRevision = UUID()
+            },
+            onDebugResetAsNewUser: {
+                Task {
+                    await appViewModel.resetAsNewUser()
+                    gradeyAIViewModel.reset()
+                    schoolAccountRevision = UUID()
+                    restartOnboarding(.newUser)
+                }
             }
         )
     }
@@ -236,62 +335,43 @@ struct ContentView: View {
     private func handleOpenURL(_ url: URL) async {
         guard url.scheme == "gradey" || url.scheme == "gradely" else { return }
 
-        if url.host == "timetable" || url.path == "/timetable" {
+        if url.host == "marks"
+            || url.host == "subjects"
+            || url.path == "/marks"
+            || url.path == "/subjects" {
+            selectedTab = .subjects
+        } else if url.host == "timetable" || url.path == "/timetable" {
             selectedTab = .timetable
         }
     }
 
-    private func presentVersionSupportPromptIfNeeded() {
-        guard appViewModel.phase == .signedIn,
-              !shouldShowOnboarding,
-              !isVersionSupportPromptPresented,
-              !isSupportTipSheetPresented
-        else {
-            return
-        }
-
-        if forcesVersionSupportPrompt {
-            guard !didForcePresentSupportPrompt else {
-                return
-            }
-            didForcePresentSupportPrompt = true
-            isVersionSupportPromptPresented = true
-            return
-        }
-
-        guard !suppressesVersionSupportPrompt,
-              currentAppVersion == Self.supportPromptVersion,
-              presentedSupportPromptVersion != Self.supportPromptVersion
-        else {
-            return
-        }
-
-        presentedSupportPromptVersion = Self.supportPromptVersion
-        isVersionSupportPromptPresented = true
+    private func presentGradeyAI() {
+        isGradeyAIPresented = true
     }
 
-    private var currentAppVersion: String? {
-        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
+    private func restartOnboarding(_ journey: OnboardingJourney) {
+        let controller = OnboardingRestartController(progressStore: onboardingProgressStore)
+        hasCompletedOnboardingV2 = false
+        isOnboardingForced = true
+        onboardingJourney = controller.restart(journey)
     }
 }
 
 private struct SplashView: View {
     var body: some View {
         ZStack {
-            Brand.gradient
-                .ignoresSafeArea()
+            AuroraBackground()
 
             VStack(spacing: Spacing.xl) {
-                Image(systemName: "graduationcap.fill")
-                    .font(.system(size: 40, weight: .bold))
-                    .foregroundStyle(Brand.primary)
+                GradelyIcon(systemName: "graduationcap.fill", size: 40)
+                    .foregroundStyle(Brand.onAccent)
                     .frame(width: 88, height: 88)
-                    .background(.white, in: RoundedRectangle(cornerRadius: Radius.xl, style: .continuous))
-                    .shadow(color: .black.opacity(0.2), radius: 16, x: 0, y: 8)
+                    .background(Brand.gradient, in: RoundedRectangle(cornerRadius: Radius.xl, style: .continuous))
+                    .shadow(color: Brand.primary.opacity(0.28), radius: 16, x: 0, y: 8)
 
                 ProgressView()
                     .controlSize(.large)
-                    .tint(Brand.onAccent)
+                    .tint(Brand.primary)
                     .accessibilityIdentifier("bootstrapProgress")
             }
         }

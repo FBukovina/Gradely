@@ -9,8 +9,11 @@ struct AppEnvironment {
     let gradeyAuthClient: any GradeyAuthClient
     let linkedAccountRepository: LinkedAccountRepository
     let historyRepository: GradeyHistoryRepository
+    let gradeyAIClient: any GradeyAIClient
+    let gradeyAIContextBuilder: any GradeyAIContextBuilding
     let devicePushTokenClient: any DevicePushTokenClient
     let notificationSettingsStore: MarkNotificationSettingsStore
+    let guestModeStore: any GradeyGuestModeStoring
     let requiresGradeyID: Bool
 
     init(
@@ -22,8 +25,11 @@ struct AppEnvironment {
         gradeyAuthClient: any GradeyAuthClient = MockGradeyAuthClient(),
         linkedAccountRepository: LinkedAccountRepository? = nil,
         historyRepository: GradeyHistoryRepository? = nil,
+        gradeyAIClient: (any GradeyAIClient)? = nil,
+        gradeyAIContextBuilder: (any GradeyAIContextBuilding)? = nil,
         devicePushTokenClient: any DevicePushTokenClient = MockDevicePushTokenClient(),
         notificationSettingsStore: MarkNotificationSettingsStore = MarkNotificationSettingsStore(userDefaults: .standard),
+        guestModeStore: any GradeyGuestModeStoring = GradeyGuestModeStore(),
         requiresGradeyID: Bool = false
     ) {
         self.repository = repository
@@ -34,15 +40,23 @@ struct AppEnvironment {
         self.gradeyAuthClient = gradeyAuthClient
         self.devicePushTokenClient = devicePushTokenClient
         self.notificationSettingsStore = notificationSettingsStore
+        self.guestModeStore = guestModeStore
         self.requiresGradeyID = requiresGradeyID
-        self.linkedAccountRepository = linkedAccountRepository ?? LinkedAccountRepository(
+        let resolvedLinkedAccountRepository = linkedAccountRepository ?? LinkedAccountRepository(
             store: LinkedAccountStore(userDefaults: .standard),
             client: MockLinkedAccountClient(),
             authClient: gradeyAuthClient
         )
-        self.historyRepository = historyRepository ?? GradeyHistoryRepository(
+        let resolvedHistoryRepository = historyRepository ?? GradeyHistoryRepository(
             client: MockGradeyHistoryClient(),
             authClient: gradeyAuthClient
+        )
+        self.linkedAccountRepository = resolvedLinkedAccountRepository
+        self.historyRepository = resolvedHistoryRepository
+        self.gradeyAIClient = gradeyAIClient ?? MockGradeyAIClient()
+        self.gradeyAIContextBuilder = gradeyAIContextBuilder ?? GradeyAIContextBuilder(
+            repository: repository,
+            historyRepository: resolvedHistoryRepository
         )
     }
 
@@ -73,19 +87,20 @@ struct AppEnvironment {
             client: SupabaseGradeyHistoryClient(),
             authClient: gradeyAuthClient
         )
+        let repository = SchoolRepository(
+            client: DemoAwareBakalariClient(liveClient: URLSessionBakalariClient()),
+            sessionStore: SessionStore(),
+            marksCache: marksCache,
+            absenceCache: absenceCache,
+            timetableCache: timetableCache,
+            nextLessonWidgetStore: nextLessonWidgetStore,
+            absenceLessonSelectionStore: absenceLessonSelectionStore,
+            schoolDirectoryProvider: schoolDirectoryProvider,
+            watchSyncService: watchSyncService
+        )
 
         return AppEnvironment(
-            repository: SchoolRepository(
-                client: DemoAwareBakalariClient(liveClient: URLSessionBakalariClient()),
-                sessionStore: SessionStore(),
-                marksCache: marksCache,
-                absenceCache: absenceCache,
-                timetableCache: timetableCache,
-                nextLessonWidgetStore: nextLessonWidgetStore,
-                absenceLessonSelectionStore: absenceLessonSelectionStore,
-                schoolDirectoryProvider: schoolDirectoryProvider,
-                watchSyncService: watchSyncService
-            ),
+            repository: repository,
             stravaCZRepository: StravaCZRepository(
                 client: URLSessionStravaCZClient(),
                 sessionStore: StravaCZSessionStore(),
@@ -97,6 +112,11 @@ struct AppEnvironment {
             gradeyAuthClient: gradeyAuthClient,
             linkedAccountRepository: linkedAccountRepository,
             historyRepository: historyRepository,
+            gradeyAIClient: FirebaseGradeyAIClient(),
+            gradeyAIContextBuilder: GradeyAIContextBuilder(
+                repository: repository,
+                historyRepository: historyRepository
+            ),
             devicePushTokenClient: devicePushTokenClient,
             notificationSettingsStore: notificationSettingsStore,
             requiresGradeyID: true
@@ -119,22 +139,91 @@ struct AppEnvironment {
         let useLargeSubjectAbsenceMock = arguments.contains("-uiTestingLargeAbsenceSubjects")
         let useManualSubjectAbsenceMock = arguments.contains("-uiTestingManualSubjectAbsence")
         let useEmptySubjectAbsenceMock = arguments.contains("-uiTestingEmptySubjectAbsence")
-        let schoolDirectoryProvider = MockSchoolDirectoryProvider(refreshResult: PreviewData.schoolDirectorySchools)
+        let useGradeyAIQuotaMock = arguments.contains("-uiTestingGradeyAIQuota")
+        let useGradeyAIDisabledMock = arguments.contains("-uiTestingGradeyAIDisabled")
+        let schoolDirectorySchools = arguments.contains("-uiTestingBroadSchoolSearch")
+            ? PreviewData.broadSchoolDirectorySearchFixture
+            : PreviewData.schoolDirectorySchools
+        let schoolDirectoryProvider = MockSchoolDirectoryProvider(refreshResult: schoolDirectorySchools)
+        let eduPageClient = UITestEduPageClient(
+            requiresTwoFactor: arguments.contains("-uiTestingEduPageTwoFactor"),
+            requiresStudentSelection: arguments.contains("-uiTestingEduPageChildSelection")
+        )
 
+        var gradeyUITestSession = arguments.contains("-uiTestingGradeyIDSignedOut")
+            ? nil
+            : PreviewData.gradeyAuthSession
+        if arguments.contains("-uiTestingMissingGradeyName"),
+           var namelessSession = gradeyUITestSession {
+            namelessSession.account.fullName = nil
+            gradeyUITestSession = namelessSession
+        }
         let gradeyAuthClient = MockGradeyAuthClient(
-            session: arguments.contains("-uiTestingGradeyIDSignedOut") ? nil : PreviewData.gradeyAuthSession
+            session: gradeyUITestSession,
+            updateFullNameError: arguments.contains("-uiTestingGradeyNameUpdateFailure")
+                ? GradeyAuthError.server("Mock name update failed")
+                : nil
         )
         let linkedAccountRepository = LinkedAccountRepository(
             store: LinkedAccountStore(userDefaults: .standard),
-            client: MockLinkedAccountClient(),
+            client: MockLinkedAccountClient(
+                schoolLinkError: arguments.contains("-uiTestingSchoolCloudLinkFailure")
+                    ? GradeyAuthError.server("Mock school cloud link failed")
+                    : nil,
+                stravaCZLinkError: arguments.contains("-uiTestingMealsCloudLinkFailure")
+                    ? GradeyAuthError.server("Mock meals cloud link failed")
+                    : nil
+            ),
             authClient: gradeyAuthClient
         )
         linkedAccountRepository.clearLocalAccounts()
         if arguments.contains("-uiTestingLinkedAccounts") {
-            linkedAccountRepository.replaceLocalAccounts([PreviewData.linkedSchoolAccount])
+            var account = PreviewData.linkedSchoolAccount
+            if arguments.contains("-uiTestingLinkedAccountActionRequired") {
+                account.status = .actionRequired
+                account.actionRequiredReason = "Provider credentials expired"
+            }
+            linkedAccountRepository.replaceLocalAccounts([account])
+            if var session = try? store.loadSession() {
+                session.bakalari = BakalariCredentials(
+                    username: DemoAccount.username,
+                    password: DemoAccount.password
+                )
+                session.linkedAccountID = account.id
+                session.linkedAccountDisplayName = account.displayName
+                session.linkedAccountSchoolName = account.schoolName
+                try? store.save(session: session)
+            }
         }
         let notificationSettingsStore = MarkNotificationSettingsStore(userDefaults: .standard)
-        notificationSettingsStore.preferences = .default
+        var notificationPreferences = NotificationPreferences.default
+        if arguments.contains("-uiTestingQuietHoursEnabled") {
+            notificationPreferences.quietHoursEnabled = true
+        }
+        notificationSettingsStore.preferences = notificationPreferences
+        let mockAccountSettingsClient = MockDevicePushTokenClient(
+            accountSettings: GradeyAccountSettingsSnapshot(
+                activeSchoolAccountID: linkedAccountRepository.loadAccounts().first(where: { $0.provider.isSchoolProvider })?.id,
+                linkedAccounts: linkedAccountRepository.loadAccounts(),
+                notificationPreferences: notificationSettingsStore.preferences
+            ),
+            fetchError: arguments.contains("-uiTestingAccountSettingsOffline")
+                ? URLError(.notConnectedToInternet)
+                : nil
+        )
+        let guestModeStore = GradeyGuestModeStore()
+        if arguments.contains("-uiTestingResetGuestMode") {
+            guestModeStore.isEnabled = false
+        }
+        let gradeyAISnapshot = GradeyAIContextSnapshot(
+            schoolScope: "school_ui_test",
+            generatedAt: Date(),
+            isStale: false,
+            unavailableSections: [.trends, .timetable],
+            subjects: GradeyAIContextBuilder.makeSubjects(from: PreviewData.subjects),
+            trends: [],
+            timetable: []
+        )
 
         return AppEnvironment(
             repository: SchoolRepository(
@@ -159,6 +248,7 @@ struct AppEnvironment {
                         ? PreviewData.largeSubjectTimetableResponse
                         : (useManualSubjectAbsenceMock ? PreviewData.manualSubjectTimetableResponse : PreviewData.timetableResponse)
                 ),
+                eduPageClient: eduPageClient,
                 sessionStore: store,
                 marksCache: cache,
                 schoolDirectoryProvider: schoolDirectoryProvider
@@ -174,8 +264,24 @@ struct AppEnvironment {
                 client: MockGradeyHistoryClient(response: PreviewData.gradeHistoryResponse),
                 authClient: gradeyAuthClient
             ),
-            devicePushTokenClient: MockDevicePushTokenClient(),
+            gradeyAIClient: MockGradeyAIClient(
+                status: GradeyAIStatus(
+                    enabled: !useGradeyAIDisabledMock,
+                    consentRequired: arguments.contains("-uiTestingGradeyAIConsentRequired"),
+                    termsVersion: "2026-07-10.v1",
+                    dailyLimit: useGradeyAIQuotaMock ? 5 : 30,
+                    dailyUsed: useGradeyAIQuotaMock ? 2 : 0,
+                    remaining: useGradeyAIQuotaMock ? 3 : 30,
+                    resetAt: useGradeyAIQuotaMock ? Date().addingTimeInterval(3_600) : nil
+                )
+            ),
+            gradeyAIContextBuilder: MockGradeyAIContextBuilder(
+                snapshot: gradeyAISnapshot,
+                refreshSnapshot: gradeyAISnapshot
+            ),
+            devicePushTokenClient: mockAccountSettingsClient,
             notificationSettingsStore: notificationSettingsStore,
+            guestModeStore: guestModeStore,
             requiresGradeyID: arguments.contains("-uiTestingRequiresGradeyID")
         )
     }
@@ -189,6 +295,112 @@ struct AppEnvironment {
             client: MockStravaCZClient(),
             sessionStore: InMemoryStravaCZSessionStore(session: session),
             menuCache: InMemoryStravaCZMenuCache(cachedMenu: menu)
+        )
+    }
+}
+
+private final class UITestEduPageClient: EduPageClient, @unchecked Sendable {
+    private let requiresTwoFactor: Bool
+    private let requiresStudentSelection: Bool
+
+    private let students = [
+        SchoolStudentProfile(id: "Student1", fullName: "Test Student", classID: "1", className: "1.A"),
+        SchoolStudentProfile(id: "Student2", fullName: "Second Student", classID: "2", className: "2.B")
+    ]
+
+    init(requiresTwoFactor: Bool, requiresStudentSelection: Bool) {
+        self.requiresTwoFactor = requiresTwoFactor
+        self.requiresStudentSelection = requiresStudentSelection
+    }
+
+    func beginLogin(baseURL: URL, username: String, password: String) async throws -> EduPageLoginResult {
+        if requiresTwoFactor {
+            return .twoFactor(EduPageTwoFactorPrompt())
+        }
+        if requiresStudentSelection {
+            return .studentSelection(students)
+        }
+        return .authenticated(sessionData(activeStudent: students[0]))
+    }
+
+    func completeTwoFactor(code: String) async throws -> EduPageLoginResult {
+        if requiresStudentSelection {
+            return .studentSelection(students)
+        }
+        return .authenticated(sessionData(activeStudent: students[0]))
+    }
+
+    func completeApprovedTwoFactor() async throws -> EduPageLoginResult {
+        try await completeTwoFactor(code: "approved")
+    }
+
+    func isTwoFactorConfirmed() async throws -> Bool { true }
+
+    func resendTwoFactorNotification() async throws {}
+
+    func selectStudent(_ studentID: String) async throws -> EduPageSessionData {
+        guard let student = students.first(where: { $0.id == studentID }) else {
+            throw SchoolAuthenticationError.invalidStudent
+        }
+        return sessionData(activeStudent: student)
+    }
+
+    func switchStudent(
+        _ studentID: String,
+        in session: EduPageSessionData,
+        baseURL: URL
+    ) async throws -> EduPageSessionData {
+        guard let student = students.first(where: { $0.id == studentID }) else {
+            throw SchoolAuthenticationError.invalidStudent
+        }
+        var updated = session
+        updated.activeStudent = student
+        return updated
+    }
+
+    func restore(_ stored: EduPageSessionData, baseURL: URL) async throws -> EduPageSessionData {
+        stored
+    }
+
+    func fetchMarks(baseURL: URL, session: EduPageSessionData) async throws -> MarksResponse {
+        MarksResponse(subjects: [])
+    }
+
+    func fetchAbsences(baseURL: URL, session: EduPageSessionData) async throws -> AbsenceResponse {
+        AbsenceResponse(percentageThreshold: nil, absences: [], absencesPerSubject: [])
+    }
+
+    func fetchUser(baseURL: URL, session: EduPageSessionData) async throws -> UserResponse {
+        UserResponse(
+            userUID: session.activeStudent?.id ?? "Student1",
+            fullName: session.activeStudent?.fullName ?? "Test Student",
+            userClass: nil,
+            schoolName: session.schoolName,
+            userType: "student",
+            userTypeText: "Student",
+            studyYear: 2026
+        )
+    }
+
+    func fetchTimetable(
+        baseURL: URL,
+        session: EduPageSessionData,
+        weekStart: Date
+    ) async throws -> TimetableResponse {
+        TimetableResponse()
+    }
+
+    private func sessionData(activeStudent: SchoolStudentProfile) -> EduPageSessionData {
+        EduPageSessionData(
+            sessionID: "ui-test-edupage-session",
+            username: "parent",
+            password: "secret",
+            gsecHash: "ui-test-gsec",
+            userID: activeStudent.id,
+            schoolName: "EduPage School",
+            activeStudent: activeStudent,
+            linkedStudents: students,
+            subjects: []
         )
     }
 }

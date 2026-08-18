@@ -57,7 +57,7 @@ final class TimetableCache: TimetableCaching {
     }
 
     func clear() throws {
-        try clear(legacyFileURL)
+        try clearMatchingFiles(prefix: "timetable-cache")
     }
 
     func clear(scope: SchoolDataScope) throws {
@@ -97,6 +97,16 @@ final class TimetableCache: TimetableCaching {
     private func clear(_ fileURL: URL) throws {
         guard FileManager.default.fileExists(atPath: fileURL.path) else { return }
         try FileManager.default.removeItem(at: fileURL)
+    }
+
+    private func clearMatchingFiles(prefix: String) throws {
+        let contents = try FileManager.default.contentsOfDirectory(
+            at: directory,
+            includingPropertiesForKeys: nil
+        )
+        for fileURL in contents where fileURL.lastPathComponent.hasPrefix(prefix) {
+            try FileManager.default.removeItem(at: fileURL)
+        }
     }
 
     private static func key(for weekStart: Date) -> String {
@@ -194,6 +204,7 @@ final class InMemoryTimetableCache: TimetableCaching {
     func clear() throws {
         cached = nil
         cachedByWeek = [:]
+        cachedByScopeAndWeek = [:]
     }
 
     func clear(scope: SchoolDataScope) throws {

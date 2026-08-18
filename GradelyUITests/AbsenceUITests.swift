@@ -97,8 +97,9 @@ final class AbsenceUITests: XCTestCase {
         app.launchArguments = ["-uiTestingMockAPI", "-uiTestingLoggedIn"]
         app.launch()
 
-        // The predictor lives on the Today tab.
-        let scrollView = app.scrollViews["todayScrollView"]
+        // The predictor belongs with the other absence tools.
+        app.tabBars.buttons.element(boundBy: 2).tap()
+        let scrollView = app.scrollViews["absenceList"]
         XCTAssertTrue(scrollView.waitForExistence(timeout: 5))
 
         let openButton = app.descendants(matching: .any)["absencePredictorOpenButton"]

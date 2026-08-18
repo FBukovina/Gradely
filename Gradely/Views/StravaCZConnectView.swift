@@ -28,30 +28,17 @@ struct StravaCZConnectView: View {
 
     var body: some View {
         ZStack {
-            Color.gradelyGroupedBackground.ignoresSafeArea()
+            SettingsModalBackground()
 
             ScrollView {
                 VStack(alignment: .leading, spacing: Spacing.xl) {
-                    VStack(alignment: .leading, spacing: Spacing.md) {
-                        Image(systemName: "fork.knife")
-                            .font(.system(size: 30, weight: .bold))
-                            .foregroundStyle(Brand.onAccent)
-                            .frame(width: 64, height: 64)
-                            .background(Brand.gradient, in: RoundedRectangle(cornerRadius: Radius.md, style: .continuous))
-                            .shadow(color: Brand.primary.opacity(0.35), radius: 14, x: 0, y: 8)
-                            .accessibilityHidden(true)
+                    SettingsModalFlowHero(
+                        icon: "fork.knife",
+                        title: "stravacz.connect.title",
+                        message: "stravacz.connect.message"
+                    )
 
-                        Text("stravacz.connect.title")
-                            .font(.title.bold())
-                            .foregroundStyle(.primary)
-
-                        Text("stravacz.connect.message")
-                            .font(.callout)
-                            .foregroundStyle(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-
-                    Card {
+                    SettingsModalSurface {
                         VStack(spacing: Spacing.lg) {
                             TextField(String(localized: "stravacz.canteenNumber"), text: $canteenNumber)
                                 .gradelyKeyboardType(.numberPad)
@@ -81,8 +68,7 @@ struct StravaCZConnectView: View {
                                     }
                                     Text(isConnecting ? String(localized: "stravacz.connect.loading") : String(localized: "stravacz.connect.button"))
                                     if !isConnecting {
-                                        Image(systemName: "chevron.right")
-                                            .font(.subheadline.weight(.bold))
+                                        GradelyIcon(systemName: "chevron.right", size: 14)
                                     }
                                 }
                             }
@@ -92,7 +78,7 @@ struct StravaCZConnectView: View {
                         }
                     }
                 }
-                .padding(.horizontal, Spacing.xl)
+                .padding(.horizontal, 20)
                 .padding(.vertical, Spacing.xxl)
                 .frame(maxWidth: 560)
                 .frame(maxWidth: .infinity)
@@ -125,7 +111,7 @@ struct StravaCZConnectView: View {
             Button {
                 isPasswordVisible.toggle()
             } label: {
-                Image(systemName: isPasswordVisible ? "eye.slash" : "eye")
+                GradelyIcon(systemName: isPasswordVisible ? "eye.slash" : "eye")
                     .foregroundStyle(.secondary)
                     .accessibilityLabel(isPasswordVisible ? String(localized: "login.hidePassword") : String(localized: "login.showPassword"))
             }

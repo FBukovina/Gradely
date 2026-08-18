@@ -136,6 +136,10 @@ final class StravaCZRepository {
         try? menuCache.clear()
     }
 
+    func clearCachedMenu() {
+        try? menuCache.clear()
+    }
+
     private func validSession() throws -> StravaCZStoredSession {
         guard let session = try sessionStore.loadSession() else {
             throw StravaCZAppError.notLoggedIn

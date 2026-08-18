@@ -15,6 +15,18 @@
 		A20000072FCE0000000000A7 /* GradelyWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = A20000042FCE0000000000A4 /* GradelyWatch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		B50000012FCF000000000001 /* GradelyMacWidgets.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = B50000022FCF000000000002 /* GradelyMacWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		C53D9B8831BC494585B5670D /* GradelyWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 23EA86CD939E4E779E620824 /* GradelyWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		D20000202FD2000000000020 /* HugeiconsCore in Frameworks */ = {isa = PBXBuildFile; productRef = D20000102FD2000000000010 /* HugeiconsCore */; };
+		D20000212FD2000000000021 /* HugeiconsStrokeRounded in Frameworks */ = {isa = PBXBuildFile; productRef = D20000112FD2000000000011 /* HugeiconsStrokeRounded */; };
+		D20000222FD2000000000022 /* HugeiconsCore in Frameworks */ = {isa = PBXBuildFile; productRef = D20000122FD2000000000012 /* HugeiconsCore */; };
+		D20000232FD2000000000023 /* HugeiconsStrokeRounded in Frameworks */ = {isa = PBXBuildFile; productRef = D20000132FD2000000000013 /* HugeiconsStrokeRounded */; };
+		F10000202FD1000000000020 /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = F10000102FD1000000000010 /* FirebaseCore */; };
+		F10000212FD1000000000021 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = F10000112FD1000000000011 /* FirebaseAuth */; };
+		F10000222FD1000000000022 /* FirebaseFunctions in Frameworks */ = {isa = PBXBuildFile; productRef = F10000122FD1000000000012 /* FirebaseFunctions */; };
+		F10000232FD1000000000023 /* FirebaseAppCheck in Frameworks */ = {isa = PBXBuildFile; productRef = F10000132FD1000000000013 /* FirebaseAppCheck */; };
+		F10000242FD1000000000024 /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = F10000142FD1000000000014 /* FirebaseCore */; };
+		F10000252FD1000000000025 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = F10000152FD1000000000015 /* FirebaseAuth */; };
+		F10000262FD1000000000026 /* FirebaseFunctions in Frameworks */ = {isa = PBXBuildFile; productRef = F10000162FD1000000000016 /* FirebaseFunctions */; };
+		F10000272FD1000000000027 /* FirebaseAppCheck in Frameworks */ = {isa = PBXBuildFile; productRef = F10000172FD1000000000017 /* FirebaseAppCheck */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -100,10 +112,11 @@
 
 /* Begin PBXFileReference section */
 		23EA86CD939E4E779E620824 /* GradelyWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = GradelyWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		8139974A30164A380078BE59 /* design-qa.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = "design-qa.md"; sourceTree = "<group>"; };
 		81EE6CA12FCDDC4A009D28DE /* Gradey.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Gradey.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		81EE6CAE2FCDDC4B009D28DE /* GradelyTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = GradelyTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		81EE6CB82FCDDC4B009D28DE /* GradelyUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = GradelyUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		920000062FD0000000000006 /* Shared.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config/Shared.xcconfig; sourceTree = "<group>"; };
+		920000062FD0000000000006 /* Config/Shared.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config/Shared.xcconfig; sourceTree = "<group>"; };
 		A20000012FCE0000000000A1 /* GradelyWatch.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = GradelyWatch.xcodeproj; path = GradelyWatch/GradelyWatch.xcodeproj; sourceTree = "<group>"; };
 		B40000052FCEF10000000005 /* Gradey.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Gradey.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B50000022FCF000000000002 /* GradelyMacWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = GradelyMacWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -159,9 +172,15 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D20000202FD2000000000020 /* HugeiconsCore in Frameworks */,
+				D20000212FD2000000000021 /* HugeiconsStrokeRounded in Frameworks */,
 				A10000032FCE000000000003 /* GradelyWatchShared in Frameworks */,
 				81EE6CCB2FCDDC4B009D28DE /* RevenueCat in Frameworks */,
 				920000012FD0000000000001 /* Supabase in Frameworks */,
+				F10000202FD1000000000020 /* FirebaseCore in Frameworks */,
+				F10000212FD1000000000021 /* FirebaseAuth in Frameworks */,
+				F10000222FD1000000000022 /* FirebaseFunctions in Frameworks */,
+				F10000232FD1000000000023 /* FirebaseAppCheck in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -184,7 +203,13 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D20000222FD2000000000022 /* HugeiconsCore in Frameworks */,
+				D20000232FD2000000000023 /* HugeiconsStrokeRounded in Frameworks */,
 				920000032FD0000000000003 /* Supabase in Frameworks */,
+				F10000242FD1000000000024 /* FirebaseCore in Frameworks */,
+				F10000252FD1000000000025 /* FirebaseAuth in Frameworks */,
+				F10000262FD1000000000026 /* FirebaseFunctions in Frameworks */,
+				F10000272FD1000000000027 /* FirebaseAppCheck in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -209,8 +234,9 @@
 				81EE6CB12FCDDC4B009D28DE /* GradelyTests */,
 				81EE6CBB2FCDDC4B009D28DE /* GradelyUITests */,
 				A20000012FCE0000000000A1 /* GradelyWatch.xcodeproj */,
-				920000062FD0000000000006 /* Shared.xcconfig */,
+				920000062FD0000000000006 /* Config/Shared.xcconfig */,
 				81EE6CA22FCDDC4A009D28DE /* Products */,
+				8139974A30164A380078BE59 /* design-qa.md */,
 			);
 			sourceTree = "<group>";
 		};
@@ -283,9 +309,15 @@
 			);
 			name = Gradely;
 			packageProductDependencies = (
+				D20000102FD2000000000010 /* HugeiconsCore */,
+				D20000112FD2000000000011 /* HugeiconsStrokeRounded */,
 				A10000022FCE000000000002 /* GradelyWatchShared */,
 				81EE6CCC2FCDDC4B009D28DE /* RevenueCat */,
 				920000022FD0000000000002 /* Supabase */,
+				F10000102FD1000000000010 /* FirebaseCore */,
+				F10000112FD1000000000011 /* FirebaseAuth */,
+				F10000122FD1000000000012 /* FirebaseFunctions */,
+				F10000132FD1000000000013 /* FirebaseAppCheck */,
 			);
 			productName = Gradey;
 			productReference = 81EE6CA12FCDDC4A009D28DE /* Gradey.app */;
@@ -358,7 +390,13 @@
 			);
 			name = GradelyMac;
 			packageProductDependencies = (
+				D20000122FD2000000000012 /* HugeiconsCore */,
+				D20000132FD2000000000013 /* HugeiconsStrokeRounded */,
 				920000042FD0000000000004 /* Supabase */,
+				F10000142FD1000000000014 /* FirebaseCore */,
+				F10000152FD1000000000015 /* FirebaseAuth */,
+				F10000162FD1000000000016 /* FirebaseFunctions */,
+				F10000172FD1000000000017 /* FirebaseAppCheck */,
 			);
 			productName = Gradey;
 			productReference = B40000052FCEF10000000005 /* Gradey.app */;
@@ -457,9 +495,11 @@
 			mainGroup = 81EE6C982FCDDC4A009D28DE;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
+				D20000012FD2000000000001 /* XCLocalSwiftPackageReference "LocalPackages/hugeicons-swift" */,
 				A10000012FCE000000000001 /* XCLocalSwiftPackageReference "GradelyWatchShared" */,
 				81EE6CCD2FCDDC4B009D28DE /* XCRemoteSwiftPackageReference "purchases-ios-spm" */,
 				920000052FD0000000000005 /* XCRemoteSwiftPackageReference "supabase-swift" */,
+				F10000012FD1000000000001 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 81EE6CA22FCDDC4A009D28DE /* Products */;
@@ -617,7 +657,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = GradelyWidgets/GradelyWidgets.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 10;
+				CURRENT_PROJECT_VERSION = 11;
 				DEVELOPMENT_TEAM = C2U9S337H8;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = "GradelyWidgets-Info.plist";
@@ -627,7 +667,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.8;
+				MARKETING_VERSION = 2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.bukovinafilip.BakalariMarks.GradelyWidgets;
 				PRODUCT_MODULE_NAME = GradelyWidgets;
 				PRODUCT_NAME = GradelyWidgets;
@@ -768,17 +808,15 @@
 		};
 		81EE6CC32FCDDC4B009D28DE /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 920000062FD0000000000006 /* Shared.xcconfig */;
+			baseConfigurationReference = 920000062FD0000000000006 /* Config/Shared.xcconfig */;
 			buildSettings = {
+				APP_ATTEST_ENVIRONMENT = development;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Gradely/Gradely.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 10;
+				CURRENT_PROJECT_VERSION = 23;
 				DEVELOPMENT_TEAM = C2U9S337H8;
-				ENABLE_APP_SANDBOX = YES;
-				ENABLE_HARDENED_RUNTIME = YES;
-				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = "Gradely-Info.plist";
@@ -789,7 +827,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.8;
+				MARKETING_VERSION = 2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.bukovinafilip.BakalariMarks;
 				PRODUCT_MODULE_NAME = Gradely;
 				PRODUCT_NAME = Gradey;
@@ -810,13 +848,14 @@
 		};
 		81EE6CC42FCDDC4B009D28DE /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 920000062FD0000000000006 /* Shared.xcconfig */;
+			baseConfigurationReference = 920000062FD0000000000006 /* Config/Shared.xcconfig */;
 			buildSettings = {
+				APP_ATTEST_ENVIRONMENT = production;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Gradely/Gradely.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 10;
+				CURRENT_PROJECT_VERSION = 23;
 				DEVELOPMENT_TEAM = C2U9S337H8;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -828,7 +867,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.8;
+				MARKETING_VERSION = 2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.bukovinafilip.BakalariMarks;
 				PRODUCT_MODULE_NAME = Gradely;
 				PRODUCT_NAME = Gradey;
@@ -932,13 +971,14 @@
 		};
 		B400000B2FCEF1000000000B /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 920000062FD0000000000006 /* Shared.xcconfig */;
+			baseConfigurationReference = 920000062FD0000000000006 /* Config/Shared.xcconfig */;
 			buildSettings = {
+				APP_ATTEST_ENVIRONMENT = development;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = GradelyMac/GradelyMac.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 10;
+				CURRENT_PROJECT_VERSION = 11;
 				DEVELOPMENT_TEAM = C2U9S337H8;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
@@ -951,7 +991,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
-				MARKETING_VERSION = 1.8;
+				MARKETING_VERSION = 2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.bukovinafilip.BakalariMarks;
 				PRODUCT_MODULE_NAME = Gradely;
 				PRODUCT_NAME = Gradey;
@@ -970,13 +1010,14 @@
 		};
 		B400000C2FCEF1000000000C /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 920000062FD0000000000006 /* Shared.xcconfig */;
+			baseConfigurationReference = 920000062FD0000000000006 /* Config/Shared.xcconfig */;
 			buildSettings = {
+				APP_ATTEST_ENVIRONMENT = production;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = GradelyMac/GradelyMac.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 10;
+				CURRENT_PROJECT_VERSION = 11;
 				DEVELOPMENT_TEAM = C2U9S337H8;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
@@ -989,7 +1030,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
-				MARKETING_VERSION = 1.8;
+				MARKETING_VERSION = 2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.bukovinafilip.BakalariMarks;
 				PRODUCT_MODULE_NAME = Gradely;
 				PRODUCT_NAME = Gradey;
@@ -1012,7 +1053,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = GradelyMacWidgets/GradelyMacWidgets.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 10;
+				CURRENT_PROJECT_VERSION = 11;
 				DEVELOPMENT_TEAM = C2U9S337H8;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -1023,7 +1064,7 @@
 					"@executable_path/../../../../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
-				MARKETING_VERSION = 1.8;
+				MARKETING_VERSION = 2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.bukovinafilip.BakalariMarks.GradelyMacWidgets;
 				PRODUCT_MODULE_NAME = GradelyMacWidgets;
 				PRODUCT_NAME = GradelyMacWidgets;
@@ -1046,7 +1087,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = GradelyMacWidgets/GradelyMacWidgets.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 10;
+				CURRENT_PROJECT_VERSION = 11;
 				DEVELOPMENT_TEAM = C2U9S337H8;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -1057,7 +1098,7 @@
 					"@executable_path/../../../../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
-				MARKETING_VERSION = 1.8;
+				MARKETING_VERSION = 2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.bukovinafilip.BakalariMarks.GradelyMacWidgets;
 				PRODUCT_MODULE_NAME = GradelyMacWidgets;
 				PRODUCT_NAME = GradelyMacWidgets;
@@ -1080,7 +1121,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = GradelyWidgets/GradelyWidgets.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 10;
+				CURRENT_PROJECT_VERSION = 11;
 				DEVELOPMENT_TEAM = C2U9S337H8;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = "GradelyWidgets-Info.plist";
@@ -1090,7 +1131,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.8;
+				MARKETING_VERSION = 2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.bukovinafilip.BakalariMarks.GradelyWidgets;
 				PRODUCT_MODULE_NAME = GradelyWidgets;
 				PRODUCT_NAME = GradelyWidgets;
@@ -1181,6 +1222,10 @@
 			isa = XCLocalSwiftPackageReference;
 			relativePath = GradelyWatchShared;
 		};
+		D20000012FD2000000000001 /* XCLocalSwiftPackageReference "LocalPackages/hugeicons-swift" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = "LocalPackages/hugeicons-swift";
+		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCRemoteSwiftPackageReference section */
@@ -1198,6 +1243,14 @@
 			requirement = {
 				kind = upToNextMajorVersion;
 				minimumVersion = 2.48.0;
+			};
+		};
+		F10000012FD1000000000001 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk.git";
+			requirement = {
+				kind = exactVersion;
+				version = 12.16.0;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */
@@ -1227,6 +1280,66 @@
 			isa = XCSwiftPackageProductDependency;
 			package = A10000012FCE000000000001 /* XCLocalSwiftPackageReference "GradelyWatchShared" */;
 			productName = GradelyWatchShared;
+		};
+		D20000102FD2000000000010 /* HugeiconsCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D20000012FD2000000000001 /* XCLocalSwiftPackageReference "LocalPackages/hugeicons-swift" */;
+			productName = HugeiconsCore;
+		};
+		D20000112FD2000000000011 /* HugeiconsStrokeRounded */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D20000012FD2000000000001 /* XCLocalSwiftPackageReference "LocalPackages/hugeicons-swift" */;
+			productName = HugeiconsStrokeRounded;
+		};
+		D20000122FD2000000000012 /* HugeiconsCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D20000012FD2000000000001 /* XCLocalSwiftPackageReference "LocalPackages/hugeicons-swift" */;
+			productName = HugeiconsCore;
+		};
+		D20000132FD2000000000013 /* HugeiconsStrokeRounded */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D20000012FD2000000000001 /* XCLocalSwiftPackageReference "LocalPackages/hugeicons-swift" */;
+			productName = HugeiconsStrokeRounded;
+		};
+		F10000102FD1000000000010 /* FirebaseCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F10000012FD1000000000001 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseCore;
+		};
+		F10000112FD1000000000011 /* FirebaseAuth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F10000012FD1000000000001 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAuth;
+		};
+		F10000122FD1000000000012 /* FirebaseFunctions */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F10000012FD1000000000001 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseFunctions;
+		};
+		F10000132FD1000000000013 /* FirebaseAppCheck */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F10000012FD1000000000001 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAppCheck;
+		};
+		F10000142FD1000000000014 /* FirebaseCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F10000012FD1000000000001 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseCore;
+		};
+		F10000152FD1000000000015 /* FirebaseAuth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F10000012FD1000000000001 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAuth;
+		};
+		F10000162FD1000000000016 /* FirebaseFunctions */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F10000012FD1000000000001 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseFunctions;
+		};
+		F10000172FD1000000000017 /* FirebaseAppCheck */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F10000012FD1000000000001 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAppCheck;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

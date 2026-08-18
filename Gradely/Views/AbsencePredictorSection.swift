@@ -92,7 +92,7 @@ struct AbsencePredictorCard: View {
 
     private func infoRow(title: Text, subtitle: Text, tint: Color) -> some View {
         HStack(spacing: Spacing.md) {
-            Image(systemName: "calendar.badge.clock")
+            GradelyIcon(systemName: "calendar.badge.clock")
                 .foregroundStyle(tint)
                 .frame(width: 32, height: 32)
                 .background(tint.opacity(0.12), in: RoundedRectangle(cornerRadius: Radius.sm, style: .continuous))
@@ -227,7 +227,7 @@ struct AbsencePredictionSheet: View {
             }
         } else if let message = viewModel.predictionErrorMessage {
             Section {
-                Label(message, systemImage: "exclamationmark.triangle")
+                GradelyLabel(message, systemImage: "exclamationmark.triangle")
                     .foregroundStyle(GradeBand.poor.foregroundColor)
 
                 Button("action.retry") {
@@ -236,7 +236,7 @@ struct AbsencePredictionSheet: View {
             }
         } else if viewModel.predictionLessons.isEmpty {
             Section {
-                Label("absence.predictor.noLessons", systemImage: "calendar.badge.checkmark")
+                GradelyLabel("absence.predictor.noLessons", systemImage: "calendar.badge.checkmark")
                     .foregroundStyle(.secondary)
                     .accessibilityIdentifier("absencePredictorNoLessons")
             }
@@ -262,10 +262,10 @@ struct AbsencePredictionSheet: View {
                             Spacer()
 
                             if viewModel.isPredictionLessonSelected(lesson.id) {
-                                Image(systemName: "checkmark.circle.fill")
+                                GradelyIcon(systemName: "checkmark.circle.fill")
                                     .foregroundStyle(Brand.primary)
                             } else {
-                                Image(systemName: "circle")
+                                GradelyIcon(systemName: "circle")
                                     .foregroundStyle(.tertiary)
                             }
                         }

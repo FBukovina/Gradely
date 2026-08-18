@@ -3,22 +3,22 @@ import SwiftUI
 
 struct GradeyIDLoginView: View {
     @State private var viewModel: GradeyIDViewModel
-    let onBypassForTesting: (() -> Void)?
+    let onContinueWithoutAccount: (() -> Void)?
     let onSignedIn: () -> Void
 
     init(
         authClient: any GradeyAuthClient,
-        onBypassForTesting: (() -> Void)? = nil,
+        onContinueWithoutAccount: (() -> Void)? = nil,
         onSignedIn: @escaping () -> Void
     ) {
         _viewModel = State(initialValue: GradeyIDViewModel(authClient: authClient))
-        self.onBypassForTesting = onBypassForTesting
+        self.onContinueWithoutAccount = onContinueWithoutAccount
         self.onSignedIn = onSignedIn
     }
 
     var body: some View {
         ZStack {
-            GradeyTwoPointZeroBackground()
+            AuroraBackground()
 
             ScrollView {
                 VStack(alignment: .leading, spacing: Spacing.lg) {
@@ -45,8 +45,7 @@ struct GradeyIDLoginView: View {
                 RoundedRectangle(cornerRadius: Radius.xl, style: .continuous)
                     .fill(Brand.gradient)
                     .shadow(color: Brand.primary.opacity(0.18), radius: 18, x: 0, y: 8)
-                Image(systemName: "person.crop.circle.badge.checkmark")
-                    .font(.system(size: 28, weight: .bold))
+                GradelyIcon(systemName: "person.crop.circle.badge.checkmark", size: 28)
                     .foregroundStyle(Brand.onAccent)
             }
             .frame(width: 58, height: 58)
@@ -54,9 +53,10 @@ struct GradeyIDLoginView: View {
 
             VStack(alignment: .leading, spacing: Spacing.sm) {
                 Text("gradey.auth.title")
-                    .font(.system(size: 34, weight: .bold, design: .rounded))
+                    .font(.gradelyDisplay())
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
+                    .accessibilityAddTraits(.isHeader)
                 Text("gradey.auth.subtitle")
                     .font(.callout)
                     .foregroundStyle(.secondary)
@@ -68,25 +68,16 @@ struct GradeyIDLoginView: View {
     private var signInCard: some View {
         Card {
             VStack(alignment: .leading, spacing: Spacing.md) {
-                Text("gradey.auth.signInHeading")
-                    .font(.headline)
-                    .foregroundStyle(.primary)
-
                 Text("gradey.auth.signInBody")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
 
-                SignInWithAppleButton(.signIn) { request in
-                    request.requestedScopes = [.email, .fullName]
-                } onCompletion: { result in
-                    handleAppleResult(result)
-                }
-                .signInWithAppleButtonStyle(.black)
-                .frame(height: 50)
-                .clipShape(RoundedRectangle(cornerRadius: Radius.sm, style: .continuous))
-                .disabled(viewModel.isLoading)
-                .accessibilityIdentifier("gradeyIDAppleButton")
+                GradelyAppleSignInButton(
+                    isLoading: viewModel.isLoading,
+                    onCompletion: handleAppleResult,
+                    onMockSignIn: signInForUITesting
+                )
 
                 if viewModel.isLoading {
                     HStack(spacing: Spacing.sm) {
@@ -100,15 +91,14 @@ struct GradeyIDLoginView: View {
                     .accessibilityIdentifier("gradeyIDSigningIn")
                 }
 
-                #if DEBUG
-                if let onBypassForTesting {
+                if let onContinueWithoutAccount {
                     Divider()
                         .padding(.vertical, Spacing.xs)
 
                     Button {
-                        onBypassForTesting()
+                        onContinueWithoutAccount()
                     } label: {
-                        Label("gradey.auth.testingBypass", systemImage: "arrow.right.circle")
+                        GradelyLabel("gradey.auth.continueWithoutAccount", systemImage: "arrow.right.circle")
                             .font(.footnote.weight(.semibold))
                             .frame(maxWidth: .infinity)
                     }
@@ -119,13 +109,12 @@ struct GradeyIDLoginView: View {
                     .disabled(viewModel.isLoading)
                     .accessibilityIdentifier("gradeyIDBypassButton")
                 }
-                #endif
             }
         }
     }
 
     private var privacyNote: some View {
-        Label("gradey.auth.privacyNote", systemImage: "lock.shield.fill")
+        GradelyLabel("gradey.auth.privacyNote", systemImage: "lock.shield.fill")
         .font(.footnote)
         .foregroundStyle(.secondary)
         .fixedSize(horizontal: false, vertical: true)
@@ -160,6 +149,14 @@ struct GradeyIDLoginView: View {
         }
     }
 
+    private func signInForUITesting() {
+        Task {
+            if await viewModel.signInWithApple(identityToken: "ui-test", nonce: nil, fullName: nil) {
+                onSignedIn()
+            }
+        }
+    }
+
     private var errorBinding: Binding<Bool> {
         Binding(
             get: { viewModel.errorMessage != nil },
@@ -168,22 +165,10 @@ struct GradeyIDLoginView: View {
     }
 }
 
+/// Kept as an alias so older call sites resolve to the app-wide aurora backdrop.
 struct GradeyTwoPointZeroBackground: View {
     var body: some View {
-        ZStack {
-            Color.gradelyGroupedBackground
-            LinearGradient(
-                colors: [
-                    Brand.primary.opacity(0.10),
-                    Color.gradelyGroupedBackground,
-                    Brand.secondary.opacity(0.08)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
-        }
-        .ignoresSafeArea()
+        AuroraBackground()
     }
 }
 

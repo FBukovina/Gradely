@@ -118,19 +118,227 @@ enum NotificationLockScreenDetail: String, Codable, CaseIterable, Equatable, Sen
 }
 
 struct NotificationPreferences: Codable, Equatable, Sendable {
+    static let legacyTimeZoneIdentifier = "Europe/Prague"
+
     var newMarksEnabled: Bool
     var lockScreenDetail: NotificationLockScreenDetail
     var quietHoursEnabled: Bool
     var quietHoursStartMinute: Int
     var quietHoursEndMinute: Int
+    var quietHoursTimeZoneIdentifier: String
+
+    init(
+        newMarksEnabled: Bool,
+        lockScreenDetail: NotificationLockScreenDetail,
+        quietHoursEnabled: Bool,
+        quietHoursStartMinute: Int,
+        quietHoursEndMinute: Int,
+        quietHoursTimeZoneIdentifier: String = NotificationPreferences.legacyTimeZoneIdentifier
+    ) {
+        self.newMarksEnabled = newMarksEnabled
+        self.lockScreenDetail = lockScreenDetail
+        self.quietHoursEnabled = quietHoursEnabled
+        self.quietHoursStartMinute = Self.validMinuteOrDefault(quietHoursStartMinute, fallback: 22 * 60)
+        self.quietHoursEndMinute = Self.validMinuteOrDefault(quietHoursEndMinute, fallback: 6 * 60)
+        self.quietHoursTimeZoneIdentifier = Self.validTimeZoneIdentifierOrDefault(quietHoursTimeZoneIdentifier)
+    }
 
     static let `default` = NotificationPreferences(
         newMarksEnabled: true,
         lockScreenDetail: .markAndSubject,
         quietHoursEnabled: false,
         quietHoursStartMinute: 22 * 60,
-        quietHoursEndMinute: 6 * 60
+        quietHoursEndMinute: 6 * 60,
+        quietHoursTimeZoneIdentifier: legacyTimeZoneIdentifier
     )
+
+    var quietHoursTimeZone: TimeZone {
+        TimeZone(identifier: quietHoursTimeZoneIdentifier)
+            ?? TimeZone(identifier: Self.legacyTimeZoneIdentifier)
+            ?? .current
+    }
+
+    func preparedForServerUpdate(timeZone: TimeZone = .current) -> NotificationPreferences {
+        var prepared = self
+        prepared.quietHoursStartMinute = Self.validMinuteOrDefault(
+            quietHoursStartMinute,
+            fallback: Self.default.quietHoursStartMinute
+        )
+        prepared.quietHoursEndMinute = Self.validMinuteOrDefault(
+            quietHoursEndMinute,
+            fallback: Self.default.quietHoursEndMinute
+        )
+        prepared.quietHoursTimeZoneIdentifier = Self.validTimeZoneIdentifierOrDefault(timeZone.identifier)
+        return prepared
+    }
+
+    func containsQuietMinute(_ minute: Int) -> Bool {
+        guard quietHoursEnabled, (0..<Self.minutesPerDay).contains(minute) else { return false }
+        if quietHoursStartMinute == quietHoursEndMinute {
+            return true
+        }
+        if quietHoursStartMinute < quietHoursEndMinute {
+            return minute >= quietHoursStartMinute && minute < quietHoursEndMinute
+        }
+        return minute >= quietHoursStartMinute || minute < quietHoursEndMinute
+    }
+
+    func isWithinQuietHours(at date: Date) -> Bool {
+        containsQuietMinute(Self.minuteOfDay(from: date, in: quietHoursTimeZone))
+    }
+
+    func nextQuietHoursEnd(after date: Date) -> Date? {
+        guard isWithinQuietHours(at: date) else { return nil }
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = quietHoursTimeZone
+        let components = DateComponents(
+            hour: quietHoursEndMinute / 60,
+            minute: quietHoursEndMinute % 60
+        )
+        return calendar.nextDate(
+            after: date,
+            matching: components,
+            matchingPolicy: .nextTime,
+            repeatedTimePolicy: .last,
+            direction: .forward
+        )
+    }
+
+    static func minuteOfDay(from date: Date, in timeZone: TimeZone = .current) -> Int {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = timeZone
+        let components = calendar.dateComponents([.hour, .minute], from: date)
+        return (components.hour ?? 0) * 60 + (components.minute ?? 0)
+    }
+
+    static func date(
+        forMinuteOfDay minute: Int,
+        on day: Date = Date(),
+        in timeZone: TimeZone = .current
+    ) -> Date {
+        let validMinute = validMinuteOrDefault(minute, fallback: 0)
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = timeZone
+        return calendar.date(
+            bySettingHour: validMinute / 60,
+            minute: validMinute % 60,
+            second: 0,
+            of: day,
+            matchingPolicy: .nextTime,
+            repeatedTimePolicy: .first,
+            direction: .forward
+        ) ?? day
+    }
+
+    private static let minutesPerDay = 24 * 60
+
+    private enum CodingKeys: String, CodingKey {
+        case newMarksEnabled = "new_marks_enabled"
+        case lockScreenDetail = "lock_screen_detail"
+        case quietHoursEnabled = "quiet_hours_enabled"
+        case quietHoursStartMinute = "quiet_hours_start_minute"
+        case quietHoursEndMinute = "quiet_hours_end_minute"
+        case quietHoursTimeZoneIdentifier = "quiet_hours_time_zone"
+    }
+
+    private enum LegacyCodingKeys: String, CodingKey {
+        case newMarksEnabled
+        case lockScreenDetail
+        case quietHoursEnabled
+        case quietHoursStartMinute
+        case quietHoursEndMinute
+        case quietHoursTimeZoneIdentifier
+    }
+
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        let legacyValues = try decoder.container(keyedBy: LegacyCodingKeys.self)
+        let defaults = Self.default
+
+        newMarksEnabled = try values.decodeIfPresent(Bool.self, forKey: .newMarksEnabled)
+            ?? legacyValues.decodeIfPresent(Bool.self, forKey: .newMarksEnabled)
+            ?? defaults.newMarksEnabled
+        lockScreenDetail = try values.decodeIfPresent(NotificationLockScreenDetail.self, forKey: .lockScreenDetail)
+            ?? legacyValues.decodeIfPresent(NotificationLockScreenDetail.self, forKey: .lockScreenDetail)
+            ?? defaults.lockScreenDetail
+        quietHoursEnabled = try values.decodeIfPresent(Bool.self, forKey: .quietHoursEnabled)
+            ?? legacyValues.decodeIfPresent(Bool.self, forKey: .quietHoursEnabled)
+            ?? defaults.quietHoursEnabled
+        quietHoursStartMinute = Self.validMinuteOrDefault(
+            try values.decodeIfPresent(Int.self, forKey: .quietHoursStartMinute)
+                ?? legacyValues.decodeIfPresent(Int.self, forKey: .quietHoursStartMinute),
+            fallback: defaults.quietHoursStartMinute
+        )
+        quietHoursEndMinute = Self.validMinuteOrDefault(
+            try values.decodeIfPresent(Int.self, forKey: .quietHoursEndMinute)
+                ?? legacyValues.decodeIfPresent(Int.self, forKey: .quietHoursEndMinute),
+            fallback: defaults.quietHoursEndMinute
+        )
+        quietHoursTimeZoneIdentifier = Self.validTimeZoneIdentifierOrDefault(
+            try values.decodeIfPresent(String.self, forKey: .quietHoursTimeZoneIdentifier)
+                ?? legacyValues.decodeIfPresent(String.self, forKey: .quietHoursTimeZoneIdentifier)
+                ?? Self.legacyTimeZoneIdentifier
+        )
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var values = encoder.container(keyedBy: CodingKeys.self)
+        try values.encode(newMarksEnabled, forKey: .newMarksEnabled)
+        try values.encode(lockScreenDetail, forKey: .lockScreenDetail)
+        try values.encode(quietHoursEnabled, forKey: .quietHoursEnabled)
+        try values.encode(quietHoursStartMinute, forKey: .quietHoursStartMinute)
+        try values.encode(quietHoursEndMinute, forKey: .quietHoursEndMinute)
+        try values.encode(quietHoursTimeZoneIdentifier, forKey: .quietHoursTimeZoneIdentifier)
+    }
+
+    private static func validMinuteOrDefault(_ minute: Int?, fallback: Int) -> Int {
+        guard let minute, (0..<minutesPerDay).contains(minute) else { return fallback }
+        return minute
+    }
+
+    private static func validTimeZoneIdentifierOrDefault(_ identifier: String) -> String {
+        TimeZone(identifier: identifier) == nil ? legacyTimeZoneIdentifier : identifier
+    }
+}
+
+struct GradeyAccountSettingsSnapshot: Decodable, Equatable, Sendable {
+    let activeSchoolAccountID: String?
+    let linkedAccounts: [LinkedAccount]
+    let notificationPreferences: NotificationPreferences
+
+    enum CodingKeys: String, CodingKey {
+        case activeSchoolAccountID = "active_school_account_id"
+        case linkedAccounts = "linked_accounts"
+        case notificationPreferences = "notification_preferences"
+    }
+}
+
+extension JSONDecoder {
+    static var gradeyAPIDecoder: JSONDecoder {
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .custom { decoder in
+            let container = try decoder.singleValueContainer()
+            let value = try container.decode(String.self)
+
+            let fractionalFormatter = ISO8601DateFormatter()
+            fractionalFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            if let date = fractionalFormatter.date(from: value) {
+                return date
+            }
+
+            let formatter = ISO8601DateFormatter()
+            formatter.formatOptions = [.withInternetDateTime]
+            if let date = formatter.date(from: value) {
+                return date
+            }
+
+            throw DecodingError.dataCorruptedError(
+                in: container,
+                debugDescription: "Invalid ISO 8601 date: \(value)"
+            )
+        }
+        return decoder
+    }
 }
 
 struct MarkFingerprint: Codable, Equatable, Hashable, Identifiable, Sendable {

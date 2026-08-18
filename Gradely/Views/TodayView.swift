@@ -2,38 +2,39 @@ import SwiftUI
 
 struct TodayView: View {
     @State private var viewModel: TodayViewModel
-    @State private var absenceViewModel: AbsenceViewModel
-    private let repository: SchoolRepository
-    private let supportTipProvider: any SupportTipProviding
+    @State private var reconnectAccount: LinkedAccount?
     private let accountHub: AnyView?
-    private let onOpenMarks: () -> Void
+    private let repository: SchoolRepository
+    private let schoolDirectoryProvider: any SchoolDirectoryProviding
+    private let onOpenGradeyAI: () -> Void
     private let onOpenAbsence: () -> Void
-    private let onSignedOut: () -> Void
+    @AppStorage("settings.showMealsTab") private var showMealsTab = true
 
     init(
         repository: SchoolRepository,
         stravaCZRepository: StravaCZRepository,
         linkedAccountRepository: LinkedAccountRepository,
         historyRepository: GradeyHistoryRepository,
-        supportTipProvider: any SupportTipProviding,
+        schoolDirectoryProvider: any SchoolDirectoryProviding,
+        accountSettingsClient: (any GradeyAccountSettingsClient)? = nil,
+        gradeyAuthClient: (any GradeyAuthClient)? = nil,
         accountHub: AnyView? = nil,
-        onOpenMarks: @escaping () -> Void,
-        onOpenAbsence: @escaping () -> Void,
-        onSignedOut: @escaping () -> Void
+        onOpenGradeyAI: @escaping () -> Void = {},
+        onOpenAbsence: @escaping () -> Void
     ) {
         self.repository = repository
-        self.supportTipProvider = supportTipProvider
+        self.schoolDirectoryProvider = schoolDirectoryProvider
         self.accountHub = accountHub
-        self.onOpenMarks = onOpenMarks
+        self.onOpenGradeyAI = onOpenGradeyAI
         self.onOpenAbsence = onOpenAbsence
-        self.onSignedOut = onSignedOut
         _viewModel = State(initialValue: TodayViewModel(
             repository: repository,
             stravaCZRepository: stravaCZRepository,
             linkedAccountRepository: linkedAccountRepository,
-            historyRepository: historyRepository
+            historyRepository: historyRepository,
+            accountSettingsClient: accountSettingsClient,
+            gradeyAuthClient: gradeyAuthClient
         ))
-        _absenceViewModel = State(initialValue: AbsenceViewModel(repository: repository))
     }
 
     var body: some View {
@@ -53,16 +54,15 @@ struct TodayView: View {
             .gradelyNavigationTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .gradelyTopBarLeading) {
-                    CreditsToolbarButton()
+                    GradeyAIToolbarButton(onOpen: onOpenGradeyAI)
                 }
                 ToolbarItem(placement: .gradelyTopBarTrailing) {
                     Button {
                         Task {
                             await viewModel.refresh(forceRefresh: true)
-                            await absenceViewModel.refresh(forceRefresh: false)
                         }
                     } label: {
-                        Image(systemName: "arrow.clockwise")
+                        GradelyIcon(systemName: "arrow.clockwise")
                             .symbolEffect(.rotate, options: .repeating, isActive: viewModel.isRefreshing)
                     }
                     .disabled(viewModel.isLoading || viewModel.isRefreshing)
@@ -70,28 +70,29 @@ struct TodayView: View {
                     .accessibilityIdentifier("todayRefreshButton")
                 }
                 ToolbarItem(placement: .gradelyTopBarTrailing) {
-                    AccountMenu(
-                        user: viewModel.snapshot.user,
-                        repository: repository,
-                        supportTipProvider: supportTipProvider,
-                        accountHub: accountHub,
-                        onSignedOut: onSignedOut
-                    )
+                    AccountSettingsButton(accountHub: accountHub)
                 }
             }
             .task {
                 await viewModel.loadIfNeeded()
             }
-            .task {
-                await absenceViewModel.loadIfNeeded()
-            }
-            .sheet(isPresented: $absenceViewModel.isPredictionSheetPresented) {
-                AbsencePredictionSheet(viewModel: absenceViewModel)
-            }
             .alert(String(localized: "error.title"), isPresented: errorBinding) {
                 Button(String(localized: "action.ok"), role: .cancel) { viewModel.clearError() }
             } message: {
                 Text(viewModel.errorMessage ?? "")
+            }
+            .sheet(item: $reconnectAccount) { account in
+                TodaySchoolReconnectSheet(
+                    account: account,
+                    prefill: viewModel.loginPrefill(for: account),
+                    repository: repository,
+                    schoolDirectoryProvider: schoolDirectoryProvider
+                ) { account in
+                    let didReconnect = await viewModel.reconnect(account)
+                    let reconnectError = didReconnect ? nil : viewModel.errorMessage
+                    viewModel.clearError()
+                    return reconnectError
+                }
             }
         }
     }
@@ -100,48 +101,67 @@ struct TodayView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: Spacing.lg) {
                 accountSwitcher
-                TodayHero(snapshot: viewModel.snapshot)
-
-                Button {
-                    onOpenMarks()
-                } label: {
-                    TodayNavigationRow(
-                        title: "Marks",
-                        subtitle: "Averages, subjects, trends, and calculator",
-                        systemImage: "checkmark.seal.fill"
-                    )
+                if let account = viewModel.accountRequiringReconnect {
+                    schoolConnectionNotice(account)
                 }
-                .buttonStyle(.plain)
-                .accessibilityIdentifier("todayMarksShortcut")
-
+                TodayHero(snapshot: viewModel.snapshot)
                 timetableCard
                 absenceRiskCard
-                absencePredictorCard
-                lunchCard
-                recentMarksCard
-
-                NavigationLink {
-                    GradeTrendsView(trends: viewModel.snapshot.gradeHistory.trends)
-                } label: {
-                    TodayNavigationRow(
-                        title: "Grade trends",
-                        subtitle: "30 days, 90 days, and school year movement",
-                        systemImage: "chart.line.uptrend.xyaxis"
-                    )
+                if showMealsTab {
+                    lunchCard
                 }
-                .buttonStyle(.plain)
-                .accessibilityIdentifier("todayGradeTrendsLink")
+                recentMarksCard
             }
             .padding(Spacing.lg)
             .frame(maxWidth: 760)
             .frame(maxWidth: .infinity)
         }
-        .background(Color.gradelyGroupedBackground.ignoresSafeArea())
+        .gradelyScreenBackground()
         .refreshable {
             await viewModel.refresh(forceRefresh: true)
-            await absenceViewModel.refresh(forceRefresh: false)
         }
         .accessibilityIdentifier("todayScrollView")
+    }
+
+    private func schoolConnectionNotice(_ account: LinkedAccount) -> some View {
+        Card {
+            VStack(alignment: .leading, spacing: Spacing.md) {
+                HStack(alignment: .top, spacing: Spacing.md) {
+                    GradelyIcon(systemName: "exclamationmark.triangle.fill")
+                        .font(.title3.weight(.semibold))
+                        .foregroundStyle(Color.gradelySystemOrange)
+
+                    VStack(alignment: .leading, spacing: Spacing.xs) {
+                        Text("School connection needs attention")
+                            .font(.headline)
+                        Text(account.displayName)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    Spacer(minLength: 0)
+                }
+
+                Text(account.actionRequiredReason ?? "Reconnect to keep marks and notifications up to date.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Button {
+                    reconnectAccount = account
+                } label: {
+                    GradelyLabel("settings.connected.reconnect", systemImage: "arrow.clockwise")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                        .frame(minHeight: 44)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(Color.gradelySystemOrange)
+                .accessibilityIdentifier("todaySchoolReconnectButton")
+            }
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("todaySchoolConnectionNotice")
     }
 
     @ViewBuilder
@@ -149,7 +169,7 @@ struct TodayView: View {
         if !viewModel.snapshot.linkedSchoolAccounts.isEmpty {
             Card(padding: Spacing.md) {
                 HStack(spacing: Spacing.md) {
-                    Image(systemName: "person.2.fill")
+                    GradelyIcon(systemName: "person.2.fill")
                         .foregroundStyle(Brand.primary)
                         .frame(width: 34, height: 34)
                         .background(Brand.primary.opacity(0.12), in: RoundedRectangle(cornerRadius: Radius.sm, style: .continuous))
@@ -171,14 +191,14 @@ struct TodayView: View {
                             Button {
                                 Task { await viewModel.activateAccount(account) }
                             } label: {
-                                Label(account.displayName, systemImage: account.id == viewModel.snapshot.activeAccount?.id ? "checkmark.circle.fill" : "circle")
+                                GradelyLabel(account.displayName, systemImage: account.id == viewModel.snapshot.activeAccount?.id ? "checkmark.circle.fill" : "circle")
                             }
                         }
                     } label: {
                         if viewModel.isActivatingAccountID != nil {
                             ProgressView().controlSize(.small)
                         } else {
-                            Image(systemName: "chevron.up.chevron.down")
+                            GradelyIcon(systemName: "chevron.up.chevron.down")
                                 .font(.caption.weight(.bold))
                                 .foregroundStyle(Brand.primary)
                                 .frame(width: 34, height: 34)
@@ -264,18 +284,6 @@ struct TodayView: View {
         .accessibilityIdentifier("todayAbsenceRiskCard")
     }
 
-    private var absencePredictorCard: some View {
-        AbsencePredictorCard(
-            result: absenceViewModel.predictionResult,
-            onOpen: {
-                absenceViewModel.openPredictionSheet()
-            },
-            onClear: {
-                absenceViewModel.clearPredictionSelections()
-            }
-        )
-    }
-
     private var lunchCard: some View {
         Card {
             VStack(alignment: .leading, spacing: Spacing.md) {
@@ -293,14 +301,16 @@ struct TodayView: View {
     }
 
     private var recentMarksCard: some View {
-        Card {
+        let newMarks = viewModel.snapshot.newMarks
+
+        return Card {
             VStack(alignment: .leading, spacing: Spacing.md) {
                 SectionHeader("New marks and trends")
-                if !viewModel.snapshot.gradeHistory.recentNewMarkEvents.isEmpty {
-                    ForEach(viewModel.snapshot.gradeHistory.recentNewMarkEvents.prefix(3)) { event in
+                if !newMarks.isEmpty {
+                    ForEach(newMarks.prefix(3)) { mark in
                         TodayInfoRow(
-                            title: "\(event.markText) in \(event.subjectAbbrev ?? event.subjectName ?? "school")",
-                            subtitle: event.createdAt.formatted(date: .abbreviated, time: .shortened),
+                            title: "\(mark.markText) in \(mark.subjectName)",
+                            subtitle: mark.detectedAt?.formatted(date: .abbreviated, time: .shortened) ?? "New from school",
                             systemImage: "checkmark.seal.fill",
                             tint: Brand.primary
                         )
@@ -310,7 +320,7 @@ struct TodayView: View {
                     }
                 }
 
-                if viewModel.snapshot.topTrends.isEmpty && viewModel.snapshot.gradeHistory.recentNewMarkEvents.isEmpty {
+                if viewModel.snapshot.topTrends.isEmpty {
                     TodayInfoRow(title: "No cloud history yet", subtitle: "Trends start after Gradey records new grade snapshots.", systemImage: "chart.line.uptrend.xyaxis", tint: .secondary)
                 } else {
                     ForEach(viewModel.snapshot.topTrends) { trend in
@@ -326,6 +336,61 @@ struct TodayView: View {
         Binding(
             get: { viewModel.errorMessage != nil },
             set: { if !$0 { viewModel.clearError() } }
+        )
+    }
+
+}
+
+private struct TodaySchoolReconnectSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var isCompletingReconnect = false
+    @State private var errorMessage: String?
+
+    let account: LinkedAccount
+    let prefill: SchoolLoginPrefill?
+    let repository: SchoolRepository
+    let schoolDirectoryProvider: any SchoolDirectoryProviding
+    let onReconnect: (LinkedAccount) async -> String?
+
+    var body: some View {
+        LoginView(
+            repository: repository,
+            schoolDirectoryProvider: schoolDirectoryProvider,
+            presentationContext: .reconnecting,
+            prefill: prefill
+        ) {
+            isCompletingReconnect = true
+            Task {
+                errorMessage = await onReconnect(account)
+                isCompletingReconnect = false
+                if errorMessage == nil {
+                    dismiss()
+                }
+            }
+        }
+        .disabled(isCompletingReconnect)
+        .overlay {
+            if isCompletingReconnect {
+                ProgressView()
+                    .controlSize(.large)
+                    .padding(Spacing.xl)
+                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: Radius.md))
+            }
+        }
+        .alert(String(localized: "error.title"), isPresented: errorBinding) {
+            Button(String(localized: "action.ok"), role: .cancel) {
+                errorMessage = nil
+            }
+        } message: {
+            Text(errorMessage ?? "")
+        }
+        .accessibilityIdentifier("todaySchoolReconnectSheet")
+    }
+
+    private var errorBinding: Binding<Bool> {
+        Binding(
+            get: { errorMessage != nil },
+            set: { if !$0 { errorMessage = nil } }
         )
     }
 }
@@ -373,7 +438,7 @@ private struct TodayNavigationRow: View {
     var body: some View {
         Card(padding: Spacing.md) {
             HStack(spacing: Spacing.md) {
-                Image(systemName: systemImage)
+                GradelyIcon(systemName: systemImage)
                     .foregroundStyle(Brand.primary)
                     .frame(width: 38, height: 38)
                     .background(Brand.primary.opacity(0.12), in: RoundedRectangle(cornerRadius: Radius.sm, style: .continuous))
@@ -382,7 +447,7 @@ private struct TodayNavigationRow: View {
                     Text(subtitle).font(.caption).foregroundStyle(.secondary)
                 }
                 Spacer()
-                Image(systemName: "chevron.right")
+                GradelyIcon(systemName: "chevron.right")
                     .font(.caption.weight(.bold))
                     .foregroundStyle(.secondary)
             }
@@ -398,7 +463,7 @@ private struct TodayInfoRow: View {
 
     var body: some View {
         HStack(spacing: Spacing.md) {
-            Image(systemName: systemImage)
+            GradelyIcon(systemName: systemImage)
                 .foregroundStyle(tint)
                 .frame(width: 32, height: 32)
                 .background(tint.opacity(0.12), in: RoundedRectangle(cornerRadius: Radius.sm, style: .continuous))
@@ -546,7 +611,15 @@ struct GradeTrendsView: View {
             .listRowSeparator(.hidden)
 
             if trends.isEmpty {
-                ContentUnavailableView("No grade history", systemImage: "chart.line.uptrend.xyaxis", description: Text("Cloud trends start after Gradey records grade snapshots."))
+                ContentUnavailableView {
+                    GradelyLabel(
+                        "No grade history",
+                        systemImage: "chart.line.uptrend.xyaxis",
+                        iconSize: 28
+                    )
+                } description: {
+                    Text("Cloud trends start after Gradey records grade snapshots.")
+                }
                     .listRowSeparator(.hidden)
             } else {
                 ForEach(filteredTrends) { trend in

@@ -66,7 +66,7 @@ struct CreditsView: View {
             Text("Side")
                 .foregroundStyle(Color(red: 0.45, green: 0.18, blue: 0.82))
         }
-        .font(.custom("SpaceGrotesk-Bold", size: 32))
+        .font(.custom(GradelyDisplayFont.postScriptName, size: 32))
     }
 
     private var team: some View {

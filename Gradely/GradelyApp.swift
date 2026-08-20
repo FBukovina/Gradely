@@ -19,6 +19,7 @@ struct GradelyApp: App {
 
     init() {
         _ = HugeiconsStrokeRounded.load()
+        GradelyDisplayFont.registerIfNeeded()
         GradeyFirebaseConfiguration.configureIfNeeded()
         RevenueCatConfiguration.configureIfNeeded()
         Self.resetLanguageForUITestsIfNeeded()

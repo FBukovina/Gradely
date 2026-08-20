@@ -8,7 +8,7 @@
 	<array>
 		<string>group.com.bukovinafilip.BakalariMarks</string>
 	</array>
-	<key>aps-environment</key>
+	<key>com.apple.developer.aps-environment</key>
 	<string>development</string>
 	<key>com.apple.developer.applesignin</key>
 	<array>

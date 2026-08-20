@@ -3,6 +3,7 @@ import HugeiconsCore
 import HugeiconsStrokeRounded
 #if os(macOS)
 import AppKit
+import CoreText
 #endif
 #if os(iOS)
 import UIKit
@@ -239,6 +240,22 @@ enum Radius {
     static let xl: CGFloat = 28
 }
 
+enum GradelyDisplayFont {
+    static let fileName = "SpaceGrotesk-Bold"
+    static let postScriptName = "SpaceGrotesk-Bold"
+
+    /// iOS registers this face through `UIAppFonts`. macOS needs an explicit
+    /// Core Text registration even when `ATSApplicationFontsPath` is set.
+    static func registerIfNeeded(in bundle: Bundle = .main) {
+        #if os(macOS)
+        guard let url = bundle.url(forResource: fileName, withExtension: "ttf") else {
+            return
+        }
+        _ = CTFontManagerRegisterFontsForURL(url as CFURL, .process, nil)
+        #endif
+    }
+}
+
 extension Font {
     /// Space Grotesk is Gradely's display face. Keep screen titles on one token
     /// so onboarding and standalone setup surfaces cannot drift apart.
@@ -246,7 +263,7 @@ extension Font {
         size: CGFloat = 38,
         relativeTo textStyle: Font.TextStyle = .largeTitle
     ) -> Font {
-        .custom("SpaceGrotesk-Bold", size: size, relativeTo: textStyle)
+        .custom(GradelyDisplayFont.postScriptName, size: size, relativeTo: textStyle)
     }
 }
 

@@ -41,8 +41,14 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.education</string>
+	<key>ATSApplicationFontsPath</key>
+	<string>.</string>
 	<key>NSAccentColorName</key>
 	<string>AccentColor</string>
+	<key>RevenueCatIOSAPIKey</key>
+	<string>$(REVENUECAT_IOS_API_KEY)</string>
+	<key>RevenueCatMacOSAPIKey</key>
+	<string>$(REVENUECAT_MACOS_API_KEY)</string>
 	<key>SupabaseAnonKey</key>
 	<string>$(SUPABASE_ANON_KEY)</string>
 	<key>SupabaseURL</key>

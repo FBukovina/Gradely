@@ -14,6 +14,8 @@ struct ContentView: View {
     private let schoolDirectoryProvider: any SchoolDirectoryProviding
     private let supportTipProvider: any SupportTipProviding
     private let watchSyncService: (any WatchSyncing)?
+    private let gradeyAIClient: any GradeyAIClient
+    private let gradeyAIContextBuilder: any GradeyAIContextBuilding
     private let gradeyAuthClient: any GradeyAuthClient
     private let linkedAccountRepository: LinkedAccountRepository
     private let historyRepository: GradeyHistoryRepository
@@ -32,6 +34,7 @@ struct ContentView: View {
     @State private var selectedTab: AppTab = .today
     @State private var schoolAccountRevision = UUID()
     @State private var isOnboardingForced = false
+    @Environment(\.scenePhase) private var scenePhase
 
     init(
         environment: AppEnvironment = .current(),
@@ -65,6 +68,8 @@ struct ContentView: View {
         schoolDirectoryProvider = environment.schoolDirectoryProvider
         supportTipProvider = environment.supportTipProvider
         watchSyncService = environment.watchSyncService
+        gradeyAIClient = environment.gradeyAIClient
+        gradeyAIContextBuilder = environment.gradeyAIContextBuilder
         gradeyAuthClient = environment.gradeyAuthClient
         linkedAccountRepository = environment.linkedAccountRepository
         historyRepository = environment.historyRepository
@@ -203,12 +208,27 @@ struct ContentView: View {
         }
         .task {
             watchSyncService?.start()
+            #if !os(macOS)
+            watchSyncService?.configureAIRelay(
+                client: gradeyAIClient,
+                contextBuilder: gradeyAIContextBuilder,
+                supportProvider: supportTipProvider
+            )
+            await publishWatchSupportTier()
+            #endif
             PushRegistrationService.shared.configure(
                 client: devicePushTokenClient,
                 authClient: gradeyAuthClient
             )
             await appViewModel.bootstrap()
             await PushRegistrationService.shared.refreshRegistrationIfAuthorized()
+        }
+        .onChange(of: scenePhase) { _, phase in
+            #if !os(macOS)
+            if phase == .active {
+                Task { await publishWatchSupportTier() }
+            }
+            #endif
         }
         .onChange(of: appViewModel.phase) {
             if appViewModel.phase == .signedIn {
@@ -354,6 +374,13 @@ struct ContentView: View {
     private func presentGradeyAI() {
         isGradeyAIPresented = true
     }
+
+    #if !os(macOS)
+    private func publishWatchSupportTier() async {
+        let entitlement = await supportTipProvider.currentEntitlement()
+        watchSyncService?.update(supportTier: WatchPayloadBuilder.supportTier(from: entitlement))
+    }
+    #endif
 
     private func restartOnboarding(_ journey: OnboardingJourney) {
         let controller = OnboardingRestartController(progressStore: onboardingProgressStore)

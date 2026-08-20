@@ -3,6 +3,10 @@ import Foundation
 public enum GradelyWatchMessageType {
     public static let syncPayload = "syncPayload"
     public static let requestSync = "requestSync"
+    public static let aiStreamRequest = "aiStreamRequest"
+    public static let aiStreamAck = "aiStreamAck"
+    public static let aiStreamEvent = "aiStreamEvent"
+    public static let aiCancel = "aiCancel"
 }
 
 public enum GradelyWatchMessageKey {
@@ -11,8 +15,18 @@ public enum GradelyWatchMessageKey {
     public static let payloadData = "payloadData"
 }
 
+public enum GradelyWatchSupportTier: String, Codable, Equatable, Sendable {
+    case none
+    case standard
+    case plus
+
+    public var isRecurringSupporter: Bool {
+        self != .none
+    }
+}
+
 public struct GradelyWatchSyncPayload: Codable, Equatable, Sendable {
-    public static let currentSchemaVersion = 2
+    public static let currentSchemaVersion = 3
 
     public let schemaVersion: Int
     public let generatedAt: Date
@@ -20,6 +34,17 @@ public struct GradelyWatchSyncPayload: Codable, Equatable, Sendable {
     public let auth: GradelyWatchAuth?
     public let user: GradelyWatchUser?
     public let timetable: GradelyWatchTimetable?
+    public let supportTier: GradelyWatchSupportTier
+
+    enum CodingKeys: String, CodingKey {
+        case schemaVersion
+        case generatedAt
+        case isSignedIn
+        case auth
+        case user
+        case timetable
+        case supportTier
+    }
 
     public init(
         schemaVersion: Int = Self.currentSchemaVersion,
@@ -27,7 +52,8 @@ public struct GradelyWatchSyncPayload: Codable, Equatable, Sendable {
         isSignedIn: Bool,
         auth: GradelyWatchAuth?,
         user: GradelyWatchUser?,
-        timetable: GradelyWatchTimetable?
+        timetable: GradelyWatchTimetable?,
+        supportTier: GradelyWatchSupportTier = .none
     ) {
         self.schemaVersion = schemaVersion
         self.generatedAt = generatedAt
@@ -35,6 +61,7 @@ public struct GradelyWatchSyncPayload: Codable, Equatable, Sendable {
         self.auth = auth
         self.user = user
         self.timetable = timetable
+        self.supportTier = supportTier
     }
 
     public static func signedOut(generatedAt: Date = Date()) -> GradelyWatchSyncPayload {
@@ -43,8 +70,31 @@ public struct GradelyWatchSyncPayload: Codable, Equatable, Sendable {
             isSignedIn: false,
             auth: nil,
             user: nil,
-            timetable: nil
+            timetable: nil,
+            supportTier: .none
         )
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        schemaVersion = try container.decode(Int.self, forKey: .schemaVersion)
+        generatedAt = try container.decode(Date.self, forKey: .generatedAt)
+        isSignedIn = try container.decode(Bool.self, forKey: .isSignedIn)
+        auth = try container.decodeIfPresent(GradelyWatchAuth.self, forKey: .auth)
+        user = try container.decodeIfPresent(GradelyWatchUser.self, forKey: .user)
+        timetable = try container.decodeIfPresent(GradelyWatchTimetable.self, forKey: .timetable)
+        supportTier = try container.decodeIfPresent(GradelyWatchSupportTier.self, forKey: .supportTier) ?? .none
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(schemaVersion, forKey: .schemaVersion)
+        try container.encode(generatedAt, forKey: .generatedAt)
+        try container.encode(isSignedIn, forKey: .isSignedIn)
+        try container.encodeIfPresent(auth, forKey: .auth)
+        try container.encodeIfPresent(user, forKey: .user)
+        try container.encodeIfPresent(timetable, forKey: .timetable)
+        try container.encode(supportTier, forKey: .supportTier)
     }
 }
 

@@ -22,6 +22,14 @@ enum WatchPayloadBuilder {
         )
     }
 
+    static func supportTier(from entitlement: SupportEntitlement) -> GradelyWatchSupportTier {
+        switch entitlement.tier {
+        case .none: .none
+        case .standard: .standard
+        case .plus: .plus
+        }
+    }
+
     static func user(from user: UserResponse) -> GradelyWatchUser {
         GradelyWatchUser(
             fullName: user.fullName,

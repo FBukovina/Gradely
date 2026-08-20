@@ -13,6 +13,12 @@ protocol WatchSyncing: AnyObject {
     func update(user: UserResponse?)
     #if !os(macOS)
     func update(timetable: GradelyWatchTimetable?)
+    func update(supportTier: GradelyWatchSupportTier)
+    func configureAIRelay(
+        client: any GradeyAIClient,
+        contextBuilder: any GradeyAIContextBuilding,
+        supportProvider: any SupportTipProviding
+    )
     #endif
     func publishSignedOut()
 }
@@ -25,7 +31,14 @@ final class LiveWatchSyncService: NSObject, WatchSyncing {
     private var auth: GradelyWatchAuth?
     private var user: GradelyWatchUser?
     private var timetable: GradelyWatchTimetable?
+    private var supportTier: GradelyWatchSupportTier = .none
     private var hasPendingPublish = false
+    private var aiClient: (any GradeyAIClient)?
+    private var contextBuilder: (any GradeyAIContextBuilding)?
+    private var supportProvider: (any SupportTipProviding)?
+    private var watchConversationID: String?
+    private var activeAIRequestID: String?
+    private var aiTask: Task<Void, Never>?
 
     func start() {
         guard WCSession.isSupported() else { return }
@@ -51,10 +64,31 @@ final class LiveWatchSyncService: NSObject, WatchSyncing {
         publishCurrentPayload()
     }
 
+    func update(supportTier: GradelyWatchSupportTier) {
+        self.supportTier = supportTier
+        publishCurrentPayload()
+    }
+
+    func configureAIRelay(
+        client: any GradeyAIClient,
+        contextBuilder: any GradeyAIContextBuilding,
+        supportProvider: any SupportTipProviding
+    ) {
+        self.aiClient = client
+        self.contextBuilder = contextBuilder
+        self.supportProvider = supportProvider
+        Task { await self.refreshSupportTier() }
+    }
+
     func publishSignedOut() {
         auth = nil
         user = nil
         timetable = nil
+        supportTier = .none
+        watchConversationID = nil
+        aiTask?.cancel()
+        aiTask = nil
+        activeAIRequestID = nil
         publish(payload: .signedOut())
     }
 
@@ -68,7 +102,8 @@ final class LiveWatchSyncService: NSObject, WatchSyncing {
             isSignedIn: true,
             auth: auth,
             user: user,
-            timetable: timetable
+            timetable: timetable,
+            supportTier: supportTier
         )
     }
 
@@ -111,6 +146,208 @@ final class LiveWatchSyncService: NSObject, WatchSyncing {
 
         replyHandler(envelope)
     }
+
+    private func refreshSupportTier() async {
+        guard let supportProvider else { return }
+        let entitlement = await supportProvider.currentEntitlement()
+        update(supportTier: WatchPayloadBuilder.supportTier(from: entitlement))
+    }
+
+    private func handleAIRequest(
+        _ request: GradelyWatchAIStreamRequest,
+        replyHandler: @escaping ([String: Any]) -> Void
+    ) async {
+        aiTask?.cancel()
+        activeAIRequestID = request.requestID
+
+        let entitlement = await supportProvider?.currentEntitlement() ?? .none
+        guard entitlement.tier != .none else {
+            reply(replyHandler, .failure(
+                code: GradelyWatchAIErrorCode.supporterRequired,
+                message: "Subscribe in Gradey on iPhone."
+            ))
+            return
+        }
+
+        guard let aiClient, let contextBuilder else {
+            reply(replyHandler, .failure(
+                code: GradelyWatchAIErrorCode.notConfigured,
+                message: "Gradey AI is not available."
+            ))
+            return
+        }
+
+        do {
+            let status = try await aiClient.loadStatus()
+            if status.consentRequired {
+                reply(replyHandler, .failure(
+                    code: GradelyWatchAIErrorCode.consentRequired,
+                    message: "Enable Gradey AI on iPhone."
+                ))
+                return
+            }
+            guard status.enabled else {
+                reply(replyHandler, .failure(
+                    code: GradelyWatchAIErrorCode.notConfigured,
+                    message: "Gradey AI is not available."
+                ))
+                return
+            }
+            guard status.remaining > 0 else {
+                reply(replyHandler, .failure(
+                    code: GradelyWatchAIErrorCode.quotaExceeded,
+                    message: "Daily Gradey AI limit reached."
+                ))
+                return
+            }
+
+            let schoolScope = try contextBuilder.currentSchoolScope()
+            let context: GradeyAIContextSnapshot
+            if let refreshed = try? await contextBuilder.refreshContext() {
+                context = refreshed
+            } else if let cached = try contextBuilder.cachedContext() {
+                context = cached
+            } else {
+                reply(replyHandler, .failure(
+                    code: GradelyWatchAIErrorCode.noSchoolAccount,
+                    message: "School context is unavailable."
+                ))
+                return
+            }
+
+            let conversationID: String
+            if let existing = request.conversationID ?? watchConversationID {
+                conversationID = existing
+            } else {
+                conversationID = try await aiClient.createConversation(
+                    schoolScope: schoolScope,
+                    title: "Watch"
+                ).id
+            }
+            watchConversationID = conversationID
+
+            reply(replyHandler, .success(conversationID: conversationID))
+
+            aiTask = Task { [weak self] in
+                await self?.stream(
+                    request: request,
+                    conversationID: conversationID,
+                    context: context,
+                    client: aiClient
+                )
+            }
+        } catch let error as GradeyAIContextError where error == .noSchoolAccount {
+            reply(replyHandler, .failure(
+                code: GradelyWatchAIErrorCode.noSchoolAccount,
+                message: "Open Gradey on iPhone and sign in to school."
+            ))
+        } catch {
+            reply(replyHandler, .failure(
+                code: "failed",
+                message: error.localizedDescription
+            ))
+        }
+    }
+
+    private func stream(
+        request: GradelyWatchAIStreamRequest,
+        conversationID: String,
+        context: GradeyAIContextSnapshot,
+        client: any GradeyAIClient
+    ) async {
+        do {
+            for try await event in client.streamReply(
+                conversationID: conversationID,
+                clientMessageID: request.clientMessageID,
+                text: request.text,
+                context: context
+            ) {
+                try Task.checkCancellation()
+                sendAIEvent(Self.watchEvent(from: event, requestID: request.requestID, conversationID: conversationID))
+            }
+        } catch is CancellationError {
+            sendAIEvent(
+                GradelyWatchAIStreamEvent(
+                    requestID: request.requestID,
+                    conversationID: conversationID,
+                    kind: .failed,
+                    errorCode: GradelyWatchAIErrorCode.cancelled,
+                    errorMessage: "Cancelled."
+                )
+            )
+        } catch {
+            sendAIEvent(
+                GradelyWatchAIStreamEvent(
+                    requestID: request.requestID,
+                    conversationID: conversationID,
+                    kind: .failed,
+                    errorCode: "failed",
+                    errorMessage: error.localizedDescription
+                )
+            )
+        }
+
+        if activeAIRequestID == request.requestID {
+            activeAIRequestID = nil
+            aiTask = nil
+        }
+    }
+
+    private func handleAICancel(_ cancel: GradelyWatchAICancel) {
+        guard cancel.requestID == activeAIRequestID else { return }
+        aiTask?.cancel()
+        aiTask = nil
+        activeAIRequestID = nil
+    }
+
+    private func sendAIEvent(_ event: GradelyWatchAIStreamEvent) {
+        guard let session, session.isReachable else { return }
+        guard let envelope = try? GradelyWatchSyncCodec.envelope(for: event) else { return }
+        session.sendMessage(envelope, replyHandler: nil, errorHandler: nil)
+    }
+
+    private func reply(_ handler: ([String: Any]) -> Void, _ ack: GradelyWatchAIStreamAck) {
+        handler((try? GradelyWatchSyncCodec.envelope(for: ack)) ?? [:])
+    }
+
+    private static func watchEvent(
+        from event: GradeyAIStreamEvent,
+        requestID: String,
+        conversationID: String
+    ) -> GradelyWatchAIStreamEvent {
+        switch event {
+        case .start(_, let remaining):
+            return GradelyWatchAIStreamEvent(
+                requestID: requestID,
+                conversationID: conversationID,
+                kind: .started,
+                remaining: remaining
+            )
+        case .delta(let text):
+            return GradelyWatchAIStreamEvent(
+                requestID: requestID,
+                conversationID: conversationID,
+                kind: .delta,
+                text: text
+            )
+        case .done(_, let remaining, _, _, _):
+            return GradelyWatchAIStreamEvent(
+                requestID: requestID,
+                conversationID: conversationID,
+                kind: .done,
+                remaining: remaining
+            )
+        case .error(let code, let message, _, let remaining):
+            return GradelyWatchAIStreamEvent(
+                requestID: requestID,
+                conversationID: conversationID,
+                kind: .failed,
+                errorCode: code,
+                errorMessage: message,
+                remaining: remaining
+            )
+        }
+    }
 }
 
 extension LiveWatchSyncService: WCSessionDelegate {
@@ -135,13 +372,28 @@ extension LiveWatchSyncService: WCSessionDelegate {
         didReceiveMessage message: [String: Any],
         replyHandler: @escaping ([String: Any]) -> Void
     ) {
-        guard GradelyWatchSyncCodec.isRequestSync(message) else {
-            replyHandler([:])
+        if GradelyWatchSyncCodec.isRequestSync(message) {
+            Task { @MainActor in
+                self.replyToSyncRequest(replyHandler)
+            }
             return
         }
 
-        Task { @MainActor in
-            self.replyToSyncRequest(replyHandler)
+        if let request = try? GradelyWatchSyncCodec.aiRequest(from: message) {
+            Task { @MainActor in
+                await self.handleAIRequest(request, replyHandler: replyHandler)
+            }
+            return
+        }
+
+        replyHandler([:])
+    }
+
+    nonisolated func session(_ session: WCSession, didReceiveMessage message: [String: Any]) {
+        if let cancel = try? GradelyWatchSyncCodec.aiCancel(from: message) {
+            Task { @MainActor in
+                self.handleAICancel(cancel)
+            }
         }
     }
 }

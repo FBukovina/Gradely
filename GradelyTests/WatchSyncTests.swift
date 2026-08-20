@@ -39,6 +39,13 @@ struct WatchSyncTests {
         #expect(watchSync.timetables[0]?.days.isEmpty == false)
     }
 
+    @Test func recordingServiceStoresSupportTier() {
+        let watchSync = RecordingWatchSyncService()
+        watchSync.update(supportTier: .standard)
+        watchSync.update(supportTier: .plus)
+        #expect(watchSync.supportTiers == [.standard, .plus])
+    }
+
     @Test func repositoryPublishesSignedOutOnLogout() throws {
         let watchSync = RecordingWatchSyncService()
         let repository = SchoolRepository(
@@ -60,6 +67,7 @@ private final class RecordingWatchSyncService: WatchSyncing {
     private(set) var sessions: [StoredSession?] = []
     private(set) var users: [UserResponse?] = []
     private(set) var timetables: [GradelyWatchTimetable?] = []
+    private(set) var supportTiers: [GradelyWatchSupportTier] = []
     private(set) var didPublishSignedOut = false
 
     func start() {}
@@ -75,6 +83,16 @@ private final class RecordingWatchSyncService: WatchSyncing {
     func update(timetable: GradelyWatchTimetable?) {
         timetables.append(timetable)
     }
+
+    func update(supportTier: GradelyWatchSupportTier) {
+        supportTiers.append(supportTier)
+    }
+
+    func configureAIRelay(
+        client: any GradeyAIClient,
+        contextBuilder: any GradeyAIContextBuilding,
+        supportProvider: any SupportTipProviding
+    ) {}
 
     func publishSignedOut() {
         didPublishSignedOut = true

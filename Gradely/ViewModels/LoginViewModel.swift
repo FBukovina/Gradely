@@ -207,7 +207,7 @@ final class LoginViewModel {
         } catch {
             hasLoadedSchoolDirectory = false
             if directorySchools.isEmpty {
-                schoolLookupErrorMessage = String(localized: "schoolDirectory.error")
+                schoolLookupErrorMessage = AppL10n.string("schoolDirectory.error")
             }
         }
     }

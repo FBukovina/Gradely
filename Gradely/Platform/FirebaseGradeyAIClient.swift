@@ -13,11 +13,22 @@ final class FirebaseGradeyAIClient: GradeyAIClient {
     private static let callableTimeout: TimeInterval = 120
 
     private let identityCoordinator = FirebaseGradeyAIIdentityCoordinator()
+    private let accountIDProvider: @Sendable () -> String?
+
+    init(accountIDProvider: @escaping @Sendable () -> String? = { nil }) {
+        self.accountIDProvider = accountIDProvider
+    }
+
+    private var gradeyAccountID: String? {
+        let trimmed = accountIDProvider()?.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let trimmed, !trimmed.isEmpty else { return nil }
+        return trimmed
+    }
 
     func loadStatus() async throws -> GradeyAIStatus {
         let response: FirebaseGradeyAIStatusDTO = try await call(
             "gradeyAIGetStatus",
-            request: FirebaseGradeyAIEmptyRequest(),
+            request: FirebaseGradeyAIEmptyRequest(gradeyAccountID: gradeyAccountID),
             requiresIdentity: false
         )
         return response.model
@@ -28,7 +39,10 @@ final class FirebaseGradeyAIClient: GradeyAIClient {
         let currentStatus = try await loadStatus()
         let response: FirebaseGradeyAIStatusEnvelope = try await call(
             "gradeyAIAcceptConsent",
-            request: FirebaseGradeyAIAcceptConsentRequest(termsVersion: currentStatus.termsVersion)
+            request: FirebaseGradeyAIAcceptConsentRequest(
+                termsVersion: currentStatus.termsVersion,
+                gradeyAccountID: gradeyAccountID
+            )
         )
         return GradeyAIConsent(consented: true, termsVersion: response.status.termsVersion)
     }
@@ -36,7 +50,7 @@ final class FirebaseGradeyAIClient: GradeyAIClient {
     func revokeConsent() async throws {
         let response: FirebaseGradeyAIRevokeResponse = try await call(
             "gradeyAIRevokeConsent",
-            request: FirebaseGradeyAIEmptyRequest()
+            request: FirebaseGradeyAIEmptyRequest(gradeyAccountID: gradeyAccountID)
         )
         if response.anonymousIdentityDeleted == true {
             try? Auth.auth().signOut()
@@ -46,7 +60,7 @@ final class FirebaseGradeyAIClient: GradeyAIClient {
     func listConversations(schoolScope: String) async throws -> [GradeyAIConversation] {
         let response: FirebaseGradeyAIChatsResponse = try await call(
             "gradeyAIListChats",
-            request: FirebaseGradeyAISchoolScopeRequest(schoolScope: schoolScope)
+            request: FirebaseGradeyAISchoolScopeRequest(schoolScope: schoolScope, gradeyAccountID: gradeyAccountID)
         )
         return response.chats.map(\.model)
     }
@@ -54,7 +68,11 @@ final class FirebaseGradeyAIClient: GradeyAIClient {
     func createConversation(schoolScope: String, title: String?) async throws -> GradeyAIConversation {
         let response: FirebaseGradeyAIChatResponse = try await call(
             "gradeyAICreateChat",
-            request: FirebaseGradeyAICreateChatRequest(schoolScope: schoolScope, title: title)
+            request: FirebaseGradeyAICreateChatRequest(
+                schoolScope: schoolScope,
+                title: title,
+                gradeyAccountID: gradeyAccountID
+            )
         )
         return response.chat.model
     }
@@ -62,7 +80,7 @@ final class FirebaseGradeyAIClient: GradeyAIClient {
     func loadConversation(id: String) async throws -> GradeyAIConversationDetail {
         let response: FirebaseGradeyAIChatDetailResponse = try await call(
             "gradeyAILoadChat",
-            request: FirebaseGradeyAIChatRequest(chatID: id)
+            request: FirebaseGradeyAIChatRequest(chatID: id, gradeyAccountID: gradeyAccountID)
         )
         return GradeyAIConversationDetail(
             conversation: response.chat.model,
@@ -73,14 +91,14 @@ final class FirebaseGradeyAIClient: GradeyAIClient {
     func deleteConversation(id: String) async throws {
         let _: FirebaseGradeyAIDeletionResponse = try await call(
             "gradeyAIDeleteChat",
-            request: FirebaseGradeyAIChatRequest(chatID: id)
+            request: FirebaseGradeyAIChatRequest(chatID: id, gradeyAccountID: gradeyAccountID)
         )
     }
 
     func deleteAllConversations(schoolScope: String) async throws {
         let _: FirebaseGradeyAIDeletionResponse = try await call(
             "gradeyAIDeleteAll",
-            request: FirebaseGradeyAISchoolScopeRequest(schoolScope: schoolScope)
+            request: FirebaseGradeyAISchoolScopeRequest(schoolScope: schoolScope, gradeyAccountID: gradeyAccountID)
         )
     }
 
@@ -107,7 +125,8 @@ final class FirebaseGradeyAIClient: GradeyAIClient {
                         locale: Locale.current.identifier,
                         schoolScope: context.schoolScope,
                         context: minimizedContext,
-                        contextGeneratedAt: Self.milliseconds(context.generatedAt)
+                        contextGeneratedAt: Self.milliseconds(context.generatedAt),
+                        gradeyAccountID: gradeyAccountID
                     )
                     guard try JSONEncoder().encode(request).count <= Self.maximumRequestBytes else {
                         throw GradeyAIError.requestTooLarge
@@ -219,23 +238,54 @@ private actor FirebaseGradeyAIIdentityCoordinator {
     }
 }
 
-nonisolated private struct FirebaseGradeyAIEmptyRequest: Codable, Sendable {}
+nonisolated private struct FirebaseGradeyAIEmptyRequest: Codable, Sendable {
+    var gradeyAccountID: String?
+
+    enum CodingKeys: String, CodingKey {
+        case gradeyAccountID = "gradey_account_id"
+    }
+}
 
 nonisolated private struct FirebaseGradeyAIAcceptConsentRequest: Codable, Sendable {
     let termsVersion: String
+    var gradeyAccountID: String?
+
+    enum CodingKeys: String, CodingKey {
+        case termsVersion
+        case gradeyAccountID = "gradey_account_id"
+    }
 }
 
 nonisolated private struct FirebaseGradeyAISchoolScopeRequest: Codable, Sendable {
     let schoolScope: String
+    var gradeyAccountID: String?
+
+    enum CodingKeys: String, CodingKey {
+        case schoolScope
+        case gradeyAccountID = "gradey_account_id"
+    }
 }
 
 nonisolated private struct FirebaseGradeyAIChatRequest: Codable, Sendable {
     let chatID: String
+    var gradeyAccountID: String?
+
+    enum CodingKeys: String, CodingKey {
+        case chatID
+        case gradeyAccountID = "gradey_account_id"
+    }
 }
 
 nonisolated private struct FirebaseGradeyAICreateChatRequest: Codable, Sendable {
     let schoolScope: String
     let title: String?
+    var gradeyAccountID: String?
+
+    enum CodingKeys: String, CodingKey {
+        case schoolScope
+        case title
+        case gradeyAccountID = "gradey_account_id"
+    }
 }
 
 nonisolated private struct FirebaseGradeyAIStreamRequest: Codable, Sendable {
@@ -246,6 +296,18 @@ nonisolated private struct FirebaseGradeyAIStreamRequest: Codable, Sendable {
     let schoolScope: String
     let context: FirebaseGradeyAIContextDTO
     let contextGeneratedAt: Double
+    var gradeyAccountID: String?
+
+    enum CodingKeys: String, CodingKey {
+        case chatID
+        case clientMessageID
+        case text
+        case locale
+        case schoolScope
+        case context
+        case contextGeneratedAt
+        case gradeyAccountID = "gradey_account_id"
+    }
 }
 
 nonisolated private struct FirebaseGradeyAIStatusDTO: Codable, Sendable {
@@ -616,6 +678,10 @@ nonisolated enum FirebaseGradeyAIWireContract {
 #else
 
 final class FirebaseGradeyAIClient: GradeyAIClient {
+    init(accountIDProvider: @escaping @Sendable () -> String? = { nil }) {
+        _ = accountIDProvider
+    }
+
     func loadStatus() async throws -> GradeyAIStatus { throw GradeyAIError.notConfigured }
     func acceptConsent() async throws -> GradeyAIConsent { throw GradeyAIError.notConfigured }
     func revokeConsent() async throws { throw GradeyAIError.notConfigured }

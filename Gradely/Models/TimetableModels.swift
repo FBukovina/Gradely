@@ -359,10 +359,10 @@ enum LessonChangeKind: Equatable {
     var localizedLabel: String? {
         switch self {
         case .none: nil
-        case .canceled: String(localized: "timetable.change.canceled")
-        case .substitution: String(localized: "timetable.change.substitution")
-        case .roomChanged: String(localized: "timetable.change.roomChange")
-        case .added: String(localized: "timetable.change.added")
+        case .canceled: AppL10n.string("timetable.change.canceled")
+        case .substitution: AppL10n.string("timetable.change.substitution")
+        case .roomChanged: AppL10n.string("timetable.change.roomChange")
+        case .added: AppL10n.string("timetable.change.added")
         }
     }
 }

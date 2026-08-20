@@ -40,14 +40,14 @@ struct StravaCZConnectView: View {
 
                     SettingsModalSurface {
                         VStack(spacing: Spacing.lg) {
-                            TextField(String(localized: "stravacz.canteenNumber"), text: $canteenNumber)
+                            TextField(AppL10n.string("stravacz.canteenNumber"), text: $canteenNumber)
                                 .gradelyKeyboardType(.numberPad)
                                 .textContentType(.oneTimeCode)
                                 .submitLabel(.next)
                                 .brandField()
                                 .accessibilityIdentifier("stravaCZCanteenField")
 
-                            TextField(String(localized: "stravacz.username"), text: $username)
+                            TextField(AppL10n.string("stravacz.username"), text: $username)
                                 .textContentType(.username)
                                 .gradelyTextInputAutocapitalization(.never)
                                 .autocorrectionDisabled()
@@ -66,7 +66,7 @@ struct StravaCZConnectView: View {
                                             .controlSize(.small)
                                             .tint(Brand.onAccent)
                                     }
-                                    Text(isConnecting ? String(localized: "stravacz.connect.loading") : String(localized: "stravacz.connect.button"))
+                                    Text(isConnecting ? AppL10n.string("stravacz.connect.loading") : AppL10n.string("stravacz.connect.button"))
                                     if !isConnecting {
                                         GradelyIcon(systemName: "chevron.right", size: 14)
                                     }
@@ -86,8 +86,8 @@ struct StravaCZConnectView: View {
             .scrollDismissesKeyboard(.interactively)
         }
         .accessibilityIdentifier("stravaCZConnectView")
-        .alert(String(localized: "error.title"), isPresented: errorBinding) {
-            Button(String(localized: "action.ok"), role: .cancel) {
+        .alert(AppL10n.string("error.title"), isPresented: errorBinding) {
+            Button(AppL10n.string("action.ok"), role: .cancel) {
                 errorMessage = nil
             }
         } message: {
@@ -99,9 +99,9 @@ struct StravaCZConnectView: View {
         HStack(spacing: Spacing.sm) {
             Group {
                 if isPasswordVisible {
-                    TextField(String(localized: "stravacz.password"), text: $password)
+                    TextField(AppL10n.string("stravacz.password"), text: $password)
                 } else {
-                    SecureField(String(localized: "stravacz.password"), text: $password)
+                    SecureField(AppL10n.string("stravacz.password"), text: $password)
                 }
             }
             .textContentType(.password)
@@ -113,7 +113,7 @@ struct StravaCZConnectView: View {
             } label: {
                 GradelyIcon(systemName: isPasswordVisible ? "eye.slash" : "eye")
                     .foregroundStyle(.secondary)
-                    .accessibilityLabel(isPasswordVisible ? String(localized: "login.hidePassword") : String(localized: "login.showPassword"))
+                    .accessibilityLabel(isPasswordVisible ? AppL10n.string("login.hidePassword") : AppL10n.string("login.showPassword"))
             }
             .buttonStyle(.plain)
         }

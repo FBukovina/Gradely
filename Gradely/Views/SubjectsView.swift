@@ -35,11 +35,11 @@ struct SubjectsView: View {
                     .accessibilityIdentifier("subjectsLoadingView")
                 } else if let errorMessage = viewModel.errorMessage, viewModel.subjects.isEmpty {
                     ContentUnavailableView {
-                        GradelyLabel(String(localized: "error.title"), systemImage: "exclamationmark.triangle")
+                        GradelyLabel(AppL10n.string("error.title"), systemImage: "exclamationmark.triangle")
                     } description: {
                         Text(errorMessage)
                     } actions: {
-                        Button(String(localized: "action.retry")) {
+                        Button(AppL10n.string("action.retry")) {
                             Task { await viewModel.refresh(forceRefresh: true) }
                         }
                         .buttonStyle(.borderedProminent)
@@ -48,7 +48,7 @@ struct SubjectsView: View {
                 } else if viewModel.subjects.isEmpty {
                     ContentUnavailableView {
                         GradelyLabel(
-                            String(localized: "subjects.empty.title"),
+                            AppL10n.string("subjects.empty.title"),
                             systemImage: "list.bullet.rectangle",
                             iconSize: 28
                         )
@@ -60,7 +60,7 @@ struct SubjectsView: View {
                     marksDashboard
                 }
             }
-            .navigationTitle(String(localized: "subjects.title"))
+            .navigationTitle(AppL10n.string("subjects.title"))
             .gradelyNavigationTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .gradelyTopBarLeading) {
@@ -75,7 +75,7 @@ struct SubjectsView: View {
                             .symbolEffect(.rotate, options: .repeating, isActive: viewModel.isRefreshing)
                     }
                     .disabled(viewModel.isLoading || viewModel.isRefreshing)
-                    .accessibilityLabel(String(localized: "action.refresh"))
+                    .accessibilityLabel(AppL10n.string("action.refresh"))
                     .accessibilityIdentifier("refreshButton")
                 }
 
@@ -207,9 +207,9 @@ private enum SubjectSortMode: String, CaseIterable, Identifiable, Hashable {
 
     var title: String {
         switch self {
-        case .focus: String(localized: "marks.sort.focus")
-        case .average: String(localized: "marks.sort.average")
-        case .name: String(localized: "marks.sort.name")
+        case .focus: AppL10n.string("marks.sort.focus")
+        case .average: AppL10n.string("marks.sort.average")
+        case .name: AppL10n.string("marks.sort.name")
         }
     }
 }
@@ -235,8 +235,8 @@ private struct MarksHero: View {
             Spacer(minLength: Spacing.md)
 
             VStack(alignment: .trailing, spacing: Spacing.xs) {
-                Text(String.localizedStringWithFormat(String(localized: "marks.hero.subjectCount"), viewModel.subjects.count))
-                Text(String.localizedStringWithFormat(String(localized: "subject.markCount"), viewModel.totalMarks))
+                Text(String.localizedStringWithFormat(AppL10n.string("marks.hero.subjectCount"), viewModel.subjects.count))
+                Text(String.localizedStringWithFormat(AppL10n.string("subject.markCount"), viewModel.totalMarks))
             }
             .font(.caption.weight(.semibold))
             .foregroundStyle(Brand.onAccent.opacity(0.72))
@@ -328,9 +328,9 @@ private struct MarksTrendChartRow: View {
     private var detail: String {
         let newMarks = trend.latestMarkCount - trend.firstMarkCount
         if newMarks > 0 {
-            return String(format: String(localized: "marks.trends.newMarks"), newMarks)
+            return String(format: AppL10n.string("marks.trends.newMarks"), newMarks)
         }
-        return String(localized: "marks.trends.movement")
+        return AppL10n.string("marks.trends.movement")
     }
 }
 
@@ -348,7 +348,7 @@ private struct SubjectDirectory: View {
             HStack(alignment: .center, spacing: Spacing.md) {
                 SectionHeader("marks.directory.title")
 
-                Picker(String(localized: "marks.sort.label"), selection: $sortMode) {
+                Picker(AppL10n.string("marks.sort.label"), selection: $sortMode) {
                     ForEach(SubjectSortMode.allCases) { mode in
                         Text(mode.title).tag(mode)
                     }
@@ -414,7 +414,7 @@ private struct SubjectRow: View {
                     .minimumScaleFactor(0.78)
 
                 HStack(spacing: Spacing.sm) {
-                    Text(String.localizedStringWithFormat(String(localized: "subject.markCount"), subject.marks.count))
+                    Text(String.localizedStringWithFormat(AppL10n.string("subject.markCount"), subject.marks.count))
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
 
@@ -446,7 +446,7 @@ private struct SubjectRow: View {
                     .minimumScaleFactor(0.7)
 
                 if let absence {
-                    Text(String(format: String(localized: "marks.row.absencePercent"), absence.absencePercentage))
+                    Text(String(format: AppL10n.string("marks.row.absencePercent"), absence.absencePercentage))
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
@@ -475,8 +475,8 @@ private struct SubjectRow: View {
 
     private func trendAccessibilityLabel(for delta: Double) -> String {
         delta < 0
-            ? String(format: String(localized: "marks.row.trendBetter"), abs(delta))
-            : String(format: String(localized: "marks.row.trendWorse"), delta)
+            ? String(format: AppL10n.string("marks.row.trendBetter"), abs(delta))
+            : String(format: AppL10n.string("marks.row.trendWorse"), delta)
     }
 }
 

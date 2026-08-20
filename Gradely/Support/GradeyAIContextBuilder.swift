@@ -7,9 +7,9 @@ enum GradeyAIContextError: LocalizedError, Equatable {
     var errorDescription: String? {
         switch self {
         case .noSchoolAccount:
-            return String(localized: "error.notLoggedIn")
+            return AppL10n.string("error.notLoggedIn")
         case .noContextAvailable:
-            return String(localized: "gradey.ai.error.noContext")
+            return AppL10n.string("gradey.ai.error.noContext")
         }
     }
 }

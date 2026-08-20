@@ -19,7 +19,7 @@ struct TimetableView: View {
     var body: some View {
         NavigationStack {
             content
-                .navigationTitle(String(localized: "rozvrh.title"))
+                .navigationTitle(AppL10n.string("rozvrh.title"))
                 .gradelyNavigationTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .gradelyTopBarLeading) {
@@ -34,7 +34,7 @@ struct TimetableView: View {
                                 .symbolEffect(.rotate, options: .repeating, isActive: viewModel.isRefreshing)
                         }
                         .disabled(viewModel.isLoading || viewModel.isRefreshing)
-                        .accessibilityLabel(String(localized: "action.refresh"))
+                        .accessibilityLabel(AppL10n.string("action.refresh"))
                         .accessibilityIdentifier("timetableRefreshButton")
                     }
 
@@ -63,11 +63,11 @@ struct TimetableView: View {
             .accessibilityIdentifier("timetableLoadingView")
         } else if let errorMessage = viewModel.errorMessage, viewModel.week == nil {
             ContentUnavailableView {
-                GradelyLabel(String(localized: "error.title"), systemImage: "exclamationmark.triangle")
+                GradelyLabel(AppL10n.string("error.title"), systemImage: "exclamationmark.triangle")
             } description: {
                 Text(errorMessage)
             } actions: {
-                Button(String(localized: "action.retry")) {
+                Button(AppL10n.string("action.retry")) {
                     Task { await viewModel.refresh() }
                 }
                 .buttonStyle(.borderedProminent)
@@ -244,7 +244,7 @@ private struct TodaySummaryCard: View {
     }
 
     private func lessonTitle(_ lesson: ScheduledLesson) -> String {
-        lesson.subjectName ?? lesson.subjectAbbrev ?? String(localized: "timetable.lesson.unknown")
+        lesson.subjectName ?? lesson.subjectAbbrev ?? AppL10n.string("timetable.lesson.unknown")
     }
 
     private func timeRange(_ lesson: ScheduledLesson) -> String {
@@ -308,7 +308,7 @@ private struct WeekNavBar: View {
                 .foregroundStyle(Brand.primary)
                 .frame(width: 44, height: 44)
         }
-        .accessibilityLabel(String(localized: label))
+        .accessibilityLabel(AppL10n.string(label))
         .accessibilityIdentifier(id)
     }
 }
@@ -490,7 +490,7 @@ private struct LessonCard: View {
     }
 
     private var subjectTitle: String {
-        lesson.subjectName ?? lesson.subjectAbbrev ?? String(localized: "timetable.lesson.unknown")
+        lesson.subjectName ?? lesson.subjectAbbrev ?? AppL10n.string("timetable.lesson.unknown")
     }
 
     private var teacher: String? {
@@ -538,9 +538,9 @@ private struct EmptyDayView: View {
 
     private var title: String {
         switch day?.dayType {
-        case .holiday, .celebration, .directorDay: String(localized: "timetable.holiday")
-        case .weekend: String(localized: "timetable.weekend")
-        default: String(localized: "timetable.empty.title")
+        case .holiday, .celebration, .directorDay: AppL10n.string("timetable.holiday")
+        case .weekend: AppL10n.string("timetable.weekend")
+        default: AppL10n.string("timetable.empty.title")
         }
     }
 
@@ -550,7 +550,7 @@ private struct EmptyDayView: View {
         }
         switch day?.dayType {
         case .holiday, .celebration, .directorDay, .weekend: return nil
-        default: return String(localized: "timetable.empty.message")
+        default: return AppL10n.string("timetable.empty.message")
         }
     }
 }
@@ -589,7 +589,7 @@ private struct LessonDetailSheet: View {
                                 DetailRow(
                                     systemImage: "checklist",
                                     title: "timetable.detail.homework",
-                                    value: String(localized: "timetable.detail.homework.has")
+                                    value: AppL10n.string("timetable.detail.homework.has")
                                 )
                             }
                         }
@@ -637,7 +637,7 @@ private struct LessonDetailSheet: View {
             VStack(alignment: .leading, spacing: Spacing.sm) {
                 HStack(spacing: Spacing.sm) {
                     GradelyIcon(systemName: "exclamationmark.triangle.fill")
-                    Text(lesson.changeKind.localizedLabel ?? String(localized: "timetable.detail.change"))
+                    Text(lesson.changeKind.localizedLabel ?? AppL10n.string("timetable.detail.change"))
                         .font(.headline)
                 }
                 .foregroundStyle(lesson.changeKind.color)

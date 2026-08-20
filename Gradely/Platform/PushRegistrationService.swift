@@ -28,7 +28,7 @@ enum GradeyFunctionError: LocalizedError, Equatable {
         switch self {
         case .httpStatus(_, _, _, let message):
             guard let message, !message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-                return String(localized: "gradey.account.error.requestFailed")
+                return AppL10n.string("gradey.account.error.requestFailed")
             }
             return message
         }
@@ -296,7 +296,7 @@ final class SupabaseDevicePushTokenClient: DevicePushTokenClient {
 
         let (data, response) = try await urlSession.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse else {
-            throw GradeyAuthError.server(String(localized: "gradey.account.error.invalidResponse"))
+            throw GradeyAuthError.server(AppL10n.string("gradey.account.error.invalidResponse"))
         }
         guard (200..<300).contains(httpResponse.statusCode) else {
             let serverError = Self.serverError(from: data)

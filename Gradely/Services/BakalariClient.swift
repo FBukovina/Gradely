@@ -18,14 +18,14 @@ enum BakalariAPIError: LocalizedError, Equatable {
         var errorDescription: String? {
             switch self {
             case .invalidResponse:
-                return String(localized: "error.api.invalidResponse")
+                return AppL10n.string("error.api.invalidResponse")
             case .httpStatus(let status, let message):
                 if let message, !message.isEmpty {
                     return message
                 }
-                return String(format: String(localized: "error.api.status"), status)
+                return String(format: AppL10n.string("error.api.status"), status)
             case .decoding(let message):
-                return String(format: String(localized: "error.api.decoding"), message)
+                return String(format: AppL10n.string("error.api.decoding"), message)
             }
         }
 }
@@ -302,7 +302,7 @@ enum DemoAccountError: LocalizedError, Equatable {
     var errorDescription: String? {
         switch self {
         case .invalidCredentials:
-            return String(localized: "error.demo.invalidCredentials")
+            return AppL10n.string("error.demo.invalidCredentials")
         }
     }
 }

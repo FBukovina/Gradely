@@ -12,6 +12,13 @@
 	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>en</string>
+		<string>cs</string>
+		<string>en-CO</string>
+		<string>cs-US</string>
+	</array>
 	<key>CFBundleName</key>
 	<string>Gradey</string>
 	<key>CFBundlePackageType</key>

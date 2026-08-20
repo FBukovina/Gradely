@@ -19,18 +19,18 @@ enum StravaCZAPIError: LocalizedError, Equatable {
     var errorDescription: String? {
         switch self {
         case .invalidResponse:
-            return String(localized: "error.stravacz.invalidResponse")
+            return AppL10n.string("error.stravacz.invalidResponse")
         case .httpStatus(let status, let message):
             if let message, !message.isEmpty {
                 return message
             }
-            return String(format: String(localized: "error.stravacz.status"), status)
+            return String(format: AppL10n.string("error.stravacz.status"), status)
         case .decoding(let message):
-            return String(format: String(localized: "error.stravacz.decoding"), message)
+            return String(format: AppL10n.string("error.stravacz.decoding"), message)
         case .authentication(let message):
-            return message ?? String(localized: "error.stravacz.authentication")
+            return message ?? AppL10n.string("error.stravacz.authentication")
         case .insufficientBalance(let message):
-            return message ?? String(localized: "error.stravacz.insufficientBalance")
+            return message ?? AppL10n.string("error.stravacz.insufficientBalance")
         }
     }
 }

@@ -66,7 +66,7 @@ struct TodayView: View {
                             .symbolEffect(.rotate, options: .repeating, isActive: viewModel.isRefreshing)
                     }
                     .disabled(viewModel.isLoading || viewModel.isRefreshing)
-                    .accessibilityLabel(String(localized: "action.refresh"))
+                    .accessibilityLabel(AppL10n.string("action.refresh"))
                     .accessibilityIdentifier("todayRefreshButton")
                 }
                 ToolbarItem(placement: .gradelyTopBarTrailing) {
@@ -76,8 +76,8 @@ struct TodayView: View {
             .task {
                 await viewModel.loadIfNeeded()
             }
-            .alert(String(localized: "error.title"), isPresented: errorBinding) {
-                Button(String(localized: "action.ok"), role: .cancel) { viewModel.clearError() }
+            .alert(AppL10n.string("error.title"), isPresented: errorBinding) {
+                Button(AppL10n.string("action.ok"), role: .cancel) { viewModel.clearError() }
             } message: {
                 Text(viewModel.errorMessage ?? "")
             }
@@ -377,8 +377,8 @@ private struct TodaySchoolReconnectSheet: View {
                     .background(.regularMaterial, in: RoundedRectangle(cornerRadius: Radius.md))
             }
         }
-        .alert(String(localized: "error.title"), isPresented: errorBinding) {
-            Button(String(localized: "action.ok"), role: .cancel) {
+        .alert(AppL10n.string("error.title"), isPresented: errorBinding) {
+            Button(AppL10n.string("action.ok"), role: .cancel) {
                 errorMessage = nil
             }
         } message: {

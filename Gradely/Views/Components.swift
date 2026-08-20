@@ -125,7 +125,7 @@ struct SettingsModalHeader: View {
                     .contentShape(Circle())
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(String(localized: "action.ok"))
+            .accessibilityLabel(AppL10n.string("action.ok"))
             .accessibilityIdentifier("modalDismissButton")
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -397,7 +397,7 @@ struct AccountSettingsButton: View {
                 .gradelyToolbarIconButton()
         }
         .disabled(accountHub == nil)
-        .accessibilityLabel(String(localized: "settings.title"))
+        .accessibilityLabel(AppL10n.string("settings.title"))
         .accessibilityIdentifier("openAccountHubButton")
     }
 
@@ -421,7 +421,7 @@ struct GradeyAIToolbarButton: View {
             GradelyIcon(systemName: "sparkles")
                 .gradelyToolbarIconButton()
         }
-        .accessibilityLabel(String(localized: "gradey.ai.title"))
+        .accessibilityLabel(AppL10n.string("gradey.ai.title"))
         .accessibilityIdentifier("gradeyAIButton")
     }
 }
@@ -596,7 +596,7 @@ extension View {
         #else
         toolbar {
             ToolbarItem(placement: .confirmationAction) {
-                Button(String(localized: "action.ok")) {
+                Button(AppL10n.string("action.ok")) {
                     dismiss()
                 }
                 .accessibilityIdentifier("modalDismissButton")

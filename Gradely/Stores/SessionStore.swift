@@ -162,7 +162,7 @@ struct KeychainClient {
         var errorDescription: String? {
             switch self {
             case .unhandledStatus(let status):
-                String(format: String(localized: "error.keychain.status"), status)
+                String(format: AppL10n.string("error.keychain.status"), status)
             }
         }
     }

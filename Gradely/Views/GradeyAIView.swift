@@ -3,8 +3,10 @@ import SwiftUI
 struct GradeyAIView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var viewModel: GradeyAIViewModel
+    @State private var supportViewModel: SupportTipViewModel
     @State private var pendingConversationDeletion: GradeyAIConversation?
     @State private var dangerousAction: DangerousAction?
+    @State private var isSupportPresented = false
     @FocusState private var isComposerFocused: Bool
 
     private enum DangerousAction {
@@ -12,8 +14,16 @@ struct GradeyAIView: View {
         case revokeConsent
     }
 
-    init(viewModel: GradeyAIViewModel) {
+    init(
+        viewModel: GradeyAIViewModel,
+        supportTipProvider: any SupportTipProviding = MockSupportTipService(),
+        isSignedIn: Bool = false
+    ) {
         _viewModel = State(initialValue: viewModel)
+        _supportViewModel = State(initialValue: SupportTipViewModel(
+            supportTipProvider: supportTipProvider,
+            isSignedIn: isSignedIn
+        ))
     }
 
     var body: some View {
@@ -41,26 +51,35 @@ struct GradeyAIView: View {
         }
         .task {
             await viewModel.bootstrap()
+            await supportViewModel.loadIfNeeded()
         }
-        .alert(String(localized: "error.title"), isPresented: errorBinding) {
-            Button(String(localized: "action.ok"), role: .cancel) {
+        .sheet(isPresented: $isSupportPresented, onDismiss: {
+            Task {
+                await supportViewModel.refreshEntitlement()
+                await viewModel.refreshStatus()
+            }
+        }) {
+            SupportTipView(viewModel: supportViewModel)
+        }
+        .alert(AppL10n.string("error.title"), isPresented: errorBinding) {
+            Button(AppL10n.string("action.ok"), role: .cancel) {
                 viewModel.clearError()
             }
         } message: {
             Text(viewModel.errorMessage ?? "")
         }
         .confirmationDialog(
-            String(localized: "gradey.ai.conversation.delete.title"),
+            AppL10n.string("gradey.ai.conversation.delete.title"),
             isPresented: deletionDialogBinding,
             titleVisibility: .visible
         ) {
             if let conversation = pendingConversationDeletion {
-                Button(String(localized: "gradey.ai.conversation.delete.action"), role: .destructive) {
+                Button(AppL10n.string("gradey.ai.conversation.delete.action"), role: .destructive) {
                     pendingConversationDeletion = nil
                     Task { await viewModel.delete(conversation) }
                 }
             }
-            Button(String(localized: "action.cancel"), role: .cancel) {
+            Button(AppL10n.string("action.cancel"), role: .cancel) {
                 pendingConversationDeletion = nil
             }
         } message: {
@@ -73,19 +92,19 @@ struct GradeyAIView: View {
         ) {
             switch dangerousAction {
             case .deleteAll:
-                Button(String(localized: "gradey.ai.deleteAll.action"), role: .destructive) {
+                Button(AppL10n.string("gradey.ai.deleteAll.action"), role: .destructive) {
                     dangerousAction = nil
                     Task { await viewModel.deleteAll() }
                 }
             case .revokeConsent:
-                Button(String(localized: "gradey.ai.privacy.revoke.action"), role: .destructive) {
+                Button(AppL10n.string("gradey.ai.privacy.revoke.action"), role: .destructive) {
                     dangerousAction = nil
                     Task { await viewModel.revokeConsent() }
                 }
             case nil:
                 EmptyView()
             }
-            Button(String(localized: "action.cancel"), role: .cancel) {
+            Button(AppL10n.string("action.cancel"), role: .cancel) {
                 dangerousAction = nil
             }
         } message: {
@@ -108,14 +127,14 @@ struct GradeyAIView: View {
             }
         } else {
             unavailableView(
-                title: String(localized: "gradey.ai.loadFailed.title"),
-                message: viewModel.errorMessage ?? String(localized: "gradey.ai.loadFailed.message")
+                title: AppL10n.string("gradey.ai.loadFailed.title"),
+                message: viewModel.errorMessage ?? AppL10n.string("gradey.ai.loadFailed.message")
             )
         }
     }
 
     private var navigationTitle: String {
-        viewModel.currentConversation?.title ?? String(localized: "gradey.ai.title")
+        viewModel.currentConversation?.title ?? AppL10n.string("gradey.ai.title")
     }
 
     @ToolbarContentBuilder
@@ -127,7 +146,7 @@ struct GradeyAIView: View {
                 } label: {
                     GradelyIcon(systemName: "chevron.left")
                 }
-                .accessibilityLabel(String(localized: "gradey.ai.conversations.back"))
+                .accessibilityLabel(AppL10n.string("gradey.ai.conversations.back"))
                 .accessibilityIdentifier("gradeyAIConversationBackButton")
             }
         }
@@ -139,14 +158,14 @@ struct GradeyAIView: View {
                         Button(role: .destructive) {
                             pendingConversationDeletion = conversation
                         } label: {
-                            GradelyLabel(String(localized: "gradey.ai.conversation.delete.action"), systemImage: "trash")
+                            GradelyLabel(AppL10n.string("gradey.ai.conversation.delete.action"), systemImage: "trash")
                         }
                     }
 
                     Button(role: .destructive) {
                         dangerousAction = .deleteAll
                     } label: {
-                        GradelyLabel(String(localized: "gradey.ai.deleteAll.action"), systemImage: "trash.slash")
+                        GradelyLabel(AppL10n.string("gradey.ai.deleteAll.action"), systemImage: "trash.slash")
                     }
                     .disabled(viewModel.conversations.isEmpty)
 
@@ -155,13 +174,13 @@ struct GradeyAIView: View {
                     Button(role: .destructive) {
                         dangerousAction = .revokeConsent
                     } label: {
-                        GradelyLabel(String(localized: "gradey.ai.privacy.revoke.action"), systemImage: "hand.raised.slash")
+                        GradelyLabel(AppL10n.string("gradey.ai.privacy.revoke.action"), systemImage: "hand.raised.slash")
                     }
                 } label: {
                     GradelyIcon(systemName: "ellipsis.circle")
                 }
                 .disabled(viewModel.isStreaming || viewModel.isLoading)
-                .accessibilityLabel(String(localized: "gradey.ai.options"))
+                .accessibilityLabel(AppL10n.string("gradey.ai.options"))
                 .accessibilityIdentifier("gradeyAIOptionsButton")
             }
         }
@@ -200,7 +219,7 @@ struct GradeyAIView: View {
                     Button {
                         Task { await viewModel.bootstrap() }
                     } label: {
-                        GradelyLabel(String(localized: "action.retry"), systemImage: "arrow.clockwise")
+                        GradelyLabel(AppL10n.string("action.retry"), systemImage: "arrow.clockwise")
                     }
                     .buttonStyle(.borderedProminent)
                     .tint(Brand.primary)
@@ -364,18 +383,24 @@ struct GradeyAIView: View {
             title: "gradey.ai.welcome.title",
             subtitle: "gradey.ai.welcome.message"
         ) {
-            HStack {
-                limitLabel(onBrand: true)
-                Spacer(minLength: Spacing.md)
-                Button {
-                    viewModel.beginDraftChat()
-                } label: {
-                    GradelyLabel(String(localized: "gradey.ai.newChat"), systemImage: "square.and.pencil")
+            VStack(alignment: .leading, spacing: Spacing.sm) {
+                HStack {
+                    limitLabel(onBrand: true)
+                    Spacer(minLength: Spacing.md)
+                    Button {
+                        viewModel.beginDraftChat()
+                    } label: {
+                        GradelyLabel(AppL10n.string("gradey.ai.newChat"), systemImage: "square.and.pencil")
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(Brand.onAccent)
+                    .disabled(viewModel.status?.canSend != true)
+                    .accessibilityIdentifier("gradeyAINewChatButton")
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(Brand.onAccent)
-                .disabled(viewModel.status?.canSend != true)
-                .accessibilityIdentifier("gradeyAINewChatButton")
+
+                if showsSupportUpgradeCTA {
+                    supportUpgradeCTA(onBrand: true)
+                }
             }
         }
     }
@@ -429,7 +454,7 @@ struct GradeyAIView: View {
             Button(role: .destructive) {
                 pendingConversationDeletion = conversation
             } label: {
-                GradelyLabel(String(localized: "gradey.ai.conversation.delete.action"), systemImage: "trash")
+                GradelyLabel(AppL10n.string("gradey.ai.conversation.delete.action"), systemImage: "trash")
             }
         }
         .accessibilityIdentifier("gradeyAIConversation-\(conversation.id)")
@@ -454,6 +479,12 @@ struct GradeyAIView: View {
             }
 
             composer
+
+            if showsSupportUpgradeCTA {
+                supportUpgradeCTA()
+                    .padding(.horizontal, Spacing.lg)
+                    .padding(.bottom, Spacing.md)
+            }
         }
     }
 
@@ -573,7 +604,7 @@ struct GradeyAIView: View {
             }
             .buttonStyle(.plain)
             .disabled(viewModel.isRefreshingContext || viewModel.isStreaming)
-            .accessibilityLabel(String(localized: "gradey.ai.context.refresh"))
+            .accessibilityLabel(AppL10n.string("gradey.ai.context.refresh"))
             .accessibilityIdentifier("gradeyAIContextRefreshButton")
         }
         .padding(.horizontal, Spacing.md)
@@ -589,15 +620,15 @@ struct GradeyAIView: View {
 
     private var contextStatusTitle: String {
         if viewModel.isRefreshingContext {
-            return String(localized: "gradey.ai.context.refreshing")
+            return AppL10n.string("gradey.ai.context.refreshing")
         }
         if viewModel.contextSnapshot == nil {
-            return String(localized: "gradey.ai.context.unavailable")
+            return AppL10n.string("gradey.ai.context.unavailable")
         }
         if viewModel.contextSnapshot?.isStale == true || viewModel.contextSnapshot?.isPartial == true {
-            return String(localized: "gradey.ai.context.partial")
+            return AppL10n.string("gradey.ai.context.partial")
         }
-        return String(localized: "gradey.ai.context.ready")
+        return AppL10n.string("gradey.ai.context.ready")
     }
 
     private var contextStatusImage: String {
@@ -613,7 +644,7 @@ struct GradeyAIView: View {
     private var composer: some View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
             HStack(alignment: .bottom, spacing: Spacing.sm) {
-                TextField(String(localized: "gradey.ai.composer.placeholder"), text: $viewModel.draft, axis: .vertical)
+                TextField(AppL10n.string("gradey.ai.composer.placeholder"), text: $viewModel.draft, axis: .vertical)
                     .textFieldStyle(.plain)
                     .lineLimit(1...4)
                     .focused($isComposerFocused)
@@ -661,7 +692,7 @@ struct GradeyAIView: View {
                     .frame(width: 36, height: 36)
                     .background(Brand.gradient, in: Circle())
             }
-            .accessibilityLabel(String(localized: "gradey.ai.stop"))
+            .accessibilityLabel(AppL10n.string("gradey.ai.stop"))
             .accessibilityIdentifier("gradeyAIStopButton")
         } else {
             Button {
@@ -674,7 +705,7 @@ struct GradeyAIView: View {
             }
             .disabled(!viewModel.canSend)
             .opacity(viewModel.canSend ? 1 : 0.38)
-            .accessibilityLabel(String(localized: "gradey.ai.send"))
+            .accessibilityLabel(AppL10n.string("gradey.ai.send"))
             .accessibilityIdentifier("gradeyAISendButton")
         }
     }
@@ -685,9 +716,23 @@ struct GradeyAIView: View {
         let secondaryColor = onBrand ? Brand.onAccent.opacity(0.55) : Color.secondary.opacity(0.58)
 
         return VStack(alignment: .leading, spacing: 2) {
-            Text(limitText)
-                .font(.caption.weight(.semibold).monospacedDigit())
-                .foregroundStyle(primaryColor)
+            HStack(spacing: 6) {
+                Text(limitText)
+                    .font(.caption.weight(.semibold).monospacedDigit())
+                    .foregroundStyle(primaryColor)
+                if supportViewModel.entitlement.hasEarlyAccess {
+                    Text("gradey.ai.earlyAccess.badge")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(onBrand ? Brand.onAccent : Brand.primary)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(
+                            (onBrand ? Brand.onAccent : Brand.primary).opacity(onBrand ? 0.18 : 0.12),
+                            in: Capsule()
+                        )
+                        .accessibilityIdentifier("gradeyAIEarlyAccessBadge")
+                }
+            }
             if let resetText {
                 Text(resetText)
                     .font(.caption2.monospacedDigit())
@@ -698,10 +743,42 @@ struct GradeyAIView: View {
         .accessibilityIdentifier("gradeyAIRemainingMessages")
     }
 
+    private var showsSupportUpgradeCTA: Bool {
+        (viewModel.status?.remaining ?? 1) == 0 && supportViewModel.entitlement.tier.canUpgrade
+    }
+
+    private func supportUpgradeCTA(onBrand: Bool = false) -> some View {
+        Button {
+            isSupportPresented = true
+        } label: {
+            HStack(alignment: .top, spacing: Spacing.sm) {
+                GradelyIcon("favourite", size: 15)
+                    .foregroundStyle(onBrand ? Brand.onAccent : Brand.primary)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("gradey.ai.limit.upgrade")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(onBrand ? Brand.onAccent : .primary)
+                        .multilineTextAlignment(.leading)
+                    Text("gradey.ai.limit.upgrade.action")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(onBrand ? Brand.onAccent.opacity(0.78) : Brand.primary)
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(Spacing.sm)
+            .background(
+                (onBrand ? Brand.onAccent : Brand.primary).opacity(onBrand ? 0.12 : 0.08),
+                in: RoundedRectangle(cornerRadius: Radius.sm, style: .continuous)
+            )
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("gradeyAISupportUpgradeButton")
+    }
+
     private var limitText: String {
         guard let status = viewModel.status else { return "" }
         return String.localizedStringWithFormat(
-            String(localized: "gradey.ai.limit.remaining"),
+            AppL10n.string("gradey.ai.limit.remaining"),
             Int64(status.remaining),
             Int64(status.dailyLimit)
         )
@@ -710,7 +787,7 @@ struct GradeyAIView: View {
     private var resetText: String? {
         guard let resetAt = viewModel.status?.resetAt else { return nil }
         return String.localizedStringWithFormat(
-            String(localized: "gradey.ai.limit.resets"),
+            AppL10n.string("gradey.ai.limit.resets"),
             resetAt.formatted(date: .omitted, time: .shortened)
         )
     }
@@ -761,16 +838,16 @@ struct GradeyAIView: View {
 
     private var dangerousActionTitle: String {
         switch dangerousAction {
-        case .deleteAll: String(localized: "gradey.ai.deleteAll.title")
-        case .revokeConsent: String(localized: "gradey.ai.privacy.revoke.title")
+        case .deleteAll: AppL10n.string("gradey.ai.deleteAll.title")
+        case .revokeConsent: AppL10n.string("gradey.ai.privacy.revoke.title")
         case nil: ""
         }
     }
 
     private var dangerousActionMessage: String {
         switch dangerousAction {
-        case .deleteAll: String(localized: "gradey.ai.deleteAll.message")
-        case .revokeConsent: String(localized: "gradey.ai.privacy.revoke.message")
+        case .deleteAll: AppL10n.string("gradey.ai.deleteAll.message")
+        case .revokeConsent: AppL10n.string("gradey.ai.privacy.revoke.message")
         case nil: ""
         }
     }
@@ -834,7 +911,7 @@ private struct GradeyAIMessageBubble: View {
                         .controlSize(.small)
                         .tint(Brand.primary)
                         .padding(.vertical, Spacing.xs)
-                        .accessibilityLabel(String(localized: "gradey.ai.responding"))
+                        .accessibilityLabel(AppL10n.string("gradey.ai.responding"))
                 } else if message.role == .assistant, message.status == .complete {
                     assistantText
                         .textSelection(.enabled)
@@ -847,7 +924,7 @@ private struct GradeyAIMessageBubble: View {
                 case .failed:
                     if canRetry {
                         Button(action: onRetry) {
-                            GradelyLabel(String(localized: "action.retry"), systemImage: "arrow.clockwise")
+                            GradelyLabel(AppL10n.string("action.retry"), systemImage: "arrow.clockwise")
                                 .font(.caption.weight(.semibold))
                         }
                         .buttonStyle(.plain)

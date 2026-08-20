@@ -537,7 +537,7 @@ struct GradelyTests {
 
     @Test func supportTipViewModelShowsUnavailableWhenNotConfigured() async {
         let service = MockSupportTipService(
-            loadResult: Result<[SupportTipOption], Error>.failure(SupportTipServiceError.notConfigured)
+            loadResult: Result<SupportCatalog, Error>.failure(SupportTipServiceError.notConfigured)
         )
         let viewModel = SupportTipViewModel(supportTipProvider: service)
 
@@ -552,7 +552,7 @@ struct GradelyTests {
     }
 
     @Test func supportTipViewModelShowsEmptyOfferingState() async {
-        let service = MockSupportTipService(tips: [])
+        let service = MockSupportTipService(tips: [], plans: [])
         let viewModel = SupportTipViewModel(supportTipProvider: service)
 
         await viewModel.load()
@@ -568,7 +568,7 @@ struct GradelyTests {
             userInfo: [NSLocalizedDescriptionKey: "Unable to fetch offerings."]
         )
         let service = MockSupportTipService(
-            loadResult: Result<[SupportTipOption], Error>.failure(error)
+            loadResult: Result<SupportCatalog, Error>.failure(error)
         )
         let viewModel = SupportTipViewModel(supportTipProvider: service)
 
@@ -619,6 +619,111 @@ struct GradelyTests {
 
         #expect(!viewModel.didCompletePurchase)
         #expect(viewModel.purchaseErrorMessage == "The purchase could not be completed.")
+    }
+
+    @Test func supportTipViewModelLoadsRecurringPlans() async {
+        let service = MockSupportTipService()
+        let viewModel = SupportTipViewModel(supportTipProvider: service)
+
+        await viewModel.load()
+
+        #expect(viewModel.plans == MockSupportTipService.previewPlans)
+        #expect(viewModel.visiblePlans.map(\.tier) == [.standard, .plus])
+        #expect(viewModel.entitlement.tier == .none)
+    }
+
+    @Test func supportTipViewModelCompletesSuccessfulPlanPurchase() async {
+        let service = MockSupportTipService()
+        let viewModel = SupportTipViewModel(supportTipProvider: service, isSignedIn: true)
+        let plan = MockSupportTipService.previewPlans[0]
+
+        await viewModel.purchase(plan)
+
+        #expect(viewModel.didCompletePurchase)
+        #expect(viewModel.completedPurchaseKind == .plan)
+        #expect(service.purchasedPlanIDs == [plan.id])
+        #expect(viewModel.entitlement.tier == .standard)
+        #expect(viewModel.entitlement.hasEarlyAccess)
+    }
+
+    @Test func supportTipViewModelBlocksPlanPurchaseWhenSignedOut() async {
+        let service = MockSupportTipService()
+        let viewModel = SupportTipViewModel(supportTipProvider: service, isSignedIn: false)
+        let plan = MockSupportTipService.previewPlans[0]
+
+        await viewModel.purchase(plan)
+
+        #expect(!viewModel.didCompletePurchase)
+        #expect(service.purchasedPlanIDs.isEmpty)
+        #expect(viewModel.purchaseErrorMessage == String(localized: "support.plans.signIn.required"))
+    }
+
+    @Test func supportTipViewModelTreatsPlusAsHigherThanStandard() async {
+        let plus = SupportEntitlement(
+            tier: .plus,
+            interval: .monthly,
+            productIdentifier: "com.bukovinafilip.BakalariMarks.support.plus.monthly",
+            expirationDate: nil,
+            willRenew: true,
+            managementURL: nil
+        )
+        let service = MockSupportTipService(entitlement: plus)
+        let viewModel = SupportTipViewModel(supportTipProvider: service)
+        await viewModel.load()
+
+        let standard = MockSupportTipService.previewPlans[0]
+        let extra = MockSupportTipService.previewPlans[2]
+        #expect(!viewModel.canPurchase(standard))
+        #expect(!viewModel.canPurchase(extra))
+        #expect(viewModel.isCurrentPlan(extra))
+        #expect(SupportTipCatalog.dailyLimit(for: .plus) == 25)
+        #expect(SupportTipCatalog.dailyLimit(for: .standard) == 10)
+        #expect(SupportTipCatalog.dailyLimit(for: .none) == 5)
+    }
+
+    @Test func supportTipViewModelRestoresPurchases() async {
+        let restored = SupportEntitlement(
+            tier: .plus,
+            interval: .yearly,
+            productIdentifier: "com.bukovinafilip.BakalariMarks.support.plus.yearly",
+            expirationDate: Date().addingTimeInterval(8_000),
+            willRenew: true,
+            managementURL: SupportTipCatalog.managementURL
+        )
+        let service = MockSupportTipService(
+            loadResult: .success(
+                SupportCatalog(
+                    tips: MockSupportTipService.previewTips,
+                    plans: MockSupportTipService.previewPlans,
+                    entitlement: .none,
+                    managementURL: SupportTipCatalog.managementURL
+                )
+            ),
+            restoreResult: .success(restored)
+        )
+        let viewModel = SupportTipViewModel(supportTipProvider: service)
+
+        await viewModel.load()
+        await viewModel.restorePurchases()
+
+        #expect(service.didRestorePurchases)
+        #expect(viewModel.entitlement.tier == .plus)
+        #expect(viewModel.didCompletePurchase)
+        #expect(viewModel.completedPurchaseKind == .plan)
+    }
+
+    @Test func supportCatalogPlusEntitlementOutranksStandard() {
+        let entitlement = SupportTipCatalog.entitlement(
+            activeProductIdentifiers: [
+                "com.bukovinafilip.BakalariMarks.support.standard.monthly",
+                "com.bukovinafilip.BakalariMarks.support.plus.yearly"
+            ],
+            activeEntitlementIDs: ["support", "support_plus"]
+        )
+
+        #expect(entitlement.tier == .plus)
+        #expect(entitlement.interval == .yearly)
+        #expect(entitlement.hasEarlyAccess)
     }
 
     private func testMark(

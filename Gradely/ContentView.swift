@@ -24,6 +24,7 @@ struct ContentView: View {
     private let skipsOnboarding: Bool
     @AppStorage(OnboardingProgressStore.completionKey) private var hasCompletedOnboardingV2 = false
     @AppStorage("settings.showMealsTab") private var showMealsTab = true
+    @Bindable private var languageStore = AppLanguageStore.shared
     @State private var appViewModel: AppViewModel
     @State private var gradeyAIViewModel: GradeyAIViewModel
     @State private var onboardingJourney: OnboardingJourney?
@@ -234,8 +235,13 @@ struct ContentView: View {
         .sheet(isPresented: $isGradeyAIPresented, onDismiss: {
             gradeyAIViewModel.stop()
         }) {
-            GradeyAIView(viewModel: gradeyAIViewModel)
+            GradeyAIView(
+                viewModel: gradeyAIViewModel,
+                supportTipProvider: supportTipProvider,
+                isSignedIn: appViewModel.gradeyAccount != nil
+            )
         }
+        .environment(\.locale, languageStore.locale)
     }
 
     private var shouldShowOnboarding: Bool {

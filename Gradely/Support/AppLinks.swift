@@ -7,4 +7,5 @@ enum AppLinks {
     static let filipInstagramURL = URL(string: "https://www.instagram.com/bukovinafilip")!
     static let filipEmailURL = URL(string: "mailto:filip@openside.tech")!
     static let tomasEmailURL = URL(string: "mailto:tom@openside.tech")!
+    static let manageSubscriptionsURL = SupportTipCatalog.managementURL
 }

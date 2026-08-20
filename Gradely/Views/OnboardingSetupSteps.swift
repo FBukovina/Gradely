@@ -176,8 +176,8 @@ struct OnboardingSchoolStep: View {
                     .id("schoolSelection")
             }
         }
-        .alert(String(localized: "error.title"), isPresented: errorBinding) {
-            Button(String(localized: "action.ok"), role: .cancel) {
+        .alert(AppL10n.string("error.title"), isPresented: errorBinding) {
+            Button(AppL10n.string("action.ok"), role: .cancel) {
                 viewModel.clearError()
             }
         } message: {
@@ -230,7 +230,7 @@ struct OnboardingSchoolStep: View {
                             .foregroundStyle(.secondary)
 
                         TextField(
-                            String(localized: viewModel.provider == .bakalari ? "login.schoolURL" : "edupage.schoolURL"),
+                            AppL10n.string(viewModel.provider == .bakalari ? "login.schoolURL" : "edupage.schoolURL"),
                             text: $viewModel.schoolURL
                         )
                         .textContentType(.URL)
@@ -297,7 +297,7 @@ struct OnboardingSchoolStep: View {
 
             SettingsModalSurface(padding: Spacing.lg) {
                 VStack(spacing: Spacing.md) {
-                    TextField(String(localized: "login.username"), text: $viewModel.username)
+                    TextField(AppL10n.string("login.username"), text: $viewModel.username)
                         .textContentType(.username)
                         .gradelyTextInputAutocapitalization(.never)
                         .autocorrectionDisabled()
@@ -398,7 +398,7 @@ struct OnboardingSchoolStep: View {
 
     private var providerPicker: some View {
         Picker(
-            String(localized: "login.provider"),
+            AppL10n.string("login.provider"),
             selection: Binding(
                 get: { viewModel.provider },
                 set: { viewModel.changeProvider($0) }
@@ -420,7 +420,7 @@ struct OnboardingSchoolStep: View {
                     .accessibilityHidden(true)
 
                 TextField(
-                    String(localized: "schoolDirectory.search"),
+                    AppL10n.string("schoolDirectory.search"),
                     text: Binding(
                         get: { viewModel.schoolSearchText },
                         set: { viewModel.updateSchoolSearch($0) }
@@ -480,10 +480,10 @@ struct OnboardingSchoolStep: View {
     private var schoolURLManual: some View {
         DisclosureGroup {
             VStack(alignment: .leading, spacing: Spacing.sm) {
-                OnboardingManualStep(number: 1, text: String(localized: "schoolURL.manual.step1"))
-                OnboardingManualStep(number: 2, text: String(localized: "schoolURL.manual.step2"))
-                OnboardingManualStep(number: 3, text: String(localized: "schoolURL.manual.step3"))
-                OnboardingManualStep(number: 4, text: String(localized: "schoolURL.manual.step4"))
+                OnboardingManualStep(number: 1, text: AppL10n.string("schoolURL.manual.step1"))
+                OnboardingManualStep(number: 2, text: AppL10n.string("schoolURL.manual.step2"))
+                OnboardingManualStep(number: 3, text: AppL10n.string("schoolURL.manual.step3"))
+                OnboardingManualStep(number: 4, text: AppL10n.string("schoolURL.manual.step4"))
 
                 Text("schoolURL.manual.example")
                     .font(.caption.monospaced())
@@ -515,9 +515,9 @@ struct OnboardingSchoolStep: View {
         HStack(spacing: Spacing.sm) {
             Group {
                 if viewModel.isPasswordVisible {
-                    TextField(String(localized: "login.password"), text: $viewModel.password)
+                    TextField(AppL10n.string("login.password"), text: $viewModel.password)
                 } else {
-                    SecureField(String(localized: "login.password"), text: $viewModel.password)
+                    SecureField(AppL10n.string("login.password"), text: $viewModel.password)
                 }
             }
             .textContentType(.password)
@@ -531,8 +531,8 @@ struct OnboardingSchoolStep: View {
                     .foregroundStyle(.secondary)
                     .accessibilityLabel(
                         viewModel.isPasswordVisible
-                            ? String(localized: "login.hidePassword")
-                            : String(localized: "login.showPassword")
+                            ? AppL10n.string("login.hidePassword")
+                            : AppL10n.string("login.showPassword")
                     )
             }
             .buttonStyle(.plain)
@@ -544,11 +544,11 @@ struct OnboardingSchoolStep: View {
         NavigationStack {
             Form {
                 Section {
-                    SecureField(String(localized: "edupage.twoFactor.code"), text: $viewModel.twoFactorCode)
+                    SecureField(AppL10n.string("edupage.twoFactor.code"), text: $viewModel.twoFactorCode)
                         .gradelyKeyboardType(.numberPad)
                         .accessibilityIdentifier("eduPageTwoFactorCode")
 
-                    Button(String(localized: "edupage.twoFactor.submit")) {
+                    Button(AppL10n.string("edupage.twoFactor.submit")) {
                         Task {
                             if await viewModel.completeTwoFactor() {
                                 onSignedIn()
@@ -656,14 +656,14 @@ struct OnboardingMealsConnectionStep: View {
         ) {
             SettingsModalSurface(padding: Spacing.lg) {
                 VStack(spacing: Spacing.md) {
-                    TextField(String(localized: "stravacz.canteenNumber"), text: $canteenNumber)
+                    TextField(AppL10n.string("stravacz.canteenNumber"), text: $canteenNumber)
                         .gradelyKeyboardType(.numberPad)
                         .textContentType(.oneTimeCode)
                         .submitLabel(.next)
                         .brandField()
                         .accessibilityIdentifier("stravaCZCanteenField")
 
-                    TextField(String(localized: "stravacz.username"), text: $username)
+                    TextField(AppL10n.string("stravacz.username"), text: $username)
                         .textContentType(.username)
                         .gradelyTextInputAutocapitalization(.never)
                         .autocorrectionDisabled()
@@ -674,9 +674,9 @@ struct OnboardingMealsConnectionStep: View {
                     HStack(spacing: Spacing.sm) {
                         Group {
                             if isPasswordVisible {
-                                TextField(String(localized: "stravacz.password"), text: $password)
+                                TextField(AppL10n.string("stravacz.password"), text: $password)
                             } else {
-                                SecureField(String(localized: "stravacz.password"), text: $password)
+                                SecureField(AppL10n.string("stravacz.password"), text: $password)
                             }
                         }
                         .textContentType(.password)
@@ -690,8 +690,8 @@ struct OnboardingMealsConnectionStep: View {
                                 .foregroundStyle(.secondary)
                                 .accessibilityLabel(
                                     isPasswordVisible
-                                        ? String(localized: "login.hidePassword")
-                                        : String(localized: "login.showPassword")
+                                        ? AppL10n.string("login.hidePassword")
+                                        : AppL10n.string("login.showPassword")
                                 )
                         }
                         .buttonStyle(.plain)
@@ -720,8 +720,8 @@ struct OnboardingMealsConnectionStep: View {
             .disabled(isConnecting)
             .accessibilityIdentifier("stravaCZConnectButton")
         }
-        .alert(String(localized: "error.title"), isPresented: errorBinding) {
-            Button(String(localized: "action.ok"), role: .cancel) {
+        .alert(AppL10n.string("error.title"), isPresented: errorBinding) {
+            Button(AppL10n.string("action.ok"), role: .cancel) {
                 errorMessage = nil
             }
         } message: {

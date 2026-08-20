@@ -18,7 +18,7 @@ struct AbsenceView: View {
     var body: some View {
         NavigationStack {
             content
-                .navigationTitle(String(localized: "absence.title"))
+                .navigationTitle(AppL10n.string("absence.title"))
                 .gradelyNavigationTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .gradelyTopBarLeading) {
@@ -33,7 +33,7 @@ struct AbsenceView: View {
                                 .symbolEffect(.rotate, options: .repeating, isActive: viewModel.isRefreshing)
                         }
                         .disabled(viewModel.isLoading || viewModel.isRefreshing)
-                        .accessibilityLabel(String(localized: "action.refresh"))
+                        .accessibilityLabel(AppL10n.string("action.refresh"))
                         .accessibilityIdentifier("absenceRefreshButton")
                     }
 
@@ -65,11 +65,11 @@ struct AbsenceView: View {
             .accessibilityIdentifier("absenceLoadingView")
         } else if let errorMessage = viewModel.errorMessage, viewModel.response == nil {
             ContentUnavailableView {
-                GradelyLabel(String(localized: "error.title"), systemImage: "exclamationmark.triangle")
+                GradelyLabel(AppL10n.string("error.title"), systemImage: "exclamationmark.triangle")
             } description: {
                 Text(errorMessage)
             } actions: {
-                Button(String(localized: "action.retry")) {
+                Button(AppL10n.string("action.retry")) {
                     Task { await viewModel.refresh(forceRefresh: true) }
                 }
                 .buttonStyle(.borderedProminent)
@@ -130,7 +130,7 @@ struct AbsenceView: View {
                     )
                 case .days:
                     AbsenceCountsList(
-                        totalTitle: String(localized: "absence.total"),
+                        totalTitle: AppL10n.string("absence.total"),
                         rows: viewModel.dayCountRows,
                         emptyTitle: "absence.days.empty"
                     )
@@ -139,7 +139,7 @@ struct AbsenceView: View {
                         AbsenceMonthsChartCard(months: viewModel.monthRows)
                     }
                     AbsenceCountsList(
-                        totalTitle: String(localized: "absence.total"),
+                        totalTitle: AppL10n.string("absence.total"),
                         rows: viewModel.monthCountRows,
                         emptyTitle: "absence.months.empty"
                     )
@@ -212,7 +212,7 @@ private struct AbsenceHeader: View {
                 }
 
                 if let threshold {
-                    Text(String(format: String(localized: "absence.threshold.caption"), threshold))
+                    Text(String(format: AppL10n.string("absence.threshold.caption"), threshold))
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                 }
@@ -302,7 +302,7 @@ private struct AbsenceCountsList: View {
 
             if nonzero.count > 4 {
                 StatusChip(
-                    text: String(format: String(localized: "absence.chip.overflow"), nonzero.count - 4),
+                    text: String(format: AppL10n.string("absence.chip.overflow"), nonzero.count - 4),
                     color: .secondary
                 )
             }
@@ -433,7 +433,7 @@ private struct SubjectAbsenceTable: View {
             HStack(spacing: Spacing.xs) {
                 Text(
                     String(
-                        format: String(localized: "absence.risk.missed"),
+                        format: AppL10n.string("absence.risk.missed"),
                         risk.missedLessons,
                         risk.totalLessons
                     )
@@ -464,14 +464,14 @@ private struct SubjectAbsenceTable: View {
 
     private func riskStatus(for risk: AbsenceRiskSubject) -> (text: String, color: Color)? {
         guard risk.threshold != nil else {
-            return (String(localized: "absence.risk.noThreshold"), .secondary)
+            return (AppL10n.string("absence.risk.noThreshold"), .secondary)
         }
         guard let misses = risk.missesUntilLimit else { return nil }
         if misses == 0 {
-            return (String(localized: "absence.risk.overLimit"), GradeBand.poor.foregroundColor)
+            return (AppL10n.string("absence.risk.overLimit"), GradeBand.poor.foregroundColor)
         }
         return (
-            String(format: String(localized: "absence.risk.untilLimit"), misses),
+            String(format: AppL10n.string("absence.risk.untilLimit"), misses),
             .secondary
         )
     }
@@ -490,7 +490,7 @@ private struct SubjectManualResolutionCallout: View {
 
                 Text(
                     String(
-                        format: String(localized: "absence.manual.callout.message"),
+                        format: AppL10n.string("absence.manual.callout.message"),
                         days.count
                     )
                 )
@@ -560,7 +560,7 @@ private struct ManualAbsenceLessonSelectionSheet: View {
                             Text(day.title)
                             Text(
                                 String(
-                                    format: String(localized: "absence.manual.selectedCount"),
+                                    format: AppL10n.string("absence.manual.selectedCount"),
                                     viewModel.selectedManualLessonCount(for: day.dateKey),
                                     day.requiredSelectionCount
                                 )
@@ -608,7 +608,7 @@ private struct SubjectResolutionStatusView: View {
                     if let progress {
                         Text(
                             String(
-                                format: String(localized: "absence.subjects.progress"),
+                                format: AppL10n.string("absence.subjects.progress"),
                                 progress.completedWeeks,
                                 progress.totalWeeks
                             )
@@ -646,7 +646,7 @@ private struct SubjectResolutionErrorView: View {
     var body: some View {
         Card {
             VStack(alignment: .leading, spacing: Spacing.sm) {
-                GradelyLabel(String(localized: "absence.subjects.error.title"), systemImage: "exclamationmark.triangle")
+                GradelyLabel(AppL10n.string("absence.subjects.error.title"), systemImage: "exclamationmark.triangle")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(GradeBand.poor.foregroundColor)
 
@@ -654,7 +654,7 @@ private struct SubjectResolutionErrorView: View {
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
 
-                Button(String(localized: "action.retry"), action: onRetry)
+                Button(AppL10n.string("action.retry"), action: onRetry)
                     .buttonStyle(.bordered)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -715,7 +715,7 @@ private enum AbsenceCategory: CaseIterable, Identifiable {
     }
 
     var accessibilityLabel: String {
-        String(localized: String.LocalizationValue(accessibilityKey))
+        AppL10n.string(String.LocalizationValue(accessibilityKey))
     }
 
     private var accessibilityKey: String {

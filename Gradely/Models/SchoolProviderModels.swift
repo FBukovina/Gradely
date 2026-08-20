@@ -105,31 +105,31 @@ enum SchoolAuthenticationError: LocalizedError, Equatable {
     var errorDescription: String? {
         switch self {
         case .missingFields:
-            String(localized: "error.missingFields")
+            AppL10n.string("error.missingFields")
         case .invalidSchoolURL:
-            String(localized: "edupage.error.schoolURL")
+            AppL10n.string("edupage.error.schoolURL")
         case .badCredentials:
-            String(localized: "edupage.error.credentials")
+            AppL10n.string("edupage.error.credentials")
         case .captchaRequired:
-            String(localized: "edupage.error.captcha")
+            AppL10n.string("edupage.error.captcha")
         case .twoFactorRequired:
-            String(localized: "edupage.error.twoFactorRequired")
+            AppL10n.string("edupage.error.twoFactorRequired")
         case .invalidTwoFactorCode:
-            String(localized: "edupage.error.twoFactorCode")
+            AppL10n.string("edupage.error.twoFactorCode")
         case .twoFactorNotConfirmed:
-            String(localized: "edupage.error.twoFactorPending")
+            AppL10n.string("edupage.error.twoFactorPending")
         case .parentHasNoLinkedStudents:
-            String(localized: "edupage.error.noChildren")
+            AppL10n.string("edupage.error.noChildren")
         case .invalidStudent:
-            String(localized: "edupage.error.invalidChild")
+            AppL10n.string("edupage.error.invalidChild")
         case .sessionExpired:
-            String(localized: "edupage.error.sessionExpired")
+            AppL10n.string("edupage.error.sessionExpired")
         case .unsupportedAccount:
-            String(localized: "edupage.error.unsupportedAccount")
+            AppL10n.string("edupage.error.unsupportedAccount")
         case .malformedResponse:
-            String(localized: "edupage.error.response")
+            AppL10n.string("edupage.error.response")
         case .httpStatus(let status):
-            String(format: String(localized: "error.api.status"), status)
+            String(format: AppL10n.string("error.api.status"), status)
         }
     }
 }

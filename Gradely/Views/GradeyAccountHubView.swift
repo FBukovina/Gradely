@@ -32,23 +32,23 @@ enum SettingsDestination: String, CaseIterable, Hashable, Identifiable {
 
     var localizedTitle: String {
         switch self {
-        case .account: String(localized: "settings.destination.account.title")
-        case .connectedServices: String(localized: "settings.destination.connected.title")
-        case .notifications: String(localized: "settings.destination.notifications.title")
-        case .privacyData: String(localized: "settings.destination.privacy.title")
-        case .appPreferences: String(localized: "settings.destination.preferences.title")
-        case .supportAbout: String(localized: "settings.destination.support.title")
+        case .account: AppL10n.string("settings.destination.account.title")
+        case .connectedServices: AppL10n.string("settings.destination.connected.title")
+        case .notifications: AppL10n.string("settings.destination.notifications.title")
+        case .privacyData: AppL10n.string("settings.destination.privacy.title")
+        case .appPreferences: AppL10n.string("settings.destination.preferences.title")
+        case .supportAbout: AppL10n.string("settings.destination.support.title")
         }
     }
 
     var subtitle: String {
         switch self {
-        case .account: String(localized: "settings.destination.account.subtitle")
-        case .connectedServices: String(localized: "settings.destination.connected.subtitle")
-        case .notifications: String(localized: "settings.destination.notifications.subtitle")
-        case .privacyData: String(localized: "settings.destination.privacy.subtitle")
-        case .appPreferences: String(localized: "settings.destination.preferences.subtitle")
-        case .supportAbout: String(localized: "settings.destination.support.subtitle")
+        case .account: AppL10n.string("settings.destination.account.subtitle")
+        case .connectedServices: AppL10n.string("settings.destination.connected.subtitle")
+        case .notifications: AppL10n.string("settings.destination.notifications.subtitle")
+        case .privacyData: AppL10n.string("settings.destination.privacy.subtitle")
+        case .appPreferences: AppL10n.string("settings.destination.preferences.subtitle")
+        case .supportAbout: AppL10n.string("settings.destination.support.subtitle")
         }
     }
 
@@ -97,6 +97,7 @@ struct GradeyAccountHubView: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage("settings.showMealsTab") private var showMealsTab = true
+    @Bindable private var languageStore = AppLanguageStore.shared
     @AppStorage(GradeyDebugModeStore.storageKey) private var isDebugModeEnabled = false
 
     @State private var viewModel: GradeyAccountHubViewModel
@@ -171,6 +172,7 @@ struct GradeyAccountHubView: View {
 
     var body: some View {
         adaptiveLayout
+            .environment(\.locale, languageStore.locale)
             .interactiveDismissDisabled(presentationContext == .requiredSetup)
             .alert("gradey.account.title", isPresented: errorBinding) {
                 Button("action.ok", role: .cancel) {
@@ -254,7 +256,8 @@ struct GradeyAccountHubView: View {
             .sheet(isPresented: $isSupportSheetPresented) {
                 SupportTipView(
                     viewModel: SupportTipViewModel(
-                        supportTipProvider: supportTipProvider
+                        supportTipProvider: supportTipProvider,
+                        isSignedIn: account != nil
                     )
                 )
             }
@@ -264,11 +267,11 @@ struct GradeyAccountHubView: View {
             .sheet(isPresented: $isStudentPickerPresented) {
                 studentPicker
             }
-            .alert(String(localized: "error.title"), isPresented: Binding(
+            .alert(AppL10n.string("error.title"), isPresented: Binding(
                 get: { studentSwitchError != nil },
                 set: { if !$0 { studentSwitchError = nil } }
             )) {
-                Button(String(localized: "action.ok"), role: .cancel) {
+                Button(AppL10n.string("action.ok"), role: .cancel) {
                     studentSwitchError = nil
                 }
             } message: {
@@ -379,7 +382,7 @@ struct GradeyAccountHubView: View {
                             .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
-                        .accessibilityLabel(String(localized: "settings.back"))
+                        .accessibilityLabel(AppL10n.string("settings.back"))
                         .accessibilityIdentifier("settingsBackButton")
                     }
                 }
@@ -410,7 +413,7 @@ struct GradeyAccountHubView: View {
                     SettingsCloseLabel()
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel(String(localized: "action.done"))
+                .accessibilityLabel(AppL10n.string("action.done"))
                 .accessibilityIdentifier("settingsDoneButton")
             }
         }
@@ -500,7 +503,7 @@ struct GradeyAccountHubView: View {
                     SettingsCloseLabel()
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel(String(localized: "action.done"))
+                .accessibilityLabel(AppL10n.string("action.done"))
                 .accessibilityIdentifier("settingsDoneButton")
             }
         }
@@ -590,42 +593,40 @@ struct GradeyAccountHubView: View {
         case .connectedServices:
             let school: String
             if schoolAccounts.isEmpty {
-                school = String(localized: "settings.overview.school.notConnected")
+                school = AppL10n.string("settings.overview.school.notConnected")
             } else if schoolAccounts.contains(where: accountNeedsAttention) {
-                school = "\(String(localized: "settings.connected.school.title")): \(String(localized: "gradey.account.status.actionRequired"))"
+                school = "\(AppL10n.string("settings.connected.school.title")): \(AppL10n.string("gradey.account.status.actionRequired"))"
             } else {
-                school = String(localized: "settings.overview.school.active")
+                school = AppL10n.string("settings.overview.school.active")
             }
 
             let meals: String
             if canteenAccounts.isEmpty {
-                meals = String(localized: "settings.overview.canteen.notConnected")
+                meals = AppL10n.string("settings.overview.canteen.notConnected")
             } else if canteenAccounts.contains(where: accountNeedsAttention) {
-                meals = "\(String(localized: "settings.connected.canteen.title")): \(String(localized: "gradey.account.status.actionRequired"))"
+                meals = "\(AppL10n.string("settings.connected.canteen.title")): \(AppL10n.string("gradey.account.status.actionRequired"))"
             } else {
-                meals = String(localized: "settings.overview.canteen.connected")
+                meals = AppL10n.string("settings.overview.canteen.connected")
             }
             return "\(school) · \(meals)"
         case .notifications:
             guard notificationsAreAvailable else {
-                return String(localized: "settings.overview.notifications.unavailable")
+                return AppL10n.string("settings.overview.notifications.unavailable")
             }
             guard viewModel.notificationPreferences.newMarksEnabled else {
-                return String(localized: "settings.overview.notifications.off")
+                return AppL10n.string("settings.overview.notifications.off")
             }
             if viewModel.notificationPreferences.quietHoursEnabled {
                 return String(
-                    format: String(localized: "settings.overview.notifications.quietUntil"),
+                    format: AppL10n.string("settings.overview.notifications.quietUntil"),
                     formattedMinute(viewModel.notificationPreferences.quietHoursEndMinute)
                 )
             }
-            return String(localized: "settings.overview.notifications.on")
+            return AppL10n.string("settings.overview.notifications.on")
         case .privacyData:
             return destination.subtitle
         case .appPreferences:
-            return showMealsTab
-                ? String(localized: "settings.overview.meals.shown")
-                : String(localized: "settings.overview.meals.hidden")
+            return languageStore.selection.displayName
         case .supportAbout:
             return destination.subtitle
         }
@@ -640,7 +641,7 @@ struct GradeyAccountHubView: View {
                 return (
                     "alert-circle",
                     .gradelySystemOrange,
-                    String(localized: "gradey.account.status.actionRequired")
+                    AppL10n.string("gradey.account.status.actionRequired")
                 )
             }
             return nil
@@ -811,7 +812,7 @@ private extension GradeyAccountHubView {
                         SettingsValueRow(
                             title: "settings.account.appleID.title",
                             value: viewModel.account?.email
-                                ?? String(localized: "gradey.account.appleConnected")
+                                ?? AppL10n.string("gradey.account.appleConnected")
                         )
                         .accessibilityIdentifier("accountAppleIDValue")
                     }
@@ -823,8 +824,8 @@ private extension GradeyAccountHubView {
                             isStudentPickerPresented = true
                         } label: {
                             SettingsActionRow(
-                                title: String(localized: "edupage.children.switch"),
-                                message: String(localized: "settings.account.children.message"),
+                                title: "edupage.children.switch",
+                                message: "settings.account.children.message",
                                 iconName: "students"
                             )
                         }
@@ -1298,7 +1299,7 @@ private extension GradeyAccountHubView {
                     Label {
                         Text(
                             String(
-                                format: String(localized: "settings.notifications.timeZone"),
+                                format: AppL10n.string("settings.notifications.timeZone"),
                                 viewModel.notificationPreferences.quietHoursTimeZoneIdentifier
                             )
                         )
@@ -1332,8 +1333,8 @@ private extension GradeyAccountHubView {
             SettingsSurface {
                 VStack(alignment: .leading, spacing: Spacing.md) {
                     SettingsActionRow(
-                        title: String(localized: "settings.privacy.export.action"),
-                        message: String(localized: "settings.privacy.export.caption"),
+                        title: "settings.privacy.export.action",
+                        message: "settings.privacy.export.caption",
                         iconName: "file-export"
                     )
 
@@ -1429,9 +1430,11 @@ private extension GradeyAccountHubView {
     var appPreferencesDetail: some View {
         VStack(alignment: .leading, spacing: Spacing.xl) {
             DetailSectionHeader(
-                title: "settings.preferences.title",
-                message: "settings.preferences.message"
+                title: "settings.destination.preferences.title",
+                message: "settings.language.message"
             )
+
+            AppLanguageOptionsList(store: languageStore, usesSettingsChrome: true)
 
             SettingsSurface {
                 Toggle(isOn: $showMealsTab) {
@@ -1463,8 +1466,8 @@ private extension GradeyAccountHubView {
                         isSupportSheetPresented = true
                     } label: {
                         SettingsActionRow(
-                            title: String(localized: "support.tips.menu"),
-                            message: String(localized: "support.tips.message"),
+                            title: "support.tips.menu",
+                            message: "support.tips.message",
                             iconName: "favourite"
                         )
                         .padding(20)
@@ -1476,7 +1479,7 @@ private extension GradeyAccountHubView {
 
                     Link(destination: AppLinks.filipEmailURL) {
                         SettingsActionRow(
-                            title: String(localized: "settings.support.contact"),
+                            title: "settings.support.contact",
                             message: "filip@openside.tech",
                             iconName: "mail-01"
                         )
@@ -1489,8 +1492,8 @@ private extension GradeyAccountHubView {
 
                     Link(destination: AppLinks.githubRepositoryURL) {
                         SettingsActionRow(
-                            title: String(localized: "github.repository"),
-                            message: String(localized: "settings.support.github.message"),
+                            title: "github.repository",
+                            message: "settings.support.github.message",
                             iconName: "github-01"
                         )
                         .padding(20)
@@ -1511,8 +1514,8 @@ private extension GradeyAccountHubView {
                         isCreditsPresented = true
                     } label: {
                         SettingsActionRow(
-                            title: String(localized: "credits.title"),
-                            message: String(localized: "settings.about.credits.message"),
+                            title: "credits.title",
+                            message: "settings.about.credits.message",
                             iconName: "user-group"
                         )
                         .padding(20)
@@ -1584,13 +1587,13 @@ private extension GradeyAccountHubView {
 private extension GradeyAccountHubView {
     var profileDisplayName: String {
         if isGuestMode {
-            return String(localized: "gradey.guest.profile.title")
+            return AppL10n.string("gradey.guest.profile.title")
         }
         if let fullName = viewModel.account?.fullName?.trimmingCharacters(in: .whitespacesAndNewlines),
            !fullName.isEmpty {
             return fullName
         }
-        return String(localized: "settings.profile.addName.title")
+        return AppL10n.string("settings.profile.addName.title")
     }
 
     var hasFullName: Bool {
@@ -1610,11 +1613,11 @@ private extension GradeyAccountHubView {
 
     var profileSubtitle: String {
         if isGuestMode {
-            return String(localized: "gradey.guest.profile.message")
+            return AppL10n.string("gradey.guest.profile.message")
         }
         return hasFullName
-            ? String(localized: "settings.profile.gradeyID")
-            : String(localized: "settings.profile.addName.message")
+            ? AppL10n.string("settings.profile.gradeyID")
+            : AppL10n.string("settings.profile.addName.message")
     }
 
     var schoolAccounts: [LinkedAccount] {
@@ -1678,11 +1681,11 @@ private extension GradeyAccountHubView {
     var notificationPermissionLabel: String {
         switch notificationAuthorizationStatus {
         case .notDetermined:
-            String(localized: "settings.notifications.permission.notDetermined")
+            AppL10n.string("settings.notifications.permission.notDetermined")
         case .denied:
-            String(localized: "settings.notifications.permission.denied")
+            AppL10n.string("settings.notifications.permission.denied")
         case .authorized:
-            String(localized: "settings.notifications.permission.authorized")
+            AppL10n.string("settings.notifications.permission.authorized")
         }
     }
 
@@ -1727,12 +1730,12 @@ private extension GradeyAccountHubView {
 
     var appVersion: String {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
-            ?? String(localized: "settings.about.unknown")
+            ?? AppL10n.string("settings.about.unknown")
     }
 
     var appBuild: String {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String
-            ?? String(localized: "settings.about.unknown")
+            ?? AppL10n.string("settings.about.unknown")
     }
 
     var errorBinding: Binding<Bool> {
@@ -1756,14 +1759,14 @@ private extension GradeyAccountHubView {
 
     var unlinkMessage: String {
         guard let pendingUnlinkAccount else {
-            return String(localized: "gradey.account.unlink.messageFallback")
+            return AppL10n.string("gradey.account.unlink.messageFallback")
         }
 
         let key: String.LocalizationValue = pendingUnlinkAccount.provider.isSchoolProvider
             ? "settings.connected.unlink.school.message"
             : "settings.connected.unlink.canteen.message"
         return String(
-            format: String(localized: key),
+            format: AppL10n.string(key),
             pendingUnlinkAccount.displayName
         )
     }
@@ -2521,8 +2524,8 @@ struct DetailSectionHeader: View {
 }
 
 private struct SettingsActionRow: View {
-    let title: String
-    let message: String
+    let title: LocalizedStringKey
+    let message: LocalizedStringKey
     let iconName: String
 
     var body: some View {

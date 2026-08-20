@@ -14,13 +14,13 @@ enum SchoolDirectoryError: LocalizedError, Equatable {
     var errorDescription: String? {
         switch self {
         case .invalidResponse:
-            return String(localized: "schoolDirectory.error")
+            return AppL10n.string("schoolDirectory.error")
         case .httpStatus:
-            return String(localized: "schoolDirectory.error")
+            return AppL10n.string("schoolDirectory.error")
         case .decoding:
-            return String(localized: "schoolDirectory.error")
+            return AppL10n.string("schoolDirectory.error")
         case .emptyDirectory:
-            return String(localized: "schoolDirectory.error")
+            return AppL10n.string("schoolDirectory.error")
         }
     }
 }

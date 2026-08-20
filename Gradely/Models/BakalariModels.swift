@@ -304,7 +304,7 @@ struct Mark: Codable, Equatable, Hashable, Identifiable {
         if let theme, !theme.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             return theme.trimmingCharacters(in: .whitespacesAndNewlines)
         }
-        return String(localized: "mark.untitled")
+        return AppL10n.string("mark.untitled")
     }
 
     var shouldShowTheme: Bool {

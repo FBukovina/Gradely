@@ -24,7 +24,7 @@ struct StravaCZView: View {
     var body: some View {
         NavigationStack {
             content
-                .navigationTitle(String(localized: "stravacz.title"))
+                .navigationTitle(AppL10n.string("stravacz.title"))
                 .gradelyNavigationTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .gradelyTopBarLeading) {
@@ -44,7 +44,7 @@ struct StravaCZView: View {
                                     .symbolEffect(.rotate, options: .repeating, isActive: viewModel.isRefreshing)
                             }
                             .disabled(viewModel.isBusy)
-                            .accessibilityLabel(String(localized: "action.refresh"))
+                            .accessibilityLabel(AppL10n.string("action.refresh"))
                             .accessibilityIdentifier("stravaCZRefreshButton")
                         }
 
@@ -53,7 +53,7 @@ struct StravaCZView: View {
                                 Button(role: .destructive) {
                                     Task { await viewModel.disconnect() }
                                 } label: {
-                                    GradelyLabel(String(localized: "stravacz.disconnect"), systemImage: "rectangle.portrait.and.arrow.right")
+                                    GradelyLabel(AppL10n.string("stravacz.disconnect"), systemImage: "rectangle.portrait.and.arrow.right")
                                 }
                                 .accessibilityIdentifier("stravaCZDisconnectButton")
                             } label: {
@@ -61,7 +61,7 @@ struct StravaCZView: View {
                                     .font(.title3)
                                     .foregroundStyle(Brand.primary)
                             }
-                            .accessibilityLabel(String(localized: "stravacz.account.menu"))
+                            .accessibilityLabel(AppL10n.string("stravacz.account.menu"))
                             .accessibilityIdentifier("stravaCZAccountMenuButton")
                         }
                     }
@@ -70,28 +70,28 @@ struct StravaCZView: View {
         .task {
             await viewModel.bootstrap()
         }
-        .alert(String(localized: "error.title"), isPresented: errorBinding) {
-            Button(String(localized: "action.ok"), role: .cancel) {
+        .alert(AppL10n.string("error.title"), isPresented: errorBinding) {
+            Button(AppL10n.string("action.ok"), role: .cancel) {
                 viewModel.clearError()
             }
         } message: {
             Text(viewModel.errorMessage ?? "")
         }
         .confirmationDialog(
-            String(localized: "stravacz.replace.title"),
+            AppL10n.string("stravacz.replace.title"),
             isPresented: replacementDialogBinding,
             titleVisibility: .visible
         ) {
             if viewModel.pendingReplacement != nil {
-                Button(String(localized: "stravacz.replace.confirm")) {
+                Button(AppL10n.string("stravacz.replace.confirm")) {
                     Task { await viewModel.confirmReplacement() }
                 }
             }
-            Button(String(localized: "action.cancel"), role: .cancel) {}
+            Button(AppL10n.string("action.cancel"), role: .cancel) {}
         } message: {
             if let replacement = viewModel.pendingReplacement {
                 Text(String(
-                    format: String(localized: "stravacz.replace.message"),
+                    format: AppL10n.string("stravacz.replace.message"),
                     replacement.existingMeal.name,
                     replacement.newMeal.name
                 ))
@@ -136,7 +136,7 @@ struct StravaCZView: View {
         } else if let menu = viewModel.menu, menu.days.isEmpty {
             ContentUnavailableView {
                 GradelyLabel(
-                    String(localized: "stravacz.menu.empty.title"),
+                    AppL10n.string("stravacz.menu.empty.title"),
                     systemImage: "fork.knife",
                     iconSize: 28
                 )
@@ -244,12 +244,12 @@ private struct StravaCZHeader: View {
 
             HStack(spacing: Spacing.md) {
                 StatTile(
-                    title: String(localized: "stravacz.ordered"),
+                    title: AppL10n.string("stravacz.ordered"),
                     value: "\(orderedCount)",
                     systemImage: "checkmark.circle.fill"
                 )
                 StatTile(
-                    title: String(localized: "stravacz.canteen"),
+                    title: AppL10n.string("stravacz.canteen"),
                     value: session.canteenName ?? session.canteenNumber,
                     systemImage: "building.2.fill"
                 )
@@ -412,7 +412,7 @@ private struct StravaCZMealSelectionButton: View {
         }
         .buttonStyle(.plain)
         .disabled(isSubmitting)
-        .accessibilityLabel(meal.ordered ? String(localized: "stravacz.meal.cancel") : String(localized: "stravacz.meal.order"))
+        .accessibilityLabel(meal.ordered ? AppL10n.string("stravacz.meal.cancel") : AppL10n.string("stravacz.meal.order"))
         .accessibilityIdentifier(meal.ordered ? "stravaCZCancelButton-\(meal.id)" : "stravaCZOrderButton-\(meal.id)")
     }
 }
@@ -424,7 +424,7 @@ private struct StravaCZMealOrderedIndicator: View {
         GradelyIcon(systemName: "checkmark.circle.fill", size: 28)
             .foregroundStyle(Brand.primary)
             .frame(width: 40, height: 40)
-            .accessibilityLabel(String(localized: "stravacz.meal.ordered"))
+            .accessibilityLabel(AppL10n.string("stravacz.meal.ordered"))
             .accessibilityIdentifier("stravaCZOrderedIndicator-\(mealID)")
     }
 }

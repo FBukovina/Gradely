@@ -61,9 +61,9 @@ enum AppError: LocalizedError, Equatable {
         var errorDescription: String? {
             switch self {
             case .notLoggedIn:
-                return String(localized: "error.notLoggedIn")
+                return AppL10n.string("error.notLoggedIn")
             case .missingFields:
-                return String(localized: "error.missingFields")
+                return AppL10n.string("error.missingFields")
             case .unknown(let message):
                 return message
             }
@@ -535,7 +535,7 @@ final class SchoolRepository {
             validDateRange: term.start...term.end
         )
         let hasPartialTimetable = timetables.failedWeeks > 0
-        let warning = hasPartialTimetable ? String(localized: "absence.subjects.partial.warning") : nil
+        let warning = hasPartialTimetable ? AppL10n.string("absence.subjects.partial.warning") : nil
 
         return AbsenceData(
             response: response,
@@ -1015,9 +1015,9 @@ private enum AbsenceSubjectResolutionError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .noUsableTimetable:
-            return String(localized: "absence.subjects.error.noTimetable")
+            return AppL10n.string("absence.subjects.error.noTimetable")
         case .timetableTimeout:
-            return String(localized: "absence.subjects.error.timeout")
+            return AppL10n.string("absence.subjects.error.timeout")
         }
     }
 }

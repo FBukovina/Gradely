@@ -70,12 +70,11 @@ struct AppEnvironment {
         #if os(macOS)
         let watchSyncService: (any WatchSyncing)? = nil
         let nextLessonWidgetStore: (any NextLessonWidgetStoring)? = NextLessonWidgetStore()
-        let supportTipProvider: any SupportTipProviding = StoreKitSupportTipService()
         #else
         let watchSyncService: (any WatchSyncing)? = LiveWatchSyncService()
         let nextLessonWidgetStore: (any NextLessonWidgetStoring)? = NextLessonWidgetStore()
-        let supportTipProvider: any SupportTipProviding = RevenueCatSupportTipService()
         #endif
+        let supportTipProvider: any SupportTipProviding = SupportTipServiceFactory.makeLive()
         let gradeyAuthClient = SupabaseGradeyAuthClient()
         let devicePushTokenClient = SupabaseDevicePushTokenClient()
         let notificationSettingsStore = MarkNotificationSettingsStore()
@@ -112,7 +111,11 @@ struct AppEnvironment {
             gradeyAuthClient: gradeyAuthClient,
             linkedAccountRepository: linkedAccountRepository,
             historyRepository: historyRepository,
-            gradeyAIClient: FirebaseGradeyAIClient(),
+            gradeyAIClient: FirebaseGradeyAIClient(
+                accountIDProvider: { [gradeyAuthClient] in
+                    (try? gradeyAuthClient.bootstrapSession())?.account.id
+                }
+            ),
             gradeyAIContextBuilder: GradeyAIContextBuilder(
                 repository: repository,
                 historyRepository: historyRepository
@@ -269,9 +272,9 @@ struct AppEnvironment {
                     enabled: !useGradeyAIDisabledMock,
                     consentRequired: arguments.contains("-uiTestingGradeyAIConsentRequired"),
                     termsVersion: "2026-07-10.v1",
-                    dailyLimit: useGradeyAIQuotaMock ? 5 : 30,
+                    dailyLimit: 5,
                     dailyUsed: useGradeyAIQuotaMock ? 2 : 0,
-                    remaining: useGradeyAIQuotaMock ? 3 : 30,
+                    remaining: useGradeyAIQuotaMock ? 3 : 5,
                     resetAt: useGradeyAIQuotaMock ? Date().addingTimeInterval(3_600) : nil
                 )
             ),

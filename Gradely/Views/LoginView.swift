@@ -103,8 +103,8 @@ struct LoginView: View {
         }
         .animation(.snappy(duration: 0.34), value: stage)
         .animation(.easeInOut(duration: 0.2), value: isSchoolSearchFocused)
-        .alert(String(localized: "error.title"), isPresented: errorBinding) {
-            Button(String(localized: "action.ok"), role: .cancel) {
+        .alert(AppL10n.string("error.title"), isPresented: errorBinding) {
+            Button(AppL10n.string("action.ok"), role: .cancel) {
                 viewModel.clearError()
             }
         } message: {
@@ -276,7 +276,7 @@ struct LoginView: View {
                     .accessibilityHidden(true)
 
                 TextField(
-                    String(localized: "schoolDirectory.search"),
+                    AppL10n.string("schoolDirectory.search"),
                     text: Binding(
                         get: { viewModel.schoolSearchText },
                         set: { viewModel.updateSchoolSearch($0) }
@@ -372,7 +372,7 @@ struct LoginView: View {
                     .accessibilityHidden(true)
 
                 TextField(
-                    String(localized: viewModel.provider == .bakalari ? "login.schoolURL" : "edupage.schoolURL"),
+                    AppL10n.string(viewModel.provider == .bakalari ? "login.schoolURL" : "edupage.schoolURL"),
                     text: $viewModel.schoolURL
                 )
                 .textContentType(.URL)
@@ -399,10 +399,10 @@ struct LoginView: View {
     private var schoolURLManual: some View {
         DisclosureGroup {
             VStack(alignment: .leading, spacing: Spacing.sm) {
-                ManualStep(number: 1, text: String(localized: "schoolURL.manual.step1"))
-                ManualStep(number: 2, text: String(localized: "schoolURL.manual.step2"))
-                ManualStep(number: 3, text: String(localized: "schoolURL.manual.step3"))
-                ManualStep(number: 4, text: String(localized: "schoolURL.manual.step4"))
+                ManualStep(number: 1, text: AppL10n.string("schoolURL.manual.step1"))
+                ManualStep(number: 2, text: AppL10n.string("schoolURL.manual.step2"))
+                ManualStep(number: 3, text: AppL10n.string("schoolURL.manual.step3"))
+                ManualStep(number: 4, text: AppL10n.string("schoolURL.manual.step4"))
 
                 Text("schoolURL.manual.example")
                     .font(.caption.monospaced())
@@ -424,7 +424,7 @@ struct LoginView: View {
 
             SettingsModalSurface(padding: Spacing.lg) {
                 VStack(alignment: .leading, spacing: Spacing.lg) {
-                    TextField(String(localized: "login.username"), text: $viewModel.username)
+                    TextField(AppL10n.string("login.username"), text: $viewModel.username)
                         .textContentType(.username)
                         .gradelyTextInputAutocapitalization(.never)
                         .autocorrectionDisabled()
@@ -514,9 +514,9 @@ struct LoginView: View {
 
             Group {
                 if viewModel.isPasswordVisible {
-                    TextField(String(localized: "login.password"), text: $viewModel.password)
+                    TextField(AppL10n.string("login.password"), text: $viewModel.password)
                 } else {
-                    SecureField(String(localized: "login.password"), text: $viewModel.password)
+                    SecureField(AppL10n.string("login.password"), text: $viewModel.password)
                 }
             }
             .textContentType(.password)
@@ -536,7 +536,7 @@ struct LoginView: View {
             } label: {
                 GradelyIcon(systemName: viewModel.isPasswordVisible ? "eye.slash" : "eye")
                     .foregroundStyle(.secondary)
-                    .accessibilityLabel(viewModel.isPasswordVisible ? String(localized: "login.hidePassword") : String(localized: "login.showPassword"))
+                    .accessibilityLabel(viewModel.isPasswordVisible ? AppL10n.string("login.hidePassword") : AppL10n.string("login.showPassword"))
             }
             .buttonStyle(.plain)
         }
@@ -565,11 +565,11 @@ struct LoginView: View {
         NavigationStack {
             Form {
                 Section {
-                    SecureField(String(localized: "edupage.twoFactor.code"), text: $viewModel.twoFactorCode)
+                    SecureField(AppL10n.string("edupage.twoFactor.code"), text: $viewModel.twoFactorCode)
                         .gradelyKeyboardType(.numberPad)
                         .accessibilityIdentifier("eduPageTwoFactorCode")
 
-                    Button(String(localized: "edupage.twoFactor.submit")) {
+                    Button(AppL10n.string("edupage.twoFactor.submit")) {
                         Task {
                             if await viewModel.completeTwoFactor() {
                                 onSignedIn()

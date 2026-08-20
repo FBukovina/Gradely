@@ -89,8 +89,8 @@ struct SubjectDetailView: View {
 
     private var sourceCaption: String {
         viewModel.chartSource == .cloud
-            ? String(localized: "detail.chart.source.cloud")
-            : String(localized: "detail.chart.source.local")
+            ? AppL10n.string("detail.chart.source.cloud")
+            : AppL10n.string("detail.chart.source.local")
     }
 
     private var calculatorSection: some View {
@@ -123,7 +123,7 @@ private struct AverageHero: View {
             HStack(spacing: Spacing.sm) {
                 heroChip(
                     String.localizedStringWithFormat(
-                        String(localized: "subject.markCount"),
+                        AppL10n.string("subject.markCount"),
                         viewModel.subject.marks.count
                     ),
                     systemImage: "checkmark.seal.fill"
@@ -132,7 +132,7 @@ private struct AverageHero: View {
                 if let absence = viewModel.absence {
                     heroChip(
                         String.localizedStringWithFormat(
-                            String(localized: "detail.absence.percent"),
+                            AppL10n.string("detail.absence.percent"),
                             absence.absencePercentage
                         ),
                         systemImage: "calendar"
@@ -202,7 +202,7 @@ private struct MarkRow: View {
                     if !mark.isPoints, resolvedWeight.source == .explicit, resolvedWeight.value > 1 {
                         StatusChip(
                             text: String.localizedStringWithFormat(
-                                String(localized: "detail.weight.decimal"),
+                                AppL10n.string("detail.weight.decimal"),
                                 GradeMath.formattedWeight(resolvedWeight.value)
                             ),
                             color: Brand.secondary
@@ -212,7 +212,7 @@ private struct MarkRow: View {
                     if !mark.isPoints, resolvedWeight.source == .inferred, resolvedWeight.value > 1 {
                         StatusChip(
                             text: String.localizedStringWithFormat(
-                                String(localized: "detail.weight.estimated.decimal"),
+                                AppL10n.string("detail.weight.estimated.decimal"),
                                 GradeMath.formattedWeight(resolvedWeight.value)
                             ),
                             color: Brand.secondary
@@ -244,7 +244,7 @@ private struct TheoreticalCalculatorView: View {
     var body: some View {
         Card {
             VStack(alignment: .leading, spacing: Spacing.lg) {
-                TextField(String(localized: "detail.calculator.mark.placeholder"), text: Binding(
+                TextField(AppL10n.string("detail.calculator.mark.placeholder"), text: Binding(
                     get: { viewModel.theoreticalMark },
                     set: { viewModel.updateTheoreticalMark($0) }
                 ))
@@ -271,7 +271,7 @@ private struct TheoreticalCalculatorView: View {
                 viewModel.decrementWeight()
             }
 
-            Text(String.localizedStringWithFormat(String(localized: "detail.weight"), viewModel.theoreticalWeight))
+            Text(String.localizedStringWithFormat(AppL10n.string("detail.weight"), viewModel.theoreticalWeight))
                 .font(.subheadline.weight(.semibold).monospacedDigit())
                 .frame(maxWidth: .infinity)
 
@@ -311,7 +311,7 @@ private struct ResultView: View {
         VStack(spacing: Spacing.xs) {
             Text(
                 String.localizedStringWithFormat(
-                    String(localized: "detail.calculator.newAverage"),
+                    AppL10n.string("detail.calculator.newAverage"),
                     theoreticalAverage
                 )
             )
@@ -339,12 +339,12 @@ private struct ResultView: View {
     private var differenceText: String? {
         guard let difference else { return nil }
         if difference < -0.01 {
-            return String.localizedStringWithFormat(String(localized: "detail.calculator.better"), -difference)
+            return String.localizedStringWithFormat(AppL10n.string("detail.calculator.better"), -difference)
         }
         if difference > 0.01 {
-            return String.localizedStringWithFormat(String(localized: "detail.calculator.worse"), difference)
+            return String.localizedStringWithFormat(AppL10n.string("detail.calculator.worse"), difference)
         }
-        return String(localized: "detail.calculator.same")
+        return AppL10n.string("detail.calculator.same")
     }
 }
 

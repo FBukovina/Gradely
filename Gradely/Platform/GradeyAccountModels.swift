@@ -14,7 +14,7 @@ struct GradeyAccount: Codable, Equatable, Identifiable, Sendable {
         if let email = email?.trimmingCharacters(in: .whitespacesAndNewlines), !email.isEmpty {
             return email
         }
-        return String(localized: "gradey.auth.title")
+        return AppL10n.string("gradey.auth.title")
     }
 }
 
@@ -69,11 +69,11 @@ enum LinkedAccountStatus: String, Codable, Equatable, Sendable {
 
     var displayName: String {
         switch self {
-        case .active: String(localized: "gradey.account.status.active")
-        case .actionRequired: String(localized: "gradey.account.status.actionRequired")
-        case .paused: String(localized: "gradey.account.status.paused")
-        case .linking: String(localized: "gradey.account.status.linking")
-        case .failed: String(localized: "gradey.account.status.failed")
+        case .active: AppL10n.string("gradey.account.status.active")
+        case .actionRequired: AppL10n.string("gradey.account.status.actionRequired")
+        case .paused: AppL10n.string("gradey.account.status.paused")
+        case .linking: AppL10n.string("gradey.account.status.linking")
+        case .failed: AppL10n.string("gradey.account.status.failed")
         }
     }
 }

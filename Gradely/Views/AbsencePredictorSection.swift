@@ -82,10 +82,10 @@ struct AbsencePredictorCard: View {
     }
 
     private var addedHoursDetail: String {
-        String(localized: "absence.predictor.okAdded")
+        AppL10n.string("absence.predictor.okAdded")
             + " "
             + String.localizedStringWithFormat(
-                String(localized: "absence.predictor.addedHours"),
+                AppL10n.string("absence.predictor.addedHours"),
                 result.addedHours
             )
     }
@@ -129,7 +129,7 @@ struct AbsencePredictorCard: View {
 
             StatusChip(
                 text: String.localizedStringWithFormat(
-                    String(localized: "absence.predictor.addedHours"),
+                    AppL10n.string("absence.predictor.addedHours"),
                     row.addedHours
                 ),
                 color: row.exceedsThreshold ? GradeBand.poor.foregroundColor : Brand.secondary
@@ -143,16 +143,16 @@ struct AbsencePredictorCard: View {
               let projectedBase = row.projectedBase,
               let currentPercentage = row.currentPercentage,
               let projectedPercentage = row.projectedPercentage else {
-            return String(localized: "absence.predictor.baselineUnavailable")
+            return AppL10n.string("absence.predictor.baselineUnavailable")
         }
 
         let absentChange = String.localizedStringWithFormat(
-            String(localized: "absence.predictor.subject.absentChange"),
+            AppL10n.string("absence.predictor.subject.absentChange"),
             currentBase,
             projectedBase
         )
         let percentChange = String.localizedStringWithFormat(
-            String(localized: "absence.predictor.subject.percentChange"),
+            AppL10n.string("absence.predictor.subject.percentChange"),
             currentPercentage,
             projectedPercentage
         )
@@ -277,7 +277,7 @@ struct AbsencePredictionSheet: View {
             } header: {
                 Text(
                     String.localizedStringWithFormat(
-                        String(localized: "absence.predictor.selectedCount"),
+                        AppL10n.string("absence.predictor.selectedCount"),
                         viewModel.predictionDraftSelectedCount
                     )
                 )

@@ -8,9 +8,9 @@ enum GradeyAuthError: LocalizedError, Equatable {
     var errorDescription: String? {
         switch self {
         case .notConfigured:
-            return String(localized: "gradey.auth.error.notConfigured")
+            return AppL10n.string("gradey.auth.error.notConfigured")
         case .missingIdentityToken:
-            return String(localized: "gradey.auth.error.missingIdentityToken")
+            return AppL10n.string("gradey.auth.error.missingIdentityToken")
         case .server(let message):
             return message
         }
@@ -319,10 +319,10 @@ final class SupabaseGradeyAuthClient: GradeyAuthClient {
 
         let (data, response) = try await urlSession.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse else {
-            throw GradeyAuthError.server(String(localized: "gradey.auth.error.invalidResponse"))
+            throw GradeyAuthError.server(AppL10n.string("gradey.auth.error.invalidResponse"))
         }
         guard (200..<300).contains(httpResponse.statusCode) else {
-            throw GradeyAuthError.server(Self.errorMessage(from: data, decoder: decoder) ?? String(localized: "gradey.auth.error.requestFailed"))
+            throw GradeyAuthError.server(Self.errorMessage(from: data, decoder: decoder) ?? AppL10n.string("gradey.auth.error.requestFailed"))
         }
 
         return data
@@ -374,7 +374,7 @@ final class MockGradeyAuthClient: GradeyAuthClient {
         guard var updatedSession = session else { throw AppError.notLoggedIn }
         if let remoteAccount {
             guard remoteAccount.id == updatedSession.account.id else {
-                throw GradeyAuthError.server(String(localized: "gradey.auth.error.invalidResponse"))
+                throw GradeyAuthError.server(AppL10n.string("gradey.auth.error.invalidResponse"))
             }
             updatedSession.account = remoteAccount
             session = updatedSession
@@ -517,7 +517,7 @@ private struct SupabaseUserResponse: Decodable {
         guard !id.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
               id == account.id
         else {
-            throw GradeyAuthError.server(String(localized: "gradey.auth.error.invalidResponse"))
+            throw GradeyAuthError.server(AppL10n.string("gradey.auth.error.invalidResponse"))
         }
 
         var merged = account

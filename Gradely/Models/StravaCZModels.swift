@@ -8,11 +8,11 @@ enum StravaCZMealType: String, Codable, Equatable {
     var localizedTitle: String {
         switch self {
         case .soup:
-            String(localized: "stravacz.mealType.soup")
+            AppL10n.string("stravacz.mealType.soup")
         case .main:
-            String(localized: "stravacz.mealType.main")
+            AppL10n.string("stravacz.mealType.main")
         case .unknown:
-            String(localized: "stravacz.mealType.unknown")
+            AppL10n.string("stravacz.mealType.unknown")
         }
     }
 }
@@ -25,11 +25,11 @@ enum StravaCZOrderType: String, Codable, Equatable {
     var localizedTitle: String {
         switch self {
         case .normal:
-            String(localized: "stravacz.orderType.normal")
+            AppL10n.string("stravacz.orderType.normal")
         case .restricted:
-            String(localized: "stravacz.orderType.restricted")
+            AppL10n.string("stravacz.orderType.restricted")
         case .optional:
-            String(localized: "stravacz.orderType.optional")
+            AppL10n.string("stravacz.orderType.optional")
         }
     }
 }
@@ -179,7 +179,7 @@ struct StravaCZMeal: Codable, Equatable, Identifiable {
     }
 
     var formattedPrice: String {
-        price > 0 ? StravaCZFormatters.price(price) : String(localized: "stravacz.price.included")
+        price > 0 ? StravaCZFormatters.price(price) : AppL10n.string("stravacz.price.included")
     }
 
     var allergenText: String {

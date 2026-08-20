@@ -6,7 +6,7 @@ import RevenueCat
 import StoreKit
 #endif
 
-struct SupportTipOption: Identifiable, Equatable {
+struct SupportTipOption: Identifiable, Equatable, Sendable {
     let id: String
     let productIdentifier: String
     let title: String
@@ -24,102 +24,314 @@ enum SupportTipServiceError: Error, Equatable {
     case emptyOffering
     case productUnavailable
     case purchaseFailed(String)
+    case accountRequired
+    case restoreFailed(String)
 }
 
 extension SupportTipServiceError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .notConfigured:
-            String(localized: "support.tips.error.notConfigured")
+            AppL10n.string("support.tips.error.notConfigured")
         case .emptyOffering:
-            String(localized: "support.tips.error.emptyOffering")
+            AppL10n.string("support.tips.error.emptyOffering")
         case .productUnavailable:
-            String(localized: "support.tips.error.productUnavailable")
-        case .purchaseFailed(let message):
+            AppL10n.string("support.tips.error.productUnavailable")
+        case .purchaseFailed(let message), .restoreFailed(let message):
             message
+        case .accountRequired:
+            AppL10n.string("support.plans.signIn.required")
         }
     }
 }
 
 protocol SupportTipProviding {
     @MainActor
-    func loadTips() async throws -> [SupportTipOption]
+    func loadCatalog() async throws -> SupportCatalog
 
     @MainActor
     func purchase(_ tip: SupportTipOption) async throws -> SupportTipPurchaseOutcome
+
+    @MainActor
+    func purchase(_ plan: SupportPlanOption) async throws -> SupportTipPurchaseOutcome
+
+    @MainActor
+    func restorePurchases() async throws -> SupportEntitlement
+
+    @MainActor
+    func currentEntitlement() async -> SupportEntitlement
 }
 
-enum SupportTipCatalog {
-    static let offeringIdentifier = "tips"
-
-    static let products: [(packageIdentifier: String, productIdentifier: String)] = [
-        ("tip_small", "com.bukovinafilip.BakalariMarks.tip.small"),
-        ("tip_medium", "com.bukovinafilip.BakalariMarks.tip.medium"),
-        ("tip_large", "com.bukovinafilip.BakalariMarks.tip.large"),
-    ]
+enum SupportTipServiceFactory {
+    @MainActor
+    static func makeLive() -> any SupportTipProviding {
+        #if canImport(RevenueCat)
+        if Purchases.isConfigured {
+            return RevenueCatSupportTipService()
+        }
+        #endif
+        #if canImport(StoreKit)
+        return StoreKitSupportTipService()
+        #else
+        return UnavailableSupportTipService()
+        #endif
+    }
 }
+
+#if canImport(StoreKit)
+@MainActor
+enum SupportStoreKitLoader {
+    static func subscriptionPlans() async -> (
+        plans: [SupportPlanOption],
+        productsByIdentifier: [String: StoreKit.Product]
+    ) {
+        let identifiers = SupportTipCatalog.subscriptionProducts.map(\.productIdentifier)
+        let storeProducts = (try? await StoreKit.Product.products(for: identifiers)) ?? []
+        let productsByID = Dictionary(uniqueKeysWithValues: storeProducts.map { ($0.id, $0) })
+        var productsByPackage: [String: StoreKit.Product] = [:]
+        let plans = SupportTipCatalog.subscriptionProducts.compactMap { catalogProduct -> SupportPlanOption? in
+            guard let product = productsByID[catalogProduct.productIdentifier] else {
+                return nil
+            }
+            productsByPackage[catalogProduct.packageIdentifier] = product
+            return SupportPlanOption(
+                id: catalogProduct.packageIdentifier,
+                productIdentifier: product.id,
+                tier: catalogProduct.tier,
+                interval: catalogProduct.interval,
+                localizedPrice: product.displayPrice
+            )
+        }
+        return (plans, productsByPackage)
+    }
+
+    static func purchase(_ product: StoreKit.Product) async throws -> SupportTipPurchaseOutcome {
+        do {
+            let result = try await product.purchase()
+            switch result {
+            case .success(let verificationResult):
+                let transaction = try verifiedTransaction(from: verificationResult)
+                await transaction.finish()
+                return .success
+            case .userCancelled:
+                return .cancelled
+            case .pending:
+                return .pending
+            @unknown default:
+                throw SupportTipServiceError.purchaseFailed(AppL10n.string("support.tips.error.purchaseUnknown"))
+            }
+        } catch let error as SupportTipServiceError {
+            throw error
+        } catch {
+            throw SupportTipServiceError.purchaseFailed(userFacingMessage(for: error))
+        }
+    }
+
+    private static func verifiedTransaction(
+        from result: StoreKit.VerificationResult<StoreKit.Transaction>
+    ) throws -> StoreKit.Transaction {
+        switch result {
+        case .verified(let transaction):
+            return transaction
+        case .unverified(_, let error):
+            throw SupportTipServiceError.purchaseFailed(userFacingMessage(for: error))
+        }
+    }
+
+    private static func userFacingMessage(for error: Error) -> String {
+        if let localizedError = error as? LocalizedError, let message = localizedError.errorDescription {
+            return message
+        }
+        return error.localizedDescription
+    }
+}
+#endif
 
 #if canImport(RevenueCat)
 @MainActor
 final class RevenueCatSupportTipService: SupportTipProviding {
     private var packagesByIdentifier: [String: Package] = [:]
+    #if canImport(StoreKit)
+    private var storeKitProductsByIdentifier: [String: StoreKit.Product] = [:]
+    #endif
 
-    func loadTips() async throws -> [SupportTipOption] {
+    func loadCatalog() async throws -> SupportCatalog {
         guard Purchases.isConfigured else {
             throw SupportTipServiceError.notConfigured
         }
 
         let offerings = try await Purchases.shared.offerings()
-        guard let offering = offerings.offering(identifier: SupportTipCatalog.offeringIdentifier) ?? offerings.current else {
-            throw SupportTipServiceError.emptyOffering
+        let tipOffering = offerings.offering(identifier: SupportTipCatalog.tipsOfferingIdentifier)
+            ?? offerings.current
+        let supportOffering = offerings.offering(identifier: SupportTipCatalog.supportOfferingIdentifier)
+
+        var packages: [Package] = []
+        if let tipOffering {
+            packages.append(contentsOf: orderedTipPackages(from: tipOffering))
+        }
+        if let supportOffering {
+            packages.append(contentsOf: orderedSubscriptionPackages(from: supportOffering))
         }
 
-        let packages = orderedTipPackages(from: offering)
         packagesByIdentifier = Dictionary(uniqueKeysWithValues: packages.map { ($0.identifier, $0) })
 
-        return packages.map { package in
+        let tips = orderedTipPackages(from: tipOffering).map { package in
             SupportTipOption(
                 id: package.identifier,
                 productIdentifier: package.storeProduct.productIdentifier,
-                title: package.storeProduct.localizedTitle,
+                title: SupportTipCatalog.localizedTipTitle(
+                    forProductIdentifier: package.storeProduct.productIdentifier
+                ),
                 localizedPrice: package.localizedPriceString
             )
         }
+        var plans = orderedSubscriptionPackages(from: supportOffering).compactMap { package -> SupportPlanOption? in
+            guard let mapped = SupportTipCatalog.subscription(forPackageIdentifier: package.identifier)
+                    ?? SupportTipCatalog.subscription(forProductIdentifier: package.storeProduct.productIdentifier)
+            else {
+                return nil
+            }
+            return SupportPlanOption(
+                id: package.identifier,
+                productIdentifier: package.storeProduct.productIdentifier,
+                tier: mapped.tier,
+                interval: mapped.interval,
+                localizedPrice: package.localizedPriceString
+            )
+        }
+        #if canImport(StoreKit)
+        if plans.isEmpty {
+            let storeKitCatalog = await SupportStoreKitLoader.subscriptionPlans()
+            plans = storeKitCatalog.plans
+            storeKitProductsByIdentifier = storeKitCatalog.productsByIdentifier
+        } else {
+            storeKitProductsByIdentifier = [:]
+        }
+        #endif
+        #if DEBUG
+        if plans.isEmpty {
+            plans = SupportTipCatalog.previewSubscriptionPlans
+        }
+        #endif
+
+        guard !tips.isEmpty || !plans.isEmpty else {
+            throw SupportTipServiceError.emptyOffering
+        }
+
+        let customerInfo = try await Purchases.shared.customerInfo()
+        let entitlement = entitlement(from: customerInfo)
+        return SupportCatalog(
+            tips: tips,
+            plans: plans,
+            entitlement: entitlement,
+            managementURL: customerInfo.managementURL ?? SupportTipCatalog.managementURL
+        )
     }
 
     func purchase(_ tip: SupportTipOption) async throws -> SupportTipPurchaseOutcome {
+        try await purchasePackage(id: tip.id)
+    }
+
+    func purchase(_ plan: SupportPlanOption) async throws -> SupportTipPurchaseOutcome {
+        try await purchasePackage(id: plan.id)
+    }
+
+    func restorePurchases() async throws -> SupportEntitlement {
         guard Purchases.isConfigured else {
             throw SupportTipServiceError.notConfigured
         }
 
-        var package = packagesByIdentifier[tip.id]
-        if package == nil {
-            _ = try await loadTips()
-            package = packagesByIdentifier[tip.id]
-        }
-
-        guard let package else {
-            throw SupportTipServiceError.productUnavailable
-        }
-
         do {
-            let result = try await Purchases.shared.purchase(package: package)
-            return result.userCancelled ? .cancelled : .success
+            let customerInfo = try await Purchases.shared.restorePurchases()
+            return entitlement(from: customerInfo)
         } catch {
             if let errorCode = (error as NSError).asErrorCode, errorCode == .purchaseCancelledError {
-                return .cancelled
+                return await currentEntitlement()
             }
-            throw SupportTipServiceError.purchaseFailed(userFacingMessage(for: error))
+            throw SupportTipServiceError.restoreFailed(userFacingMessage(for: error))
         }
     }
 
-    private func orderedTipPackages(from offering: Offering) -> [Package] {
-        SupportTipCatalog.products.compactMap { product in
+    func currentEntitlement() async -> SupportEntitlement {
+        guard Purchases.isConfigured else { return .none }
+        if let customerInfo = try? await Purchases.shared.customerInfo() {
+            return entitlement(from: customerInfo)
+        }
+        return entitlement(from: Purchases.shared.cachedCustomerInfo)
+    }
+
+    private func purchasePackage(id: String) async throws -> SupportTipPurchaseOutcome {
+        guard Purchases.isConfigured else {
+            throw SupportTipServiceError.notConfigured
+        }
+
+        var package = packagesByIdentifier[id]
+        if package == nil {
+            _ = try await loadCatalog()
+            package = packagesByIdentifier[id]
+        }
+
+        if let package {
+            do {
+                let result = try await Purchases.shared.purchase(package: package)
+                return result.userCancelled ? .cancelled : .success
+            } catch {
+                if let errorCode = (error as NSError).asErrorCode {
+                    if errorCode == .purchaseCancelledError {
+                        return .cancelled
+                    }
+                    if errorCode == .productAlreadyPurchasedError {
+                        return .success
+                    }
+                }
+                throw SupportTipServiceError.purchaseFailed(userFacingMessage(for: error))
+            }
+        }
+
+        #if canImport(StoreKit)
+        if let storeProduct = storeKitProductsByIdentifier[id] {
+            return try await SupportStoreKitLoader.purchase(storeProduct)
+        }
+        #endif
+
+        throw SupportTipServiceError.productUnavailable
+    }
+
+    private func orderedTipPackages(from offering: Offering?) -> [Package] {
+        guard let offering else { return [] }
+        return SupportTipCatalog.tipProducts.compactMap { product in
             offering.package(identifier: product.packageIdentifier)
                 ?? offering.availablePackages.first {
                     $0.storeProduct.productIdentifier == product.productIdentifier
                 }
         }
+    }
+
+    private func orderedSubscriptionPackages(from offering: Offering?) -> [Package] {
+        guard let offering else { return [] }
+        return SupportTipCatalog.subscriptionProducts.compactMap { product in
+            offering.package(identifier: product.packageIdentifier)
+                ?? offering.availablePackages.first {
+                    $0.storeProduct.productIdentifier == product.productIdentifier
+                }
+        }
+    }
+
+    private func entitlement(from customerInfo: CustomerInfo?) -> SupportEntitlement {
+        guard let customerInfo else { return .none }
+        let activeEntitlements = customerInfo.entitlements.active
+        let activeIDs = Set(activeEntitlements.keys)
+        let productIDs = activeEntitlements.values.map(\.productIdentifier)
+        let plusInfo = activeEntitlements[SupportTipCatalog.plusEntitlementID]
+        let standardInfo = activeEntitlements[SupportTipCatalog.standardEntitlementID]
+        let primary = plusInfo ?? standardInfo
+        return SupportTipCatalog.entitlement(
+            activeProductIdentifiers: productIDs,
+            activeEntitlementIDs: activeIDs,
+            expirationDate: primary?.expirationDate,
+            willRenew: primary?.willRenew ?? false,
+            managementURL: customerInfo.managementURL
+        )
     }
 
     private func userFacingMessage(for error: Error) -> String {
@@ -136,11 +348,14 @@ final class RevenueCatSupportTipService: SupportTipProviding {
 final class StoreKitSupportTipService: SupportTipProviding {
     private var productsByPackageIdentifier: [String: StoreKit.Product] = [:]
 
-    func loadTips() async throws -> [SupportTipOption] {
-        let productIdentifiers = SupportTipCatalog.products.map(\.productIdentifier)
+    func loadCatalog() async throws -> SupportCatalog {
+        let catalogProducts = SupportTipCatalog.tipProducts + SupportTipCatalog.subscriptionProducts.map {
+            (packageIdentifier: $0.packageIdentifier, productIdentifier: $0.productIdentifier)
+        }
+        let productIdentifiers = catalogProducts.map(\.productIdentifier)
         let storeProducts = try await StoreKit.Product.products(for: productIdentifiers)
         let productsByIdentifier = Dictionary(uniqueKeysWithValues: storeProducts.map { ($0.id, $0) })
-        let orderedProducts = SupportTipCatalog.products.compactMap { catalogProduct -> (packageIdentifier: String, product: StoreKit.Product)? in
+        let orderedProducts = catalogProducts.compactMap { catalogProduct -> (packageIdentifier: String, product: StoreKit.Product)? in
             guard let product = productsByIdentifier[catalogProduct.productIdentifier] else {
                 return nil
             }
@@ -155,21 +370,93 @@ final class StoreKitSupportTipService: SupportTipProviding {
             uniqueKeysWithValues: orderedProducts.map { ($0.packageIdentifier, $0.product) }
         )
 
-        return orderedProducts.map { packageIdentifier, product in
-            SupportTipOption(
-                id: packageIdentifier,
+        let tips = SupportTipCatalog.tipProducts.compactMap { catalogProduct -> SupportTipOption? in
+            guard let product = productsByPackageIdentifier[catalogProduct.packageIdentifier] else {
+                return nil
+            }
+            return SupportTipOption(
+                id: catalogProduct.packageIdentifier,
                 productIdentifier: product.id,
-                title: product.displayName,
+                title: SupportTipCatalog.localizedTipTitle(forProductIdentifier: product.id),
                 localizedPrice: product.displayPrice
             )
         }
+        var plans = SupportTipCatalog.subscriptionProducts.compactMap { catalogProduct -> SupportPlanOption? in
+            guard let product = productsByPackageIdentifier[catalogProduct.packageIdentifier] else {
+                return nil
+            }
+            return SupportPlanOption(
+                id: catalogProduct.packageIdentifier,
+                productIdentifier: product.id,
+                tier: catalogProduct.tier,
+                interval: catalogProduct.interval,
+                localizedPrice: product.displayPrice
+            )
+        }
+        #if DEBUG
+        if plans.isEmpty {
+            plans = SupportTipCatalog.previewSubscriptionPlans
+        }
+        #endif
+
+        let entitlement = await currentEntitlement()
+        return SupportCatalog(
+            tips: tips,
+            plans: plans,
+            entitlement: entitlement,
+            managementURL: SupportTipCatalog.managementURL
+        )
     }
 
     func purchase(_ tip: SupportTipOption) async throws -> SupportTipPurchaseOutcome {
-        var product = productsByPackageIdentifier[tip.id]
+        try await purchaseProduct(id: tip.id)
+    }
+
+    func purchase(_ plan: SupportPlanOption) async throws -> SupportTipPurchaseOutcome {
+        try await purchaseProduct(id: plan.id)
+    }
+
+    func restorePurchases() async throws -> SupportEntitlement {
+        do {
+            try await AppStore.sync()
+            return await currentEntitlement()
+        } catch {
+            throw SupportTipServiceError.restoreFailed(userFacingMessage(for: error))
+        }
+    }
+
+    func currentEntitlement() async -> SupportEntitlement {
+        var productIdentifiers: [String] = []
+        var expirationDate: Date?
+        var willRenew = false
+
+        for await result in Transaction.currentEntitlements {
+            guard case .verified(let transaction) = result else { continue }
+            guard SupportTipCatalog.subscription(forProductIdentifier: transaction.productID) != nil else {
+                continue
+            }
+            productIdentifiers.append(transaction.productID)
+            if let transactionExpiration = transaction.expirationDate {
+                if expirationDate == nil || transactionExpiration > expirationDate! {
+                    expirationDate = transactionExpiration
+                    willRenew = transaction.isUpgraded == false
+                }
+            }
+        }
+
+        return SupportTipCatalog.entitlement(
+            activeProductIdentifiers: productIdentifiers,
+            expirationDate: expirationDate,
+            willRenew: willRenew,
+            managementURL: SupportTipCatalog.managementURL
+        )
+    }
+
+    private func purchaseProduct(id: String) async throws -> SupportTipPurchaseOutcome {
+        var product = productsByPackageIdentifier[id]
         if product == nil {
-            _ = try await loadTips()
-            product = productsByPackageIdentifier[tip.id]
+            _ = try await loadCatalog()
+            product = productsByPackageIdentifier[id]
         }
 
         guard let product else {
@@ -188,7 +475,7 @@ final class StoreKitSupportTipService: SupportTipProviding {
             case .pending:
                 return .pending
             @unknown default:
-                throw SupportTipServiceError.purchaseFailed(String(localized: "support.tips.error.purchaseUnknown"))
+                throw SupportTipServiceError.purchaseFailed(AppL10n.string("support.tips.error.purchaseUnknown"))
             }
         } catch let error as SupportTipServiceError {
             throw error
@@ -218,12 +505,24 @@ final class StoreKitSupportTipService: SupportTipProviding {
 #endif
 
 final class UnavailableSupportTipService: SupportTipProviding {
-    func loadTips() async throws -> [SupportTipOption] {
+    func loadCatalog() async throws -> SupportCatalog {
         throw SupportTipServiceError.notConfigured
     }
 
     func purchase(_ tip: SupportTipOption) async throws -> SupportTipPurchaseOutcome {
         throw SupportTipServiceError.notConfigured
+    }
+
+    func purchase(_ plan: SupportPlanOption) async throws -> SupportTipPurchaseOutcome {
+        throw SupportTipServiceError.notConfigured
+    }
+
+    func restorePurchases() async throws -> SupportEntitlement {
+        throw SupportTipServiceError.notConfigured
+    }
+
+    func currentEntitlement() async -> SupportEntitlement {
+        .none
     }
 }
 
@@ -232,49 +531,127 @@ final class MockSupportTipService: SupportTipProviding {
         SupportTipOption(
             id: "tip_small",
             productIdentifier: "com.bukovinafilip.BakalariMarks.tip.small",
-            title: String(localized: "support.tips.tip.small"),
+            title: AppL10n.string("support.tips.tip.small"),
             localizedPrice: "29 CZK"
         ),
         SupportTipOption(
             id: "tip_medium",
             productIdentifier: "com.bukovinafilip.BakalariMarks.tip.medium",
-            title: String(localized: "support.tips.tip.medium"),
+            title: AppL10n.string("support.tips.tip.medium"),
             localizedPrice: "79 CZK"
         ),
         SupportTipOption(
             id: "tip_large",
             productIdentifier: "com.bukovinafilip.BakalariMarks.tip.large",
-            title: String(localized: "support.tips.tip.large"),
+            title: AppL10n.string("support.tips.tip.large"),
             localizedPrice: "149 CZK"
         ),
     ]
 
-    var loadResult: Result<[SupportTipOption], Error>
+    static let previewPlans = [
+        SupportPlanOption(
+            id: "support_standard_monthly",
+            productIdentifier: "com.bukovinafilip.BakalariMarks.support.standard.monthly",
+            tier: .standard,
+            interval: .monthly,
+            localizedPrice: "$2.00"
+        ),
+        SupportPlanOption(
+            id: "support_standard_yearly",
+            productIdentifier: "com.bukovinafilip.BakalariMarks.support.standard.yearly",
+            tier: .standard,
+            interval: .yearly,
+            localizedPrice: "$20.00"
+        ),
+        SupportPlanOption(
+            id: "support_plus_monthly",
+            productIdentifier: "com.bukovinafilip.BakalariMarks.support.plus.monthly",
+            tier: .plus,
+            interval: .monthly,
+            localizedPrice: "$4.00"
+        ),
+        SupportPlanOption(
+            id: "support_plus_yearly",
+            productIdentifier: "com.bukovinafilip.BakalariMarks.support.plus.yearly",
+            tier: .plus,
+            interval: .yearly,
+            localizedPrice: "$40.00"
+        ),
+    ]
+
+    var loadResult: Result<SupportCatalog, Error>
     var purchaseResult: Result<SupportTipPurchaseOutcome, Error>
+    var restoreResult: Result<SupportEntitlement, Error>
     private(set) var purchasedTipIDs: [String] = []
+    private(set) var purchasedPlanIDs: [String] = []
+    private(set) var didRestorePurchases = false
+    private var entitlement: SupportEntitlement
 
     init(
         tips: [SupportTipOption] = MockSupportTipService.previewTips,
+        plans: [SupportPlanOption] = MockSupportTipService.previewPlans,
+        entitlement: SupportEntitlement = .none,
         purchaseResult: Result<SupportTipPurchaseOutcome, Error> = .success(.success)
     ) {
-        self.loadResult = .success(tips)
+        self.loadResult = .success(
+            SupportCatalog(
+                tips: tips,
+                plans: plans,
+                entitlement: entitlement,
+                managementURL: SupportTipCatalog.managementURL
+            )
+        )
         self.purchaseResult = purchaseResult
+        self.restoreResult = .success(entitlement)
+        self.entitlement = entitlement
     }
 
     init(
-        loadResult: Result<[SupportTipOption], Error>,
-        purchaseResult: Result<SupportTipPurchaseOutcome, Error> = .success(.success)
+        loadResult: Result<SupportCatalog, Error>,
+        purchaseResult: Result<SupportTipPurchaseOutcome, Error> = .success(.success),
+        restoreResult: Result<SupportEntitlement, Error> = .success(.none)
     ) {
         self.loadResult = loadResult
         self.purchaseResult = purchaseResult
+        self.restoreResult = restoreResult
+        self.entitlement = (try? loadResult.get())?.entitlement ?? .none
     }
 
-    func loadTips() async throws -> [SupportTipOption] {
-        try loadResult.get()
+    func loadCatalog() async throws -> SupportCatalog {
+        var catalog = try loadResult.get()
+        catalog.entitlement = entitlement
+        return catalog
     }
 
     func purchase(_ tip: SupportTipOption) async throws -> SupportTipPurchaseOutcome {
         purchasedTipIDs.append(tip.id)
         return try purchaseResult.get()
+    }
+
+    func purchase(_ plan: SupportPlanOption) async throws -> SupportTipPurchaseOutcome {
+        purchasedPlanIDs.append(plan.id)
+        let outcome = try purchaseResult.get()
+        if outcome == .success {
+            entitlement = SupportEntitlement(
+                tier: plan.tier,
+                interval: plan.interval,
+                productIdentifier: plan.productIdentifier,
+                expirationDate: Date().addingTimeInterval(plan.interval == .yearly ? 31_536_000 : 2_592_000),
+                willRenew: true,
+                managementURL: SupportTipCatalog.managementURL
+            )
+        }
+        return outcome
+    }
+
+    func restorePurchases() async throws -> SupportEntitlement {
+        didRestorePurchases = true
+        let restored = try restoreResult.get()
+        entitlement = restored
+        return restored
+    }
+
+    func currentEntitlement() async -> SupportEntitlement {
+        entitlement
     }
 }

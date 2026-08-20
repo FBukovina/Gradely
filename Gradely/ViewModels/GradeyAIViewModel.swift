@@ -127,6 +127,12 @@ final class GradeyAIViewModel {
         }
     }
 
+    func refreshStatus() async {
+        if case .success(let loadedStatus) = await loadStatusAttempt() {
+            status = loadedStatus
+        }
+    }
+
     func acceptConsent() async {
         errorMessage = nil
         isLoading = true
@@ -177,7 +183,7 @@ final class GradeyAIViewModel {
             let conversation = GradeyAIConversation(
                 id: UUID().uuidString,
                 schoolScope: schoolScope,
-                title: String(localized: "gradey.ai.newChat"),
+                title: AppL10n.string("gradey.ai.newChat"),
                 createdAt: now,
                 updatedAt: now,
                 lastMessageAt: nil
@@ -262,7 +268,7 @@ final class GradeyAIViewModel {
             return
         }
         guard (status?.remaining ?? 0) > 0 else {
-            errorMessage = "You have reached today's Gradey AI message limit."
+            errorMessage = AppL10n.string("gradey.ai.limit.reached")
             return
         }
 
@@ -632,7 +638,7 @@ final class GradeyAIViewModel {
         if let title,
            updated.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             || updated.title == "New chat"
-            || updated.title == String(localized: "gradey.ai.newChat") {
+            || updated.title == AppL10n.string("gradey.ai.newChat") {
             updated.title = title
         }
         updated.updatedAt = Date()

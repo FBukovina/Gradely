@@ -488,15 +488,54 @@ final class GradelyUITests: XCTestCase {
         supportButton.tap()
 
         XCTAssertTrue(app.descendants(matching: .any)["supportTipsList"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["supportPlan-standard"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["supportPlan-plus"].exists)
+        XCTAssertTrue(app.descendants(matching: .any)["supportPlanIntervalPicker"].exists)
+
+        let supportScroll = app.scrollViews["supportTipsScreen"]
         let smallTip = app.buttons["supportTip-tip_small"]
         let mediumTip = app.buttons["supportTip-tip_medium"]
         let largeTip = app.buttons["supportTip-tip_large"]
+        scroll(supportScroll, untilExists: smallTip)
 
         XCTAssertTrue(smallTip.waitForExistence(timeout: 5))
         XCTAssertTrue(mediumTip.exists)
         XCTAssertTrue(largeTip.exists)
 
         smallTip.tap()
+
+        XCTAssertTrue(app.descendants(matching: .any)["supportTipsThankYou"].waitForExistence(timeout: 5))
+    }
+
+    @MainActor
+    func testSupportSubscriptionFlowUsesMockPurchase() throws {
+        let app = XCUIApplication()
+        app.launchArguments = signedInLaunchArguments
+        app.launch()
+
+        XCTAssertTrue(app.scrollViews["todayScrollView"].waitForExistence(timeout: 5))
+        openSettings(in: app)
+        openSettingsDestination(
+            SettingsDestinationSpec(
+                rowIdentifier: "settingsDestination-supportAbout",
+                detailIdentifier: "settingsDetail-supportAbout"
+            ),
+            in: app
+        )
+
+        let settingsScroll = settingsDetailScrollView(in: app)
+        let supportButton = waitForAny([
+            app.buttons["supportGradelyButton"],
+            app.buttons["Support Gradey"],
+            app.buttons["Podpořit Gradey"]
+        ])
+        scroll(settingsScroll, untilExists: supportButton)
+        XCTAssertTrue(supportButton.waitForExistence(timeout: 3))
+        supportButton.tap()
+
+        XCTAssertTrue(app.buttons["supportPlan-standard"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["supportRestorePurchasesButton"].exists)
+        app.buttons["supportPlan-standard"].tap()
 
         XCTAssertTrue(app.descendants(matching: .any)["supportTipsThankYou"].waitForExistence(timeout: 5))
     }
@@ -1145,6 +1184,10 @@ final class GradelyUITests: XCTestCase {
         )
         let toggle = app.descendants(matching: .any)["showMealsTabToggle"]
         XCTAssertTrue(toggle.waitForExistence(timeout: 3))
+        scroll(
+            app.descendants(matching: .any)["settingsDetail-appPreferences"],
+            untilHittable: toggle
+        )
         XCTAssertTrue(isSwitchOn(toggle))
         toggle.tap()
 
@@ -1159,6 +1202,48 @@ final class GradelyUITests: XCTestCase {
         XCTAssertTrue(app.scrollViews["todayScrollView"].waitForExistence(timeout: 5))
         XCTAssertFalse(mealsTabButton(in: app).exists)
         XCTAssertFalse(app.descendants(matching: .any)["todayLunchCard"].exists)
+    }
+
+    @MainActor
+    func testSettingsLanguagePickerExposesChronicallyOnlineOptions() throws {
+        let app = XCUIApplication()
+        app.launchArguments = signedInLaunchArguments
+        app.launch()
+
+        openSettings(in: app)
+        openSettingsDestination(
+            SettingsDestinationSpec(
+                rowIdentifier: "settingsDestination-appPreferences",
+                detailIdentifier: "settingsDetail-appPreferences"
+            ),
+            in: app
+        )
+
+        XCTAssertTrue(app.descendants(matching: .any)["appLanguageOptions"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.descendants(matching: .any)["appLanguageOption-english"].exists)
+        XCTAssertTrue(app.descendants(matching: .any)["appLanguageOption-czech"].exists)
+        XCTAssertTrue(app.descendants(matching: .any)["chronicallyOnlineToggle"].exists)
+        XCTAssertFalse(app.descendants(matching: .any)["appLanguageOption-englishChronicallyOnline"].exists)
+        XCTAssertFalse(app.descendants(matching: .any)["appLanguageOption-czechChronicallyOnline"].exists)
+        XCTAssertFalse(app.descendants(matching: .any)["appLanguageOption-system"].exists)
+    }
+
+    @MainActor
+    func testChronicallyOnlineEnglishUsesLowercaseTabs() throws {
+        let app = XCUIApplication()
+        app.launchArguments = signedInLaunchArguments + [
+            "-settings.appLanguage",
+            "englishChronicallyOnline"
+        ]
+        app.launch()
+
+        XCTAssertTrue(app.scrollViews["todayScrollView"].waitForExistence(timeout: 5))
+        let todayTab = waitForAny([
+            app.tabBars.buttons["today"],
+            app.tabBars.buttons["Today"]
+        ])
+        XCTAssertTrue(todayTab.waitForExistence(timeout: 3))
+        XCTAssertEqual(todayTab.label.lowercased(), "today")
     }
 
     @MainActor

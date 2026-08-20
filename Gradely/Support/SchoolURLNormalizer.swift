@@ -9,11 +9,11 @@ enum SchoolURLNormalizer {
         var errorDescription: String? {
             switch self {
             case .empty:
-                return String(localized: "error.schoolURL.empty")
+                return AppL10n.string("error.schoolURL.empty")
             case .invalid:
-                return String(localized: "error.schoolURL.invalid")
+                return AppL10n.string("error.schoolURL.invalid")
             case .insecure:
-                return String(localized: "error.schoolURL.insecure")
+                return AppL10n.string("error.schoolURL.insecure")
             }
         }
     }

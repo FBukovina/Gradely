@@ -13,6 +13,7 @@
 		A10000032FCE000000000003 /* GradelyWatchShared in Frameworks */ = {isa = PBXBuildFile; productRef = A10000022FCE000000000002 /* GradelyWatchShared */; };
 		A10000042FCE000000000004 /* GradelyWatchShared in Frameworks */ = {isa = PBXBuildFile; productRef = A10000052FCE000000000005 /* GradelyWatchShared */; };
 		A20000072FCE0000000000A7 /* GradelyWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = A20000042FCE0000000000A4 /* GradelyWatch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		B40000RC2FCEF10000000001 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = B40000RC2FCEF10000000002 /* RevenueCat */; };
 		B50000012FCF000000000001 /* GradelyMacWidgets.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = B50000022FCF000000000002 /* GradelyMacWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		C53D9B8831BC494585B5670D /* GradelyWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 23EA86CD939E4E779E620824 /* GradelyWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		D20000202FD2000000000020 /* HugeiconsCore in Frameworks */ = {isa = PBXBuildFile; productRef = D20000102FD2000000000010 /* HugeiconsCore */; };
@@ -119,6 +120,7 @@
 		920000062FD0000000000006 /* Config/Shared.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config/Shared.xcconfig; sourceTree = "<group>"; };
 		A20000012FCE0000000000A1 /* GradelyWatch.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = GradelyWatch.xcodeproj; path = GradelyWatch/GradelyWatch.xcodeproj; sourceTree = "<group>"; };
 		B40000052FCEF10000000005 /* Gradey.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Gradey.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		B40000SK2FCEF10000000003 /* Config/Gradely.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = Config/Gradely.storekit; sourceTree = "<group>"; };
 		B50000022FCF000000000002 /* GradelyMacWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = GradelyMacWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -206,6 +208,7 @@
 				D20000222FD2000000000022 /* HugeiconsCore in Frameworks */,
 				D20000232FD2000000000023 /* HugeiconsStrokeRounded in Frameworks */,
 				920000032FD0000000000003 /* Supabase in Frameworks */,
+				B40000RC2FCEF10000000001 /* RevenueCat in Frameworks */,
 				F10000242FD1000000000024 /* FirebaseCore in Frameworks */,
 				F10000252FD1000000000025 /* FirebaseAuth in Frameworks */,
 				F10000262FD1000000000026 /* FirebaseFunctions in Frameworks */,
@@ -235,6 +238,7 @@
 				81EE6CBB2FCDDC4B009D28DE /* GradelyUITests */,
 				A20000012FCE0000000000A1 /* GradelyWatch.xcodeproj */,
 				920000062FD0000000000006 /* Config/Shared.xcconfig */,
+				B40000SK2FCEF10000000003 /* Config/Gradely.storekit */,
 				81EE6CA22FCDDC4A009D28DE /* Products */,
 				8139974A30164A380078BE59 /* design-qa.md */,
 			);
@@ -392,6 +396,7 @@
 			packageProductDependencies = (
 				D20000122FD2000000000012 /* HugeiconsCore */,
 				D20000132FD2000000000013 /* HugeiconsStrokeRounded */,
+				B40000RC2FCEF10000000002 /* RevenueCat */,
 				920000042FD0000000000004 /* Supabase */,
 				F10000142FD1000000000014 /* FirebaseCore */,
 				F10000152FD1000000000015 /* FirebaseAuth */,
@@ -490,6 +495,8 @@
 			knownRegions = (
 				en,
 				cs,
+				"en-CO",
+				"cs-US",
 				Base,
 			);
 			mainGroup = 81EE6C982FCDDC4A009D28DE;
@@ -815,7 +822,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Gradely/Gradely.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 23;
+				CURRENT_PROJECT_VERSION = 25;
 				DEVELOPMENT_TEAM = C2U9S337H8;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -855,7 +862,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Gradely/Gradely.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 23;
+				CURRENT_PROJECT_VERSION = 25;
 				DEVELOPMENT_TEAM = C2U9S337H8;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -1280,6 +1287,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = A10000012FCE000000000001 /* XCLocalSwiftPackageReference "GradelyWatchShared" */;
 			productName = GradelyWatchShared;
+		};
+		B40000RC2FCEF10000000002 /* RevenueCat */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 81EE6CCD2FCDDC4B009D28DE /* XCRemoteSwiftPackageReference "purchases-ios-spm" */;
+			productName = RevenueCat;
 		};
 		D20000102FD2000000000010 /* HugeiconsCore */ = {
 			isa = XCSwiftPackageProductDependency;

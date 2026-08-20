@@ -81,6 +81,7 @@ struct OnboardingView: View {
     @State private var didAttemptUpgradeMigration = false
     @AccessibilityFocusState private var focusedStep: OnboardingStep?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Bindable private var languageStore = AppLanguageStore.shared
 
     init(
         journey: OnboardingJourney,
@@ -120,7 +121,8 @@ struct OnboardingView: View {
             progressStore: progressStore
         ))
         _supportViewModel = State(initialValue: SupportTipViewModel(
-            supportTipProvider: supportTipProvider
+            supportTipProvider: supportTipProvider,
+            isSignedIn: appViewModel.gradeyAccount != nil
         ))
     }
 
@@ -139,10 +141,11 @@ struct OnboardingView: View {
                     .tint(Brand.primary)
                     .padding(Spacing.xl)
                     .background(.regularMaterial, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
-                    .accessibilityLabel(String(localized: "onboarding.sync.warning.retrying"))
+                    .accessibilityLabel(AppL10n.string("onboarding.sync.warning.retrying"))
                     .accessibilityIdentifier("onboardingWorking")
             }
         }
+        .environment(\.locale, languageStore.locale)
         .safeAreaInset(edge: .top, spacing: 0) {
             if viewModel.currentStep != .welcome, viewModel.currentStep != .school {
                 progressHeader
@@ -265,6 +268,17 @@ struct OnboardingView: View {
                         )
                     }
 
+                    VStack(alignment: .leading, spacing: Spacing.sm) {
+                        Text("settings.language.title")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                        AppLanguageOptionsList(
+                            store: languageStore,
+                            usesSettingsChrome: false,
+                            compact: true
+                        )
+                    }
+
                     VStack(spacing: Spacing.md) {
                         primaryButton("onboarding.getStarted", systemImage: "arrow.right") {
                             viewModel.chooseGetStarted()
@@ -365,7 +379,7 @@ struct OnboardingView: View {
                 VStack(spacing: 0) {
                     OnboardingSummaryRow(
                         title: "onboarding.ready.school",
-                        value: schoolLabel ?? String(localized: "onboarding.ready.connected"),
+                        value: schoolLabel ?? AppL10n.string("onboarding.ready.connected"),
                         systemImage: "building.columns.fill"
                     )
                     Divider().padding(.leading, 44)
@@ -417,6 +431,9 @@ struct OnboardingView: View {
 
             SupportTipOptionsContent(viewModel: supportViewModel)
                 .accessibilityIdentifier("onboardingSupportOptions")
+                .onAppear {
+                    supportViewModel.isSignedIn = appViewModel.gradeyAccount != nil
+                }
 
             primaryButton("onboarding.upgrade.support.continue", systemImage: "arrow.right.circle.fill") {
                 if viewModel.finish() {
@@ -529,7 +546,7 @@ struct OnboardingView: View {
 
     private var progressText: String {
         String(
-            format: String(localized: "onboarding.progress"),
+            format: AppL10n.string("onboarding.progress"),
             Int64(viewModel.progressPosition),
             Int64(viewModel.progressCount)
         )
@@ -548,22 +565,22 @@ struct OnboardingView: View {
     private var accountSummary: String {
         switch viewModel.accountMode {
         case .gradeyID:
-            return String(localized: "onboarding.ready.gradeyID")
+            return AppL10n.string("onboarding.ready.gradeyID")
         case .guest, .undecided:
-            return String(localized: "onboarding.ready.localOnly")
+            return AppL10n.string("onboarding.ready.localOnly")
         }
     }
 
     private var notificationSummary: String {
         switch viewModel.notificationStatus {
         case .enabled:
-            return String(localized: "onboarding.notifications.enabled")
+            return AppL10n.string("onboarding.notifications.enabled")
         case .unavailable:
             return viewModel.accountMode == .guest
-                ? String(localized: "onboarding.notifications.unavailable")
-                : String(localized: "onboarding.notifications.disabled")
+                ? AppL10n.string("onboarding.notifications.unavailable")
+                : AppL10n.string("onboarding.notifications.disabled")
         case .notDetermined, .notNow, .denied:
-            return String(localized: "onboarding.notifications.disabled")
+            return AppL10n.string("onboarding.notifications.disabled")
         }
     }
 

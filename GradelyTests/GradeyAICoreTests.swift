@@ -298,7 +298,7 @@ struct GradeyAICoreTests {
         #expect(viewModel.messages.map(\.role) == [.user, .assistant])
         #expect(viewModel.messages.last?.content == "A useful answer")
         #expect(viewModel.messages.last?.status == .complete)
-        #expect(viewModel.status?.remaining == 29)
+        #expect(viewModel.status?.remaining == 4)
         #expect(viewModel.isStreaming == false)
     }
 

@@ -68,28 +68,28 @@ struct GradeyDebugPanel: View {
                     copyableRow(
                         title: "debug.supabaseID",
                         value: snapshot.supabaseUserID,
-                        copiedLabel: String(localized: "debug.supabaseID"),
+                        copiedLabel: AppL10n.string("debug.supabaseID"),
                         identifier: "debugSupabaseID"
                     )
                     SettingsRowDivider()
                     copyableRow(
                         title: "debug.revenueCatID",
                         value: snapshot.revenueCatAppUserID,
-                        copiedLabel: String(localized: "debug.revenueCatID"),
+                        copiedLabel: AppL10n.string("debug.revenueCatID"),
                         identifier: "debugRevenueCatID"
                     )
                     SettingsRowDivider()
                     copyableRow(
                         title: "debug.revenueCatOriginalID",
                         value: snapshot.revenueCatOriginalAppUserID,
-                        copiedLabel: String(localized: "debug.revenueCatOriginalID"),
+                        copiedLabel: AppL10n.string("debug.revenueCatOriginalID"),
                         identifier: "debugRevenueCatOriginalID"
                     )
                     SettingsRowDivider()
                     copyableRow(
                         title: "debug.linkedAccountID",
                         value: snapshot.linkedAccountID,
-                        copiedLabel: String(localized: "debug.linkedAccountID"),
+                        copiedLabel: AppL10n.string("debug.linkedAccountID"),
                         identifier: "debugLinkedAccountID"
                     )
                 }
@@ -100,8 +100,8 @@ struct GradeyDebugPanel: View {
                     SettingsValueRow(
                         title: "debug.guestMode",
                         value: snapshot.isGuestMode
-                            ? String(localized: "debug.yes")
-                            : String(localized: "debug.no")
+                            ? AppL10n.string("debug.yes")
+                            : AppL10n.string("debug.no")
                     )
                     .padding(20)
                     .accessibilityIdentifier("debugGuestMode")
@@ -111,8 +111,8 @@ struct GradeyDebugPanel: View {
                     SettingsValueRow(
                         title: "debug.onboardingV2",
                         value: snapshot.hasCompletedOnboardingV2
-                            ? String(localized: "debug.yes")
-                            : String(localized: "debug.no")
+                            ? AppL10n.string("debug.yes")
+                            : AppL10n.string("debug.no")
                     )
                     .padding(20)
 
@@ -121,8 +121,8 @@ struct GradeyDebugPanel: View {
                     SettingsValueRow(
                         title: "debug.onboardingV1",
                         value: snapshot.hasCompletedOnboardingV1
-                            ? String(localized: "debug.yes")
-                            : String(localized: "debug.no")
+                            ? AppL10n.string("debug.yes")
+                            : AppL10n.string("debug.no")
                     )
                     .padding(20)
 
@@ -201,7 +201,7 @@ struct GradeyDebugPanel: View {
             }
 
             if let copiedField {
-                Text(String(format: String(localized: "debug.copied"), copiedField))
+                Text(String(format: AppL10n.string("debug.copied"), copiedField))
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .accessibilityIdentifier("debugCopiedLabel")
@@ -227,7 +227,7 @@ struct GradeyDebugPanel: View {
 
     private var progressSummary: String {
         guard let journey = snapshot.savedJourney, let step = snapshot.savedStep else {
-            return String(localized: "debug.none")
+            return AppL10n.string("debug.none")
         }
         return "\(journey.rawValue) / \(step.rawValue)"
     }
@@ -313,7 +313,7 @@ struct GradeyDebugPanel: View {
 
     private func displayValue(_ value: String?) -> String {
         let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        return trimmed.isEmpty ? String(localized: "debug.unavailable") : trimmed
+        return trimmed.isEmpty ? AppL10n.string("debug.unavailable") : trimmed
     }
 
     private func copy(_ value: String) {

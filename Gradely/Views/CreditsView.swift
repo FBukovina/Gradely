@@ -73,7 +73,7 @@ struct CreditsView: View {
         SettingsModalSurface(padding: 0) {
             VStack(spacing: 0) {
                 CreditPersonRow(
-                    role: String(localized: "credits.role.leadDeveloper"),
+                    role: AppL10n.string("credits.role.leadDeveloper"),
                     name: "Filip Bukovina",
                     email: AppLinks.filipEmailURL,
                     instagram: AppLinks.filipInstagramURL
@@ -82,7 +82,7 @@ struct CreditsView: View {
                 SettingsModalRowDivider(leadingInset: 20)
 
                 CreditPersonRow(
-                    role: String(localized: "credits.role.leadGraphics"),
+                    role: AppL10n.string("credits.role.leadGraphics"),
                     name: "Tomáš Vlk",
                     email: AppLinks.tomasEmailURL,
                     instagram: nil

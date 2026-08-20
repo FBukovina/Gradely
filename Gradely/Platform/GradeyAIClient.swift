@@ -17,9 +17,9 @@ enum GradeyAIError: LocalizedError, Equatable {
     var errorDescription: String? {
         switch self {
         case .notConfigured:
-            return String(localized: "gradey.auth.error.notConfigured")
+            return AppL10n.string("gradey.auth.error.notConfigured")
         case .invalidResponse, .invalidStream:
-            return String(localized: "gradey.account.error.invalidResponse")
+            return AppL10n.string("gradey.account.error.invalidResponse")
         case .invalidPrompt:
             return "Enter a message between 1 and 2,000 characters."
         case .requestTooLarge:
@@ -64,9 +64,9 @@ final class MockGradeyAIClient: GradeyAIClient {
             enabled: true,
             consentRequired: false,
             termsVersion: "1",
-            dailyLimit: 30,
+            dailyLimit: 5,
             dailyUsed: 0,
-            remaining: 30,
+            remaining: 5,
             resetAt: nil
         ),
         conversations: [GradeyAIConversation] = [],

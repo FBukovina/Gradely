@@ -14,13 +14,13 @@ enum StravaCZAppError: LocalizedError, Equatable {
     var errorDescription: String? {
         switch self {
         case .notLoggedIn:
-            return String(localized: "error.stravacz.notLoggedIn")
+            return AppL10n.string("error.stravacz.notLoggedIn")
         case .missingFields:
-            return String(localized: "error.missingFields")
+            return AppL10n.string("error.missingFields")
         case .mealNotFound:
-            return String(localized: "error.stravacz.mealNotFound")
+            return AppL10n.string("error.stravacz.mealNotFound")
         case .mealNotModifiable:
-            return String(localized: "error.stravacz.mealNotModifiable")
+            return AppL10n.string("error.stravacz.mealNotModifiable")
         }
     }
 }

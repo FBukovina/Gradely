@@ -292,11 +292,11 @@ final class SupabaseLinkedAccountClient: LinkedAccountClient {
 
         let (data, response) = try await urlSession.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse else {
-            throw GradeyAuthError.server(String(localized: "gradey.account.error.invalidResponse"))
+            throw GradeyAuthError.server(AppL10n.string("gradey.account.error.invalidResponse"))
         }
         guard (200..<300).contains(httpResponse.statusCode) else {
             let message = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines)
-            throw GradeyAuthError.server(message?.isEmpty == false ? message! : String(localized: "gradey.account.error.requestFailed"))
+            throw GradeyAuthError.server(message?.isEmpty == false ? message! : AppL10n.string("gradey.account.error.requestFailed"))
         }
         return data
     }

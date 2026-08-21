@@ -7,7 +7,12 @@ struct GradeyAIView: View {
     @State private var pendingConversationDeletion: GradeyAIConversation?
     @State private var dangerousAction: DangerousAction?
     @State private var isSupportPresented = false
+    @State private var didCompleteGuestSignIn = false
     @FocusState private var isComposerFocused: Bool
+
+    private let isGuestMode: Bool
+    private let authClient: any GradeyAuthClient
+    private let onGuestSignedIn: (() async -> Void)?
 
     private enum DangerousAction {
         case deleteAll
@@ -17,8 +22,14 @@ struct GradeyAIView: View {
     init(
         viewModel: GradeyAIViewModel,
         supportTipProvider: any SupportTipProviding = MockSupportTipService(),
-        isSignedIn: Bool = false
+        isSignedIn: Bool = false,
+        isGuestMode: Bool = false,
+        authClient: any GradeyAuthClient = MockGradeyAuthClient(session: nil),
+        onGuestSignedIn: (() async -> Void)? = nil
     ) {
+        self.isGuestMode = isGuestMode
+        self.authClient = authClient
+        self.onGuestSignedIn = onGuestSignedIn
         _viewModel = State(initialValue: viewModel)
         _supportViewModel = State(initialValue: SupportTipViewModel(
             supportTipProvider: supportTipProvider,
@@ -26,7 +37,36 @@ struct GradeyAIView: View {
         ))
     }
 
+    private var needsSignIn: Bool {
+        isGuestMode && !didCompleteGuestSignIn
+    }
+
     var body: some View {
+        Group {
+            if needsSignIn {
+                signInContent
+            } else {
+                aiContent
+            }
+        }
+    }
+
+    private var signInContent: some View {
+        NavigationStack {
+            GradeyIDLoginView(
+                authClient: authClient,
+                subtitleKey: "gradey.ai.signIn.subtitle"
+            ) {
+                Task { await completeGuestSignIn() }
+            }
+        }
+        .gradelyModalDismissButton {
+            dismiss()
+        }
+        .accessibilityIdentifier("gradeyAISignInView")
+    }
+
+    private var aiContent: some View {
         NavigationStack {
             ZStack {
                 AuroraBackground()
@@ -50,6 +90,7 @@ struct GradeyAIView: View {
             dismiss()
         }
         .task {
+            guard !needsSignIn else { return }
             await viewModel.bootstrap()
             await supportViewModel.loadIfNeeded()
         }
@@ -815,9 +856,17 @@ struct GradeyAIView: View {
         }
     }
 
+    private func completeGuestSignIn() async {
+        if let onGuestSignedIn {
+            await onGuestSignedIn()
+        }
+        supportViewModel.isSignedIn = true
+        didCompleteGuestSignIn = true
+    }
+
     private var errorBinding: Binding<Bool> {
         Binding(
-            get: { viewModel.errorMessage != nil },
+            get: { !needsSignIn && viewModel.errorMessage != nil },
             set: { if !$0 { viewModel.clearError() } }
         )
     }

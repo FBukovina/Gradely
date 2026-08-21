@@ -816,6 +816,40 @@ final class GradelyUITests: XCTestCase {
     }
 
     @MainActor
+    func testGuestOpeningGradeyAIShowsLoginInsteadOfErrorAlert() throws {
+        let app = XCUIApplication()
+        app.launchArguments = [
+            "-uiTestingMockAPI",
+            "-uiTestingLoggedIn",
+            "-uiTestingRequiresGradeyID",
+            "-uiTestingGradeyIDSignedOut",
+            "-uiTestingResetGuestMode"
+        ]
+        app.launch()
+
+        let guestButton = app.buttons["gradeyIDBypassButton"]
+        XCTAssertTrue(guestButton.waitForExistence(timeout: 5))
+        guestButton.tap()
+        XCTAssertTrue(app.scrollViews["todayScrollView"].waitForExistence(timeout: 5))
+
+        let aiButton = app.buttons["gradeyAIButton"]
+        XCTAssertTrue(aiButton.waitForExistence(timeout: 3))
+        aiButton.tap()
+
+        XCTAssertTrue(app.descendants(matching: .any)["gradeyAISignInView"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["gradeyIDAppleButton"].exists)
+        XCTAssertFalse(app.buttons["gradeyIDBypassButton"].exists)
+        XCTAssertFalse(app.alerts.firstMatch.exists)
+        XCTAssertFalse(app.descendants(matching: .any)["gradeyAIView"].exists)
+        XCTAssertFalse(app.descendants(matching: .any)["gradeyAIUnavailable"].exists)
+
+        app.buttons["gradeyIDAppleButton"].tap()
+        XCTAssertTrue(app.descendants(matching: .any)["gradeyAIView"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.descendants(matching: .any)["gradeyAISignInView"].exists)
+        XCTAssertFalse(app.alerts.firstMatch.exists)
+    }
+
+    @MainActor
     func testGradeyAIMockStreamUpdatesReplyAndQuota() throws {
         let app = XCUIApplication()
         app.launchArguments = [

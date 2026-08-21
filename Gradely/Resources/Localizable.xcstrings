@@ -7588,6 +7588,34 @@
         }
       }
     },
+    "gradey.ai.signIn.subtitle" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gradey AI je jen pro přihlášené uživatele. Přihlas se ke Gradey ID a pokračuj."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gradey AI is available for signed-in users. Sign in with Gradey ID to continue."
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gradey AI is for signed-in users. sign in with Gradey ID to continue."
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gradey AI je jen pro přihlášené. přihlas se ke Gradey ID a pokračuj."
+          }
+        }
+      }
+    },
     "gradey.ai.stop" : {
       "localizations" : {
         "cs" : {

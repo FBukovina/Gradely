@@ -3,15 +3,18 @@ import SwiftUI
 
 struct GradeyIDLoginView: View {
     @State private var viewModel: GradeyIDViewModel
+    private let subtitleKey: String
     let onContinueWithoutAccount: (() -> Void)?
     let onSignedIn: () -> Void
 
     init(
         authClient: any GradeyAuthClient,
+        subtitleKey: String = "gradey.auth.subtitle",
         onContinueWithoutAccount: (() -> Void)? = nil,
         onSignedIn: @escaping () -> Void
     ) {
         _viewModel = State(initialValue: GradeyIDViewModel(authClient: authClient))
+        self.subtitleKey = subtitleKey
         self.onContinueWithoutAccount = onContinueWithoutAccount
         self.onSignedIn = onSignedIn
     }
@@ -57,7 +60,7 @@ struct GradeyIDLoginView: View {
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
                     .accessibilityAddTraits(.isHeader)
-                Text("gradey.auth.subtitle")
+                Text(LocalizedStringKey(subtitleKey))
                     .font(.callout)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)

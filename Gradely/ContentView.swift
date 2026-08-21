@@ -258,7 +258,12 @@ struct ContentView: View {
             GradeyAIView(
                 viewModel: gradeyAIViewModel,
                 supportTipProvider: supportTipProvider,
-                isSignedIn: appViewModel.gradeyAccount != nil
+                isSignedIn: appViewModel.gradeyAccount != nil,
+                isGuestMode: appViewModel.isGuestMode,
+                authClient: gradeyAuthClient,
+                onGuestSignedIn: {
+                    await appViewModel.markGradeySignedIn()
+                }
             )
         }
         .environment(\.locale, languageStore.locale)

@@ -343,6 +343,42 @@ struct RiskCapsuleBar: View {
     }
 }
 
+/// Circular progress ring showing absence percentage relative to the school
+/// threshold; falls back to a 0–100 % scale when no threshold is known.
+struct AbsenceRiskRing: View {
+    let percentage: Double
+    let threshold: Double?
+    let level: AbsenceRiskLevel
+    var size: CGFloat = 38
+    var lineWidth: CGFloat = 4.5
+
+    private var fraction: Double {
+        if let threshold, threshold > 0 {
+            return min(max(percentage / threshold, 0), 1)
+        }
+        return min(max(percentage / 100, 0), 1)
+    }
+
+    private var fillColor: Color {
+        threshold == nil ? Color.secondary.opacity(0.5) : level.color
+    }
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .stroke(fillColor.opacity(0.22), lineWidth: lineWidth)
+            Circle()
+                .trim(from: 0, to: fraction)
+                .stroke(fillColor, style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
+                .rotationEffect(.degrees(-90))
+        }
+        .padding(lineWidth / 2)
+        .frame(width: size, height: size)
+        .fixedSize()
+        .accessibilityHidden(true)
+    }
+}
+
 // MARK: - GitHub mark
 
 struct GitHubIcon: View {

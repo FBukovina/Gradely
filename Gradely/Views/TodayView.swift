@@ -187,13 +187,15 @@ struct TodayView: View {
                     Spacer(minLength: Spacing.sm)
 
                     Menu {
-                        ForEach(viewModel.snapshot.linkedSchoolAccounts) { account in
-                            Button {
-                                Task { await viewModel.activateAccount(account) }
-                            } label: {
-                                GradelyLabel(account.displayName, systemImage: account.id == viewModel.snapshot.activeAccount?.id ? "checkmark.circle.fill" : "circle")
+                        Picker(selection: selectedSchoolAccountID) {
+                            ForEach(viewModel.snapshot.linkedSchoolAccounts) { account in
+                                Text(verbatim: account.displayName)
+                                    .tag(account.id)
                             }
+                        } label: {
+                            EmptyView()
                         }
+                        .pickerStyle(.inline)
                     } label: {
                         if viewModel.isActivatingAccountID != nil {
                             ProgressView().controlSize(.small)
@@ -205,6 +207,12 @@ struct TodayView: View {
                                 .background(Brand.primary.opacity(0.12), in: Circle())
                         }
                     }
+                    .menuIndicator(.hidden)
+                    .buttonStyle(.plain)
+                    .disabled(viewModel.isActivatingAccountID != nil)
+                    .accessibilityLabel(
+                        viewModel.snapshot.activeAccount?.displayName ?? "School account"
+                    )
                     .accessibilityIdentifier("todayAccountSwitcher")
                 }
             }
@@ -336,6 +344,18 @@ struct TodayView: View {
         Binding(
             get: { viewModel.errorMessage != nil },
             set: { if !$0 { viewModel.clearError() } }
+        )
+    }
+
+    private var selectedSchoolAccountID: Binding<String> {
+        Binding(
+            get: { viewModel.snapshot.activeAccount?.id ?? "" },
+            set: { id in
+                guard let account = viewModel.snapshot.linkedSchoolAccounts.first(where: { $0.id == id }) else {
+                    return
+                }
+                Task { await viewModel.activateAccount(account) }
+            }
         )
     }
 
@@ -485,11 +505,12 @@ private struct TodayRiskRow: View {
     let subject: AbsenceRiskSubject
 
     var body: some View {
-        HStack(spacing: Spacing.md) {
-            Gauge(value: min(subject.percentage, subject.threshold ?? max(subject.percentage, 1)), in: 0...(subject.threshold ?? max(subject.percentage, 1))) {}
-                .gaugeStyle(.accessoryCircularCapacity)
-                .tint(tint)
-                .frame(width: 38, height: 38)
+        HStack(alignment: .center, spacing: Spacing.md) {
+            AbsenceRiskRing(
+                percentage: subject.percentage,
+                threshold: subject.threshold,
+                level: subject.level
+            )
             VStack(alignment: .leading, spacing: Spacing.xs) {
                 Text(subject.subjectName)
                     .font(.subheadline.weight(.bold))
@@ -498,11 +519,12 @@ private struct TodayRiskRow: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
-            Spacer()
+            Spacer(minLength: 0)
             Text(String(format: "%.0f%%", subject.percentage))
                 .font(.headline.monospacedDigit())
                 .foregroundStyle(tint)
         }
+        .frame(minHeight: 44)
     }
 
     private var subtitle: String {

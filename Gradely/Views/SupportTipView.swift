@@ -154,9 +154,10 @@ struct SupportTipOptionsContent: View {
                     Text("support.plans.interval.yearly")
                         .tag(SupportInterval.yearly)
                 } label: {
-                    Text("support.plans.interval.monthly")
+                    EmptyView()
                 }
                 .pickerStyle(.segmented)
+                .labelsHidden()
                 .accessibilityIdentifier("supportPlanIntervalPicker")
 
                 if viewModel.selectedInterval == .yearly {

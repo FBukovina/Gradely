@@ -177,7 +177,7 @@ final class AppViewModel {
             let activation = try await linkedAccountRepository.activateSchoolAccount(
                 id: selectedAccount.id
             )
-            _ = try repository.activateLinkedSchoolAccount(activation)
+            _ = try await repository.activateLinkedSchoolAccount(activation)
             return true
         } catch {
             return false

@@ -424,6 +424,90 @@ struct GradelyTests {
         #expect(store.session?.accessToken == "refreshed-access")
     }
 
+    @Test func activateKeepsLocalBakalariSessionInsteadOfPollerTokens() async throws {
+        let account = PreviewData.linkedSchoolAccount
+        let local = StoredSession(
+            accessToken: "local-access",
+            refreshToken: "local-refresh",
+            tokenType: "Bearer",
+            expiresAt: Date().addingTimeInterval(3600),
+            baseURL: URL(string: "https://demo.bakalari.cz/")!,
+            provider: .bakalari,
+            bakalari: BakalariCredentials(username: "student", password: "secret"),
+            linkedAccountID: account.id
+        )
+        let store = InMemorySessionStore(session: local)
+        let client = RefreshSpyBakalariClient()
+        let repository = SchoolRepository(
+            client: client,
+            sessionStore: store,
+            marksCache: InMemoryMarksCache()
+        )
+        let pollerSession = StoredSession(
+            accessToken: "poller-access",
+            refreshToken: "poller-refresh",
+            tokenType: "Bearer",
+            expiresAt: Date().addingTimeInterval(3600),
+            baseURL: URL(string: "https://demo.bakalari.cz/")!,
+            provider: .bakalari,
+            bakalari: BakalariCredentials(username: "student", password: "secret"),
+            linkedAccountID: account.id
+        )
+        let activation = LinkedSchoolAccountActivation(
+            account: account,
+            tokenPayload: ProviderSecretSanitizer.schoolPayload(from: pollerSession)
+        )
+
+        let session = try await repository.activateLinkedSchoolAccount(activation)
+
+        #expect(client.loginCallCount == 0)
+        #expect(session.accessToken == "local-access")
+        #expect(store.session?.refreshToken == "local-refresh")
+    }
+
+    @Test func activateLogsInWithStoredCredentialsInsteadOfPollerTokens() async throws {
+        let account = PreviewData.linkedSchoolAccount
+        let store = InMemorySessionStore()
+        let client = RefreshSpyBakalariClient(
+            loginResult: LoginResponse(
+                accessToken: "device-access",
+                refreshToken: "device-refresh",
+                tokenType: "Bearer",
+                expiresIn: 3600,
+                apiVersion: nil,
+                appVersion: nil,
+                userID: "student"
+            )
+        )
+        let repository = SchoolRepository(
+            client: client,
+            sessionStore: store,
+            marksCache: InMemoryMarksCache()
+        )
+        let pollerSession = StoredSession(
+            accessToken: "poller-access",
+            refreshToken: "poller-refresh",
+            tokenType: "Bearer",
+            expiresAt: Date().addingTimeInterval(3600),
+            baseURL: URL(string: "https://demo.bakalari.cz/")!,
+            provider: .bakalari,
+            bakalari: BakalariCredentials(username: "student", password: "secret"),
+            linkedAccountID: account.id
+        )
+        let activation = LinkedSchoolAccountActivation(
+            account: account,
+            tokenPayload: ProviderSecretSanitizer.schoolPayload(from: pollerSession)
+        )
+
+        let session = try await repository.activateLinkedSchoolAccount(activation)
+
+        #expect(client.loginCallCount == 1)
+        #expect(session.accessToken == "device-access")
+        #expect(session.bakalari?.username == "student")
+        #expect(store.session?.refreshToken == "device-refresh")
+        #expect(store.session?.linkedAccountID == account.id)
+    }
+
     @Test func storedSessionDecodesLegacyBlobWithoutCredentials() throws {
         let json = """
         {

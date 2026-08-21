@@ -1,3 +1,9 @@
+import {
+  isProviderAuthenticationError,
+  parseBakalariTokenResponse,
+  ProviderAuthenticationError,
+  resolveBakalariPollingSecret,
+} from "../_shared/bakalari-provider-session.ts";
 import { adminClient, providerSecretKey } from "../_shared/client.ts";
 import { errorResponse, handleOptions, json } from "../_shared/http.ts";
 import { markFingerprint, notificationBody } from "../_shared/marks.ts";
@@ -155,20 +161,18 @@ async function fetchBakalariMarks(
   secret: Record<string, any>,
   baseURL: string,
 ) {
-  let activeSecret = secret;
-  let didRefresh = false;
-
-  // The app and background poller cannot safely rotate the same refresh-token
-  // chain. Refresh once on the first poll to establish a poller-owned chain,
-  // then renew that chain shortly before its access token expires.
-  if (shouldRefreshBakalariSecret(activeSecret)) {
-    activeSecret = await refreshBakalariSecret(supabase, account, activeSecret, baseURL);
-    didRefresh = true;
-  }
-
+  const resolved = await resolveAndPersistBakalariSecret(supabase, account, secret, baseURL);
+  let activeSecret = resolved.secret;
   let response = await requestBakalariMarks(activeSecret, baseURL);
-  if (response.status === 401 && !didRefresh) {
-    activeSecret = await refreshBakalariSecret(supabase, account, activeSecret, baseURL);
+
+  if (response.status === 401 && !resolved.didMutate) {
+    activeSecret = (await resolveAndPersistBakalariSecret(
+      supabase,
+      account,
+      activeSecret,
+      baseURL,
+      true,
+    )).secret;
     response = await requestBakalariMarks(activeSecret, baseURL);
   }
 
@@ -187,27 +191,38 @@ function requestBakalariMarks(secret: Record<string, any>, baseURL: string) {
   });
 }
 
-function shouldRefreshBakalariSecret(secret: Record<string, any>) {
-  if (!secret.pollingSessionEstablishedAt) return true;
-  const expiresAt = Date.parse(String(secret.expiresAt ?? ""));
-  return !Number.isFinite(expiresAt) || expiresAt <= Date.now() + 5 * 60 * 1000;
-}
-
-async function refreshBakalariSecret(
+async function resolveAndPersistBakalariSecret(
   supabase: ReturnType<typeof adminClient>,
   account: Record<string, any>,
   secret: Record<string, any>,
   baseURL: string,
+  forceRefresh = false,
 ) {
-  const refreshToken = stringValue(secret.refreshToken);
-  if (!refreshToken) {
-    throw new ProviderAuthenticationError("bakalari_refresh_token_missing");
+  const resolved = await resolveBakalariPollingSecret(secret, {
+    forceRefresh,
+    login: (credentials) => requestBakalariTokens(baseURL, {
+      grant_type: "password",
+      username: credentials.username,
+      password: credentials.password,
+    }),
+    refresh: (refreshToken) => requestBakalariTokens(baseURL, {
+      grant_type: "refresh_token",
+      refresh_token: refreshToken,
+    }),
+  });
+  if (!resolved.didMutate) {
+    return { secret: resolved.secret as Record<string, any>, didMutate: false };
   }
+  return {
+    secret: await persistProviderSecret(supabase, account, resolved.secret),
+    didMutate: true,
+  };
+}
 
+async function requestBakalariTokens(baseURL: string, fields: Record<string, string>) {
   const body = new URLSearchParams({
     client_id: "ANDR",
-    grant_type: "refresh_token",
-    refresh_token: refreshToken,
+    ...fields,
   });
   const response = await fetch(new URL("api/login", baseURL).toString(), {
     method: "POST",
@@ -220,44 +235,28 @@ async function refreshBakalariSecret(
   });
 
   if (response.status === 400 || response.status === 401) {
-    throw new ProviderAuthenticationError("bakalari_refresh_rejected");
+    throw new ProviderAuthenticationError(
+      fields.grant_type === "password" ? "bakalari_login_rejected" : "bakalari_refresh_rejected",
+    );
   }
-  if (!response.ok) throw new Error(`bakalari_refresh_status_${response.status}`);
+  if (!response.ok) throw new Error(`bakalari_token_status_${response.status}`);
+  return parseBakalariTokenResponse(await response.json());
+}
 
-  const tokens = await response.json();
-  const accessToken = stringValue(tokens?.access_token);
-  const rotatedRefreshToken = stringValue(tokens?.refresh_token);
-  const expiresIn = numberValue(tokens?.expires_in);
-  if (!accessToken || !rotatedRefreshToken || expiresIn == null || expiresIn <= 0) {
-    throw new Error("bakalari_refresh_response_invalid");
-  }
-
-  const now = new Date();
-  const refreshedSecret = {
-    ...secret,
-    accessToken,
-    refreshToken: rotatedRefreshToken,
-    tokenType: stringValue(tokens?.token_type) || "Bearer",
-    expiresAt: new Date(now.getTime() + expiresIn * 1000).toISOString(),
-    pollingSessionEstablishedAt: now.toISOString(),
-  };
+async function persistProviderSecret(
+  supabase: ReturnType<typeof adminClient>,
+  account: Record<string, any>,
+  secret: Record<string, unknown>,
+) {
   const { data: updated, error } = await supabase.rpc("update_provider_secret", {
     p_secret_id: account.secret_id,
     p_user_id: account.user_id,
-    p_payload: refreshedSecret,
+    p_payload: secret,
     p_key: providerSecretKey(),
   });
   if (error) throw error;
   if (updated !== true) throw new Error("provider_secret_update_failed");
-
-  return refreshedSecret;
-}
-
-class ProviderAuthenticationError extends Error {}
-
-function isProviderAuthenticationError(error: unknown) {
-  return error instanceof ProviderAuthenticationError ||
-    (error instanceof Error && error.message === "edupage_auth_failed");
+  return secret as Record<string, any>;
 }
 
 async function recordGradeHistory(

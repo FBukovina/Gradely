@@ -160,6 +160,9 @@ enum ProviderSecretSanitizer {
         let tokenType: String
         let expiresAt: Date?
         let eduPage: EduPagePayload?
+        /// Bakaláři username/password so the cloud poller can mint its own
+        /// token family instead of racing the app's rotating refresh token.
+        let bakalari: BakalariCredentials?
     }
 
     struct EduPagePayload: Codable, Equatable {
@@ -190,7 +193,8 @@ enum ProviderSecretSanitizer {
                     linkedStudents: data.linkedStudents,
                     subjects: data.subjects
                 )
-            }
+            },
+            bakalari: session.bakalari
         )
     }
 }

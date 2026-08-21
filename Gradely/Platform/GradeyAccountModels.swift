@@ -460,7 +460,7 @@ struct LinkedSchoolAccountActivation: Codable, Equatable, Sendable {
             baseURL: tokenPayload.baseURL,
             provider: provider,
             eduPage: eduPage,
-            bakalari: nil,
+            bakalari: tokenPayload.bakalari,
             linkedAccountID: account.id,
             linkedAccountDisplayName: account.displayName,
             linkedAccountSchoolName: account.schoolName

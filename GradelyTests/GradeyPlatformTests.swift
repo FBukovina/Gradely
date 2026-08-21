@@ -71,6 +71,28 @@ struct GradeyPlatformTests {
         #expect(!json.contains("super-secret-password"))
         #expect(json.contains("session"))
         #expect(json.contains("hash"))
+        #expect(!json.contains("bakalari"))
+    }
+
+    @Test func schoolProviderSecretPayloadIncludesBakalariCredentialsForPolling() throws {
+        let session = StoredSession(
+            accessToken: "access",
+            refreshToken: "refresh",
+            tokenType: "Bearer",
+            expiresAt: Date(timeIntervalSince1970: 1_800_000_000),
+            baseURL: URL(string: "https://school.bakalari.cz/")!,
+            provider: .bakalari,
+            bakalari: BakalariCredentials(username: "filip", password: "school-password")
+        )
+
+        let payload = ProviderSecretSanitizer.schoolPayload(from: session)
+        let data = try JSONEncoder.sessionEncoder.encode(payload)
+        let json = String(data: data, encoding: .utf8) ?? ""
+
+        #expect(payload.bakalari?.username == "filip")
+        #expect(payload.bakalari?.password == "school-password")
+        #expect(json.contains("school-password"))
+        #expect(json.contains("filip"))
     }
 
     @Test func reconnectPrefillUsesLinkedSchoolAndUsernameWithoutPassword() throws {
@@ -423,6 +445,115 @@ struct GradeyPlatformTests {
         #expect(viewModel.accounts.first?.id == PreviewData.linkedSchoolAccount.id)
         #expect(viewModel.accounts.first?.status == .active)
         #expect(viewModel.accounts.first?.actionRequiredReason == nil)
+    }
+
+    @MainActor
+    @Test func todaySilentlyRelinksWhenLocalProviderSessionStillWorks() async {
+        var actionRequired = PreviewData.linkedSchoolAccount
+        actionRequired.status = .actionRequired
+        actionRequired.actionRequiredReason = "Provider session expired. Re-link this account in Gradey."
+
+        let defaults = UserDefaults(suiteName: "GradeyPlatformTests.\(UUID().uuidString)")!
+        let authClient = MockGradeyAuthClient()
+        let linkedClient = MockLinkedAccountClient()
+        let linkedRepository = LinkedAccountRepository(
+            store: LinkedAccountStore(userDefaults: defaults),
+            client: linkedClient,
+            authClient: authClient
+        )
+        linkedRepository.replaceLocalAccounts([actionRequired])
+
+        let session = StoredSession(
+            accessToken: "local-access",
+            refreshToken: "local-refresh",
+            tokenType: "Bearer",
+            expiresAt: Date().addingTimeInterval(3600),
+            baseURL: URL(string: "https://demo.bakalari.cz/")!,
+            provider: .bakalari,
+            bakalari: BakalariCredentials(username: "filip", password: "secret"),
+            linkedAccountID: actionRequired.id
+        )
+        let viewModel = TodayViewModel(
+            repository: SchoolRepository(
+                client: MockBakalariClient(),
+                sessionStore: InMemorySessionStore(session: session),
+                marksCache: InMemoryMarksCache()
+            ),
+            stravaCZRepository: AppEnvironment.makeMockStravaCZRepository(),
+            linkedAccountRepository: linkedRepository,
+            historyRepository: GradeyHistoryRepository(
+                client: MockGradeyHistoryClient(),
+                authClient: authClient
+            ),
+            accountSettingsClient: MockDevicePushTokenClient(
+                accountSettings: GradeyAccountSettingsSnapshot(
+                    activeSchoolAccountID: actionRequired.id,
+                    linkedAccounts: [actionRequired],
+                    notificationPreferences: .default
+                )
+            ),
+            gradeyAuthClient: authClient
+        )
+
+        await viewModel.refresh(forceRefresh: false)
+
+        #expect(linkedClient.reconnectCallCount == 1)
+        #expect(viewModel.accountRequiringReconnect == nil)
+        #expect(linkedRepository.loadAccounts().first?.status == .active)
+        #expect(viewModel.errorMessage == nil)
+    }
+
+    @MainActor
+    @Test func todayKeepsReconnectBannerWhenSilentRelinkFails() async {
+        var actionRequired = PreviewData.linkedSchoolAccount
+        actionRequired.status = .actionRequired
+        actionRequired.actionRequiredReason = "Provider session expired. Re-link this account in Gradey."
+
+        let defaults = UserDefaults(suiteName: "GradeyPlatformTests.\(UUID().uuidString)")!
+        let authClient = MockGradeyAuthClient()
+        let linkedRepository = LinkedAccountRepository(
+            store: LinkedAccountStore(userDefaults: defaults),
+            client: MockLinkedAccountClient(reconnectError: GradeyAuthError.server("still expired")),
+            authClient: authClient
+        )
+        linkedRepository.replaceLocalAccounts([actionRequired])
+
+        let session = StoredSession(
+            accessToken: "local-access",
+            refreshToken: "local-refresh",
+            tokenType: "Bearer",
+            expiresAt: Date().addingTimeInterval(3600),
+            baseURL: URL(string: "https://demo.bakalari.cz/")!,
+            provider: .bakalari,
+            bakalari: BakalariCredentials(username: "filip", password: "secret"),
+            linkedAccountID: actionRequired.id
+        )
+        let viewModel = TodayViewModel(
+            repository: SchoolRepository(
+                client: MockBakalariClient(),
+                sessionStore: InMemorySessionStore(session: session),
+                marksCache: InMemoryMarksCache()
+            ),
+            stravaCZRepository: AppEnvironment.makeMockStravaCZRepository(),
+            linkedAccountRepository: linkedRepository,
+            historyRepository: GradeyHistoryRepository(
+                client: MockGradeyHistoryClient(),
+                authClient: authClient
+            ),
+            accountSettingsClient: MockDevicePushTokenClient(
+                accountSettings: GradeyAccountSettingsSnapshot(
+                    activeSchoolAccountID: actionRequired.id,
+                    linkedAccounts: [actionRequired],
+                    notificationPreferences: .default
+                )
+            ),
+            gradeyAuthClient: authClient
+        )
+
+        await viewModel.refresh(forceRefresh: false)
+
+        #expect(viewModel.accountRequiringReconnect?.id == actionRequired.id)
+        #expect(viewModel.errorMessage == nil)
     }
 
     @MainActor

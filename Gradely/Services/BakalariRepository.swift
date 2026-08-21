@@ -255,12 +255,44 @@ final class SchoolRepository {
         watchSyncService?.update(session: session)
     }
 
-    func activateLinkedSchoolAccount(_ activation: LinkedSchoolAccountActivation) throws -> StoredSession {
-        let session = activation.makeStoredSession()
-        try sessionStore.save(session: session)
-        watchSyncService?.update(session: session)
+    func activateLinkedSchoolAccount(_ activation: LinkedSchoolAccountActivation) async throws -> StoredSession {
+        let incoming = activation.makeStoredSession()
+
+        if let existing = try sessionStore.loadSession(),
+           shouldKeepLocalSchoolSession(existing, insteadOf: incoming) {
+            var preserved = existing
+            preserved.linkedAccountID = incoming.linkedAccountID
+            preserved.linkedAccountDisplayName = incoming.linkedAccountDisplayName
+            preserved.linkedAccountSchoolName = incoming.linkedAccountSchoolName
+            if preserved.bakalari == nil {
+                preserved.bakalari = incoming.bakalari
+            }
+            try sessionStore.save(session: preserved)
+            watchSyncService?.update(session: preserved)
+            NotificationCenter.default.post(name: .gradelySchoolAccountDidChange, object: nil)
+            return preserved
+        }
+
+        if incoming.provider == .bakalari, let credentials = incoming.bakalari {
+            let response = try await client.login(
+                baseURL: incoming.baseURL,
+                username: credentials.username,
+                password: credentials.password
+            )
+            let session = try persistBakalariSession(
+                from: response,
+                baseURL: incoming.baseURL,
+                credentials: credentials,
+                metadataFrom: incoming
+            )
+            NotificationCenter.default.post(name: .gradelySchoolAccountDidChange, object: nil)
+            return session
+        }
+
+        try sessionStore.save(session: incoming)
+        watchSyncService?.update(session: incoming)
         NotificationCenter.default.post(name: .gradelySchoolAccountDidChange, object: nil)
-        return session
+        return incoming
     }
 
     /// Keeps a freshly authenticated local provider session associated with its
@@ -277,6 +309,21 @@ final class SchoolRepository {
         session.linkedAccountSchoolName = account.schoolName
         try sessionStore.save(session: session)
         watchSyncService?.update(session: session)
+    }
+
+    /// Prefers the device's own Bakaláři token family over the cloud poller's.
+    /// Sharing a rotating refresh token with polling is what marks the school
+    /// account as needing a reconnect.
+    private func shouldKeepLocalSchoolSession(
+        _ existing: StoredSession,
+        insteadOf incoming: StoredSession
+    ) -> Bool {
+        guard existing.provider == incoming.provider else { return false }
+        guard existing.baseURL == incoming.baseURL else { return false }
+        guard let existingID = existing.linkedAccountID, let incomingID = incoming.linkedAccountID else {
+            return false
+        }
+        return existingID == incomingID
     }
 
     private func mapEduPageLoginResult(

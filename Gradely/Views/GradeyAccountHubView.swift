@@ -1979,7 +1979,7 @@ private extension GradeyAccountHubView {
             }
 
             do {
-                _ = try repository.activateLinkedSchoolAccount(activation)
+                _ = try await repository.activateLinkedSchoolAccount(activation)
                 detailPath = []
                 compactPath = []
                 onSchoolLinked()

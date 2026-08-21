@@ -303,6 +303,7 @@ final class SupabaseLinkedAccountClient: LinkedAccountClient {
 }
 
 final class MockLinkedAccountClient: LinkedAccountClient {
+    private(set) var reconnectCallCount = 0
     private var schoolPayloads: [String: ProviderSecretSanitizer.SchoolPayload] = [:]
     private var accountsByID: [String: LinkedAccount] = [:]
     private let schoolLinkError: Error?
@@ -399,6 +400,7 @@ final class MockLinkedAccountClient: LinkedAccountClient {
         gradeySession: GradeyAuthSession
     ) async throws -> LinkedAccount {
         if let reconnectError { throw reconnectError }
+        reconnectCallCount += 1
         let previous = accountsByID[id]
         let account = LinkedAccount(
             id: id,

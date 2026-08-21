@@ -166,7 +166,7 @@ final class TodayViewModel {
 
         do {
             let activation = try await linkedAccountRepository.activateSchoolAccount(id: account.id)
-            _ = try repository.activateLinkedSchoolAccount(activation)
+            _ = try await repository.activateLinkedSchoolAccount(activation)
             snapshot = .empty
             loadCachedSnapshot()
             await refresh(forceRefresh: false)
@@ -179,16 +179,7 @@ final class TodayViewModel {
         errorMessage = nil
 
         do {
-            let session = try await repository.validSession()
-            let user = await repository.loadUser()
-            let reconnectedAccount = try await linkedAccountRepository.reconnectSchoolAccount(
-                id: account.id,
-                session: session,
-                user: user
-            )
-            try repository.associateCurrentSession(with: reconnectedAccount)
-            snapshot.linkedSchoolAccounts = linkedSchoolAccounts()
-            snapshot.activeAccount = activeLinkedAccount()
+            try await restoreSchoolConnection(account)
             return true
         } catch {
             errorMessage = userFacingMessage(for: error)
@@ -295,10 +286,59 @@ final class TodayViewModel {
                 gradeySession: gradeySession
             )
             linkedAccountRepository.replaceLocalAccounts(settings.linkedAccounts)
+            await recoverSchoolConnectionIfNeeded()
         } catch {
             // Account recovery should still work from the last cached status
             // while the Gradey account service is temporarily unavailable.
+            await recoverSchoolConnectionIfNeeded()
         }
+    }
+
+    private func recoverSchoolConnectionIfNeeded() async {
+        guard allowsAutomaticSchoolRecovery else { return }
+        let accounts = linkedSchoolAccounts().filter {
+            $0.status == .actionRequired || $0.status == .failed
+        }
+        guard let account = accounts.first(where: { $0.id == activeLinkedAccount()?.id })
+                ?? accounts.first,
+              canSilentlyRecover(account)
+        else { return }
+
+        do {
+            try await restoreSchoolConnection(account)
+        } catch {
+            // Leave the account in its cloud status so the reconnect banner
+            // can still be shown when a silent restore is not possible.
+        }
+    }
+
+    private func restoreSchoolConnection(_ account: LinkedAccount) async throws {
+        let session = try await repository.validSession()
+        let user = await repository.loadUser()
+        let reconnectedAccount = try await linkedAccountRepository.reconnectSchoolAccount(
+            id: account.id,
+            session: session,
+            user: user
+        )
+        try repository.associateCurrentSession(with: reconnectedAccount)
+        snapshot.linkedSchoolAccounts = linkedSchoolAccounts()
+        snapshot.activeAccount = activeLinkedAccount()
+    }
+
+    private func canSilentlyRecover(_ account: LinkedAccount) -> Bool {
+        guard account.provider.isSchoolProvider else { return false }
+        guard let session = try? repository.currentStoredSession() else { return false }
+        guard LinkedAccountProvider(schoolProvider: session.provider) == account.provider else {
+            return false
+        }
+        if let linkedAccountID = session.linkedAccountID, linkedAccountID != account.id {
+            return linkedSchoolAccounts().count == 1
+        }
+        return true
+    }
+
+    private var allowsAutomaticSchoolRecovery: Bool {
+        !ProcessInfo.processInfo.arguments.contains("-uiTestingLinkedAccountActionRequired")
     }
 
     private func linkedSchoolAccounts() -> [LinkedAccount] {

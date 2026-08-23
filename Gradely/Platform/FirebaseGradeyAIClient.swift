@@ -140,16 +140,11 @@ final class FirebaseGradeyAIClient: GradeyAIClient {
                         FirebaseGradeyAIStreamEventDTO,
                         FirebaseGradeyAIStreamEventDTO
                     >
-                    #if os(macOS)
-                    var callable: Callable<FirebaseGradeyAIStreamRequest, FirebaseStream> =
-                        Functions.functions(region: Self.region).httpsCallable("gradeyAIStreamReply")
-                    #else
                     var callable: Callable<FirebaseGradeyAIStreamRequest, FirebaseStream> =
                         Functions.functions(region: Self.region).httpsCallable(
                             "gradeyAIStreamReply",
                             options: HTTPSCallableOptions(requireLimitedUseAppCheckTokens: true)
                         )
-                    #endif
                     callable.timeoutInterval = Self.callableTimeout
 
                     var receivedTerminalEvent = false
@@ -502,12 +497,35 @@ private extension KeyedDecodingContainer where Key == AnyFirebaseCodingKey {
 
     func flexibleBool(_ names: String..., fallback: Bool) -> Bool {
         for name in names {
-            let key = AnyFirebaseCodingKey(name)
-            if let value = try? decode(Bool.self, forKey: key) {
+            if let value = boolValue(for: AnyFirebaseCodingKey(name)) {
                 return value
             }
         }
         return fallback
+    }
+
+    private func boolValue(for key: AnyFirebaseCodingKey) -> Bool? {
+        if let value = try? decode(Bool.self, forKey: key) {
+            return value
+        }
+        if let value = try? decode(Int.self, forKey: key) {
+            switch value {
+            case 0: return false
+            case 1: return true
+            default: return nil
+            }
+        }
+        if let value = try? decode(Double.self, forKey: key) {
+            if value == 0 { return false }
+            if value == 1 { return true }
+            return nil
+        }
+        guard let value = try? decode(String.self, forKey: key) else { return nil }
+        switch value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
+        case "true", "yes", "1": return true
+        case "false", "no", "0": return false
+        default: return nil
+        }
     }
 
     func flexibleInt(_ names: String..., fallback: Int) -> Int {
@@ -552,8 +570,8 @@ nonisolated private struct FirebaseGradeyAIStatusDTO: Codable, Sendable {
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: AnyFirebaseCodingKey.self)
-        enabled = container.flexibleBool("enabled", fallback: true)
-        consentRequired = container.flexibleBool("consentRequired", "consent_required", fallback: false)
+        enabled = container.flexibleBool("enabled", fallback: false)
+        consentRequired = container.flexibleBool("consentRequired", "consent_required", fallback: true)
         termsVersion = container.flexibleString("termsVersion", "terms_version") ?? ""
         tier = container.flexibleString("tier") ?? GradeyAIIdentityTier.anonymous.rawValue
         dailyLimit = container.flexibleInt("dailyLimit", "daily_limit", fallback: 5)
@@ -1021,6 +1039,10 @@ nonisolated private struct FirebaseGradeyAIContextDTO: Codable, Sendable {
 }
 
 nonisolated enum FirebaseGradeyAIWireContract {
+    static func decodeStatus(_ data: Data) throws -> GradeyAIStatus {
+        try JSONDecoder().decode(FirebaseGradeyAIStatusDTO.self, from: data).model
+    }
+
     static func decodeStreamEvent(
         _ data: Data,
         fallbackConversationID: String

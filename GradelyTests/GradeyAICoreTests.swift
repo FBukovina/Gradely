@@ -211,6 +211,35 @@ struct GradeyAICoreTests {
         ))
     }
 
+    @Test func firebaseStatusFailsClosedWhenGateFieldsAreMissing() throws {
+        let status = try FirebaseGradeyAIWireContract.decodeStatus(
+            Data(#"{"termsVersion":"beta","tier":"guest","dailyLimit":5,"dailyUsed":1,"remaining":4}"#.utf8)
+        )
+
+        #expect(status.enabled == false)
+        #expect(status.consentRequired == true)
+        #expect(status.remaining == 4)
+    }
+
+    @Test func firebaseStatusDecodesStringAndNumericGateFields() throws {
+        let stringStatus = try FirebaseGradeyAIWireContract.decodeStatus(
+            Data(#"{"enabled":"true","consent_required":"false","termsVersion":"beta","tier":"guest","dailyLimit":5,"dailyUsed":1,"remaining":4}"#.utf8)
+        )
+        let numericStatus = try FirebaseGradeyAIWireContract.decodeStatus(
+            Data(#"{"enabled":1,"consentRequired":0,"termsVersion":"beta","tier":"guest","dailyLimit":5,"dailyUsed":1,"remaining":4}"#.utf8)
+        )
+        let invalidStatus = try FirebaseGradeyAIWireContract.decodeStatus(
+            Data(#"{"enabled":"maybe","consentRequired":"yesn't","termsVersion":"beta","tier":"guest","dailyLimit":5,"dailyUsed":1,"remaining":4}"#.utf8)
+        )
+
+        #expect(stringStatus.enabled == true)
+        #expect(stringStatus.consentRequired == false)
+        #expect(numericStatus.enabled == true)
+        #expect(numericStatus.consentRequired == false)
+        #expect(invalidStatus.enabled == false)
+        #expect(invalidStatus.consentRequired == true)
+    }
+
     @Test func firebaseLoadChatDecodesLegacyMessagePayloads() throws {
         let json = """
         {

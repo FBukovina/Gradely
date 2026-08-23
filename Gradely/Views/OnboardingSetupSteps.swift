@@ -3,8 +3,8 @@ import SwiftUI
 
 // MARK: - Gradey ID
 
-/// Purpose-built first setup step. It shares authentication logic with the
-/// standalone gate but owns its layout and information hierarchy.
+/// First-run and returning-user Gradey ID sign-in. This is the only full-screen
+/// account setup surface; settings never hosts that flow.
 struct OnboardingAccountStep: View {
     @State private var viewModel: GradeyIDViewModel
     private let accountIntent: OnboardingAccountIntent

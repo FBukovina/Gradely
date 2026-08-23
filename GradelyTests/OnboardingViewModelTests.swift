@@ -297,4 +297,35 @@ struct OnboardingViewModelTests {
         #expect(store.savedProgress == OnboardingProgress(journey: .newUser, step: .school))
         #expect(!viewModel.canFinish)
     }
+
+    @Test func restoredSignedInSessionCompletesNewUserOnboarding() {
+        let store = InMemoryOnboardingProgressStore(journey: .newUser, step: .account)
+        let viewModel = OnboardingViewModel(journey: .newUser, progressStore: store)
+
+        viewModel.reconcile(with: OnboardingSnapshot(
+            accountMode: .gradeyID,
+            hasSchoolConnection: true,
+            isSchoolCloudLinked: true
+        ))
+
+        #expect(viewModel.completeRestoredSession())
+        #expect(viewModel.isFinished)
+        #expect(store.savedProgress == nil)
+    }
+
+    @Test func restoredSessionDoesNotCompleteUpgradeOrMissingSchool() {
+        let upgrade = OnboardingViewModel(
+            journey: .upgrade,
+            progressStore: InMemoryOnboardingProgressStore()
+        )
+        upgrade.markSignedIn()
+        #expect(!upgrade.completeRestoredSession())
+
+        let missingSchool = OnboardingViewModel(
+            journey: .newUser,
+            progressStore: InMemoryOnboardingProgressStore(journey: .newUser, step: .account)
+        )
+        missingSchool.markSignedIn()
+        #expect(!missingSchool.completeRestoredSession())
+    }
 }

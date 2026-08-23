@@ -473,6 +473,17 @@ final class OnboardingViewModel {
         return true
     }
 
+    /// Returning users who already have Gradey ID and a school session skip the rest of first-run setup.
+    @discardableResult
+    func completeRestoredSession() -> Bool {
+        guard journey == .newUser, accountMode == .gradeyID, hasSchoolConnection else {
+            return false
+        }
+        progressStore.clear()
+        isFinished = true
+        return true
+    }
+
     private var nextStepAfterSchool: OnboardingStep {
         accountMode == .gradeyID && schoolCloudLinkStatus == .linked
             ? .notifications

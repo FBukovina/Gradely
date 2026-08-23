@@ -156,7 +156,7 @@ struct ContentView: View {
                                 schoolDirectoryProvider: schoolDirectoryProvider,
                                 accountSettingsClient: devicePushTokenClient,
                                 gradeyAuthClient: gradeyAuthClient,
-                                accountHub: AnyView(accountHub(presentationContext: .modal)),
+                                accountHub: AnyView(accountHub()),
                                 onOpenGradeyAI: presentGradeyAI,
                                 onOpenAbsence: {
                                     selectedTab = .absence
@@ -168,7 +168,7 @@ struct ContentView: View {
                             SubjectsView(
                                 repository: repository,
                                 historyRepository: historyRepository,
-                                accountHub: AnyView(accountHub(presentationContext: .modal)),
+                                accountHub: AnyView(accountHub()),
                                 onOpenGradeyAI: presentGradeyAI
                             )
                         }
@@ -176,7 +176,7 @@ struct ContentView: View {
                         Tab("absence.title", image: "TabAbsence", value: AppTab.absence) {
                             AbsenceView(
                                 repository: repository,
-                                accountHub: AnyView(accountHub(presentationContext: .modal)),
+                                accountHub: AnyView(accountHub()),
                                 onOpenGradeyAI: presentGradeyAI
                             )
                         }
@@ -184,7 +184,7 @@ struct ContentView: View {
                         Tab("rozvrh.title", image: "TabTimetable", value: AppTab.timetable) {
                             TimetableView(
                                 repository: repository,
-                                accountHub: AnyView(accountHub(presentationContext: .modal)),
+                                accountHub: AnyView(accountHub()),
                                 onOpenGradeyAI: presentGradeyAI
                             )
                         }
@@ -194,7 +194,7 @@ struct ContentView: View {
                                 StravaCZView(
                                     repository: stravaCZRepository,
                                     linkedAccountRepository: linkedAccountRepository,
-                                    accountHub: AnyView(accountHub(presentationContext: .modal)),
+                                    accountHub: AnyView(accountHub()),
                                     onOpenGradeyAI: presentGradeyAI
                                 )
                             }
@@ -221,7 +221,9 @@ struct ContentView: View {
                 authClient: gradeyAuthClient
             )
             await appViewModel.bootstrap()
+            resumeOnboardingIfSessionIsIncomplete()
             await PushRegistrationService.shared.refreshRegistrationIfAuthorized()
+            await preloadGradeyAIIfNeeded()
         }
         .onChange(of: scenePhase) { _, phase in
             #if !os(macOS)
@@ -231,8 +233,10 @@ struct ContentView: View {
             #endif
         }
         .onChange(of: appViewModel.phase) {
+            resumeOnboardingIfSessionIsIncomplete()
             if appViewModel.phase == .signedIn {
                 selectedTab = .today
+                Task { await preloadGradeyAIIfNeeded() }
             } else {
                 isGradeyAIPresented = false
                 gradeyAIViewModel.reset()
@@ -251,6 +255,7 @@ struct ContentView: View {
             gradeyAIViewModel.reset()
             selectedTab = .today
             schoolAccountRevision = UUID()
+            Task { await preloadGradeyAIIfNeeded() }
         }
         .sheet(isPresented: $isGradeyAIPresented, onDismiss: {
             gradeyAIViewModel.stop()
@@ -278,14 +283,7 @@ struct ContentView: View {
     @ViewBuilder
     private var signedOutView: some View {
         if appViewModel.usesGradeyIDGate {
-            GradeyIDLoginView(
-                authClient: gradeyAuthClient,
-                onContinueWithoutAccount: {
-                    Task { await appViewModel.continueWithoutAccount() }
-                }
-            ) {
-                Task { await appViewModel.markGradeySignedIn() }
-            }
+            SplashView()
         } else {
             LoginView(repository: repository, schoolDirectoryProvider: schoolDirectoryProvider) {
                 appViewModel.markSignedIn()
@@ -295,22 +293,26 @@ struct ContentView: View {
 
     @ViewBuilder
     private var needsSchoolView: some View {
-        if appViewModel.usesGradeyIDGate {
-            accountHub(presentationContext: .requiredSetup)
-        } else {
-            LoginView(repository: repository, schoolDirectoryProvider: schoolDirectoryProvider) {
-                appViewModel.markSignedIn()
-            }
+        LoginView(
+            repository: repository,
+            schoolDirectoryProvider: schoolDirectoryProvider,
+            onBackFromSchool: appViewModel.usesGradeyIDGate
+                ? {
+                    Task {
+                        await appViewModel.signOut()
+                        resumeOnboardingIfSessionIsIncomplete()
+                    }
+                }
+                : nil
+        ) {
+            Task { await finishSchoolReconnect() }
         }
     }
 
-    private func accountHub(
-        presentationContext: GradelyAccountHubPresentationContext
-    ) -> some View {
+    private func accountHub() -> some View {
         GradeyAccountHubView(
             account: appViewModel.gradeyAccount,
             isGuestMode: appViewModel.isGuestMode,
-            presentationContext: presentationContext,
             repository: repository,
             stravaCZRepository: stravaCZRepository,
             schoolDirectoryProvider: schoolDirectoryProvider,
@@ -329,6 +331,7 @@ struct ContentView: View {
                         await appViewModel.signOutOfSchool()
                     } else {
                         await appViewModel.signOut()
+                        resumeOnboardingIfSessionIsIncomplete()
                     }
                 }
             },
@@ -380,6 +383,15 @@ struct ContentView: View {
         isGradeyAIPresented = true
     }
 
+    private func preloadGradeyAIIfNeeded() async {
+        guard appViewModel.phase == .signedIn, !appViewModel.isGuestMode else { return }
+        async let bootstrap: Void = gradeyAIViewModel.bootstrap()
+        async let entitlement = supportTipProvider.currentEntitlement()
+        _ = await bootstrap
+        let tier = await entitlement
+        gradeyAIViewModel.applySupportTier(tier.tier, catalogLoaded: false)
+    }
+
     #if !os(macOS)
     private func publishWatchSupportTier() async {
         let entitlement = await supportTipProvider.currentEntitlement()
@@ -387,11 +399,33 @@ struct ContentView: View {
     }
     #endif
 
-    private func restartOnboarding(_ journey: OnboardingJourney) {
+    private func finishSchoolReconnect() async {
+        if appViewModel.gradeyAccount != nil, let session = try? repository.bootstrapSession() {
+            let user = await repository.loadUser()
+            if let account = try? await linkedAccountRepository.linkCurrentSchoolAccount(
+                session: session,
+                user: user
+            ) {
+                try? repository.associateCurrentSession(with: account)
+            }
+        }
+        appViewModel.markSignedIn()
+    }
+
+    private func resumeOnboardingIfSessionIsIncomplete() {
+        guard appViewModel.usesGradeyIDGate, appViewModel.phase == .signedOut else { return }
+        if shouldShowOnboarding {
+            return
+        }
+
+        restartOnboarding(.newUser, at: .account)
+    }
+
+    private func restartOnboarding(_ journey: OnboardingJourney, at step: OnboardingStep? = nil) {
         let controller = OnboardingRestartController(progressStore: onboardingProgressStore)
         hasCompletedOnboardingV2 = false
         isOnboardingForced = true
-        onboardingJourney = controller.restart(journey)
+        onboardingJourney = controller.restart(journey, at: step)
     }
 }
 
@@ -401,17 +435,20 @@ private struct SplashView: View {
             AuroraBackground()
 
             VStack(spacing: Spacing.xl) {
-                GradelyIcon(systemName: "graduationcap.fill", size: 40)
-                    .foregroundStyle(Brand.onAccent)
-                    .frame(width: 88, height: 88)
-                    .background(Brand.gradient, in: RoundedRectangle(cornerRadius: Radius.xl, style: .continuous))
-                    .shadow(color: Brand.primary.opacity(0.28), radius: 16, x: 0, y: 8)
+                Image("GradeyLogo")
+                    .renderingMode(.template)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 220)
+                    .foregroundStyle(.primary)
+                    .accessibilityHidden(true)
 
                 ProgressView()
                     .controlSize(.large)
                     .tint(Brand.primary)
                     .accessibilityIdentifier("bootstrapProgress")
             }
+            .padding(.horizontal, Spacing.xxl)
         }
     }
 }

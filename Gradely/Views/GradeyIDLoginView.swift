@@ -1,6 +1,8 @@
 import AuthenticationServices
 import SwiftUI
 
+/// In-sheet Gradey ID sign-in for Gradey AI when the user is in guest mode.
+/// Root app setup never uses this view; that flow lives in onboarding.
 struct GradeyIDLoginView: View {
     @State private var viewModel: GradeyIDViewModel
     private let subtitleKey: String

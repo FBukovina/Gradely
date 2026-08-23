@@ -1,14 +1,5 @@
 import SwiftUI
 
-enum GradelyAccountHubPresentationContext: Equatable {
-    case modal
-    case requiredSetup
-
-    var showsDoneButton: Bool {
-        self == .modal
-    }
-}
-
 enum SettingsDestination: String, CaseIterable, Hashable, Identifiable {
     case account
     case connectedServices
@@ -83,7 +74,6 @@ struct GradeyAccountHubView: View {
     let schoolDirectoryProvider: any SchoolDirectoryProviding
     let supportTipProvider: any SupportTipProviding
     let notificationAuthorizer: any NotificationAuthorizing
-    let presentationContext: GradelyAccountHubPresentationContext
     let onSchoolLinked: () -> Void
     let onSignedOut: () -> Void
     let onLeaveGuestMode: () -> Void
@@ -125,7 +115,6 @@ struct GradeyAccountHubView: View {
     init(
         account: GradeyAccount?,
         isGuestMode: Bool = false,
-        presentationContext: GradelyAccountHubPresentationContext = .modal,
         repository: SchoolRepository,
         stravaCZRepository: StravaCZRepository,
         schoolDirectoryProvider: any SchoolDirectoryProviding,
@@ -151,7 +140,6 @@ struct GradeyAccountHubView: View {
         self.schoolDirectoryProvider = schoolDirectoryProvider
         self.supportTipProvider = supportTipProvider
         self.notificationAuthorizer = notificationAuthorizer
-        self.presentationContext = presentationContext
         self.onSchoolLinked = onSchoolLinked
         self.onSignedOut = onSignedOut
         self.onLeaveGuestMode = onLeaveGuestMode
@@ -160,7 +148,7 @@ struct GradeyAccountHubView: View {
         self.onDebugSignOut = onDebugSignOut
         self.onDebugClearCache = onDebugClearCache
         self.onDebugResetAsNewUser = onDebugResetAsNewUser
-        _selectedDestination = State(initialValue: presentationContext == .requiredSetup ? .connectedServices : .account)
+        _selectedDestination = State(initialValue: .account)
         _viewModel = State(initialValue: GradeyAccountHubViewModel(
             account: account,
             linkedAccountRepository: linkedAccountRepository,
@@ -173,7 +161,6 @@ struct GradeyAccountHubView: View {
     var body: some View {
         adaptiveLayout
             .environment(\.locale, languageStore.locale)
-            .interactiveDismissDisabled(presentationContext == .requiredSetup)
             .alert("gradey.account.title", isPresented: errorBinding) {
                 Button("action.ok", role: .cancel) {
                     viewModel.clearError()
@@ -403,22 +390,6 @@ struct GradeyAccountHubView: View {
         }
     }
 
-    @ToolbarContentBuilder
-    private var doneToolbar: some ToolbarContent {
-        if presentationContext.showsDoneButton {
-            ToolbarItem(placement: .confirmationAction) {
-                Button {
-                    dismiss()
-                } label: {
-                    SettingsCloseLabel()
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(AppL10n.string("action.done"))
-                .accessibilityIdentifier("settingsDoneButton")
-            }
-        }
-    }
-
     private func overview(
         selectedDestination: SettingsDestination?,
         onSelect: @escaping (SettingsDestination) -> Void
@@ -496,16 +467,14 @@ struct GradeyAccountHubView: View {
 
             Spacer(minLength: Spacing.md)
 
-            if presentationContext.showsDoneButton {
-                Button {
-                    dismiss()
-                } label: {
-                    SettingsCloseLabel()
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(AppL10n.string("action.done"))
-                .accessibilityIdentifier("settingsDoneButton")
+            Button {
+                dismiss()
+            } label: {
+                SettingsCloseLabel()
             }
+            .buttonStyle(.plain)
+            .accessibilityLabel(AppL10n.string("action.done"))
+            .accessibilityIdentifier("settingsDoneButton")
         }
         .accessibilitySortPriority(10)
     }
@@ -856,7 +825,10 @@ private extension GradeyAccountHubView {
                         )
                             .font(.headline)
 
-                        Button(action: onLeaveGuestMode) {
+                        Button {
+                            dismiss()
+                            onLeaveGuestMode()
+                        } label: {
                             SettingsHugeiconLabel(
                                 "gradey.guest.accountSection.action",
                                 iconName: "user-check-02",
@@ -1122,7 +1094,7 @@ private extension GradeyAccountHubView {
     @ViewBuilder
     func connectedAccountActions(_ linkedAccount: LinkedAccount) -> some View {
         if linkedAccount.provider.isSchoolProvider,
-           presentationContext == .requiredSetup || viewModel.activeSchoolAccountID != linkedAccount.id {
+           viewModel.activeSchoolAccountID != linkedAccount.id {
             Button {
                 activate(linkedAccount)
             } label: {
@@ -1555,22 +1527,16 @@ private extension GradeyAccountHubView {
                         isGuestMode: isGuestMode
                     ),
                     onRestart: { journey in
-                        if presentationContext == .modal {
-                            dismiss()
-                        }
+                        dismiss()
                         onRestartOnboarding(journey)
                     },
                     onSignOut: {
-                        if presentationContext == .modal {
-                            dismiss()
-                        }
+                        dismiss()
                         onDebugSignOut()
                     },
                     onClearCache: onDebugClearCache,
                     onResetAsNewUser: {
-                        if presentationContext == .modal {
-                            dismiss()
-                        }
+                        dismiss()
                         onDebugResetAsNewUser()
                     },
                     onDisable: {
@@ -2112,9 +2078,7 @@ private extension GradeyAccountHubView {
     }
 
     func completeSignOut() {
-        if presentationContext == .modal {
-            dismiss()
-        }
+        dismiss()
         onSignedOut()
     }
 

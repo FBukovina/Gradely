@@ -872,6 +872,41 @@ struct GradeyPlatformTests {
     }
 
     @MainActor
+    @Test func bootstrapActivatesCachedSchoolWhenCanonicalSettingsAreOffline() async {
+        let defaults = UserDefaults(suiteName: "GradeyPlatformTests.\(UUID().uuidString)")!
+        let schoolSessionStore = InMemorySessionStore()
+        let authClient = MockGradeyAuthClient()
+        let linkedRepository = LinkedAccountRepository(
+            store: LinkedAccountStore(userDefaults: defaults),
+            client: MockLinkedAccountClient(),
+            authClient: authClient
+        )
+        linkedRepository.replaceLocalAccounts([PreviewData.linkedSchoolAccount])
+        let accountSettingsClient = MockDevicePushTokenClient(
+            fetchError: URLError(.notConnectedToInternet)
+        )
+        let viewModel = AppViewModel(
+            repository: SchoolRepository(
+                client: MockBakalariClient(),
+                sessionStore: schoolSessionStore,
+                marksCache: InMemoryMarksCache()
+            ),
+            stravaCZRepository: AppEnvironment.makeMockStravaCZRepository(),
+            gradeyAuthClient: authClient,
+            linkedAccountRepository: linkedRepository,
+            accountSettingsClient: accountSettingsClient,
+            notificationSettingsStore: MarkNotificationSettingsStore(userDefaults: defaults),
+            guestModeStore: InMemoryGradeyGuestModeStore(),
+            requiresGradeyID: true
+        )
+
+        await viewModel.bootstrap()
+
+        #expect(viewModel.phase == .signedIn)
+        #expect(schoolSessionStore.session?.linkedAccountID == PreviewData.linkedSchoolAccount.id)
+    }
+
+    @MainActor
     @Test func bootstrapKeepsGradeySessionWhenCanonicalSchoolCannotBeActivated() async {
         let defaults = UserDefaults(suiteName: "GradeyPlatformTests.\(UUID().uuidString)")!
         let authClient = MockGradeyAuthClient()

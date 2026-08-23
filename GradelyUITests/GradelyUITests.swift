@@ -42,6 +42,17 @@ final class GradelyUITests: XCTestCase {
         ]
     }
 
+    private var upgradeGuestLaunchArguments: [String] {
+        [
+            "-uiTestingMockAPI",
+            "-uiTestingShowUpgradeOnboarding",
+            "-uiTestingLoggedIn",
+            "-uiTestingRequiresGradeyID",
+            "-uiTestingGradeyIDSignedOut",
+            "-uiTestingResetGuestMode"
+        ]
+    }
+
     override func setUpWithError() throws {
         continueAfterFailure = false
     }
@@ -718,37 +729,40 @@ final class GradelyUITests: XCTestCase {
     @MainActor
     func testReleaseGuestActionPersistsAcrossRelaunch() throws {
         let app = XCUIApplication()
-        let signedOutArguments = [
+        let guestSetupArguments = [
+            "-uiTestingMockAPI",
+            "-uiTestingShowUpgradeOnboarding",
+            "-uiTestingRequiresGradeyID",
+            "-uiTestingGradeyIDSignedOut",
+            "-uiTestingResetGuestMode"
+        ]
+        app.launchArguments = guestSetupArguments
+        app.launch()
+        defer {
+            app.terminate()
+            app.launchArguments = [
+                "-uiTestingMockAPI",
+                "-uiTestingRequiresGradeyID",
+                "-uiTestingGradeyIDSignedOut",
+                "-uiTestingResetGuestMode"
+            ]
+            app.launch()
+            _ = app.buttons["onboardingPrimaryButton"].waitForExistence(timeout: 3)
+                || app.buttons["gradeyIDAppleButton"].waitForExistence(timeout: 3)
+            app.terminate()
+        }
+
+        completeUpgradeAsGuest(in: app, expectsToday: false)
+        XCTAssertTrue(app.textFields["schoolURLField"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.textFields["gradeyIDEmailField"].exists)
+        XCTAssertFalse(app.buttons["gradeyIDMagicLinkButton"].exists)
+
+        app.terminate()
+        app.launchArguments = [
             "-uiTestingMockAPI",
             "-uiTestingRequiresGradeyID",
             "-uiTestingGradeyIDSignedOut"
         ]
-        app.launchArguments = signedOutArguments + ["-uiTestingResetGuestMode"]
-        app.launch()
-        defer {
-            app.terminate()
-            app.launchArguments = signedOutArguments + ["-uiTestingResetGuestMode"]
-            app.launch()
-            _ = app.buttons["gradeyIDAppleButton"].waitForExistence(timeout: 3)
-            app.terminate()
-        }
-
-        XCTAssertTrue(app.buttons["gradeyIDAppleButton"].waitForExistence(timeout: 5))
-        let guestAction = app.buttons["gradeyIDBypassButton"]
-        XCTAssertTrue(guestAction.waitForExistence(timeout: 2))
-        XCTAssertTrue(
-            guestAction.label.contains("Continue without an account")
-                || guestAction.label.contains("Pokračovat bez účtu")
-        )
-        XCTAssertFalse(app.textFields["gradeyIDEmailField"].exists)
-        XCTAssertFalse(app.buttons["gradeyIDMagicLinkButton"].exists)
-        XCTAssertFalse(app.textFields["schoolURLField"].exists)
-
-        guestAction.tap()
-        XCTAssertTrue(app.textFields["schoolURLField"].waitForExistence(timeout: 5))
-
-        app.terminate()
-        app.launchArguments = signedOutArguments
         app.launch()
 
         XCTAssertTrue(app.textFields["schoolURLField"].waitForExistence(timeout: 5))
@@ -818,19 +832,9 @@ final class GradelyUITests: XCTestCase {
     @MainActor
     func testGuestOpeningGradeyAIShowsLoginInsteadOfErrorAlert() throws {
         let app = XCUIApplication()
-        app.launchArguments = [
-            "-uiTestingMockAPI",
-            "-uiTestingLoggedIn",
-            "-uiTestingRequiresGradeyID",
-            "-uiTestingGradeyIDSignedOut",
-            "-uiTestingResetGuestMode"
-        ]
+        app.launchArguments = upgradeGuestLaunchArguments
         app.launch()
-
-        let guestButton = app.buttons["gradeyIDBypassButton"]
-        XCTAssertTrue(guestButton.waitForExistence(timeout: 5))
-        guestButton.tap()
-        XCTAssertTrue(app.scrollViews["todayScrollView"].waitForExistence(timeout: 5))
+        completeUpgradeAsGuest(in: app)
 
         let aiButton = app.buttons["gradeyAIButton"]
         XCTAssertTrue(aiButton.waitForExistence(timeout: 3))
@@ -893,7 +897,7 @@ final class GradelyUITests: XCTestCase {
         XCTAssertTrue(doneButton.waitForExistence(timeout: 3))
         let profileCard = app.descendants(matching: .any)["settingsDestination-account"]
         XCTAssertTrue(profileCard.label.contains("Preview Student"))
-        XCTAssertTrue(profileCard.label.contains("Gradely ID"))
+        XCTAssertTrue(profileCard.label.contains("Gradey ID"))
         XCTAssertFalse(app.staticTexts["student@example.com"].exists)
 
         for destination in settingsDestinations {
@@ -1010,7 +1014,7 @@ final class GradelyUITests: XCTestCase {
     }
 
     @MainActor
-    func testSettingsRequiredSchoolSetupIsNonDismissibleAndCanLinkSchool() throws {
+    func testGradeySessionWithoutSchoolUsesOnboardingNotSettings() throws {
         let app = XCUIApplication()
         app.launchArguments = [
             "-uiTestingMockAPI",
@@ -1019,51 +1023,23 @@ final class GradelyUITests: XCTestCase {
         ]
         app.launch()
 
-        let overview = settingsOverview(in: app)
-        XCTAssertTrue(overview.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.textFields["schoolURLField"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["onboardingBackButton"].waitForExistence(timeout: 3))
         XCTAssertFalse(app.buttons["settingsDoneButton"].exists)
+        XCTAssertFalse(app.scrollViews["accountHubScroll"].exists)
 
-        for destination in settingsDestinations {
-            let row = app.descendants(matching: .any)[destination.rowIdentifier]
-            scroll(overview, untilHittable: row)
-            XCTAssertTrue(row.exists, "Missing required-setup row: \(destination.rowIdentifier)")
-        }
-
-        openSettingsDestination(
-            SettingsDestinationSpec(
-                rowIdentifier: "settingsDestination-connectedServices",
-                detailIdentifier: "settingsDetail-connectedServices"
-            ),
-            in: app
-        )
-        XCTAssertFalse(app.buttons["settingsDoneButton"].exists)
-        XCTAssertTrue(app.buttons["accountLinkSchoolButton"].waitForExistence(timeout: 3))
+        app.buttons["onboardingBackButton"].tap()
+        XCTAssertTrue(app.buttons["gradeyIDAppleButton"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["gradeyIDBypassButton"].exists)
+        XCTAssertFalse(app.scrollViews["accountHubScroll"].exists)
     }
 
     @MainActor
     func testSettingsGuestKeepsUnavailableNotificationControlsVisible() throws {
         let app = XCUIApplication()
-        let guestArguments = [
-            "-uiTestingMockAPI",
-            "-uiTestingLoggedIn",
-            "-uiTestingRequiresGradeyID",
-            "-uiTestingGradeyIDSignedOut",
-            "-uiTestingResetGuestMode"
-        ]
-        app.launchArguments = guestArguments
+        app.launchArguments = upgradeGuestLaunchArguments
         app.launch()
-        defer {
-            app.terminate()
-            app.launchArguments = guestArguments
-            app.launch()
-            _ = app.buttons["gradeyIDBypassButton"].waitForExistence(timeout: 2)
-            app.terminate()
-        }
-
-        let guestButton = app.buttons["gradeyIDBypassButton"]
-        XCTAssertTrue(guestButton.waitForExistence(timeout: 5))
-        guestButton.tap()
-        XCTAssertTrue(app.scrollViews["todayScrollView"].waitForExistence(timeout: 5))
+        completeUpgradeAsGuest(in: app)
 
         openSettings(in: app)
         let guestProfile = app.descendants(matching: .any)["settingsDestination-account"]
@@ -1324,11 +1300,8 @@ final class GradelyUITests: XCTestCase {
 
     @MainActor
     func testSettingsConnectedServicesEmptyStateHasSinglePrimaryLinkActions() throws {
-        let app = XCUIApplication()
-        app.launchArguments = ["-uiTestingMockAPI", "-uiTestingRequiresGradeyID", "-uiTestingResetGuestMode"]
-        app.launch()
-
-        XCTAssertTrue(settingsOverview(in: app).waitForExistence(timeout: 10))
+        let app = launchSignedInApp()
+        openSettings(in: app)
         openSettingsDestination(
             SettingsDestinationSpec(
                 rowIdentifier: "settingsDestination-connectedServices",
@@ -1341,6 +1314,7 @@ final class GradelyUITests: XCTestCase {
         XCTAssertTrue(app.buttons["accountLinkStravaCZButton"].exists)
         XCTAssertTrue(app.descendants(matching: .any)["linkedAccountsEmptyState"].exists)
         XCTAssertFalse(app.descendants(matching: .any)["accountEmptyLinkSchoolButton"].exists)
+        XCTAssertTrue(app.buttons["settingsBackButton"].waitForExistence(timeout: 3))
     }
 
     @MainActor
@@ -1468,7 +1442,7 @@ final class GradelyUITests: XCTestCase {
     }
 
     @MainActor
-    func testRequiredSetupCanActivateCachedSchoolWhenSettingsRefreshIsOffline() throws {
+    func testOfflineAccountSettingsStillOpensTodayFromCachedSchool() throws {
         let app = XCUIApplication()
         app.launchArguments = [
             "-uiTestingMockAPI",
@@ -1479,21 +1453,9 @@ final class GradelyUITests: XCTestCase {
         ]
         app.launch()
 
-        XCTAssertTrue(settingsOverview(in: app).waitForExistence(timeout: 5))
-        XCTAssertFalse(app.alerts.firstMatch.exists)
-        openSettingsDestination(
-            SettingsDestinationSpec(
-                rowIdentifier: "settingsDestination-connectedServices",
-                detailIdentifier: "settingsDetail-connectedServices"
-            ),
-            in: app
-        )
-        let activate = app.buttons["linkedAccountActivate-preview-school"]
-        scroll(settingsDetailScrollView(in: app), untilHittable: activate)
-        XCTAssertTrue(activate.isHittable)
-        activate.tap()
-
         XCTAssertTrue(app.scrollViews["todayScrollView"].waitForExistence(timeout: 8))
+        XCTAssertFalse(app.scrollViews["accountHubScroll"].exists)
+        XCTAssertFalse(app.alerts.firstMatch.exists)
     }
 
     @MainActor
@@ -1624,6 +1586,28 @@ final class GradelyUITests: XCTestCase {
         app.launch()
         XCTAssertTrue(app.scrollViews["todayScrollView"].waitForExistence(timeout: 5))
         return app
+    }
+
+    @MainActor
+    private func completeUpgradeAsGuest(in app: XCUIApplication, expectsToday: Bool = true) {
+        XCTAssertTrue(app.buttons["onboardingPrimaryButton"].waitForExistence(timeout: 5))
+        app.buttons["onboardingPrimaryButton"].tap()
+
+        let guestButton = app.buttons["gradeyIDBypassButton"]
+        XCTAssertTrue(guestButton.waitForExistence(timeout: 5))
+        XCTAssertTrue(
+            guestButton.label.contains("Continue without")
+                || guestButton.label.contains("Pokračovat bez")
+                || guestButton.label.contains("without an account")
+                || guestButton.label.contains("bez účtu")
+        )
+        guestButton.tap()
+
+        XCTAssertTrue(app.buttons["onboardingUpgradeFinishButton"].waitForExistence(timeout: 5))
+        app.buttons["onboardingUpgradeFinishButton"].tap()
+        if expectsToday {
+            XCTAssertTrue(app.scrollViews["todayScrollView"].waitForExistence(timeout: 5))
+        }
     }
 
     @MainActor

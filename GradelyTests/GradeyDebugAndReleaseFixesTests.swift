@@ -70,6 +70,22 @@ struct GradeyDebugAndReleaseFixesTests {
         #expect(defaults.bool(forKey: OnboardingProgressStore.legacyCompletionKey))
         #expect(progressStore.loadProgress() == .initial(for: .upgrade))
     }
+
+    @Test func restartControllerCanResumeAtASpecificStep() throws {
+        let suiteName = "OnboardingRestartStep.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        defaults.set(true, forKey: OnboardingProgressStore.completionKey)
+        let progressStore = OnboardingProgressStore(userDefaults: defaults)
+
+        let controller = OnboardingRestartController(
+            userDefaults: defaults,
+            progressStore: progressStore
+        )
+        #expect(controller.restart(.newUser, at: .school) == .newUser)
+        #expect(!defaults.bool(forKey: OnboardingProgressStore.completionKey))
+        #expect(progressStore.loadProgress() == OnboardingProgress(journey: .newUser, step: .school))
+    }
 }
 
 @MainActor

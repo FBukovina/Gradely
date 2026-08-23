@@ -157,7 +157,9 @@ final class AppViewModel {
     }
 
     private func restoreActiveSchoolSession(using gradeySession: GradeyAuthSession) async -> Bool {
-        guard let accountSettingsClient else { return false }
+        guard let accountSettingsClient else {
+            return await activateLocalSchoolAccountIfPossible()
+        }
 
         do {
             let snapshot = try await accountSettingsClient.fetchAccountSettings(
@@ -165,15 +167,36 @@ final class AppViewModel {
             )
             linkedAccountRepository.replaceLocalAccounts(snapshot.linkedAccounts)
             notificationSettingsStore.preferences = snapshot.notificationPreferences
+            return await activateSchoolAccountIfPossible(
+                from: snapshot.linkedAccounts,
+                preferredID: snapshot.activeSchoolAccountID
+            )
+        } catch {
+            return await activateLocalSchoolAccountIfPossible()
+        }
+    }
 
-            let activeSchools = snapshot.linkedAccounts.filter {
-                $0.provider.isSchoolProvider && $0.status == .active
-            }
-            let selectedAccount = snapshot.activeSchoolAccountID.flatMap { activeID in
-                activeSchools.first(where: { $0.id == activeID })
-            } ?? (activeSchools.count == 1 ? activeSchools[0] : nil)
+    private func activateLocalSchoolAccountIfPossible() async -> Bool {
+        await activateSchoolAccountIfPossible(
+            from: linkedAccountRepository.loadAccounts(),
+            preferredID: nil
+        )
+    }
 
-            guard let selectedAccount else { return false }
+    private func activateSchoolAccountIfPossible(
+        from accounts: [LinkedAccount],
+        preferredID: String?
+    ) async -> Bool {
+        let activeSchools = accounts.filter {
+            $0.provider.isSchoolProvider && $0.status == .active
+        }
+        let selectedAccount = preferredID.flatMap { activeID in
+            activeSchools.first(where: { $0.id == activeID })
+        } ?? (activeSchools.count == 1 ? activeSchools[0] : nil)
+
+        guard let selectedAccount else { return false }
+
+        do {
             let activation = try await linkedAccountRepository.activateSchoolAccount(
                 id: selectedAccount.id
             )

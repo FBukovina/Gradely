@@ -596,10 +596,15 @@ struct OnboardingView: View {
     private func completeGradeyIDSignIn() async {
         isWorking = true
         await appViewModel.markGradeySignedIn()
-        viewModel.markSignedIn()
-        await migrateUpgradeConnectionsIfNeeded()
         isWorking = false
         await reconcileWithPersistedState()
+        if appViewModel.phase == .signedIn, viewModel.completeRestoredSession() {
+            onFinished()
+            return
+        }
+
+        viewModel.markSignedIn()
+        await migrateUpgradeConnectionsIfNeeded()
     }
 
     private func completeSchoolConnection() async {

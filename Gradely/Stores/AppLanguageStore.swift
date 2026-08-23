@@ -114,7 +114,6 @@ enum ChronicallyOnlineText {
     static let missingSentinel = "\u{E000}gradely.missing\u{E001}"
 
     private static let preservedTokens = [
-        "Gradely ID",
         "Gradey ID",
         "Gradey AI",
         "Strava.cz",

@@ -1,0 +1,242 @@
+{
+  "appPolicies" : {
+    "eula" : "",
+    "policies" : [
+      {
+        "locale" : "en_US",
+        "policyText" : "",
+        "policyURL" : ""
+      }
+    ]
+  },
+  "identifier" : "A31F08C2B94E4D1A9C7E2F6B",
+  "nonRenewingSubscriptions" : [
+
+  ],
+  "products" : [
+    {
+      "displayPrice" : "0.99",
+      "familyShareable" : false,
+      "internalID" : "B1C2D3E4F5061728394A5B6C",
+      "localizations" : [
+        {
+          "description" : "A small one-time tip to support Gradey.",
+          "displayName" : "Small tip",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.bukovinafilip.BakalariMarks.tip.small",
+      "referenceName" : "Small Tip",
+      "type" : "Consumable"
+    },
+    {
+      "displayPrice" : "2.99",
+      "familyShareable" : false,
+      "internalID" : "C2D3E4F5061728394A5B6C7D",
+      "localizations" : [
+        {
+          "description" : "A medium one-time tip to support Gradey.",
+          "displayName" : "Medium tip",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.bukovinafilip.BakalariMarks.tip.medium",
+      "referenceName" : "Medium Tip",
+      "type" : "Consumable"
+    },
+    {
+      "displayPrice" : "4.99",
+      "familyShareable" : false,
+      "internalID" : "D3E4F5061728394A5B6C7D8E",
+      "localizations" : [
+        {
+          "description" : "A large one-time tip to support Gradey.",
+          "displayName" : "Large tip",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.bukovinafilip.BakalariMarks.tip.large",
+      "referenceName" : "Large Tip",
+      "type" : "Consumable"
+    }
+  ],
+  "settings" : {
+    "_failTransactionsEnabled" : false,
+    "_locale" : "en_US",
+    "_storefront" : "USA",
+    "_storeKitErrors" : [
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Load Products"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Purchase"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Verification"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "App Store Sync"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Subscription Status"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "App Transaction"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Manage Subscriptions Sheet"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Refund Request Sheet"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Offer Code Redeem Sheet"
+      }
+    ]
+  },
+  "subscriptionGroups" : [
+    {
+      "id" : "E4F5061728394A5B6C7D8E9F",
+      "localizations" : [
+        {
+          "description" : "Optional recurring support for Gradey AI limits and early access.",
+          "displayName" : "Gradey Support",
+          "locale" : "en_US"
+        }
+      ],
+      "name" : "Gradey Support",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "4.0",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "F5061728394A5B6C7D8E9F01",
+          "localizations" : [
+            {
+              "description" : "Extra recurring support with 25 Gradey AI messages a day and early access.",
+              "displayName" : "Extra support",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "com.bukovinafilip.BakalariMarks.support.plus.monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "Extra Support Monthly",
+          "subscriptionGroupID" : "E4F5061728394A5B6C7D8E9F",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : [
+
+          ]
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "40.0",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "061728394A5B6C7D8E9F0123",
+          "localizations" : [
+            {
+              "description" : "Yearly extra support with 25 Gradey AI messages a day and early access.",
+              "displayName" : "Extra support",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "com.bukovinafilip.BakalariMarks.support.plus.yearly",
+          "recurringSubscriptionPeriod" : "P1Y",
+          "referenceName" : "Extra Support Yearly",
+          "subscriptionGroupID" : "E4F5061728394A5B6C7D8E9F",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : [
+
+          ]
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "2.0",
+          "familyShareable" : false,
+          "groupNumber" : 2,
+          "internalID" : "1728394A5B6C7D8E9F012345",
+          "localizations" : [
+            {
+              "description" : "Recurring support with 10 Gradey AI messages a day and early access.",
+              "displayName" : "Support",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "com.bukovinafilip.BakalariMarks.support.standard.monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "Support Monthly",
+          "subscriptionGroupID" : "E4F5061728394A5B6C7D8E9F",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : [
+
+          ]
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "20.0",
+          "familyShareable" : false,
+          "groupNumber" : 2,
+          "internalID" : "28394A5B6C7D8E9F01234567",
+          "localizations" : [
+            {
+              "description" : "Yearly support with 10 Gradey AI messages a day and early access.",
+              "displayName" : "Support",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "com.bukovinafilip.BakalariMarks.support.standard.yearly",
+          "recurringSubscriptionPeriod" : "P1Y",
+          "referenceName" : "Support Yearly",
+          "subscriptionGroupID" : "E4F5061728394A5B6C7D8E9F",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : [
+
+          ]
+        }
+      ]
+    }
+  ],
+  "version" : {
+    "major" : 4,
+    "minor" : 0
+  }
+}

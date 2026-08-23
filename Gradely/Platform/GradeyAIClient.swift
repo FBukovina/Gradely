@@ -12,6 +12,7 @@ enum GradeyAIError: LocalizedError, Equatable {
     case invalidPrompt
     case requestTooLarge
     case invalidStream
+    case unauthenticated
     case server(code: String, message: String, retryable: Bool)
 
     var errorDescription: String? {
@@ -24,14 +25,22 @@ enum GradeyAIError: LocalizedError, Equatable {
             return "Enter a message between 1 and 2,000 characters."
         case .requestTooLarge:
             return "The selected school context is too large to send. Refresh it and try again."
+        case .unauthenticated:
+            return AppL10n.string("gradey.ai.error.unauthenticated")
         case .server(_, let message, _):
             return message
         }
     }
 
     var isRetryable: Bool {
-        if case .server(_, _, let retryable) = self { return retryable }
-        return false
+        switch self {
+        case .server(_, _, let retryable):
+            return retryable
+        case .unauthenticated:
+            return true
+        default:
+            return false
+        }
     }
 }
 
@@ -58,6 +67,9 @@ final class MockGradeyAIClient: GradeyAIClient {
     var messagesByConversationID: [String: [GradeyAIMessage]]
     var responseText: String
     var error: Error?
+    var holdsList = false
+
+    private var listContinuation: CheckedContinuation<Void, Never>?
 
     init(
         status: GradeyAIStatus = GradeyAIStatus(
@@ -99,9 +111,20 @@ final class MockGradeyAIClient: GradeyAIClient {
 
     func listConversations(schoolScope: String) async throws -> [GradeyAIConversation] {
         if let error { throw error }
+        if holdsList {
+            await withCheckedContinuation { continuation in
+                listContinuation = continuation
+            }
+        }
         return conversations
             .filter { $0.schoolScope == schoolScope }
             .sorted { $0.updatedAt > $1.updatedAt }
+    }
+
+    func releaseList() {
+        listContinuation?.resume()
+        listContinuation = nil
+        holdsList = false
     }
 
     func createConversation(schoolScope: String, title: String?) async throws -> GradeyAIConversation {

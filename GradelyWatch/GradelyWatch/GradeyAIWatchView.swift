@@ -26,7 +26,7 @@ struct GradeyAIWatchView: View {
         VStack(spacing: 6) {
             ScrollViewReader { proxy in
                 ScrollView {
-                    LazyVStack(alignment: .leading, spacing: 6) {
+                    LazyVStack(alignment: .leading, spacing: 8) {
                         if model.aiMessages.isEmpty {
                             Text("Ask Gradey AI")
                                 .font(.caption.weight(.semibold))
@@ -40,6 +40,7 @@ struct GradeyAIWatchView: View {
                                 .id(message.id)
                         }
                     }
+                    .padding(.trailing, 10)
                     .padding(.bottom, 4)
                 }
                 .onChange(of: model.aiMessages.last?.text) { _, _ in
@@ -62,40 +63,98 @@ struct GradeyAIWatchView: View {
                     .foregroundStyle(.secondary)
             }
 
-            HStack(spacing: 6) {
-                TextField("Message", text: $model.aiDraft)
-                    .textFieldStyle(.plain)
-                    .disabled(model.isAIStreaming)
-
-                Button {
-                    if model.isAIStreaming {
-                        model.cancelAI()
-                    } else {
-                        Task { await model.sendAIMessage() }
-                    }
-                } label: {
-                    Image(systemName: model.isAIStreaming ? "stop.fill" : "arrow.up")
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(WatchBrand.onAccent)
-                        .frame(width: 28, height: 28)
-                        .background(WatchBrand.gradient, in: Circle())
-                }
-                .buttonStyle(.plain)
-                .disabled(!model.isAIStreaming && model.aiDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-            }
+            composer
         }
     }
 
-    private func aiBubble(_ message: WatchAIChatMessage) -> some View {
-        Text(message.text.isEmpty && message.isStreaming ? "…" : message.text)
-            .font(.caption)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 6)
-            .frame(maxWidth: .infinity, alignment: message.role == .user ? .trailing : .leading)
-            .background {
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(message.role == .user ? AnyShapeStyle(WatchBrand.gradient) : AnyShapeStyle(.white.opacity(0.08)))
+    private var composer: some View {
+        HStack(alignment: .center, spacing: 6) {
+            TextField("Message", text: $model.aiDraft)
+                .textFieldStyle(.plain)
+                .disabled(model.isAIStreaming)
+
+            composerActionButton
+        }
+    }
+
+    @ViewBuilder
+    private var composerActionButton: some View {
+        if model.isAIStreaming {
+            Button {
+                model.cancelAI()
+            } label: {
+                Image(systemName: "stop.fill")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(WatchBrand.onAccent)
+                    .frame(width: 28, height: 28)
+                    .background(WatchBrand.gradient, in: Circle())
             }
-            .foregroundStyle(message.role == .user ? WatchBrand.onAccent : .white)
+            .buttonStyle(.plain)
+            .accessibilityLabel("Stop")
+        } else {
+            Button {
+                Task { await model.sendAIMessage() }
+            } label: {
+                Image(systemName: "arrow.up")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(WatchBrand.onAccent)
+                    .frame(width: 28, height: 28)
+                    .background(WatchBrand.gradient, in: Circle())
+            }
+            .buttonStyle(.plain)
+            .disabled(draftIsEmpty)
+            .opacity(draftIsEmpty ? 0.38 : 1)
+            .accessibilityLabel("Send")
+        }
+    }
+
+    private var draftIsEmpty: Bool {
+        model.aiDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    private func aiBubble(_ message: WatchAIChatMessage) -> some View {
+        HStack(alignment: .bottom, spacing: 6) {
+            if message.role == .user {
+                Spacer(minLength: 16)
+            } else {
+                Image(systemName: "sparkles")
+                    .font(.system(size: 8, weight: .bold))
+                    .foregroundStyle(WatchBrand.onAccent)
+                    .frame(width: 16, height: 16)
+                    .background(WatchBrand.gradient, in: Circle())
+                    .accessibilityHidden(true)
+            }
+
+            bubbleBody(message)
+
+            if message.role == .assistant {
+                Spacer(minLength: 16)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: message.role == .user ? .trailing : .leading)
+    }
+
+    @ViewBuilder
+    private func bubbleBody(_ message: WatchAIChatMessage) -> some View {
+        Group {
+            if message.text.isEmpty && message.isStreaming {
+                ProgressView()
+                    .controlSize(.mini)
+                    .tint(WatchBrand.primary)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 8)
+                    .accessibilityLabel("Responding")
+            } else {
+                Text(message.text)
+                    .font(.caption)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 6)
+            }
+        }
+        .foregroundStyle(message.role == .user ? WatchBrand.onAccent : .white)
+        .background {
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(message.role == .user ? AnyShapeStyle(WatchBrand.gradient) : AnyShapeStyle(.white.opacity(0.08)))
+        }
     }
 }

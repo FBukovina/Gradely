@@ -211,6 +211,54 @@ struct GradeyAICoreTests {
         ))
     }
 
+    @Test func firebaseLoadChatDecodesLegacyMessagePayloads() throws {
+        let json = """
+        {
+          "conversation": {
+            "id": "old-chat",
+            "school_scope": "school_test_scope",
+            "title": "History",
+            "created_at": {"_seconds": 1783810800, "_nanoseconds": 0},
+            "updated_at": "2026-07-10T08:00:00Z"
+          },
+          "messages": {
+            "m1": {
+              "id": "m1",
+              "chat_id": "old-chat",
+              "role": "user",
+              "content": "Hello",
+              "createdAt": 1783810800000
+            },
+            "m2": {
+              "id": "m2",
+              "conversation_id": "old-chat",
+              "role": "assistant",
+              "text": "Hi there",
+              "status": {"enabled": true, "remaining": 4},
+              "created_at": {"seconds": 1783810860, "nanoseconds": 0}
+            },
+            "ignored": {
+              "bad": true
+            }
+          }
+        }
+        """
+
+        let detail = try FirebaseGradeyAIWireContract.decodeChatDetail(
+            Data(json.utf8),
+            fallbackConversationID: "old-chat"
+        )
+
+        #expect(detail.conversation.id == "old-chat")
+        #expect(detail.conversation.title == "History")
+        #expect(detail.messages.map(\.id) == ["m1", "m2"])
+        #expect(detail.messages.map(\.role) == [.user, .assistant])
+        #expect(detail.messages.map(\.content) == ["Hello", "Hi there"])
+        #expect(detail.messages.allSatisfy { $0.status == .complete })
+        #expect(detail.messages[0].createdAt == Date(timeIntervalSince1970: 1_783_810_800))
+        #expect(detail.messages[1].createdAt == Date(timeIntervalSince1970: 1_783_810_860))
+    }
+
     @MainActor
     @Test func bootstrapLoadsHistoryWhenGenerationIsDisabled() async {
         let snapshot = disabledContextSnapshot()
@@ -337,6 +385,114 @@ struct GradeyAICoreTests {
     }
 
     @MainActor
+    @Test func bootstrapKeepsNewChatAvailableWhileHistoryIsStillLoading() async {
+        let snapshot = GradeyAIContextSnapshot(
+            schoolScope: "school_test_scope",
+            generatedAt: Date(),
+            isStale: false,
+            unavailableSections: [],
+            subjects: [],
+            trends: [],
+            timetable: []
+        )
+        let client = MockGradeyAIClient()
+        client.holdsList = true
+        let viewModel = GradeyAIViewModel(
+            client: client,
+            contextBuilder: MockGradeyAIContextBuilder(snapshot: snapshot)
+        )
+        defer { client.releaseList() }
+
+        let bootstrap = Task { await viewModel.bootstrap() }
+        for _ in 0..<50 where viewModel.status == nil {
+            try? await Task.sleep(for: .milliseconds(10))
+        }
+
+        #expect(viewModel.status != nil)
+        #expect(viewModel.isLoading == false)
+        #expect(viewModel.canStartNewChat)
+        viewModel.beginDraftChat()
+        #expect(viewModel.isDraftChat)
+
+        client.releaseList()
+        await bootstrap.value
+        #expect(viewModel.isDraftChat)
+    }
+
+    @MainActor
+    @Test func paidPlanRaisesTheDisplayedDailyLimit() async {
+        let snapshot = GradeyAIContextSnapshot(
+            schoolScope: "school_test_scope",
+            generatedAt: Date(),
+            isStale: false,
+            unavailableSections: [],
+            subjects: [],
+            trends: [],
+            timetable: []
+        )
+        let client = MockGradeyAIClient(
+            status: GradeyAIStatus(
+                enabled: true,
+                consentRequired: false,
+                termsVersion: "1",
+                dailyLimit: 5,
+                dailyUsed: 2,
+                remaining: 3,
+                resetAt: nil
+            )
+        )
+        let viewModel = GradeyAIViewModel(
+            client: client,
+            contextBuilder: MockGradeyAIContextBuilder(snapshot: snapshot)
+        )
+
+        await viewModel.bootstrap()
+        #expect(viewModel.status?.dailyLimit == 5)
+        #expect(viewModel.status?.remaining == 3)
+
+        viewModel.applySupportTier(.plus, catalogLoaded: true)
+
+        #expect(viewModel.status?.dailyLimit == 25)
+        #expect(viewModel.status?.dailyUsed == 2)
+        #expect(viewModel.status?.remaining == 23)
+        #expect(viewModel.canStartNewChat)
+    }
+
+    @MainActor
+    @Test func openingAConversationStaysOnTheChatIfLoadingFails() async {
+        let snapshot = GradeyAIContextSnapshot(
+            schoolScope: "school_test_scope",
+            generatedAt: Date(),
+            isStale: false,
+            unavailableSections: [],
+            subjects: [],
+            trends: [],
+            timetable: []
+        )
+        let conversation = GradeyAIConversation(
+            id: "old-chat",
+            schoolScope: "school_test_scope",
+            title: "History",
+            createdAt: Date(),
+            updatedAt: Date(),
+            lastMessageAt: Date()
+        )
+        let client = MockGradeyAIClient(conversations: [conversation])
+        let viewModel = GradeyAIViewModel(
+            client: client,
+            contextBuilder: MockGradeyAIContextBuilder(snapshot: snapshot)
+        )
+
+        await viewModel.bootstrap()
+        client.error = GradeyAIError.invalidResponse
+        await viewModel.open(conversation)
+
+        #expect(viewModel.currentConversation?.id == conversation.id)
+        #expect(viewModel.errorMessage == GradeyAIError.invalidResponse.errorDescription)
+        #expect(viewModel.isOpeningConversation == false)
+    }
+
+    @MainActor
     @Test func sendingFromADraftCreatesTheRemoteChatAndKeepsTheUserMessage() async {
         let snapshot = GradeyAIContextSnapshot(
             schoolScope: "school_test_scope",
@@ -391,6 +547,38 @@ struct GradeyAICoreTests {
         #expect(viewModel.messages.map(\.role) == [.user, .assistant])
         #expect(viewModel.messages.first?.content == "What should I study first?")
         #expect(viewModel.messages.first?.conversationID == viewModel.currentConversation?.id)
+    }
+
+    @Test func unauthenticatedErrorUsesFriendlyCopy() {
+        let message = GradeyAIError.unauthenticated.errorDescription ?? ""
+        #expect(!message.isEmpty)
+        #expect(!message.localizedCaseInsensitiveContains("unauthenticated"))
+        #expect(GradeyAIError.unauthenticated.isRetryable)
+    }
+
+    @MainActor
+    @Test func bootstrapKeepsUnauthenticatedFailureOnTheLoadScreen() async {
+        let snapshot = GradeyAIContextSnapshot(
+            schoolScope: "school_test_scope",
+            generatedAt: Date(),
+            isStale: false,
+            unavailableSections: [],
+            subjects: [],
+            trends: [],
+            timetable: []
+        )
+        let client = MockGradeyAIClient()
+        client.error = GradeyAIError.unauthenticated
+        let viewModel = GradeyAIViewModel(
+            client: client,
+            contextBuilder: MockGradeyAIContextBuilder(snapshot: snapshot)
+        )
+
+        await viewModel.bootstrap()
+
+        #expect(viewModel.status == nil)
+        #expect(viewModel.errorMessage == GradeyAIError.unauthenticated.errorDescription)
+        #expect(viewModel.conversations.isEmpty)
     }
 
     private func disabledContextSnapshot() -> GradeyAIContextSnapshot {

@@ -39,9 +39,11 @@ nonisolated final class GradeyAppCheckProviderFactory: NSObject, AppCheckProvide
            let provider = AppAttestProvider(app: app) {
             return provider
         }
-        if #available(iOS 11.0, macOS 10.15, *) {
+        #if !os(macOS)
+        if #available(iOS 11.0, *) {
             return DeviceCheckProvider(app: app)
         }
+        #endif
         return nil
         #endif
     }

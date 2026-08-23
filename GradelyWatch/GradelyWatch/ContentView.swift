@@ -2,19 +2,31 @@ import GradelyWatchShared
 import SwiftUI
 
 struct ContentView: View {
+    private enum RootTab: Hashable {
+        case now
+        case upcoming
+        case ai
+    }
+
     @ObservedObject var model: WatchAppModel
+    @State private var selectedTab: RootTab = .now
 
     var body: some View {
         Group {
             if model.isSignedIn {
-                TabView {
+                TabView(selection: $selectedTab) {
                     NavigationStack {
                         CurrentLessonView(model: model)
                     }
+                    .tag(RootTab.now)
+
                     UpcomingLessonView(model: model)
+                        .tag(RootTab.upcoming)
+
                     NavigationStack {
                         GradeyAIWatchView(model: model)
                     }
+                    .tag(RootTab.ai)
                 }
                 .tabViewStyle(.verticalPage)
                 .containerBackground(for: .tabView) {
@@ -28,7 +40,9 @@ struct ContentView: View {
             }
         }
         .overlay(alignment: .topLeading) {
-            refreshButton
+            if model.isSignedIn, selectedTab != .ai {
+                refreshButton
+            }
         }
     }
 

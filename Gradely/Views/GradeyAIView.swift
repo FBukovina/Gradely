@@ -71,15 +71,6 @@ struct GradeyAIView: View {
             ZStack {
                 AuroraBackground()
                 content
-
-                if viewModel.isLoading, viewModel.status != nil {
-                    ProgressView()
-                        .controlSize(.large)
-                        .tint(Brand.primary)
-                        .padding(Spacing.lg)
-                        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: Radius.md, style: .continuous))
-                        .accessibilityIdentifier("gradeyAIBlockingProgress")
-                }
             }
             .navigationTitle(navigationTitle)
             .gradelyNavigationTitleDisplayMode(.inline)
@@ -91,23 +82,23 @@ struct GradeyAIView: View {
         }
         .task {
             guard !needsSignIn else { return }
-            await viewModel.bootstrap()
-            await supportViewModel.loadIfNeeded()
+            async let bootstrap: Void = viewModel.bootstrap()
+            async let catalog: Void = supportViewModel.loadIfNeeded()
+            _ = await (bootstrap, catalog)
+            applySupportTierFromCatalog()
+        }
+        .onChange(of: supportViewModel.entitlement) {
+            applySupportTierFromCatalog()
         }
         .sheet(isPresented: $isSupportPresented, onDismiss: {
             Task {
                 await supportViewModel.refreshEntitlement()
+                applySupportTierFromCatalog()
                 await viewModel.refreshStatus()
+                applySupportTierFromCatalog()
             }
         }) {
             SupportTipView(viewModel: supportViewModel)
-        }
-        .alert(AppL10n.string("error.title"), isPresented: errorBinding) {
-            Button(AppL10n.string("action.ok"), role: .cancel) {
-                viewModel.clearError()
-            }
-        } message: {
-            Text(viewModel.errorMessage ?? "")
         }
         .confirmationDialog(
             AppL10n.string("gradey.ai.conversation.delete.title"),
@@ -159,12 +150,22 @@ struct GradeyAIView: View {
         if viewModel.isLoading, viewModel.status == nil {
             loadingView
         } else if let status = viewModel.status {
-            if status.consentRequired {
-                consentView
-            } else if viewModel.currentConversation != nil {
-                chatView
-            } else {
-                conversationListView
+            VStack(spacing: 0) {
+                if let errorMessage = viewModel.errorMessage {
+                    inlineErrorBanner(errorMessage)
+                        .padding(.horizontal, Spacing.lg)
+                        .padding(.top, Spacing.sm)
+                }
+
+                Group {
+                    if status.consentRequired {
+                        consentView
+                    } else if viewModel.currentConversation != nil {
+                        chatView
+                    } else {
+                        conversationListView
+                    }
+                }
             }
         } else {
             unavailableView(
@@ -172,6 +173,40 @@ struct GradeyAIView: View {
                 message: viewModel.errorMessage ?? AppL10n.string("gradey.ai.loadFailed.message")
             )
         }
+    }
+
+    private func inlineErrorBanner(_ message: String) -> some View {
+        HStack(alignment: .top, spacing: Spacing.sm) {
+            GradelyIcon(systemName: "exclamationmark.triangle.fill")
+                .foregroundStyle(GradeBand.poor.foregroundColor)
+                .accessibilityHidden(true)
+
+            Text(message)
+                .font(.subheadline)
+                .foregroundStyle(.primary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Spacer(minLength: 0)
+
+            Button {
+                viewModel.clearError()
+            } label: {
+                GradelyModalCloseLabel(size: 28)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(AppL10n.string("action.done"))
+            .accessibilityIdentifier("gradeyAIErrorDismissButton")
+        }
+        .padding(Spacing.md)
+        .background(
+            GradeBand.poor.foregroundColor.opacity(0.10),
+            in: RoundedRectangle(cornerRadius: Radius.sm, style: .continuous)
+        )
+        .overlay {
+            RoundedRectangle(cornerRadius: Radius.sm, style: .continuous)
+                .strokeBorder(GradeBand.poor.foregroundColor.opacity(0.18), lineWidth: 1)
+        }
+        .accessibilityIdentifier("gradeyAIInlineError")
     }
 
     private var navigationTitle: String {
@@ -220,7 +255,7 @@ struct GradeyAIView: View {
                 } label: {
                     GradelyIcon(systemName: "ellipsis.circle")
                 }
-                .disabled(viewModel.isStreaming || viewModel.isLoading)
+                .disabled(viewModel.isStreaming)
                 .accessibilityLabel(AppL10n.string("gradey.ai.options"))
                 .accessibilityIdentifier("gradeyAIOptionsButton")
             }
@@ -435,7 +470,7 @@ struct GradeyAIView: View {
                     }
                     .buttonStyle(.borderedProminent)
                     .tint(Brand.onAccent)
-                    .disabled(viewModel.status?.canSend != true)
+                    .disabled(!viewModel.canStartNewChat)
                     .accessibilityIdentifier("gradeyAINewChatButton")
                 }
 
@@ -513,7 +548,9 @@ struct GradeyAIView: View {
                 .padding(.horizontal, Spacing.lg)
                 .padding(.top, Spacing.sm)
 
-            if viewModel.messages.isEmpty {
+            if viewModel.isOpeningConversation, viewModel.messages.isEmpty {
+                openingConversationView
+            } else if viewModel.messages.isEmpty {
                 emptyChatBody
             } else {
                 messageList
@@ -527,6 +564,21 @@ struct GradeyAIView: View {
                     .padding(.bottom, Spacing.md)
             }
         }
+    }
+
+    private var openingConversationView: some View {
+        VStack(spacing: Spacing.lg) {
+            Spacer(minLength: Spacing.md)
+            ProgressView()
+                .controlSize(.large)
+                .tint(Brand.primary)
+            Text("gradey.ai.loading")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+            Spacer(minLength: Spacing.md)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .accessibilityIdentifier("gradeyAIOpeningConversation")
     }
 
     private var emptyChatBody: some View {
@@ -864,11 +916,15 @@ struct GradeyAIView: View {
         didCompleteGuestSignIn = true
     }
 
-    private var errorBinding: Binding<Bool> {
-        Binding(
-            get: { !needsSignIn && viewModel.errorMessage != nil },
-            set: { if !$0 { viewModel.clearError() } }
-        )
+    private func applySupportTierFromCatalog() {
+        switch supportViewModel.loadState {
+        case .loaded, .empty:
+            viewModel.applySupportTier(supportViewModel.entitlement.tier, catalogLoaded: true)
+        case .idle, .loading, .failed:
+            if supportViewModel.entitlement.tier != .none {
+                viewModel.applySupportTier(supportViewModel.entitlement.tier, catalogLoaded: false)
+            }
+        }
     }
 
     private var deletionDialogBinding: Binding<Bool> {

@@ -114,21 +114,30 @@ struct SettingsModalHeader: View {
                 .accessibilityAddTraits(.isHeader)
 
             Button(action: onDismiss) {
-                GradelyIcon("cancel-01", size: 15)
-                    .foregroundStyle(.primary)
-                    .frame(width: 48, height: 48)
-                    .background(Brand.primary.opacity(0.10), in: Circle())
-                    .overlay {
-                        Circle()
-                            .strokeBorder(Color.primary.opacity(0.09), lineWidth: 1)
-                    }
-                    .contentShape(Circle())
+                GradelyModalCloseLabel(size: 48)
             }
             .buttonStyle(.plain)
             .accessibilityLabel(AppL10n.string("action.ok"))
             .accessibilityIdentifier("modalDismissButton")
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+/// Compact circular close control used by modal headers and macOS sheet overlays.
+struct GradelyModalCloseLabel: View {
+    var size: CGFloat = 32
+
+    var body: some View {
+        GradelyIcon("cancel-01", size: 15)
+            .foregroundStyle(.primary)
+            .frame(width: size, height: size)
+            .background(Brand.primary.opacity(0.10), in: Circle())
+            .overlay {
+                Circle()
+                    .strokeBorder(Color.primary.opacity(0.09), lineWidth: 1)
+            }
+            .contentShape(Circle())
     }
 }
 
@@ -609,24 +618,14 @@ extension View {
     func gradelyModalDismissButton(_ dismiss: @escaping () -> Void) -> some View {
         #if os(macOS)
         overlay(alignment: .topTrailing) {
-            Button {
-                dismiss()
-            } label: {
-                Text("action.ok")
-                    .font(.body.weight(.semibold))
-                    .foregroundStyle(.primary)
-                    .padding(.horizontal, Spacing.sm + 2)
-                    .padding(.vertical, 5)
-                    .background(Color.gradelyTertiaryFill, in: Capsule())
-                    .overlay {
-                        Capsule()
-                            .strokeBorder(Color.primary.opacity(0.08), lineWidth: 1)
-                    }
+            Button(action: dismiss) {
+                GradelyModalCloseLabel()
             }
             .buttonStyle(.plain)
-            .keyboardShortcut(.defaultAction)
-            .padding(.top, 20)
+            .keyboardShortcut(.cancelAction)
+            .padding(.top, 16)
             .padding(.trailing, Spacing.lg)
+            .accessibilityLabel(AppL10n.string("action.done"))
             .accessibilityIdentifier("modalDismissButton")
         }
         #else

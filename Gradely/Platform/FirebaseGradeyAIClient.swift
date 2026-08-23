@@ -28,8 +28,7 @@ final class FirebaseGradeyAIClient: GradeyAIClient {
     func loadStatus() async throws -> GradeyAIStatus {
         let response: FirebaseGradeyAIStatusDTO = try await call(
             "gradeyAIGetStatus",
-            request: FirebaseGradeyAIEmptyRequest(gradeyAccountID: gradeyAccountID),
-            requiresIdentity: false
+            request: FirebaseGradeyAIEmptyRequest(gradeyAccountID: gradeyAccountID)
         )
         return response.model
     }
@@ -84,7 +83,7 @@ final class FirebaseGradeyAIClient: GradeyAIClient {
         )
         return GradeyAIConversationDetail(
             conversation: response.chat.model,
-            messages: response.messages.map { $0.model(fallbackConversationID: id) }
+            messages: response.decodedMessages(fallbackConversationID: id)
         )
     }
 
@@ -141,11 +140,16 @@ final class FirebaseGradeyAIClient: GradeyAIClient {
                         FirebaseGradeyAIStreamEventDTO,
                         FirebaseGradeyAIStreamEventDTO
                     >
+                    #if os(macOS)
+                    var callable: Callable<FirebaseGradeyAIStreamRequest, FirebaseStream> =
+                        Functions.functions(region: Self.region).httpsCallable("gradeyAIStreamReply")
+                    #else
                     var callable: Callable<FirebaseGradeyAIStreamRequest, FirebaseStream> =
                         Functions.functions(region: Self.region).httpsCallable(
                             "gradeyAIStreamReply",
                             options: HTTPSCallableOptions(requireLimitedUseAppCheckTokens: true)
                         )
+                    #endif
                     callable.timeoutInterval = Self.callableTimeout
 
                     var receivedTerminalEvent = false
@@ -207,13 +211,24 @@ final class FirebaseGradeyAIClient: GradeyAIClient {
     }
 
     private static func mappedError(_ error: Error) -> Error {
+        if error is DecodingError {
+            return GradeyAIError.invalidResponse
+        }
         if error is CancellationError || error is GradeyAIError { return error }
 
         let nsError = error as NSError
+        if nsError.domain == AuthErrorDomain {
+            return GradeyAIError.unauthenticated
+        }
         guard nsError.domain == FunctionsErrorDomain else { return error }
         let details = nsError.userInfo[FunctionsErrorDetailsKey] as? [String: Any]
         let code = details?["code"] as? String ?? "firebase_\(nsError.code)"
         let message = details?["message"] as? String ?? nsError.localizedDescription
+        if nsError.code == FunctionsErrorCode.unauthenticated.rawValue
+            || code.caseInsensitiveCompare("unauthenticated") == .orderedSame
+            || message.localizedCaseInsensitiveContains("unauthenticated") {
+            return GradeyAIError.unauthenticated
+        }
         let retryable = details?["retryable"] as? Bool
             ?? [
                 FunctionsErrorCode.cancelled.rawValue,
@@ -233,7 +248,14 @@ private actor FirebaseGradeyAIIdentityCoordinator {
         guard GradeyFirebaseConfiguration.isConfigured else {
             throw GradeyAIError.notConfigured
         }
-        guard Auth.auth().currentUser == nil else { return }
+        if let user = Auth.auth().currentUser {
+            do {
+                _ = try await user.getIDToken()
+                return
+            } catch {
+                try? Auth.auth().signOut()
+            }
+        }
         _ = try await Auth.auth().signInAnonymously()
     }
 }
@@ -310,6 +332,201 @@ nonisolated private struct FirebaseGradeyAIStreamRequest: Codable, Sendable {
     }
 }
 
+nonisolated private struct AnyFirebaseCodingKey: CodingKey {
+    var stringValue: String
+    var intValue: Int?
+
+    init(_ string: String) {
+        stringValue = string
+        intValue = nil
+    }
+
+    init?(stringValue: String) {
+        self.stringValue = stringValue
+        intValue = nil
+    }
+
+    init?(intValue: Int) {
+        stringValue = String(intValue)
+        self.intValue = intValue
+    }
+}
+
+nonisolated private enum FirebaseFlexibleJSON: Codable {
+    case null
+    case bool(Bool)
+    case number(Double)
+    case string(String)
+    case array([FirebaseFlexibleJSON])
+    case object([String: FirebaseFlexibleJSON])
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        if container.decodeNil() {
+            self = .null
+        } else if let value = try? container.decode(Bool.self) {
+            self = .bool(value)
+        } else if let value = try? container.decode(Double.self) {
+            self = .number(value)
+        } else if let value = try? container.decode(String.self) {
+            self = .string(value)
+        } else if let value = try? container.decode([FirebaseFlexibleJSON].self) {
+            self = .array(value)
+        } else if let value = try? container.decode([String: FirebaseFlexibleJSON].self) {
+            self = .object(value)
+        } else {
+            throw DecodingError.dataCorruptedError(
+                in: container,
+                debugDescription: "Unsupported Firebase JSON value"
+            )
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        switch self {
+        case .null:
+            try container.encodeNil()
+        case .bool(let value):
+            try container.encode(value)
+        case .number(let value):
+            try container.encode(value)
+        case .string(let value):
+            try container.encode(value)
+        case .array(let value):
+            try container.encode(value)
+        case .object(let value):
+            try container.encode(value)
+        }
+    }
+}
+
+nonisolated private enum FirebaseFlexibleTime {
+    static func milliseconds(
+        in container: KeyedDecodingContainer<AnyFirebaseCodingKey>,
+        names: String...
+    ) -> Double? {
+        for name in names {
+            let key = AnyFirebaseCodingKey(name)
+            if let value = try? container.decode(Double.self, forKey: key) {
+                return normalize(value)
+            }
+            if let value = try? container.decode(Int64.self, forKey: key) {
+                return normalize(Double(value))
+            }
+            if let value = try? container.decode(String.self, forKey: key),
+               let parsed = parse(value) {
+                return parsed
+            }
+            if let timestamp = try? container.decode(Timestamp.self, forKey: key) {
+                return timestamp.milliseconds
+            }
+        }
+        return nil
+    }
+
+    static func normalize(_ value: Double) -> Double {
+        abs(value) < 10_000_000_000 ? value * 1_000 : value
+    }
+
+    private static func parse(_ value: String) -> Double? {
+        if let number = Double(value) {
+            return normalize(number)
+        }
+        let fractional = ISO8601DateFormatter()
+        fractional.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let date = fractional.date(from: value) {
+            return date.timeIntervalSince1970 * 1_000
+        }
+        let basic = ISO8601DateFormatter()
+        basic.formatOptions = [.withInternetDateTime]
+        return basic.date(from: value).map { $0.timeIntervalSince1970 * 1_000 }
+    }
+
+    private struct Timestamp: Decodable {
+        let milliseconds: Double
+
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: AnyFirebaseCodingKey.self)
+            if let value = try container.decodeIfPresent(String.self, forKey: AnyFirebaseCodingKey("value")) {
+                if let parsed = FirebaseFlexibleTime.parse(value) {
+                    milliseconds = parsed
+                    return
+                }
+            }
+            let seconds = FirebaseFlexibleTime.number(in: container, names: "seconds", "_seconds")
+            let nanos = FirebaseFlexibleTime.number(in: container, names: "nanos", "nanoseconds", "_nanoseconds") ?? 0
+            guard let seconds else {
+                throw DecodingError.dataCorrupted(
+                    .init(codingPath: decoder.codingPath, debugDescription: "Missing timestamp seconds")
+                )
+            }
+            milliseconds = seconds * 1_000 + nanos / 1_000_000
+        }
+    }
+
+    private static func number(
+        in container: KeyedDecodingContainer<AnyFirebaseCodingKey>,
+        names: String...
+    ) -> Double? {
+        for name in names {
+            let key = AnyFirebaseCodingKey(name)
+            if let value = try? container.decode(Double.self, forKey: key) {
+                return value
+            }
+            if let value = try? container.decode(Int64.self, forKey: key) {
+                return Double(value)
+            }
+            if let value = try? container.decode(String.self, forKey: key), let parsed = Double(value) {
+                return parsed
+            }
+        }
+        return nil
+    }
+}
+
+private extension KeyedDecodingContainer where Key == AnyFirebaseCodingKey {
+    func flexibleString(_ names: String...) -> String? {
+        for name in names {
+            let key = AnyFirebaseCodingKey(name)
+            if let value = try? decode(String.self, forKey: key) {
+                let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !trimmed.isEmpty { return trimmed }
+            }
+            if let value = try? decode(Int.self, forKey: key) {
+                return String(value)
+            }
+        }
+        return nil
+    }
+
+    func flexibleBool(_ names: String..., fallback: Bool) -> Bool {
+        for name in names {
+            let key = AnyFirebaseCodingKey(name)
+            if let value = try? decode(Bool.self, forKey: key) {
+                return value
+            }
+        }
+        return fallback
+    }
+
+    func flexibleInt(_ names: String..., fallback: Int) -> Int {
+        for name in names {
+            let key = AnyFirebaseCodingKey(name)
+            if let value = try? decode(Int.self, forKey: key) {
+                return value
+            }
+            if let value = try? decode(Double.self, forKey: key) {
+                return Int(value.rounded())
+            }
+            if let value = try? decode(String.self, forKey: key), let parsed = Int(value) {
+                return parsed
+            }
+        }
+        return fallback
+    }
+}
+
 nonisolated private struct FirebaseGradeyAIStatusDTO: Codable, Sendable {
     let enabled: Bool
     let consentRequired: Bool
@@ -331,6 +548,33 @@ nonisolated private struct FirebaseGradeyAIStatusDTO: Codable, Sendable {
             resetAt: resetAt.map { Date(timeIntervalSince1970: $0 / 1_000) },
             tier: GradeyAIIdentityTier(rawValue: tier) ?? .anonymous
         )
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: AnyFirebaseCodingKey.self)
+        enabled = container.flexibleBool("enabled", fallback: true)
+        consentRequired = container.flexibleBool("consentRequired", "consent_required", fallback: false)
+        termsVersion = container.flexibleString("termsVersion", "terms_version") ?? ""
+        tier = container.flexibleString("tier") ?? GradeyAIIdentityTier.anonymous.rawValue
+        dailyLimit = container.flexibleInt("dailyLimit", "daily_limit", fallback: 5)
+        dailyUsed = container.flexibleInt("dailyUsed", "daily_used", fallback: 0)
+        remaining = container.flexibleInt(
+            "remaining",
+            fallback: max(0, dailyLimit - dailyUsed)
+        )
+        resetAt = FirebaseFlexibleTime.milliseconds(in: container, names: "resetAt", "reset_at")
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: AnyFirebaseCodingKey.self)
+        try container.encode(enabled, forKey: AnyFirebaseCodingKey("enabled"))
+        try container.encode(consentRequired, forKey: AnyFirebaseCodingKey("consentRequired"))
+        try container.encode(termsVersion, forKey: AnyFirebaseCodingKey("termsVersion"))
+        try container.encode(tier, forKey: AnyFirebaseCodingKey("tier"))
+        try container.encode(dailyLimit, forKey: AnyFirebaseCodingKey("dailyLimit"))
+        try container.encode(dailyUsed, forKey: AnyFirebaseCodingKey("dailyUsed"))
+        try container.encode(remaining, forKey: AnyFirebaseCodingKey("remaining"))
+        try container.encodeIfPresent(resetAt, forKey: AnyFirebaseCodingKey("resetAt"))
     }
 }
 
@@ -355,6 +599,27 @@ nonisolated private struct FirebaseGradeyAIChatDTO: Codable, Sendable {
             updatedAt: Date(timeIntervalSince1970: updatedAt / 1_000),
             lastMessageAt: lastMessageAt.map { Date(timeIntervalSince1970: $0 / 1_000) }
         )
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: AnyFirebaseCodingKey.self)
+        let now = Date().timeIntervalSince1970 * 1_000
+        id = container.flexibleString("id") ?? UUID().uuidString
+        schoolScope = container.flexibleString("schoolScope", "school_scope") ?? ""
+        title = container.flexibleString("title") ?? ""
+        createdAt = FirebaseFlexibleTime.milliseconds(in: container, names: "createdAt", "created_at") ?? now
+        updatedAt = FirebaseFlexibleTime.milliseconds(in: container, names: "updatedAt", "updated_at") ?? createdAt
+        lastMessageAt = FirebaseFlexibleTime.milliseconds(in: container, names: "lastMessageAt", "last_message_at")
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: AnyFirebaseCodingKey.self)
+        try container.encode(id, forKey: AnyFirebaseCodingKey("id"))
+        try container.encode(schoolScope, forKey: AnyFirebaseCodingKey("schoolScope"))
+        try container.encode(title, forKey: AnyFirebaseCodingKey("title"))
+        try container.encode(createdAt, forKey: AnyFirebaseCodingKey("createdAt"))
+        try container.encode(updatedAt, forKey: AnyFirebaseCodingKey("updatedAt"))
+        try container.encodeIfPresent(lastMessageAt, forKey: AnyFirebaseCodingKey("lastMessageAt"))
     }
 }
 
@@ -391,6 +656,47 @@ nonisolated private struct FirebaseGradeyAIMessageDTO: Codable, Sendable {
         default: .complete
         }
     }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: AnyFirebaseCodingKey.self)
+        let now = Date().timeIntervalSince1970 * 1_000
+        guard let id = container.flexibleString("id") else {
+            throw DecodingError.keyNotFound(
+                AnyFirebaseCodingKey("id"),
+                .init(codingPath: decoder.codingPath, debugDescription: "Gradey AI message is missing id")
+            )
+        }
+        self.id = id
+        conversationID = container.flexibleString("conversationID", "conversation_id")
+        chatID = container.flexibleString("chatID", "chat_id", "chatId")
+        clientMessageID = container.flexibleString("clientMessageID", "client_message_id")
+        role = container.flexibleString("role") ?? "assistant"
+        content = container.flexibleString("content", "text") ?? ""
+        status = container.flexibleString("status", "state") ?? "complete"
+        createdAt = FirebaseFlexibleTime.milliseconds(
+            in: container,
+            names: "createdAt", "created_at"
+        ) ?? now
+        updatedAt = FirebaseFlexibleTime.milliseconds(in: container, names: "updatedAt", "updated_at")
+        contextGeneratedAt = FirebaseFlexibleTime.milliseconds(
+            in: container,
+            names: "contextGeneratedAt", "context_generated_at"
+        )
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: AnyFirebaseCodingKey.self)
+        try container.encode(id, forKey: AnyFirebaseCodingKey("id"))
+        try container.encodeIfPresent(conversationID, forKey: AnyFirebaseCodingKey("conversationID"))
+        try container.encodeIfPresent(chatID, forKey: AnyFirebaseCodingKey("chatID"))
+        try container.encodeIfPresent(clientMessageID, forKey: AnyFirebaseCodingKey("clientMessageID"))
+        try container.encode(role, forKey: AnyFirebaseCodingKey("role"))
+        try container.encode(content, forKey: AnyFirebaseCodingKey("content"))
+        try container.encode(status, forKey: AnyFirebaseCodingKey("status"))
+        try container.encode(createdAt, forKey: AnyFirebaseCodingKey("createdAt"))
+        try container.encodeIfPresent(updatedAt, forKey: AnyFirebaseCodingKey("updatedAt"))
+        try container.encodeIfPresent(contextGeneratedAt, forKey: AnyFirebaseCodingKey("contextGeneratedAt"))
+    }
 }
 
 nonisolated private struct FirebaseGradeyAIChatsResponse: Codable, Sendable {
@@ -406,7 +712,65 @@ nonisolated private struct FirebaseGradeyAIChatResponse: Codable, Sendable {
 nonisolated private struct FirebaseGradeyAIChatDetailResponse: Codable, Sendable {
     let chat: FirebaseGradeyAIChatDTO
     let messages: [FirebaseGradeyAIMessageDTO]
-    let status: FirebaseGradeyAIStatusDTO
+    let status: FirebaseGradeyAIStatusDTO?
+
+    func decodedMessages(fallbackConversationID: String) -> [GradeyAIMessage] {
+        messages
+            .map { $0.model(fallbackConversationID: fallbackConversationID) }
+            .sorted { $0.createdAt < $1.createdAt }
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: AnyFirebaseCodingKey.self)
+        if let decodedChat = try? container.decode(FirebaseGradeyAIChatDTO.self, forKey: AnyFirebaseCodingKey("chat")) {
+            chat = decodedChat
+        } else {
+            chat = try container.decode(FirebaseGradeyAIChatDTO.self, forKey: AnyFirebaseCodingKey("conversation"))
+        }
+        messages = Self.decodeMessages(from: container)
+        status = try container.decodeIfPresent(
+            FirebaseGradeyAIStatusDTO.self,
+            forKey: AnyFirebaseCodingKey("status")
+        )
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: AnyFirebaseCodingKey.self)
+        try container.encode(chat, forKey: AnyFirebaseCodingKey("chat"))
+        try container.encode(messages, forKey: AnyFirebaseCodingKey("messages"))
+        try container.encodeIfPresent(status, forKey: AnyFirebaseCodingKey("status"))
+    }
+
+    private static func decodeMessages(
+        from container: KeyedDecodingContainer<AnyFirebaseCodingKey>
+    ) -> [FirebaseGradeyAIMessageDTO] {
+        let keys = ["messages", "history", "items"]
+        for keyName in keys {
+            let key = AnyFirebaseCodingKey(keyName)
+            if let decoded = try? container.decode([FirebaseGradeyAIMessageDTO].self, forKey: key) {
+                return decoded
+            }
+            if let decoded = try? container.decode([String: FirebaseGradeyAIMessageDTO].self, forKey: key) {
+                return decoded.values.sorted { $0.createdAt < $1.createdAt }
+            }
+            if let values = try? container.decode([FirebaseFlexibleJSON].self, forKey: key) {
+                return decodeLossyMessages(values)
+            }
+            if let values = try? container.decode([String: FirebaseFlexibleJSON].self, forKey: key) {
+                return decodeLossyMessages(Array(values.values))
+            }
+        }
+        return []
+    }
+
+    private static func decodeLossyMessages(_ values: [FirebaseFlexibleJSON]) -> [FirebaseGradeyAIMessageDTO] {
+        let decoder = JSONDecoder()
+        let encoder = JSONEncoder()
+        return values.compactMap { value in
+            guard let data = try? encoder.encode(value) else { return nil }
+            return try? decoder.decode(FirebaseGradeyAIMessageDTO.self, from: data)
+        }
+    }
 }
 
 nonisolated private struct FirebaseGradeyAIDeletionResponse: Codable, Sendable {
@@ -663,6 +1027,17 @@ nonisolated enum FirebaseGradeyAIWireContract {
     ) throws -> GradeyAIStreamEvent {
         let payload = try JSONDecoder().decode(FirebaseGradeyAIStreamEventDTO.self, from: data)
         return try payload.model(fallbackConversationID: fallbackConversationID)
+    }
+
+    static func decodeChatDetail(
+        _ data: Data,
+        fallbackConversationID: String
+    ) throws -> GradeyAIConversationDetail {
+        let payload = try JSONDecoder().decode(FirebaseGradeyAIChatDetailResponse.self, from: data)
+        return GradeyAIConversationDetail(
+            conversation: payload.chat.model,
+            messages: payload.decodedMessages(fallbackConversationID: fallbackConversationID)
+        )
     }
 
     static func encodeMinimizedContext(

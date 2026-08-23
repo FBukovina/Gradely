@@ -12,6 +12,7 @@ final class GradeyAIViewModel {
     var isLoading = false
     var isStreaming = false
     var isRefreshingContext = false
+    var isOpeningConversation = false
     var contextSnapshot: GradeyAIContextSnapshot?
     var contextError: String?
     var errorMessage: String?
@@ -35,6 +36,13 @@ final class GradeyAIViewModel {
             && trimmed.count <= 2_000
             && contextSnapshot != nil
             && status?.canSend == true
+    }
+
+    var canStartNewChat: Bool {
+        status?.enabled == true
+            && status?.consentRequired == false
+            && (status?.remaining ?? 0) > 0
+            && !isStreaming
     }
 
     var starterPrompts: [String] {
@@ -67,6 +75,11 @@ final class GradeyAIViewModel {
     @ObservationIgnored private var activeSchoolScope: String?
     @ObservationIgnored private var lastFailedRequest: FailedRequest?
     @ObservationIgnored private var draftConversationID: String?
+    @ObservationIgnored private var bootstrapTask: Task<Void, Never>?
+    @ObservationIgnored private var reportedDailyLimit = 0
+    @ObservationIgnored private var reportedUsed = 0
+    @ObservationIgnored private var supportTier: SupportTier?
+    @ObservationIgnored private var serverStatus: GradeyAIStatus?
 
     var isDraftChat: Bool {
         guard let draftConversationID, let currentConversation else { return false }
@@ -79,29 +92,79 @@ final class GradeyAIViewModel {
     }
 
     func bootstrap() async {
+        if let bootstrapTask {
+            await bootstrapTask.value
+            if status != nil { return }
+        }
+
+        let task = Task { @MainActor [weak self] in
+            guard let self else { return }
+            await self.performBootstrap()
+        }
+        bootstrapTask = task
+        await task.value
+        if bootstrapTask == task {
+            bootstrapTask = nil
+        }
+    }
+
+    func refreshStatus() async {
+        if case .success(let loadedStatus) = await loadStatusAttempt() {
+            ingestStatus(loadedStatus)
+        }
+    }
+
+    func applySupportTier(_ tier: SupportTier, catalogLoaded: Bool) {
+        guard catalogLoaded || tier != .none else { return }
+        supportTier = tier
+        recomposeStatus()
+    }
+
+    private func performBootstrap() async {
         stop()
         errorMessage = nil
         contextError = nil
-        isLoading = true
-        defer { isLoading = false }
 
         do {
             let schoolScope = try contextBuilder.currentSchoolScope()
             if let activeSchoolScope, activeSchoolScope != schoolScope {
-                reset()
-                isLoading = true
+                conversations = []
+                messages = []
+                currentConversation = nil
+                draftConversationID = nil
+                status = nil
+                serverStatus = nil
+                reportedDailyLimit = 0
+                reportedUsed = 0
+                lastFailedRequest = nil
+                isOpeningConversation = false
             }
             activeSchoolScope = schoolScope
-            contextSnapshot = try contextBuilder.cachedContext()
+            if contextSnapshot == nil {
+                contextSnapshot = try contextBuilder.cachedContext()
+            }
 
+            let isInitialLoad = status == nil
+            if isInitialLoad {
+                isLoading = true
+            }
+
+            async let statusAttempt = loadStatusAttempt()
+            async let conversationsAttempt = loadConversationsAttempt(schoolScope: schoolScope)
             async let contextAttempt = refreshContextAttempt()
-            let statusResult = await loadStatusAttempt()
 
-            switch statusResult {
+            switch await statusAttempt {
             case .success(let loadedStatus):
-                status = loadedStatus
-                if !loadedStatus.consentRequired {
-                    switch await loadConversationsAttempt(schoolScope: schoolScope) {
+                ingestStatus(loadedStatus)
+                isLoading = false
+                if loadedStatus.consentRequired {
+                    conversations = []
+                    if currentConversation != nil, !isDraftChat {
+                        currentConversation = nil
+                        messages = []
+                    }
+                } else {
+                    switch await conversationsAttempt {
                     case .success(let loadedConversations):
                         conversations = loadedConversations
                         if let currentConversation,
@@ -109,27 +172,23 @@ final class GradeyAIViewModel {
                             self.currentConversation = refreshed
                         }
                     case .failure(let error):
-                        errorMessage = userFacingMessage(for: error)
+                        if conversations.isEmpty, currentConversation == nil {
+                            errorMessage = userFacingMessage(for: error)
+                        }
                     }
-                } else {
-                    conversations = []
-                    currentConversation = nil
-                    messages = []
                 }
             case .failure(let error):
-                errorMessage = userFacingMessage(for: error)
+                isLoading = false
+                if status == nil {
+                    errorMessage = userFacingMessage(for: error)
+                }
             }
 
             applyContextResult(await contextAttempt)
         } catch {
+            isLoading = false
             errorMessage = userFacingMessage(for: error)
             contextError = userFacingMessage(for: error)
-        }
-    }
-
-    func refreshStatus() async {
-        if case .success(let loadedStatus) = await loadStatusAttempt() {
-            status = loadedStatus
         }
     }
 
@@ -143,7 +202,7 @@ final class GradeyAIViewModel {
                 currentStatus.consentRequired = false
                 status = currentStatus
             }
-            status = try await client.loadStatus()
+            ingestStatus(try await client.loadStatus())
             if let status, !status.consentRequired {
                 let schoolScope = try contextBuilder.currentSchoolScope()
                 conversations = try await client.listConversations(schoolScope: schoolScope)
@@ -163,11 +222,12 @@ final class GradeyAIViewModel {
             conversations = []
             messages = []
             currentConversation = nil
-            if var currentStatus = status {
+            reportedUsed = 0
+            if var currentStatus = serverStatus ?? status {
                 currentStatus.consentRequired = true
                 currentStatus.dailyUsed = 0
                 currentStatus.remaining = currentStatus.dailyLimit
-                status = currentStatus
+                ingestStatus(currentStatus)
             }
         } catch {
             errorMessage = userFacingMessage(for: error)
@@ -193,6 +253,7 @@ final class GradeyAIViewModel {
             messages = []
             draft = ""
             lastFailedRequest = nil
+            isOpeningConversation = false
         } catch {
             errorMessage = userFacingMessage(for: error)
         }
@@ -224,14 +285,17 @@ final class GradeyAIViewModel {
     func open(_ conversation: GradeyAIConversation) async {
         stop()
         errorMessage = nil
-        isLoading = true
-        defer { isLoading = false }
+        draftConversationID = nil
+        currentConversation = conversation
+        messages = []
+        lastFailedRequest = nil
+        isOpeningConversation = true
+        defer { isOpeningConversation = false }
         do {
             let detail = try await client.loadConversation(id: conversation.id)
             currentConversation = detail.conversation
             messages = detail.messages
             upsert(detail.conversation)
-            lastFailedRequest = nil
         } catch {
             errorMessage = userFacingMessage(for: error)
         }
@@ -246,6 +310,7 @@ final class GradeyAIViewModel {
         currentConversation = nil
         messages = []
         lastFailedRequest = nil
+        isOpeningConversation = false
     }
 
     func send() async {
@@ -434,6 +499,7 @@ final class GradeyAIViewModel {
         draft = ""
         currentConversation = nil
         isLoading = false
+        isOpeningConversation = false
         isRefreshingContext = false
         contextSnapshot = nil
         contextError = nil
@@ -441,6 +507,10 @@ final class GradeyAIViewModel {
         activeSchoolScope = nil
         lastFailedRequest = nil
         draftConversationID = nil
+        reportedDailyLimit = 0
+        reportedUsed = 0
+        supportTier = nil
+        serverStatus = nil
     }
 
     func clearError() {
@@ -626,11 +696,28 @@ final class GradeyAIViewModel {
         }
     }
 
+    private func ingestStatus(_ loadedStatus: GradeyAIStatus) {
+        serverStatus = loadedStatus
+        reportedDailyLimit = max(loadedStatus.dailyLimit, 0)
+        reportedUsed = max(
+            loadedStatus.dailyUsed,
+            max(0, loadedStatus.dailyLimit - loadedStatus.remaining)
+        )
+        recomposeStatus()
+    }
+
+    private func recomposeStatus() {
+        guard var loadedStatus = serverStatus else { return }
+        let dailyLimit = supportTier.map { SupportTipCatalog.dailyLimit(for: $0) } ?? reportedDailyLimit
+        loadedStatus.dailyLimit = dailyLimit
+        loadedStatus.dailyUsed = reportedUsed
+        loadedStatus.remaining = max(0, dailyLimit - reportedUsed)
+        status = loadedStatus
+    }
+
     private func updateRemaining(_ remaining: Int) {
-        guard var currentStatus = status else { return }
-        currentStatus.remaining = max(0, remaining)
-        currentStatus.dailyUsed = max(0, currentStatus.dailyLimit - currentStatus.remaining)
-        status = currentStatus
+        reportedUsed = max(0, reportedDailyLimit - remaining)
+        recomposeStatus()
     }
 
     private func updateConversationAfterMessage(_ conversation: GradeyAIConversation, title: String?) {
@@ -669,6 +756,9 @@ final class GradeyAIViewModel {
     }
 
     private func userFacingMessage(for error: Error) -> String {
+        if error is DecodingError {
+            return AppL10n.string("gradey.account.error.invalidResponse")
+        }
         if let localizedError = error as? LocalizedError,
            let message = localizedError.errorDescription,
            !message.isEmpty {

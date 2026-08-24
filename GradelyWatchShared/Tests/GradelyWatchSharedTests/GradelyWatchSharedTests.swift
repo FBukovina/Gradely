@@ -57,6 +57,15 @@ struct GradelyWatchSharedTests {
         #expect(envelope[GradelyWatchMessageKey.schemaVersion] as? Int == GradelyWatchSyncPayload.currentSchemaVersion)
     }
 
+    @Test func purchaseRefreshEnvelopeIsDistinctFromRequestSync() {
+        let envelope = GradelyWatchSyncCodec.requestPurchaseRefreshEnvelope()
+
+        #expect(GradelyWatchSyncCodec.isRequestPurchaseRefresh(envelope))
+        #expect(!GradelyWatchSyncCodec.isRequestSync(envelope))
+        #expect(envelope[GradelyWatchMessageKey.messageType] as? String == GradelyWatchMessageType.requestPurchaseRefresh)
+        #expect(envelope[GradelyWatchMessageKey.schemaVersion] as? Int == GradelyWatchSyncPayload.currentSchemaVersion)
+    }
+
     @Test func signedOutPayloadClearsPrivateState() {
         let payload = GradelyWatchSyncPayload.signedOut(generatedAt: Date(timeIntervalSince1970: 10))
 

@@ -153,6 +153,18 @@ final class LiveWatchSyncService: NSObject, WatchSyncing {
         update(supportTier: WatchPayloadBuilder.supportTier(from: entitlement))
     }
 
+    private func handlePurchaseRefreshRequest(_ replyHandler: @escaping ([String: Any]) -> Void) async {
+        if let supportProvider {
+            do {
+                let entitlement = try await supportProvider.restorePurchases()
+                update(supportTier: WatchPayloadBuilder.supportTier(from: entitlement))
+            } catch {
+                await refreshSupportTier()
+            }
+        }
+        replyToSyncRequest(replyHandler)
+    }
+
     private func handleAIRequest(
         _ request: GradelyWatchAIStreamRequest,
         replyHandler: @escaping ([String: Any]) -> Void
@@ -372,8 +384,16 @@ extension LiveWatchSyncService: WCSessionDelegate {
         didReceiveMessage message: [String: Any],
         replyHandler: @escaping ([String: Any]) -> Void
     ) {
+        if GradelyWatchSyncCodec.isRequestPurchaseRefresh(message) {
+            Task { @MainActor in
+                await self.handlePurchaseRefreshRequest(replyHandler)
+            }
+            return
+        }
+
         if GradelyWatchSyncCodec.isRequestSync(message) {
             Task { @MainActor in
+                await self.refreshSupportTier()
                 self.replyToSyncRequest(replyHandler)
             }
             return

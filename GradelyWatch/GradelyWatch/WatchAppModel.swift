@@ -22,6 +22,8 @@ final class WatchAppModel: ObservableObject {
     @Published private(set) var timetable: GradelyWatchTimetable?
     @Published private(set) var supportTier: GradelyWatchSupportTier = .none
     @Published private(set) var isSyncing = false
+    @Published private(set) var isRefreshingPurchases = false
+    @Published private(set) var purchaseRefreshMessage: String?
     @Published private(set) var errorMessage: String?
     @Published private(set) var isPhoneReachable = false
     @Published var aiMessages: [WatchAIChatMessage] = []
@@ -151,6 +153,24 @@ final class WatchAppModel: ObservableObject {
             WidgetCenter.shared.reloadAllTimelines()
         } catch {
             errorMessage = userFacingMessage(for: error)
+        }
+    }
+
+    func refreshPurchases() async {
+        guard !isRefreshingPurchases else { return }
+
+        isRefreshingPurchases = true
+        purchaseRefreshMessage = nil
+        defer { isRefreshingPurchases = false }
+
+        do {
+            let payload = try await connectivity.requestPurchaseRefresh()
+            persist(supportTier: payload.supportTier)
+            if !isRecurringSupporter {
+                purchaseRefreshMessage = "No active plan found. Subscribe in Gradey on iPhone."
+            }
+        } catch {
+            purchaseRefreshMessage = userFacingMessage(for: error)
         }
     }
 

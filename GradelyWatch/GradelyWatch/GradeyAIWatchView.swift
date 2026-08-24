@@ -14,11 +14,51 @@ struct GradeyAIWatchView: View {
     }
 
     private var lock: some View {
-        WatchStatusPage(
-            systemImage: "lock.fill",
-            title: "Gradey AI",
-            detail: "Available on recurring supporter plans. Subscribe in Gradey on iPhone."
-        )
+        ScrollView {
+            VStack(spacing: 10) {
+                WatchStatusPage(
+                    systemImage: "lock.fill",
+                    title: "Gradey AI",
+                    detail: "Available on recurring supporter plans. Subscribe in Gradey on iPhone."
+                )
+
+                if let purchaseRefreshMessage = model.purchaseRefreshMessage {
+                    Text(purchaseRefreshMessage)
+                        .font(.caption2)
+                        .foregroundStyle(WatchBrand.canceled)
+                        .multilineTextAlignment(.center)
+                } else if !model.isPhoneReachable {
+                    Text("Bring iPhone nearby")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                }
+
+                Button {
+                    Task { await model.refreshPurchases() }
+                } label: {
+                    HStack(spacing: 6) {
+                        if model.isRefreshingPurchases {
+                            ProgressView()
+                                .controlSize(.mini)
+                                .tint(WatchBrand.onAccent)
+                        } else {
+                            Image(systemName: "arrow.clockwise")
+                        }
+                        Text("Refresh purchases")
+                    }
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(WatchBrand.onAccent)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 8)
+                    .background(WatchBrand.gradient, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                }
+                .buttonStyle(.plain)
+                .disabled(model.isRefreshingPurchases)
+                .accessibilityLabel("Refresh purchases")
+            }
+            .padding(.horizontal, 2)
+        }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 

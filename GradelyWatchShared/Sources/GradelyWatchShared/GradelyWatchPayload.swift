@@ -3,6 +3,7 @@ import Foundation
 public enum GradelyWatchMessageType {
     public static let syncPayload = "syncPayload"
     public static let requestSync = "requestSync"
+    public static let requestPurchaseRefresh = "requestPurchaseRefresh"
     public static let aiStreamRequest = "aiStreamRequest"
     public static let aiStreamAck = "aiStreamAck"
     public static let aiStreamEvent = "aiStreamEvent"
@@ -323,6 +324,13 @@ public enum GradelyWatchSyncCodec {
         ]
     }
 
+    public static func requestPurchaseRefreshEnvelope() -> [String: Any] {
+        [
+            GradelyWatchMessageKey.messageType: GradelyWatchMessageType.requestPurchaseRefresh,
+            GradelyWatchMessageKey.schemaVersion: GradelyWatchSyncPayload.currentSchemaVersion
+        ]
+    }
+
     public static func payload(from envelope: [String: Any]) throws -> GradelyWatchSyncPayload? {
         guard envelope[GradelyWatchMessageKey.messageType] as? String == GradelyWatchMessageType.syncPayload,
               let data = envelope[GradelyWatchMessageKey.payloadData] as? Data
@@ -335,6 +343,10 @@ public enum GradelyWatchSyncCodec {
 
     public static func isRequestSync(_ envelope: [String: Any]) -> Bool {
         envelope[GradelyWatchMessageKey.messageType] as? String == GradelyWatchMessageType.requestSync
+    }
+
+    public static func isRequestPurchaseRefresh(_ envelope: [String: Any]) -> Bool {
+        envelope[GradelyWatchMessageKey.messageType] as? String == GradelyWatchMessageType.requestPurchaseRefresh
     }
 
     public static func selectLesson(

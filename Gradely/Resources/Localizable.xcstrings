@@ -8692,6 +8692,34 @@
         }
       }
     },
+    "login.support.chat" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Napsat podpoře"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "napsat podpoře"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chat with support"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "chat with support"
+          }
+        }
+      }
+    },
     "login.title" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -15660,6 +15688,62 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "hide the canteen tab if you don't order meals."
+          }
+        }
+      }
+    },
+    "settings.support.chat" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Napsat podpoře"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "napsat podpoře"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chat with support"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "chat with support"
+          }
+        }
+      }
+    },
+    "settings.support.chat.message" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Otevři chat o známkách, přihlášení nebo Bakalářích."
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "otevři chat o známkách, přihlášení nebo Bakalářích."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open a chat about grades, sign-in, or Bakaláři."
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "open a chat about grades, sign-in, or Bakaláři."
           }
         }
       }

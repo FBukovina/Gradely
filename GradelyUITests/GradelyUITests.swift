@@ -489,6 +489,10 @@ final class GradelyUITests: XCTestCase {
         )
 
         let settingsScroll = settingsDetailScrollView(in: app)
+        let chatButton = app.buttons["supportChatButton"]
+        scroll(settingsScroll, untilExists: chatButton)
+        XCTAssertTrue(chatButton.waitForExistence(timeout: 3))
+
         let supportButton = waitForAny([
             app.buttons["supportGradelyButton"],
             app.buttons["Support Gradey"],
@@ -608,6 +612,11 @@ final class GradelyUITests: XCTestCase {
         )
 
         let settingsScroll = settingsDetailScrollView(in: app)
+        let chatButton = app.buttons["supportChatButton"]
+        scroll(settingsScroll, untilHittable: chatButton)
+        XCTAssertTrue(chatButton.waitForExistence(timeout: 3))
+        XCTAssertTrue(chatButton.isHittable)
+
         let supportButton = app.buttons["supportGradelyButton"]
         scroll(settingsScroll, untilHittable: supportButton)
         XCTAssertTrue(supportButton.isHittable)

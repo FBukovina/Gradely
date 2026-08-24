@@ -52,6 +52,7 @@ final class AppViewModel {
     func bootstrap() async {
         if isGuestMode {
             await RevenueCatIdentity.reset()
+            IntercomIdentity.reset()
             await gradeyAuthClient.signOut()
             linkedAccountRepository.clearLocalAccounts()
             notificationSettingsStore.clear()
@@ -64,27 +65,33 @@ final class AppViewModel {
                 guard let restoredGradeySession = try gradeyAuthClient.bootstrapSession() else {
                     gradeyAccount = nil
                     phase = .signedOut
+                    IntercomIdentity.reset()
                     return
                 }
                 gradeySession = restoredGradeySession
                 gradeyAccount = restoredGradeySession.account
                 await RevenueCatIdentity.identify(userID: restoredGradeySession.account.id)
+                IntercomIdentity.identify(account: restoredGradeySession.account)
             }
 
             if try repository.bootstrapSession() != nil {
                 phase = .signedIn
+                syncIntercomUser()
                 return
             }
 
             if let gradeySession,
                await restoreActiveSchoolSession(using: gradeySession) {
                 phase = .signedIn
+                syncIntercomUser()
                 return
             }
 
             phase = .signedInNeedsSchool
+            syncIntercomUser()
         } catch {
             phase = .signedOut
+            IntercomIdentity.reset()
         }
     }
 
@@ -98,6 +105,7 @@ final class AppViewModel {
 
     func continueWithoutAccount() async {
         await RevenueCatIdentity.reset()
+        IntercomIdentity.reset()
         await gradeyAuthClient.signOut()
         linkedAccountRepository.clearLocalAccounts()
         notificationSettingsStore.clear()
@@ -112,6 +120,7 @@ final class AppViewModel {
         isGuestMode = false
         gradeyAccount = nil
         phase = .signedOut
+        IntercomIdentity.reset()
     }
 
     func markSignedIn() {
@@ -125,11 +134,13 @@ final class AppViewModel {
     func updateGradeyAccount(_ account: GradeyAccount) {
         guard !isGuestMode, gradeyAccount == nil || gradeyAccount?.id == account.id else { return }
         gradeyAccount = account
+        IntercomIdentity.identify(account: account)
     }
 
     func signOut() async {
         await stravaCZRepository.logout()
         await RevenueCatIdentity.reset()
+        IntercomIdentity.reset()
         await gradeyAuthClient.signOut()
         linkedAccountRepository.clearLocalAccounts()
         notificationSettingsStore.clear()
@@ -154,6 +165,14 @@ final class AppViewModel {
     func resetAsNewUser() async {
         await signOut()
         clearLocalCaches()
+    }
+
+    private func syncIntercomUser() {
+        if let gradeyAccount, !isGuestMode {
+            IntercomIdentity.identify(account: gradeyAccount)
+        } else {
+            IntercomIdentity.loginUnidentified()
+        }
     }
 
     private func restoreActiveSchoolSession(using gradeySession: GradeyAuthSession) async -> Bool {

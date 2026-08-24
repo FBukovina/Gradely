@@ -22,6 +22,7 @@ struct GradelyApp: App {
         GradelyDisplayFont.registerIfNeeded()
         GradeyFirebaseConfiguration.configureIfNeeded()
         RevenueCatConfiguration.configureIfNeeded()
+        IntercomConfiguration.configureIfNeeded()
         Self.resetLanguageForUITestsIfNeeded()
         let store = AppLanguageStore.shared
         store.prepareAtLaunch()

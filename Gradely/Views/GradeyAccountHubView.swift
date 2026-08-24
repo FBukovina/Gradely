@@ -1434,6 +1434,21 @@ private extension GradeyAccountHubView {
 
             SettingsSurface(padding: 0) {
                 VStack(spacing: 0) {
+                    #if os(iOS)
+                    Button(action: IntercomIdentity.presentMessenger) {
+                        SettingsActionRow(
+                            title: "settings.support.chat",
+                            message: "settings.support.chat.message",
+                            iconName: "message-multiple-01"
+                        )
+                        .padding(20)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("supportChatButton")
+
+                    SettingsRowDivider()
+                    #endif
+
                     Button {
                         isSupportSheetPresented = true
                     } label: {

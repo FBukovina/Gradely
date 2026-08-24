@@ -43,6 +43,14 @@
 	<true/>
 	<key>NSAccentColorName</key>
 	<string>AccentColor</string>
+	<key>IntercomAppID</key>
+	<string>$(INTERCOM_APP_ID)</string>
+	<key>IntercomIOSAPIKey</key>
+	<string>$(INTERCOM_IOS_API_KEY)</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Gradey uses the camera so you can send a photo in support chat.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Gradey uses the microphone so you can send a video in support chat.</string>
 	<key>RevenueCatIOSAPIKey</key>
 	<string>$(REVENUECAT_IOS_API_KEY)</string>
 	<key>SupabaseAnonKey</key>

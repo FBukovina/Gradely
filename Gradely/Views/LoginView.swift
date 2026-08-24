@@ -86,8 +86,15 @@ struct LoginView: View {
                     }
                     .id(stage)
 
-                    if presentationContext.showsRepositoryLink, stage == .school {
-                        githubLink
+                    if stage == .school {
+                        VStack(spacing: Spacing.md) {
+                            #if os(iOS)
+                            supportChatButton
+                            #endif
+                            if presentationContext.showsRepositoryLink {
+                                githubLink
+                            }
+                        }
                     }
                 }
                 .padding(.horizontal, 20)
@@ -546,6 +553,23 @@ struct LoginView: View {
             focusedCredentialField = .password
         }
     }
+
+    #if os(iOS)
+    private var supportChatButton: some View {
+        Button(action: IntercomIdentity.presentMessenger) {
+            Label {
+                Text("login.support.chat")
+            } icon: {
+                GradelyIcon(systemName: "bubble.left.and.bubble.right.fill", size: 16)
+            }
+            .font(.footnote.weight(.semibold))
+            .foregroundStyle(Brand.primary)
+        }
+        .buttonStyle(.plain)
+        .frame(maxWidth: .infinity)
+        .accessibilityIdentifier("loginSupportChatButton")
+    }
+    #endif
 
     private var githubLink: some View {
         Link(destination: AppLinks.githubRepositoryURL) {

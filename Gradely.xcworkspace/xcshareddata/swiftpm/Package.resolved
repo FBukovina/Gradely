@@ -83,6 +83,15 @@
       }
     },
     {
+      "identity" : "intercom-ios-sp",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/intercom/intercom-ios-sp.git",
+      "state" : {
+        "revision" : "58c62766abb306053ac06366806474d9e882473e",
+        "version" : "19.8.0"
+      }
+    },
+    {
       "identity" : "interop-ios-for-google-sdks",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/google/interop-ios-for-google-sdks.git",

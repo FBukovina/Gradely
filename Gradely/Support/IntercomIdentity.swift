@@ -37,7 +37,7 @@ enum IntercomIdentity {
     static func reset() {
         #if os(iOS) && canImport(Intercom)
         guard IntercomConfiguration.isConfigured else { return }
-        if Intercom.isUserLoggedIn {
+        if Intercom.isUserLoggedIn() {
             let attributes = Intercom.fetchLoggedInUserAttributes()
             if attributes?.userId != nil || attributes?.email != nil {
                 Intercom.logout()

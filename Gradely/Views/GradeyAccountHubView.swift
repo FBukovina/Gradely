@@ -866,6 +866,15 @@ private extension GradeyAccountHubView {
             .buttonStyle(.bordered)
             .tint(.red)
             .accessibilityIdentifier("accountSignOutButton")
+
+            if !isGuestMode {
+                DetailSectionHeader(
+                    title: "settings.privacy.delete.title",
+                    message: "settings.privacy.delete.message"
+                )
+
+                deleteGradeyAccountButton
+            }
         }
     }
 
@@ -1369,27 +1378,7 @@ private extension GradeyAccountHubView {
                     .font(.subheadline)
                     .foregroundStyle(Color.gradelySystemOrange)
 
-                    Button(role: .destructive) {
-                        isDeleteConfirmationPresented = true
-                    } label: {
-                        if isDeletingAccount || viewModel.isDeletingAccount {
-                            ProgressView()
-                                .frame(maxWidth: .infinity)
-                                .frame(minHeight: 44)
-                        } else {
-                            SettingsHugeiconLabel(
-                                "settings.privacy.delete.action",
-                                iconName: "delete-02",
-                                iconColor: .red
-                            )
-                                .frame(maxWidth: .infinity)
-                                .frame(minHeight: 44)
-                        }
-                    }
-                    .buttonStyle(.bordered)
-                    .tint(.red)
-                    .disabled(isGuestMode || isDeletingAccount || viewModel.isDeletingAccount)
-                    .accessibilityIdentifier("accountDeleteButton")
+                    deleteGradeyAccountButton
                 }
             }
 
@@ -1590,6 +1579,30 @@ private extension GradeyAccountHubView {
 
     var accountSignOutTitle: LocalizedStringKey {
         isGuestMode ? "gradey.guest.schoolLogout" : "action.logout"
+    }
+
+    var deleteGradeyAccountButton: some View {
+        Button(role: .destructive) {
+            isDeleteConfirmationPresented = true
+        } label: {
+            if isDeletingAccount || viewModel.isDeletingAccount {
+                ProgressView()
+                    .frame(maxWidth: .infinity)
+                    .frame(minHeight: 44)
+            } else {
+                SettingsHugeiconLabel(
+                    "settings.privacy.delete.action",
+                    iconName: "delete-02",
+                    iconColor: .red
+                )
+                .frame(maxWidth: .infinity)
+                .frame(minHeight: 44)
+            }
+        }
+        .buttonStyle(.bordered)
+        .tint(.red)
+        .disabled(isGuestMode || isDeletingAccount || viewModel.isDeletingAccount)
+        .accessibilityIdentifier("accountDeleteButton")
     }
 
     var profileSubtitle: String {

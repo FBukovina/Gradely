@@ -1100,6 +1100,17 @@ final class GradelyUITests: XCTestCase {
         let signOut = app.buttons["accountSignOutButton"]
         scroll(detail, untilHittable: signOut)
         XCTAssertTrue(signOut.exists)
+
+        let deleteAccount = waitForAny([
+            app.buttons["accountDeleteButton"],
+            app.buttons["deleteGradeyAccountButton"],
+            app.descendants(matching: .any)["accountDeleteButton"]
+        ])
+        scroll(detail, untilHittable: deleteAccount)
+        XCTAssertTrue(deleteAccount.exists)
+        XCTAssertTrue(deleteAccount.isHittable)
+
+        scroll(detail, untilHittable: signOut)
         signOut.tap()
 
         let cancel = waitForAny([

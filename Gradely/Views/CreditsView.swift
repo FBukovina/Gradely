@@ -17,6 +17,7 @@ struct CreditsView: View {
 
                         header
                         team
+                        bakalariAttribution
                         eduPageAttribution
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -91,6 +92,21 @@ struct CreditsView: View {
         }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("creditsTeam")
+    }
+
+    private var bakalariAttribution: some View {
+        SettingsModalSurface {
+            VStack(alignment: .leading, spacing: Spacing.sm) {
+                Text("bakalari.attribution.title")
+                    .font(.headline)
+                Text("bakalari.attribution.message")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .accessibilityIdentifier("creditsBakalariAttribution")
     }
 
     private var eduPageAttribution: some View {

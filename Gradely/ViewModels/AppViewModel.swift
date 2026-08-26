@@ -168,10 +168,9 @@ final class AppViewModel {
     }
 
     private func syncIntercomUser() {
+        guard AgeAttestationStore.allowsAppUse() else { return }
         if let gradeyAccount, !isGuestMode {
             IntercomIdentity.identify(account: gradeyAccount)
-        } else {
-            IntercomIdentity.loginUnidentified()
         }
     }
 

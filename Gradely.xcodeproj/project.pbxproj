@@ -8,7 +8,6 @@
 
 /* Begin PBXBuildFile section */
 		81EE6CCB2FCDDC4B009D28DE /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = 81EE6CCC2FCDDC4B009D28DE /* RevenueCat */; };
-		C30000012FD3000000000001 /* Intercom in Frameworks */ = {isa = PBXBuildFile; productRef = C30000022FD3000000000002 /* Intercom */; };
 		920000012FD0000000000001 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 920000022FD0000000000002 /* Supabase */; };
 		920000032FD0000000000003 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 920000042FD0000000000004 /* Supabase */; };
 		A10000032FCE000000000003 /* GradelyWatchShared in Frameworks */ = {isa = PBXBuildFile; productRef = A10000022FCE000000000002 /* GradelyWatchShared */; };
@@ -16,6 +15,7 @@
 		A20000072FCE0000000000A7 /* GradelyWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = A20000042FCE0000000000A4 /* GradelyWatch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		B40000RC2FCEF10000000001 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = B40000RC2FCEF10000000002 /* RevenueCat */; };
 		B50000012FCF000000000001 /* GradelyMacWidgets.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = B50000022FCF000000000002 /* GradelyMacWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		C30000012FD3000000000001 /* Intercom in Frameworks */ = {isa = PBXBuildFile; productRef = C30000022FD3000000000002 /* Intercom */; };
 		C53D9B8831BC494585B5670D /* GradelyWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 23EA86CD939E4E779E620824 /* GradelyWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		D20000202FD2000000000020 /* HugeiconsCore in Frameworks */ = {isa = PBXBuildFile; productRef = D20000102FD2000000000010 /* HugeiconsCore */; };
 		D20000212FD2000000000021 /* HugeiconsStrokeRounded in Frameworks */ = {isa = PBXBuildFile; productRef = D20000112FD2000000000011 /* HugeiconsStrokeRounded */; };
@@ -1275,11 +1275,6 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		C30000022FD3000000000002 /* Intercom */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = C30000032FD3000000000003 /* XCRemoteSwiftPackageReference "intercom-ios-sp" */;
-			productName = Intercom;
-		};
 		81EE6CCC2FCDDC4B009D28DE /* RevenueCat */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 81EE6CCD2FCDDC4B009D28DE /* XCRemoteSwiftPackageReference "purchases-ios-spm" */;
@@ -1309,6 +1304,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 81EE6CCD2FCDDC4B009D28DE /* XCRemoteSwiftPackageReference "purchases-ios-spm" */;
 			productName = RevenueCat;
+		};
+		C30000022FD3000000000002 /* Intercom */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C30000032FD3000000000003 /* XCRemoteSwiftPackageReference "intercom-ios-sp" */;
+			productName = Intercom;
 		};
 		D20000102FD2000000000010 /* HugeiconsCore */ = {
 			isa = XCSwiftPackageProductDependency;

@@ -24,6 +24,7 @@ struct GradelyApp: App {
         RevenueCatConfiguration.configureIfNeeded()
         IntercomConfiguration.configureIfNeeded()
         Self.resetLanguageForUITestsIfNeeded()
+        Self.attestAgeForUITestsIfNeeded()
         let store = AppLanguageStore.shared
         store.prepareAtLaunch()
         _languageStore = State(initialValue: store)
@@ -64,5 +65,18 @@ private extension GradelyApp {
                 forKey: AppLanguageStore.storageKey
             )
         }
+    }
+
+    static func attestAgeForUITestsIfNeeded() {
+        let arguments = ProcessInfo.processInfo.arguments
+        guard arguments.contains("-uiTestingMockAPI") else { return }
+        if arguments.contains(AgeAttestationStore.uiTestingShowArgument) {
+            UserDefaults.standard.removeObject(forKey: AgeAttestationStore.storageKey)
+            return
+        }
+        UserDefaults.standard.set(
+            AgeAttestationKind.sixteenOrOlder.rawValue,
+            forKey: AgeAttestationStore.storageKey
+        )
     }
 }

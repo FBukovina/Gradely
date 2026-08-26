@@ -64,20 +64,20 @@ final class WatchAppModel: ObservableObject {
 
     var statusTitle: String {
         if !isSignedIn {
-            return "Not signed in"
+            return String(localized: "watch.status.notSignedIn")
         }
         if let errorMessage, !errorMessage.isEmpty {
-            return "Needs attention"
+            return String(localized: "watch.status.needsAttention")
         }
         switch lessonSelection {
         case .lesson:
-            return "Timetable"
+            return String(localized: "watch.status.timetable")
         case .noTimetable:
-            return "Syncing timetable"
+            return String(localized: "watch.status.syncing")
         case .noLessons:
-            return "Done for today"
+            return String(localized: "watch.done.title")
         case .stale:
-            return "Timetable is stale"
+            return String(localized: "watch.stale.title")
         }
     }
 
@@ -167,7 +167,7 @@ final class WatchAppModel: ObservableObject {
             let payload = try await connectivity.requestPurchaseRefresh()
             persist(supportTier: payload.supportTier)
             if !isRecurringSupporter {
-                purchaseRefreshMessage = "No active plan found. Subscribe in Gradey on iPhone."
+                purchaseRefreshMessage = String(localized: "watch.purchase.noPlan")
             }
         } catch {
             purchaseRefreshMessage = userFacingMessage(for: error)
@@ -216,7 +216,7 @@ final class WatchAppModel: ObservableObject {
     func cancelAI() {
         guard let aiRequestID else { return }
         connectivity.sendAICancel(GradelyWatchAICancel(requestID: aiRequestID))
-        failAI(message: "Cancelled.")
+        failAI(message: String(localized: "watch.ai.error.cancelled"))
     }
 
     private func handleAIEvent(_ event: GradelyWatchAIStreamEvent) {
@@ -246,7 +246,7 @@ final class WatchAppModel: ObservableObject {
             try? await Task.sleep(for: .seconds(120))
             guard !Task.isCancelled else { return }
             await MainActor.run {
-                self?.failAI(message: "The iPhone took too long to reply.")
+                self?.failAI(message: String(localized: "watch.ai.error.timeout"))
             }
         }
     }
@@ -267,7 +267,7 @@ final class WatchAppModel: ObservableObject {
            aiMessages[index].text.isEmpty {
             aiMessages.remove(at: index)
         }
-        aiErrorMessage = message ?? "Something went wrong."
+        aiErrorMessage = message ?? String(localized: "watch.ai.error.generic")
     }
 
     private func apply(_ payload: GradelyWatchSyncPayload) async {

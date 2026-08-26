@@ -49,8 +49,8 @@ struct ContentView: View {
     private var signedOutView: some View {
         WatchStatusPage(
             systemImage: "iphone.and.arrow.forward",
-            title: "Open Gradey on iPhone",
-            detail: "Sign in and the watch will receive your school session."
+            title: String(localized: "watch.signedOut.title"),
+            detail: String(localized: "watch.signedOut.detail")
         )
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }

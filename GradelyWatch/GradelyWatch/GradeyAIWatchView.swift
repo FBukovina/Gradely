@@ -19,7 +19,7 @@ struct GradeyAIWatchView: View {
                 WatchStatusPage(
                     systemImage: "lock.fill",
                     title: "Gradey AI",
-                    detail: "Available on recurring supporter plans. Subscribe in Gradey on iPhone."
+                    detail: String(localized: "watch.ai.lock.detail")
                 )
 
                 if let purchaseRefreshMessage = model.purchaseRefreshMessage {
@@ -28,7 +28,7 @@ struct GradeyAIWatchView: View {
                         .foregroundStyle(WatchBrand.canceled)
                         .multilineTextAlignment(.center)
                 } else if !model.isPhoneReachable {
-                    Text("Bring iPhone nearby")
+                    Text("watch.ai.bringIPhone")
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
@@ -45,7 +45,7 @@ struct GradeyAIWatchView: View {
                         } else {
                             Image(systemName: "arrow.clockwise")
                         }
-                        Text("Refresh purchases")
+                        Text("watch.ai.refreshPurchases")
                     }
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(WatchBrand.onAccent)
@@ -55,7 +55,7 @@ struct GradeyAIWatchView: View {
                 }
                 .buttonStyle(.plain)
                 .disabled(model.isRefreshingPurchases)
-                .accessibilityLabel("Refresh purchases")
+                .accessibilityLabel("watch.ai.refreshPurchases")
             }
             .padding(.horizontal, 2)
         }
@@ -68,7 +68,7 @@ struct GradeyAIWatchView: View {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 8) {
                         if model.aiMessages.isEmpty {
-                            Text("Ask Gradey AI")
+                            Text("watch.ai.ask")
                                 .font(.caption.weight(.semibold))
                                 .foregroundStyle(.secondary)
                                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -98,7 +98,7 @@ struct GradeyAIWatchView: View {
                     .foregroundStyle(WatchBrand.canceled)
                     .lineLimit(3)
             } else if !model.isPhoneReachable {
-                Text("Bring iPhone nearby")
+                Text("watch.ai.bringIPhone")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             }
@@ -109,7 +109,7 @@ struct GradeyAIWatchView: View {
 
     private var composer: some View {
         HStack(alignment: .center, spacing: 6) {
-            TextField("Message", text: $model.aiDraft)
+            TextField("watch.ai.message", text: $model.aiDraft)
                 .textFieldStyle(.plain)
                 .disabled(model.isAIStreaming)
 
@@ -130,7 +130,7 @@ struct GradeyAIWatchView: View {
                     .background(WatchBrand.gradient, in: Circle())
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Stop")
+            .accessibilityLabel("watch.ai.stop")
         } else {
             Button {
                 Task { await model.sendAIMessage() }
@@ -144,7 +144,7 @@ struct GradeyAIWatchView: View {
             .buttonStyle(.plain)
             .disabled(draftIsEmpty)
             .opacity(draftIsEmpty ? 0.38 : 1)
-            .accessibilityLabel("Send")
+            .accessibilityLabel("watch.ai.send")
         }
     }
 
@@ -183,7 +183,7 @@ struct GradeyAIWatchView: View {
                     .tint(WatchBrand.primary)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 8)
-                    .accessibilityLabel("Responding")
+                    .accessibilityLabel("watch.ai.responding")
             } else {
                 Text(message.text)
                     .font(.caption)

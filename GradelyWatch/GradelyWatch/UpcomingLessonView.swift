@@ -34,8 +34,8 @@ struct UpcomingLessonView: View {
         } else {
             WatchStatusPage(
                 systemImage: "calendar.badge.checkmark",
-                title: "No more lessons",
-                detail: "Nothing left on today’s timetable."
+                title: String(localized: "watch.noMoreLessons.title"),
+                detail: String(localized: "watch.noMoreLessons.detail")
             )
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
@@ -49,7 +49,7 @@ private struct UpcomingLessonHero: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Next")
+            Text("watch.next")
                 .font(.caption2.weight(.bold))
                 .foregroundStyle(.secondary)
 
@@ -80,7 +80,7 @@ private struct UpcomingLessonHero: View {
                     metaChip("person.fill", teacher)
                 }
                 if let change = lesson.changeKind.shortTitle {
-                    Text(change)
+                    Text(LocalizedStringKey(change))
                         .font(.caption2.weight(.bold))
                         .padding(.horizontal, 6)
                         .padding(.vertical, 3)
@@ -94,7 +94,11 @@ private struct UpcomingLessonHero: View {
 
             Spacer(minLength: 0)
 
-            Text(remainingCount == 1 ? "Tap for details" : "Tap for \(remainingCount) remaining")
+            Text(
+                remainingCount == 1
+                    ? String(localized: "watch.remaining.tapDetails")
+                    : String(format: String(localized: "watch.remaining.tapCount"), remainingCount)
+            )
                 .font(.caption2)
                 .foregroundStyle(.secondary)
         }
@@ -135,7 +139,7 @@ struct RemainingDayView: View {
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
-        .navigationTitle("Today")
+        .navigationTitle("watch.today")
         .navigationBarTitleDisplayMode(.inline)
         .containerBackground(for: .navigation) {
             WatchBrand.screenBackground

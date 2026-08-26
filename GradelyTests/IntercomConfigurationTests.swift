@@ -36,4 +36,10 @@ struct IntercomConfigurationTests {
         IntercomIdentity.loginUnidentified()
         IntercomIdentity.reset()
     }
+
+    @Test func unidentifiedLoginRequiresAgeAttestation() throws {
+        #expect(!AgeAttestationKind.underThirteen.allowsAppUse)
+        #expect(AgeAttestationKind.sixteenOrOlder.allowsAppUse)
+        #expect(AgeAttestationKind.thirteenToFifteenWithParent.allowsAppUse)
+    }
 }

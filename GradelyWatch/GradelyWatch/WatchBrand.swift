@@ -50,11 +50,15 @@ enum WatchLessonFormatting {
         let seconds = max(0, Int(date.timeIntervalSince(now)))
         let minutes = seconds / 60
         if minutes >= 60 {
-            return "\(minutes / 60)h \(minutes % 60)m"
+            return String(
+                format: String(localized: "watch.remaining.hoursMinutes"),
+                minutes / 60,
+                minutes % 60
+            )
         }
         if minutes < 1 {
-            return "\(seconds)s"
+            return String(format: String(localized: "watch.remaining.seconds"), seconds)
         }
-        return "\(minutes) min"
+        return String(format: String(localized: "watch.remaining.minutes"), minutes)
     }
 }

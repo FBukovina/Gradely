@@ -6,7 +6,7 @@ import Intercom
 enum IntercomIdentity {
     static func loginUnidentified() {
         #if os(iOS) && canImport(Intercom)
-        guard IntercomConfiguration.isConfigured else { return }
+        guard IntercomConfiguration.isConfigured, AgeAttestationStore.allowsAppUse() else { return }
         Intercom.loginUnidentifiedUser { _ in }
         #endif
     }
@@ -17,7 +17,7 @@ enum IntercomIdentity {
 
     static func identify(userID: String, email: String?, name: String?) {
         #if os(iOS) && canImport(Intercom)
-        guard IntercomConfiguration.isConfigured else { return }
+        guard IntercomConfiguration.isConfigured, AgeAttestationStore.allowsAppUse() else { return }
         let trimmedID = userID.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedID.isEmpty else { return }
 
@@ -38,19 +38,21 @@ enum IntercomIdentity {
         #if os(iOS) && canImport(Intercom)
         guard IntercomConfiguration.isConfigured else { return }
         if Intercom.isUserLoggedIn() {
-            let attributes = Intercom.fetchLoggedInUserAttributes()
-            if attributes?.userId != nil || attributes?.email != nil {
-                Intercom.logout()
-            }
+            Intercom.logout()
         }
-        loginUnidentified()
         #endif
     }
 
     static func presentMessenger() {
         #if os(iOS) && canImport(Intercom)
-        guard IntercomConfiguration.isConfigured else { return }
-        Intercom.present()
+        guard IntercomConfiguration.isConfigured, AgeAttestationStore.allowsAppUse() else { return }
+        if Intercom.isUserLoggedIn() {
+            Intercom.present()
+            return
+        }
+        Intercom.loginUnidentifiedUser { _ in
+            Intercom.present()
+        }
         #endif
     }
 }

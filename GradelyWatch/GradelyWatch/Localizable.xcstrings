@@ -1,0 +1,294 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "watch.ai.ask" : {
+      "localizations" : {
+        "cs" : { "stringUnit" : { "state" : "translated", "value" : "Zeptej se Gradey AI" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Ask Gradey AI" } }
+      }
+    },
+    "watch.ai.bringIPhone" : {
+      "localizations" : {
+        "cs" : { "stringUnit" : { "state" : "translated", "value" : "Měj iPhone nablízku" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Bring iPhone nearby" } }
+      }
+    },
+    "watch.ai.error.cancelled" : {
+      "localizations" : {
+        "cs" : { "stringUnit" : { "state" : "translated", "value" : "Zrušeno." } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Cancelled." } }
+      }
+    },
+    "watch.ai.error.generic" : {
+      "localizations" : {
+        "cs" : { "stringUnit" : { "state" : "translated", "value" : "Něco se pokazilo." } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Something went wrong." } }
+      }
+    },
+    "watch.ai.error.invalidReply" : {
+      "localizations" : {
+        "cs" : { "stringUnit" : { "state" : "translated", "value" : "iPhone požadavek Gradey AI nepřijal." } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "The iPhone did not accept the Gradey AI request." } }
+      }
+    },
+    "watch.ai.error.iphoneNearby" : {
+      "localizations" : {
+        "cs" : { "stringUnit" : { "state" : "translated", "value" : "Pro Gradey AI měj iPhone nablízku." } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Bring iPhone nearby to use Gradey AI." } }
+      }
+    },
+    "watch.ai.error.timeout" : {
+      "localizations" : {
+        "cs" : { "stringUnit" : { "state" : "translated", "value" : "iPhone odpovídal moc dlouho." } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "The iPhone took too long to reply." } }
+      }
+    },
+    "watch.ai.lock.detail" : {
+      "localizations" : {
+        "cs" : { "stringUnit" : { "state" : "translated", "value" : "Na opakovaných plánech podpory. Předplatné nastavíš v Gradey na iPhonu." } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Available on recurring supporter plans. Subscribe in Gradey on iPhone." } }
+      }
+    },
+    "watch.ai.message" : {
+      "localizations" : {
+        "cs" : { "stringUnit" : { "state" : "translated", "value" : "Zpráva" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Message" } }
+      }
+    },
+    "watch.ai.refreshPurchases" : {
+      "localizations" : {
+        "cs" : { "stringUnit" : { "state" : "translated", "value" : "Obnovit nákupy" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Refresh purchases" } }
+      }
+    },
+    "watch.ai.responding" : {
+      "localizations" : {
+        "cs" : { "stringUnit" : { "state" : "translated", "value" : "Odpovídá" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Responding" } }
+      }
+    },
+    "watch.ai.send" : {
+      "localizations" : {
+        "cs" : { "stringUnit" : { "state" : "translated", "value" : "Odeslat" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Send" } }
+      }
+    },
+    "watch.ai.stop" : {
+      "localizations" : {
+        "cs" : { "stringUnit" : { "state" : "translated", "value" : "Zastavit" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Stop" } }
+      }
+    },
+    "watch.break" : {
+      "localizations" : {
+        "cs" : { "stringUnit" : { "state" : "translated", "value" : "Přestávka" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Break" } }
+      }
+    },
+    "watch.change.added" : {
+      "localizations" : {
+        "cs" : { "stringUnit" : { "state" : "translated", "value" : "Přidáno" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Added" } }
+      }
+    },
+    "watch.change.canceled" : {
+      "localizations" : {
+        "cs" : { "stringUnit" : { "state" : "translated", "value" : "Zrušeno" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Canceled" } }
+      }
+    },
+    "watch.change.changed" : {
+      "localizations" : {
+        "cs" : { "stringUnit" : { "state" : "translated", "value" : "Změna" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Changed" } }
+      }
+    },
+    "watch.change.room" : {
+      "localizations" : {
+        "cs" : { "stringUnit" : { "state" : "translated", "value" : "Učebna" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Room" } }
+      }
+    },
+    "watch.done.detail" : {
+      "localizations" : {
+        "cs" : { "stringUnit" : { "state" : "translated", "value" : "Dnes už žádné hodiny nejsou." } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "No more lessons left." } }
+      }
+    },
+    "watch.done.title" : {
+      "localizations" : {
+        "cs" : { "stringUnit" : { "state" : "translated", "value" : "Hotovo na dnešek" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Done for today" } }
+      }
+    },
+    "watch.end" : {
+      "localizations" : {
+        "cs" : { "stringUnit" : { "state" : "translated", "value" : "Konec" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "End" } }
+      }
+    },
+    "watch.next" : {
+      "localizations" : {
+        "cs" : { "stringUnit" : { "state" : "translated", "value" : "Další" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Next" } }
+      }
+    },
+    "watch.noMoreLessons.detail" : {
+      "localizations" : {
+        "cs" : { "stringUnit" : { "state" : "translated", "value" : "V dnešním rozvrhu už nic nezbývá." } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Nothing left on today’s timetable." } }
+      }
+    },
+    "watch.noMoreLessons.title" : {
+      "localizations" : {
+        "cs" : { "stringUnit" : { "state" : "translated", "value" : "Dnes už nic není" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "No more lessons" } }
+      }
+    },
+    "watch.noTimetable.detail" : {
+      "localizations" : {
+        "cs" : { "stringUnit" : { "state" : "translated", "value" : "Otevři Gradey na iPhonu a synchronizuj." } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Open Gradey on iPhone to sync." } }
+      }
+    },
+    "watch.noTimetable.title" : {
+      "localizations" : {
+        "cs" : { "stringUnit" : { "state" : "translated", "value" : "Rozvrh zatím není" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "No timetable yet" } }
+      }
+    },
+    "watch.purchase.error.invalidReply" : {
+      "localizations" : {
+        "cs" : { "stringUnit" : { "state" : "translated", "value" : "Nákupy se neobnovily. Otevři Gradey na iPhonu a zkus to znovu." } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Could not refresh purchases. Open Gradey on iPhone and try again." } }
+      }
+    },
+    "watch.purchase.error.iphoneNearby" : {
+      "localizations" : {
+        "cs" : { "stringUnit" : { "state" : "translated", "value" : "Pro obnovení nákupů měj iPhone nablízku." } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Bring iPhone nearby to refresh purchases." } }
+      }
+    },
+    "watch.purchase.noPlan" : {
+      "localizations" : {
+        "cs" : { "stringUnit" : { "state" : "translated", "value" : "Žádný aktivní plán. Předplatné nastavíš v Gradey na iPhonu." } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "No active plan found. Subscribe in Gradey on iPhone." } }
+      }
+    },
+    "watch.remaining.hoursMinutes" : {
+      "localizations" : {
+        "cs" : { "stringUnit" : { "state" : "translated", "value" : "%d h %d min" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "%d h %d min" } }
+      }
+    },
+    "watch.remaining.minutes" : {
+      "localizations" : {
+        "cs" : { "stringUnit" : { "state" : "translated", "value" : "%d min" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "%d min" } }
+      }
+    },
+    "watch.remaining.seconds" : {
+      "localizations" : {
+        "cs" : { "stringUnit" : { "state" : "translated", "value" : "%d s" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "%d s" } }
+      }
+    },
+    "watch.remaining.tapCount" : {
+      "localizations" : {
+        "cs" : { "stringUnit" : { "state" : "translated", "value" : "Klepni pro zbývajících %d" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Tap for %d remaining" } }
+      }
+    },
+    "watch.remaining.tapDetails" : {
+      "localizations" : {
+        "cs" : { "stringUnit" : { "state" : "translated", "value" : "Klepni pro detail" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Tap for details" } }
+      }
+    },
+    "watch.signedOut.detail" : {
+      "localizations" : {
+        "cs" : { "stringUnit" : { "state" : "translated", "value" : "Přihlas se a hodinky dostanou školní relaci." } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Sign in and the watch will receive your school session." } }
+      }
+    },
+    "watch.signedOut.title" : {
+      "localizations" : {
+        "cs" : { "stringUnit" : { "state" : "translated", "value" : "Otevři Gradey na iPhonu" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Open Gradey on iPhone" } }
+      }
+    },
+    "watch.stale.detail" : {
+      "localizations" : {
+        "cs" : { "stringUnit" : { "state" : "translated", "value" : "Obnov z Gradey na iPhonu." } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Refresh from Gradey on iPhone." } }
+      }
+    },
+    "watch.stale.title" : {
+      "localizations" : {
+        "cs" : { "stringUnit" : { "state" : "translated", "value" : "Rozvrh je zastaralý" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Timetable is stale" } }
+      }
+    },
+    "watch.start" : {
+      "localizations" : {
+        "cs" : { "stringUnit" : { "state" : "translated", "value" : "Začátek" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Start" } }
+      }
+    },
+    "watch.status.canceled" : {
+      "localizations" : {
+        "cs" : { "stringUnit" : { "state" : "translated", "value" : "Zrušeno" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Canceled" } }
+      }
+    },
+    "watch.status.in" : {
+      "localizations" : {
+        "cs" : { "stringUnit" : { "state" : "translated", "value" : "Za %@" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "In %@" } }
+      }
+    },
+    "watch.status.needsAttention" : {
+      "localizations" : {
+        "cs" : { "stringUnit" : { "state" : "translated", "value" : "Vyžaduje pozornost" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Needs attention" } }
+      }
+    },
+    "watch.status.notSignedIn" : {
+      "localizations" : {
+        "cs" : { "stringUnit" : { "state" : "translated", "value" : "Nepřihlášeno" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Not signed in" } }
+      }
+    },
+    "watch.status.now" : {
+      "localizations" : {
+        "cs" : { "stringUnit" : { "state" : "translated", "value" : "Teď" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Now" } }
+      }
+    },
+    "watch.status.syncing" : {
+      "localizations" : {
+        "cs" : { "stringUnit" : { "state" : "translated", "value" : "Stahuju rozvrh" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Syncing timetable" } }
+      }
+    },
+    "watch.status.timetable" : {
+      "localizations" : {
+        "cs" : { "stringUnit" : { "state" : "translated", "value" : "Rozvrh" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Timetable" } }
+      }
+    },
+    "watch.status.upNext" : {
+      "localizations" : {
+        "cs" : { "stringUnit" : { "state" : "translated", "value" : "Další" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Up next" } }
+      }
+    },
+    "watch.today" : {
+      "localizations" : {
+        "cs" : { "stringUnit" : { "state" : "translated", "value" : "Dnes" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Today" } }
+      }
+    }
+  },
+  "version" : "1.0"
+}

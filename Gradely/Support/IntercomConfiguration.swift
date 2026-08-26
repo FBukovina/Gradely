@@ -29,7 +29,6 @@ enum IntercomConfiguration {
         if !isConfigured, let credentials = credentials(from: bundle) {
             Intercom.setApiKey(credentials.apiKey, forAppId: credentials.appID)
             isConfigured = true
-            IntercomIdentity.loginUnidentified()
         }
 
         guard isConfigured else { return }

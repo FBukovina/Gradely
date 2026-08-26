@@ -66,8 +66,8 @@ struct NextLessonComplication: Widget {
             NextLessonComplicationView(entry: entry)
                 .containerBackground(.clear, for: .widget)
         }
-        .configurationDisplayName("Lessons")
-        .description("Shows your current and next lesson.")
+        .configurationDisplayName("watch.complication.name")
+        .description("watch.complication.description")
         .supportedFamilies([.accessoryCircular, .accessoryRectangular, .accessoryInline, .accessoryCorner])
     }
 }
@@ -79,10 +79,10 @@ struct NextLessonComplicationView: View {
 
     private var displayed: (label: String, lesson: GradelyWatchTimetableLesson)? {
         if let current = entry.nowNext.current {
-            return ("Now", current)
+            return (String(localized: "watch.complication.now"), current)
         }
         if let next = entry.nowNext.next {
-            return ("Next", next)
+            return (String(localized: "watch.complication.next"), next)
         }
         return nil
     }
@@ -109,7 +109,7 @@ struct NextLessonComplicationView: View {
                     Text("\(displayed.label): \(displayed.lesson.title)")
                 }
             } else {
-                Text("No lessons")
+                Text("watch.complication.noLessons")
             }
         }
     }
@@ -123,7 +123,7 @@ struct NextLessonComplicationView: View {
                         .font(.caption2.weight(.bold))
                         .foregroundStyle(displayed.lesson.changeKind == .none ? Color.accentColor : accent)
                     if let change = displayed.lesson.changeKind.shortTitle {
-                        Text(change)
+                        Text(LocalizedStringKey(change))
                             .font(.caption2.weight(.semibold))
                             .foregroundStyle(accent)
                     }
@@ -143,9 +143,9 @@ struct NextLessonComplicationView: View {
                 .font(.caption2)
                 .foregroundStyle(.secondary)
             } else {
-                Text("No lessons")
+                Text("watch.complication.noLessons")
                     .font(.headline)
-                Text("Enjoy your free time")
+                Text("watch.complication.freeTime")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             }
@@ -198,7 +198,7 @@ struct NextLessonComplicationView: View {
             } else {
                 Image(systemName: "calendar.badge.checkmark")
                     .font(.title3)
-                    .widgetLabel("No lessons")
+                    .widgetLabel("watch.complication.noLessons")
             }
         }
     }

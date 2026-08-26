@@ -29,7 +29,6 @@ struct GradeyIDLoginView: View {
                 VStack(alignment: .leading, spacing: Spacing.lg) {
                     hero
                     signInCard
-                    privacyNote
                 }
                 .padding(.horizontal, Spacing.lg)
                 .padding(.vertical, Spacing.xxl)
@@ -116,17 +115,6 @@ struct GradeyIDLoginView: View {
                 }
             }
         }
-    }
-
-    private var privacyNote: some View {
-        GradelyLabel("gradey.auth.privacyNote", systemImage: "lock.shield.fill")
-        .font(.footnote)
-        .foregroundStyle(.secondary)
-        .fixedSize(horizontal: false, vertical: true)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, Spacing.md)
-        .padding(.vertical, Spacing.sm)
-        .background(Color.gradelySecondaryGroupedBackground.opacity(0.72), in: RoundedRectangle(cornerRadius: Radius.md, style: .continuous))
     }
 
     private func handleAppleResult(_ result: Result<ASAuthorization, Error>) {

@@ -58,6 +58,22 @@ final class GradelyUITests: XCTestCase {
     }
 
     @MainActor
+    func testAgeGateAppearsWhenRequested() throws {
+        let app = XCUIApplication()
+        app.launchArguments = [
+            "-uiTestingMockAPI",
+            "-uiTestingShowAgeGate"
+        ]
+        app.launch()
+
+        XCTAssertTrue(app.descendants(matching: .any)["ageAttestationView"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["ageAttestationSixteenButton"].exists)
+        XCTAssertTrue(app.buttons["ageAttestationTeenButton"].exists)
+        XCTAssertTrue(app.buttons["ageAttestationUnderThirteenButton"].exists)
+        XCTAssertFalse(app.tabBars.buttons.element(boundBy: 0).exists)
+    }
+
+    @MainActor
     func testNewUserOnboardingRequiresGradeyIDAndPersistsCompletion() throws {
         let app = XCUIApplication()
         app.launchArguments = [
@@ -517,6 +533,13 @@ final class GradelyUITests: XCTestCase {
         XCTAssertTrue(mediumTip.exists)
         XCTAssertTrue(largeTip.exists)
 
+        XCTAssertTrue(app.buttons["supportRestorePurchasesButton"].waitForExistence(timeout: 5))
+        let legalFooter = app.descendants(matching: .any)["supportLegalFooter"]
+        scroll(supportScroll, untilExists: legalFooter)
+        XCTAssertTrue(legalFooter.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.descendants(matching: .any)["supportLegalPrivacyLink"].exists)
+        XCTAssertTrue(app.descendants(matching: .any)["supportLegalTermsLink"].exists)
+
         smallTip.tap()
 
         XCTAssertTrue(app.descendants(matching: .any)["supportTipsThankYou"].waitForExistence(timeout: 5))
@@ -644,6 +667,7 @@ final class GradelyUITests: XCTestCase {
         XCTAssertTrue(app.scrollViews["creditsScreen"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.descendants(matching: .any)["creditsOpenSideLink"].exists)
         XCTAssertTrue(app.descendants(matching: .any)["creditsTeam"].exists)
+        XCTAssertTrue(app.descendants(matching: .any)["creditsBakalariAttribution"].exists)
         XCTAssertTrue(app.descendants(matching: .any)["creditsEduPageAttribution"].exists)
         XCTAssertTrue(app.buttons["modalDismissButton"].isHittable)
 
@@ -1150,6 +1174,13 @@ final class GradelyUITests: XCTestCase {
         )
 
         let detail = settingsDetailScrollView(in: app)
+        let privacyPolicy = app.descendants(matching: .any)["privacyPolicyLink"]
+        scroll(detail, untilExists: privacyPolicy)
+        XCTAssertTrue(privacyPolicy.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.descendants(matching: .any)["termsOfUseLink"].exists)
+        XCTAssertTrue(app.descendants(matching: .any)["settingsPrivacyAgeStatus"].exists)
+        XCTAssertTrue(app.descendants(matching: .any)["settingsPrivacyIntercomNote"].exists)
+
         let exportButton = app.buttons["accountExportButton"]
         scroll(detail, untilHittable: exportButton)
         XCTAssertTrue(exportButton.isHittable)

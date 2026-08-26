@@ -10,9 +10,9 @@ enum WatchAITransportError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .notActivated, .phoneUnreachable:
-            return "Bring iPhone nearby to use Gradey AI."
+            return String(localized: "watch.ai.error.iphoneNearby")
         case .invalidReply:
-            return "The iPhone did not accept the Gradey AI request."
+            return String(localized: "watch.ai.error.invalidReply")
         }
     }
 }
@@ -25,9 +25,9 @@ enum WatchPurchaseRefreshError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .notActivated, .phoneUnreachable:
-            return "Bring iPhone nearby to refresh purchases."
+            return String(localized: "watch.purchase.error.iphoneNearby")
         case .invalidReply:
-            return "Could not refresh purchases. Open Gradey on iPhone and try again."
+            return String(localized: "watch.purchase.error.invalidReply")
         }
     }
 }

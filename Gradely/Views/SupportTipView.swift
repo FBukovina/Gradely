@@ -122,6 +122,7 @@ struct SupportTipOptionsContent: View {
             }
 
             restoreRow
+            legalFooter
 
             if let purchaseErrorMessage = viewModel.purchaseErrorMessage {
                 Text(purchaseErrorMessage)
@@ -287,6 +288,39 @@ struct SupportTipOptionsContent: View {
         .buttonStyle(PrimaryButtonStyle())
         .disabled(viewModel.isPurchasing)
         .accessibilityIdentifier("supportRestorePurchasesButton")
+    }
+
+    private var legalFooter: some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            if !viewModel.plans.isEmpty {
+                Text("support.plans.legal.renewal")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("supportLegalRenewalCopy")
+            }
+
+            HStack(spacing: Spacing.md) {
+                Link(destination: AppLinks.privacyPolicyURL) {
+                    Text("legal.privacyPolicy")
+                        .font(.footnote.weight(.semibold))
+                }
+                .accessibilityIdentifier("supportLegalPrivacyLink")
+
+                Text("·")
+                    .foregroundStyle(.tertiary)
+                    .accessibilityHidden(true)
+
+                Link(destination: AppLinks.termsOfUseURL) {
+                    Text("legal.termsOfUse")
+                        .font(.footnote.weight(.semibold))
+                }
+                .accessibilityIdentifier("supportLegalTermsLink")
+            }
+            .foregroundStyle(Brand.primary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityIdentifier("supportLegalFooter")
     }
 
     private func unavailable(message: String, canRetry: Bool) -> some View {

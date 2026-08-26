@@ -1307,6 +1307,52 @@ private extension GradeyAccountHubView {
     var privacyDataDetail: some View {
         VStack(alignment: .leading, spacing: Spacing.xl) {
             DetailSectionHeader(
+                title: "settings.privacy.documents.title",
+                message: "settings.privacy.documents.message"
+            )
+
+            SettingsSurface(padding: 0) {
+                VStack(spacing: 0) {
+                    Link(destination: AppLinks.privacyPolicyURL) {
+                        SettingsActionRow(
+                            title: "legal.privacyPolicy",
+                            message: "settings.privacy.policy.caption",
+                            iconName: "security-lock"
+                        )
+                        .padding(20)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("privacyPolicyLink")
+
+                    SettingsRowDivider()
+
+                    Link(destination: AppLinks.termsOfUseURL) {
+                        SettingsActionRow(
+                            title: "legal.termsOfUse",
+                            message: "settings.privacy.terms.caption",
+                            iconName: "left-to-right-list-bullet"
+                        )
+                        .padding(20)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("termsOfUseLink")
+                }
+            }
+
+            DetailSectionHeader(
+                title: "settings.privacy.age.title",
+                message: "settings.privacy.age.message"
+            )
+
+            SettingsAvailabilityMessage(ageAttestationStatusMessage)
+                .accessibilityIdentifier("settingsPrivacyAgeStatus")
+
+            #if os(iOS)
+            SettingsAvailabilityMessage("settings.privacy.intercom.note")
+                .accessibilityIdentifier("settingsPrivacyIntercomNote")
+            #endif
+
+            DetailSectionHeader(
                 title: "settings.privacy.export.title",
                 message: "settings.privacy.export.message"
             )
@@ -1476,6 +1522,32 @@ private extension GradeyAccountHubView {
                     }
                     .buttonStyle(.plain)
                     .accessibilityIdentifier("githubRepositoryLink")
+
+                    SettingsRowDivider()
+
+                    Link(destination: AppLinks.privacyPolicyURL) {
+                        SettingsActionRow(
+                            title: "legal.privacyPolicy",
+                            message: "settings.privacy.policy.caption",
+                            iconName: "security-lock"
+                        )
+                        .padding(20)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("aboutPrivacyPolicyLink")
+
+                    SettingsRowDivider()
+
+                    Link(destination: AppLinks.termsOfUseURL) {
+                        SettingsActionRow(
+                            title: "legal.termsOfUse",
+                            message: "settings.privacy.terms.caption",
+                            iconName: "left-to-right-list-bullet"
+                        )
+                        .padding(20)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("aboutTermsOfUseLink")
                 }
             }
 
@@ -1660,6 +1732,17 @@ private extension GradeyAccountHubView {
 
     var quietHoursControlsAreEnabled: Bool {
         notificationControlsAreEnabled && viewModel.notificationPreferences.quietHoursEnabled
+    }
+
+    private var ageAttestationStatusMessage: LocalizedStringKey {
+        switch AgeAttestationStore.shared.kind {
+        case .sixteenOrOlder:
+            "settings.privacy.age.sixteen"
+        case .thirteenToFifteenWithParent:
+            "settings.privacy.age.teen"
+        case .underThirteen, nil:
+            "settings.privacy.age.unknown"
+        }
     }
 
     var notificationsUnavailableMessage: LocalizedStringKey? {

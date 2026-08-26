@@ -27,6 +27,7 @@ struct ContentView: View {
     @AppStorage(OnboardingProgressStore.completionKey) private var hasCompletedOnboardingV2 = false
     @AppStorage("settings.showMealsTab") private var showMealsTab = true
     @Bindable private var languageStore = AppLanguageStore.shared
+    @State private var ageAttestationStore = AgeAttestationStore.shared
     @State private var appViewModel: AppViewModel
     @State private var gradeyAIViewModel: GradeyAIViewModel
     @State private var onboardingJourney: OnboardingJourney?
@@ -117,7 +118,9 @@ struct ContentView: View {
 
     var body: some View {
         Group {
-            if shouldShowOnboarding, let onboardingJourney {
+            if !ageAttestationStore.allowsAppUse {
+                AgeAttestationView(store: ageAttestationStore)
+            } else if shouldShowOnboarding, let onboardingJourney {
                 OnboardingView(
                     journey: onboardingJourney,
                     appViewModel: appViewModel,

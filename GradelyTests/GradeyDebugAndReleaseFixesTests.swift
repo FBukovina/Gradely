@@ -341,3 +341,58 @@ struct AbsenceRiskNormalizationTests {
         #expect(subject.missesUntilLimit == 2)
     }
 }
+
+struct AppStoreLegalLinksTests {
+    @Test func helpCenterArticlesUseTheGleapHostAndLanguagePrefix() {
+        #expect(AppLinks.helpCenterHost == "help.bukovinafilip.com")
+        #expect(AppLinks.privacyPolicyURL.host == AppLinks.helpCenterHost)
+        #expect(AppLinks.termsOfUseURL.host == AppLinks.helpCenterHost)
+        #expect(AppLinks.privacyPolicyURL.path.contains("articles/10-privacy-policy"))
+        #expect(AppLinks.termsOfUseURL.path.contains("articles/11-terms-and-conditions"))
+
+        let czechPrivacy = AppLinks.helpURL(path: "articles/10-privacy-policy", languageCode: "cs")
+        #expect(czechPrivacy.path.hasPrefix("/cs/"))
+        let englishTerms = AppLinks.helpURL(path: "articles/11-terms-and-conditions", languageCode: "en")
+        #expect(englishTerms.path.hasPrefix("/en/"))
+    }
+}
+
+struct AgeAttestationStoreTests {
+    @Test func sixteenAndTeenAllowUseAndUnderThirteenBlocks() throws {
+        let suiteName = "AgeAttestation.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let store = AgeAttestationStore(userDefaults: defaults)
+
+        #expect(store.kind == nil)
+        #expect(!store.allowsAppUse)
+
+        store.confirm(.underThirteen)
+        #expect(store.kind == .underThirteen)
+        #expect(!store.allowsAppUse)
+        #expect(defaults.string(forKey: AgeAttestationStore.storageKey) == AgeAttestationKind.underThirteen.rawValue)
+
+        store.clearBlockedChoice()
+        #expect(store.kind == nil)
+        #expect(!store.allowsAppUse)
+
+        store.confirm(.thirteenToFifteenWithParent)
+        #expect(store.allowsAppUse)
+
+        store.confirm(.sixteenOrOlder)
+        #expect(store.allowsAppUse)
+        #expect(defaults.string(forKey: AgeAttestationStore.storageKey) == AgeAttestationKind.sixteenOrOlder.rawValue)
+        #expect(AgeAttestationStore.allowsAppUse(userDefaults: defaults))
+    }
+
+    @Test func persistedChoiceReloads() throws {
+        let suiteName = "AgeAttestationReload.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        defaults.set(AgeAttestationKind.sixteenOrOlder.rawValue, forKey: AgeAttestationStore.storageKey)
+
+        let store = AgeAttestationStore(userDefaults: defaults)
+        #expect(store.kind == .sixteenOrOlder)
+        #expect(store.allowsAppUse)
+    }
+}

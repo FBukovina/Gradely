@@ -1,0 +1,66 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "watch.change.added" : {
+      "localizations" : {
+        "cs" : { "stringUnit" : { "state" : "translated", "value" : "Přidáno" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Added" } }
+      }
+    },
+    "watch.change.canceled" : {
+      "localizations" : {
+        "cs" : { "stringUnit" : { "state" : "translated", "value" : "Zrušeno" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Canceled" } }
+      }
+    },
+    "watch.change.changed" : {
+      "localizations" : {
+        "cs" : { "stringUnit" : { "state" : "translated", "value" : "Změna" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Changed" } }
+      }
+    },
+    "watch.change.room" : {
+      "localizations" : {
+        "cs" : { "stringUnit" : { "state" : "translated", "value" : "Učebna" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Room" } }
+      }
+    },
+    "watch.complication.description" : {
+      "localizations" : {
+        "cs" : { "stringUnit" : { "state" : "translated", "value" : "Zobrazí aktuální a další hodinu." } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Shows your current and next lesson." } }
+      }
+    },
+    "watch.complication.freeTime" : {
+      "localizations" : {
+        "cs" : { "stringUnit" : { "state" : "translated", "value" : "Užij si volno" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Enjoy your free time" } }
+      }
+    },
+    "watch.complication.name" : {
+      "localizations" : {
+        "cs" : { "stringUnit" : { "state" : "translated", "value" : "Hodiny" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Lessons" } }
+      }
+    },
+    "watch.complication.next" : {
+      "localizations" : {
+        "cs" : { "stringUnit" : { "state" : "translated", "value" : "Další" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Next" } }
+      }
+    },
+    "watch.complication.noLessons" : {
+      "localizations" : {
+        "cs" : { "stringUnit" : { "state" : "translated", "value" : "Žádné hodiny" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "No lessons" } }
+      }
+    },
+    "watch.complication.now" : {
+      "localizations" : {
+        "cs" : { "stringUnit" : { "state" : "translated", "value" : "Teď" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Now" } }
+      }
+    }
+  },
+  "version" : "1.0"
+}

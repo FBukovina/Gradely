@@ -18748,6 +18748,1518 @@
           }
         }
       }
+    },
+    "age.gate.blocked.body" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kvůli COPPA Gradey nenabízí účet ani školní synchronizaci dětem mladším 13 let. Pokud jsi to klepl omylem, věk můžeš vybrat znovu."
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "kvůli COPPA Gradey nenabízí účet ani školní synchronizaci dětem mladším 13 let. Pokud jsi to klepl omylem, věk můžeš vybrat znovu."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Because of COPPA, Gradey doesn’t offer accounts or school sync to children under 13. If you tapped this by mistake, you can choose a different age."
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "because of COPPA, Gradey doesn’t offer accounts or school sync to children under 13. If you tapped this by mistake, you can choose a different age."
+          }
+        }
+      }
+    },
+    "age.gate.blocked.change" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vybrat jiný věk"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "vybrat jiný věk"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose a different age"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "choose a different age"
+          }
+        }
+      }
+    },
+    "age.gate.blocked.title" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gradey teď nejde použít"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gradey teď nejde použít"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gradey isn’t available"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gradey isn’t available"
+          }
+        }
+      }
+    },
+    "age.gate.body" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gradey zpracovává školní údaje, volitelné AI a chat podpory. Americké COPPA zakazuje účty pod 13 let. V Česku u uživatelů do 15 let (GDPR) potřebuješ souhlas rodiče nebo zákonného zástupce."
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gradey zpracovává školní údaje, volitelné AI a chat podpory. Americké COPPA zakazuje účty pod 13 let. V Česku u uživatelů do 15 let (GDPR) potřebuješ souhlas rodiče nebo zákonného zástupce."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gradey handles school records, optional AI, and support chat. US law (COPPA) blocks under-13 accounts. In Czechia, digital consent for under-16 users needs a parent or guardian."
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gradey handles school records, optional AI, and support chat. US law (COPPA) blocks under-13 accounts. In Czechia, digital consent for under-16 users needs a parent or guardian."
+          }
+        }
+      }
+    },
+    "age.gate.privacyLink" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zásady ochrany osobních údajů"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "zásady ochrany osobních údajů"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Privacy Policy"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "privacy Policy"
+          }
+        }
+      }
+    },
+    "age.gate.sixteen.subtitle" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Můžu používat Gradey a souhlasím se zásadami ochrany osobních údajů."
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "můžu používat Gradey a souhlasím se zásadami ochrany osobních údajů."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "I can use Gradey and agree to the privacy policy."
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "i can use Gradey and agree to the privacy policy."
+          }
+        }
+      }
+    },
+    "age.gate.sixteen.title" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Je mi 16 nebo více"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "je mi 16 nebo více"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "I am 16 or older"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "i am 16 or older"
+          }
+        }
+      }
+    },
+    "age.gate.teen.confirm" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Požádej rodiče nebo zákonného zástupce, ať si přečte zásady ochrany osobních údajů. Musí souhlasit, že Gradey smí zpracovat tvoje školní údaje, chat podpory a volitelné AI."
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "požádej rodiče nebo zákonného zástupce, ať si přečte zásady ochrany osobních údajů. Musí souhlasit, že Gradey smí zpracovat tvoje školní údaje, chat podpory a volitelné AI."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ask a parent or guardian to review the privacy policy. They must agree that Gradey may process your school records, support chat, and optional AI."
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ask a parent or guardian to review the privacy policy. They must agree that Gradey may process your school records, support chat, and optional AI."
+          }
+        }
+      }
+    },
+    "age.gate.teen.continue" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pokračovat"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "pokračovat"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Continue"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "continue"
+          }
+        }
+      }
+    },
+    "age.gate.teen.subtitle" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Než Gradey zpracuje školní data, musí souhlasit rodič nebo zákonný zástupce."
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "než Gradey zpracuje školní data, musí souhlasit rodič nebo zákonný zástupce."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A parent or guardian must agree before school data goes to Gradey."
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "a parent or guardian must agree before school data goes to Gradey."
+          }
+        }
+      }
+    },
+    "age.gate.teen.title" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Je mi 13, 14 nebo 15"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "je mi 13, 14 nebo 15"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "I am 13, 14, or 15"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "i am 13, 14, or 15"
+          }
+        }
+      }
+    },
+    "age.gate.teen.toggle" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rodič nebo zákonný zástupce si zásady přečetl a souhlasí."
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "rodič nebo zákonný zástupce si zásady přečetl a souhlasí."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A parent or guardian has reviewed the privacy policy and agrees."
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "a parent or guardian has reviewed the privacy policy and agrees."
+          }
+        }
+      }
+    },
+    "age.gate.title" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Potvrď svůj věk"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "potvrď svůj věk"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Confirm your age"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "confirm your age"
+          }
+        }
+      }
+    },
+    "age.gate.underThirteen.subtitle" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gradey v tomhle věku nemůže založit účet ani ukládat školní data."
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gradey v tomhle věku nemůže založit účet ani ukládat školní data."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gradey can’t create an account or store school data for this age."
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gradey can’t create an account or store school data for this age."
+          }
+        }
+      }
+    },
+    "age.gate.underThirteen.title" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Je mi méně než 13"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "je mi méně než 13"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "I am under 13"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "i am under 13"
+          }
+        }
+      }
+    },
+    "bakalari.attribution.message" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Neoficiální integrace se připojuje ke školním systémům Bakaláři. Gradey není produktem Bakaláři a není s Bakaláři software nijak spojený ani jím schválený."
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "neoficiální integrace se připojuje ke školním systémům Bakaláři. Gradey není produktem Bakaláři a není s Bakaláři software nijak spojený ani jím schválený."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This unofficial integration talks to Bakaláři school systems. Gradey is not a Bakaláři product and is not affiliated with or endorsed by Bakaláři software."
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "this unofficial integration talks to Bakaláři school systems. Gradey is not a Bakaláři product and is not affiliated with or endorsed by Bakaláři software."
+          }
+        }
+      }
+    },
+    "bakalari.attribution.title" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Podpora Bakaláři"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "podpora Bakaláři"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bakaláři support"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "bakaláři support"
+          }
+        }
+      }
+    },
+    "legal.privacyPolicy" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zásady ochrany osobních údajů"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "zásady ochrany osobních údajů"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Privacy Policy"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "privacy policy"
+          }
+        }
+      }
+    },
+    "legal.termsOfUse" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Podmínky používání"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "podmínky používání"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Terms of Use"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "terms of use"
+          }
+        }
+      }
+    },
+    "marks.trends.range" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Období"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "období"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Range"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "range"
+          }
+        }
+      }
+    },
+    "marks.trends.range30" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "30 dní"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "30 dní"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "30 days"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "30 days"
+          }
+        }
+      }
+    },
+    "marks.trends.schoolYear" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Školní rok"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "školní rok"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "School year"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "school year"
+          }
+        }
+      }
+    },
+    "settings.privacy.age.message" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gradey před odesláním školních dat, chatu podpory nebo AI na servery vyžaduje potvrzení věku."
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gradey před odesláním školních dat, chatu podpory nebo AI na servery vyžaduje potvrzení věku."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gradey asks for an age confirmation before school data, support chat, or AI leave the device for our servers."
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gradey asks for an age confirmation before school data, support chat, or AI leave the device for our servers."
+          }
+        }
+      }
+    },
+    "settings.privacy.age.sixteen" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Potvrdil jsi, že ti je 16 nebo více."
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "potvrdil jsi, že ti je 16 nebo více."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You confirmed you are 16 or older."
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "you confirmed you are 16 or older."
+          }
+        }
+      }
+    },
+    "settings.privacy.age.teen" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Potvrdil jsi věk 13–15 a souhlas rodiče nebo zákonného zástupce."
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "potvrdil jsi věk 13–15 a souhlas rodiče nebo zákonného zástupce."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You confirmed you are 13–15 and a parent or guardian agrees."
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "you confirmed you are 13–15 and a parent or guardian agrees."
+          }
+        }
+      }
+    },
+    "settings.privacy.age.title" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Věk"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "věk"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Age"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "age"
+          }
+        }
+      }
+    },
+    "settings.privacy.age.unknown" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Věk ještě není potvrzený."
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "věk ještě není potvrzený."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Age is not confirmed yet."
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "age is not confirmed yet."
+          }
+        }
+      }
+    },
+    "settings.privacy.documents.message" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Veřejné dokumenty pro Gradey najdeš v centru nápovědy."
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "veřejné dokumenty pro Gradey najdeš v centru nápovědy."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Public legal documents for Gradey live in the help center."
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "public legal documents for Gradey live in the help center."
+          }
+        }
+      }
+    },
+    "settings.privacy.documents.title" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zásady a podmínky"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "zásady a podmínky"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Policies and terms"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "policies and terms"
+          }
+        }
+      }
+    },
+    "settings.privacy.intercom.note" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chat podpory (Intercom) se spustí, až otevřeš nápovědu. Gradey při startu Intercom uživatele nevytváří."
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "chat podpory (Intercom) se spustí, až otevřeš nápovědu. Gradey při startu Intercom uživatele nevytváří."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Support chat (Intercom) starts only when you open Help. Gradey does not create an Intercom user at launch."
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "support chat (Intercom) starts only when you open Help. Gradey does not create an Intercom user at launch."
+          }
+        }
+      }
+    },
+    "settings.privacy.policy.caption" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jak Gradey nakládá s daty účtu a školy."
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "jak Gradey nakládá s daty účtu a školy."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "How Gradey handles account and school data."
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "how Gradey handles account and school data."
+          }
+        }
+      }
+    },
+    "settings.privacy.terms.caption" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Podmínky používání aplikace a předplatného."
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "podmínky používání aplikace a předplatného."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Terms for using Gradey and optional support plans."
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "terms for using Gradey and optional support plans."
+          }
+        }
+      }
+    },
+    "support.plans.legal.renewal" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Předplatné se obnovuje automaticky, pokud ho nezrušíš nejméně 24 hodin před koncem období. Spravovat nebo zrušit ho můžeš v Nastavení. Platba se strhne z Apple ID."
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "předplatné se obnovuje automaticky, pokud ho nezrušíš nejméně 24 hodin před koncem období. spravovat nebo zrušit ho můžeš v nastavení. platba se strhne z apple id."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Subscriptions auto-renew unless cancelled at least 24 hours before the period ends. Manage or cancel in Settings. Payment is charged to your Apple ID."
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "subscriptions auto-renew unless cancelled at least 24 hours before the period ends. manage or cancel in settings. payment is charged to your apple id."
+          }
+        }
+      }
+    },
+    "today.currentLesson" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Právě probíhá"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "právě probíhá"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Current lesson"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "current lesson"
+          }
+        }
+      }
+    },
+    "today.history.empty" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zatím žádná cloudová historie"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "zatím žádná cloudová historie"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No cloud history yet"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "no cloud history yet"
+          }
+        }
+      }
+    },
+    "today.history.empty.subtitle" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Trendy se objeví, až Gradey uloží snímky známek."
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "trendy se objeví, až Gradey uloží snímky známek."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Trends start after Gradey records new grade snapshots."
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "trends start after Gradey records new grade snapshots."
+          }
+        }
+      }
+    },
+    "today.linkedAccounts" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Propojené účty"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "propojené účty"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Linked accounts"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "linked accounts"
+          }
+        }
+      }
+    },
+    "today.markInSubject" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ z předmětu %@"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ z předmětu %@"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ in %@"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ in %@"
+          }
+        }
+      }
+    },
+    "today.mealsNotConnected" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jídelna není propojená"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "jídelna není propojená"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Meals not connected"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "meals not connected"
+          }
+        }
+      }
+    },
+    "today.mealsNotConnected.subtitle" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Strava.cz propojíš v účtu."
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "strava.cz propojíš v účtu."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connect Strava.cz from Account."
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "connect Strava.cz from Account."
+          }
+        }
+      }
+    },
+    "today.newFromSchool" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nové ze školy"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "nové ze školy"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "New from school"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "new from school"
+          }
+        }
+      }
+    },
+    "today.nextLesson" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Další hodina"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "další hodina"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Next lesson"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "next lesson"
+          }
+        }
+      }
+    },
+    "today.noAbsenceRisk" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Riziko absence zatím není"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "riziko absence zatím není"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No absence risk yet"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "no absence risk yet"
+          }
+        }
+      }
+    },
+    "today.noAbsenceRisk.subtitle" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Po obnovení se tady ukáže absence."
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "po obnovení se tady ukáže absence."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Absence data will appear here after refresh."
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "absence data will appear here after refresh."
+          }
+        }
+      }
+    },
+    "today.noMeal" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Žádný objednaný oběd"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "žádný objednaný oběd"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No ordered meal"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "no ordered meal"
+          }
+        }
+      }
+    },
+    "today.noMeal.subtitle" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Oběd objednáš nebo zkontroluješ v Jídelně."
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "oběd objednáš nebo zkontroluješ v Jídelně."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open Meals to order or check the menu."
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "open Meals to order or check the menu."
+          }
+        }
+      }
+    },
+    "today.noMoreLessons" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dnes už nic není"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "dnes už nic není"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No more lessons"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "no more lessons"
+          }
+        }
+      }
+    },
+    "today.noMoreLessons.subtitle" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Školní den je volný."
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "školní den je volný."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The school day is clear."
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "the school day is clear."
+          }
+        }
+      }
+    },
+    "today.reconnect.fallback" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Znovu se přihlas, ať známky a oznámení zůstanou aktuální."
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "znovu se přihlas, ať známky a oznámení zůstanou aktuální."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reconnect to keep marks and notifications up to date."
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "reconnect to keep marks and notifications up to date."
+          }
+        }
+      }
+    },
+    "today.schoolAccount" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Školní účet"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "školní účet"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "School account"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "school account"
+          }
+        }
+      }
+    },
+    "today.timetableChange" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Změna v rozvrhu"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "změna v rozvrhu"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Timetable change"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "timetable change"
+          }
+        }
+      }
+    },
+    "today.timetableUnavailable" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rozvrh není k dispozici"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "rozvrh není k dispozici"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Timetable unavailable"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "timetable unavailable"
+          }
+        }
+      }
+    },
+    "today.timetableUnavailable.subtitle" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Potáhni pro obnovení, nebo otevři Rozvrh."
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "potáhni pro obnovení, nebo otevři Rozvrh."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pull to refresh or open Timetable."
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "pull to refresh or open Timetable."
+          }
+        }
+      }
+    },
+    "today.trends.cloudSubtitle" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cloudové trendy začnou po uložení snímků známek."
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "cloudové trendy začnou po uložení snímků známek."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cloud trends start after Gradey records grade snapshots."
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "cloud trends start after Gradey records grade snapshots."
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

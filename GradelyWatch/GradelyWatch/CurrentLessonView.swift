@@ -18,25 +18,27 @@ struct CurrentLessonView: View {
         case .noTimetable:
             WatchStatusPage(
                 systemImage: "calendar",
-                title: "No timetable yet",
-                detail: "Open Gradey on iPhone to sync."
+                title: String(localized: "watch.noTimetable.title"),
+                detail: String(localized: "watch.noTimetable.detail")
             )
         case .stale:
             WatchStatusPage(
                 systemImage: "arrow.clockwise",
-                title: "Timetable is stale",
-                detail: "Refresh from Gradey on iPhone."
+                title: String(localized: "watch.stale.title"),
+                detail: String(localized: "watch.stale.detail")
             )
         case .doneForToday:
             WatchStatusPage(
                 systemImage: "checkmark.circle.fill",
-                title: "Done for today",
-                detail: "No more lessons left."
+                title: String(localized: "watch.done.title"),
+                detail: String(localized: "watch.done.detail")
             )
         case .inLesson(let lesson, let progress):
             lessonHero(
                 lesson: lesson,
-                status: lesson.isCanceled ? "Canceled" : "Now",
+                status: lesson.isCanceled
+                    ? String(localized: "watch.status.canceled")
+                    : String(localized: "watch.status.now"),
                 statusColor: lesson.isCanceled ? WatchBrand.canceled : WatchBrand.primary,
                 progress: progress,
                 now: now,
@@ -45,11 +47,18 @@ struct CurrentLessonView: View {
         case .betweenLessons(let next, let progress, _):
             lessonHero(
                 lesson: next,
-                status: next.startDate.map { "In \(WatchLessonFormatting.remaining(until: $0, now: now))" } ?? "Up next",
+                status: next.startDate.map {
+                    String(format: String(localized: "watch.status.in"), WatchLessonFormatting.remaining(until: $0, now: now))
+                } ?? String(localized: "watch.status.upNext"),
                 statusColor: WatchBrand.primary,
                 progress: progress,
                 now: now,
-                subtitle: ["Break", metaLine(for: next)].compactMap { $0 }.joined(separator: " · ")
+                subtitle: [
+                    Optional(String(localized: "watch.break")),
+                    metaLine(for: next)
+                ]
+                    .compactMap { $0 }
+                    .joined(separator: " · ")
             )
         }
     }
@@ -94,7 +103,7 @@ struct CurrentLessonView: View {
                     Text(WatchLessonFormatting.time(lesson.startDate))
                         .font(.headline.weight(.bold))
                         .strikethrough(lesson.isCanceled)
-                    Text("Start")
+                    Text(String(localized: "watch.start"))
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                 }
@@ -103,7 +112,7 @@ struct CurrentLessonView: View {
                     Text(WatchLessonFormatting.time(lesson.endDate))
                         .font(.headline.weight(.bold))
                         .strikethrough(lesson.isCanceled)
-                    Text("End")
+                    Text(String(localized: "watch.end"))
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                 }

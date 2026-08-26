@@ -215,10 +215,10 @@ public enum GradelyWatchLessonChangeKind: String, Codable, Equatable, Sendable {
     public var shortTitle: String? {
         switch self {
         case .none: nil
-        case .canceled: "Canceled"
-        case .substitution: "Changed"
-        case .roomChanged: "Room"
-        case .added: "Added"
+        case .canceled: "watch.change.canceled"
+        case .substitution: "watch.change.changed"
+        case .roomChanged: "watch.change.room"
+        case .added: "watch.change.added"
         }
     }
 }

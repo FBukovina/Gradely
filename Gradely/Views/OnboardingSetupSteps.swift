@@ -58,13 +58,6 @@ struct OnboardingAccountStep: View {
                         .frame(maxWidth: .infinity)
                         .accessibilityIdentifier("gradeyIDSigningIn")
                     }
-
-                    Divider()
-
-                    GradelyLabel("gradey.auth.privacyNote", systemImage: "lock.shield.fill")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
 

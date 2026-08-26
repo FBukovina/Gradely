@@ -142,7 +142,7 @@ struct TodayView: View {
                     Spacer(minLength: 0)
                 }
 
-                Text(account.actionRequiredReason ?? "Reconnect to keep marks and notifications up to date.")
+                Text(account.actionRequiredReason ?? AppL10n.string("today.reconnect.fallback"))
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -175,10 +175,10 @@ struct TodayView: View {
                         .background(Brand.primary.opacity(0.12), in: RoundedRectangle(cornerRadius: Radius.sm, style: .continuous))
 
                     VStack(alignment: .leading, spacing: Spacing.xs) {
-                        Text(viewModel.snapshot.activeAccount?.displayName ?? "School account")
+                        Text(viewModel.snapshot.activeAccount?.displayName ?? AppL10n.string("today.schoolAccount"))
                             .font(.headline)
                             .lineLimit(1)
-                        Text(viewModel.snapshot.activeAccount?.subtitle ?? "Linked accounts")
+                        Text(viewModel.snapshot.activeAccount?.subtitle ?? AppL10n.string("today.linkedAccounts"))
                             .font(.caption)
                             .foregroundStyle(.secondary)
                             .lineLimit(1)
@@ -211,7 +211,7 @@ struct TodayView: View {
                     .buttonStyle(.plain)
                     .disabled(viewModel.isActivatingAccountID != nil)
                     .accessibilityLabel(
-                        viewModel.snapshot.activeAccount?.displayName ?? "School account"
+                        viewModel.snapshot.activeAccount?.displayName ?? AppL10n.string("today.schoolAccount")
                     )
                     .accessibilityIdentifier("todayAccountSwitcher")
                 }
@@ -226,35 +226,45 @@ struct TodayView: View {
                 if let summary = viewModel.snapshot.timetableSummary {
                     if let current = summary.currentLesson {
                         TodayInfoRow(
-                            title: current.title.isEmpty ? "Current lesson" : current.title,
-                            subtitle: current.subjectName ?? current.hour.caption,
+                            title: current.title.isEmpty ? Text("today.currentLesson") : Text(verbatim: current.title),
+                            subtitle: Text(verbatim: current.subjectName ?? current.hour.caption),
                             systemImage: "play.circle.fill",
                             tint: Brand.primary
                         )
                     } else if let next = summary.nextLesson {
                         TodayInfoRow(
-                            title: next.title.isEmpty ? "Next lesson" : next.title,
-                            subtitle: next.subjectName ?? next.hour.caption,
+                            title: next.title.isEmpty ? Text("today.nextLesson") : Text(verbatim: next.title),
+                            subtitle: Text(verbatim: next.subjectName ?? next.hour.caption),
                             systemImage: "clock.fill",
                             tint: Brand.secondary
                         )
                     } else {
-                        TodayInfoRow(title: "No more lessons", subtitle: "The school day is clear.", systemImage: "checkmark.circle.fill", tint: Brand.primary)
+                        TodayInfoRow(
+                            title: Text("today.noMoreLessons"),
+                            subtitle: Text("today.noMoreLessons.subtitle"),
+                            systemImage: "checkmark.circle.fill",
+                            tint: Brand.primary
+                        )
                     }
 
                     if summary.hasChanges {
                         Divider()
                         ForEach(summary.changedLessons.prefix(3)) { lesson in
                             TodayInfoRow(
-                                title: lesson.changeKind.localizedLabel ?? "Timetable change",
-                                subtitle: lesson.subjectName ?? lesson.title,
+                                title: Text(verbatim: lesson.changeKind.localizedLabel ?? AppL10n.string("today.timetableChange")),
+                                subtitle: Text(verbatim: lesson.subjectName ?? lesson.title),
                                 systemImage: "exclamationmark.triangle.fill",
                                 tint: .gradelySystemOrange
                             )
                         }
                     }
                 } else {
-                    TodayInfoRow(title: "Timetable unavailable", subtitle: "Pull to refresh or open Timetable.", systemImage: "calendar", tint: .secondary)
+                    TodayInfoRow(
+                        title: Text("today.timetableUnavailable"),
+                        subtitle: Text("today.timetableUnavailable.subtitle"),
+                        systemImage: "calendar",
+                        tint: .secondary
+                    )
                 }
             }
         }
@@ -285,7 +295,12 @@ struct TodayView: View {
                             .foregroundStyle(.secondary)
                     }
                 } else {
-                    TodayInfoRow(title: "No absence risk yet", subtitle: "Absence data will appear here after refresh.", systemImage: "calendar.badge.exclamationmark", tint: .secondary)
+                    TodayInfoRow(
+                        title: Text("today.noAbsenceRisk"),
+                        subtitle: Text("today.noAbsenceRisk.subtitle"),
+                        systemImage: "calendar.badge.exclamationmark",
+                        tint: .secondary
+                    )
                 }
             }
         }
@@ -297,11 +312,26 @@ struct TodayView: View {
             VStack(alignment: .leading, spacing: Spacing.md) {
                 SectionHeader("Lunch")
                 if let meal = viewModel.snapshot.orderedMeal {
-                    TodayInfoRow(title: meal.name, subtitle: meal.formattedPrice, systemImage: "fork.knife", tint: Brand.primary)
+                    TodayInfoRow(
+                        title: Text(verbatim: meal.name),
+                        subtitle: Text(verbatim: meal.formattedPrice),
+                        systemImage: "fork.knife",
+                        tint: Brand.primary
+                    )
                 } else if viewModel.snapshot.stravaSession != nil {
-                    TodayInfoRow(title: "No ordered meal", subtitle: "Open Meals to order or check the menu.", systemImage: "fork.knife.circle", tint: .secondary)
+                    TodayInfoRow(
+                        title: Text("today.noMeal"),
+                        subtitle: Text("today.noMeal.subtitle"),
+                        systemImage: "fork.knife.circle",
+                        tint: .secondary
+                    )
                 } else {
-                    TodayInfoRow(title: "Meals not connected", subtitle: "Connect Strava.cz from Account.", systemImage: "fork.knife", tint: .secondary)
+                    TodayInfoRow(
+                        title: Text("today.mealsNotConnected"),
+                        subtitle: Text("today.mealsNotConnected.subtitle"),
+                        systemImage: "fork.knife",
+                        tint: .secondary
+                    )
                 }
             }
         }
@@ -317,8 +347,13 @@ struct TodayView: View {
                 if !newMarks.isEmpty {
                     ForEach(newMarks.prefix(3)) { mark in
                         TodayInfoRow(
-                            title: "\(mark.markText) in \(mark.subjectName)",
-                            subtitle: mark.detectedAt?.formatted(date: .abbreviated, time: .shortened) ?? "New from school",
+                            title: Text(verbatim: String(
+                                format: AppL10n.string("today.markInSubject"),
+                                mark.markText,
+                                mark.subjectName
+                            )),
+                            subtitle: Text(verbatim: mark.detectedAt?.formatted(date: .abbreviated, time: .shortened)
+                                ?? AppL10n.string("today.newFromSchool")),
                             systemImage: "checkmark.seal.fill",
                             tint: Brand.primary
                         )
@@ -329,7 +364,12 @@ struct TodayView: View {
                 }
 
                 if viewModel.snapshot.topTrends.isEmpty {
-                    TodayInfoRow(title: "No cloud history yet", subtitle: "Trends start after Gradey records new grade snapshots.", systemImage: "chart.line.uptrend.xyaxis", tint: .secondary)
+                    TodayInfoRow(
+                        title: Text("today.history.empty"),
+                        subtitle: Text("today.history.empty.subtitle"),
+                        systemImage: "chart.line.uptrend.xyaxis",
+                        tint: .secondary
+                    )
                 } else {
                     ForEach(viewModel.snapshot.topTrends) { trend in
                         TrendRow(trend: trend)
@@ -427,7 +467,7 @@ private struct TodayHero: View {
 
             HStack(alignment: .firstTextBaseline) {
                 VStack(alignment: .leading, spacing: Spacing.xs) {
-                    Text("Overall average")
+                    Text("marks.hero.average")
                         .font(.caption.weight(.bold))
                         .foregroundStyle(Brand.onAccent.opacity(0.7))
                     Text(GradeMath.formattedAverage(snapshot.overallAverage))
@@ -436,8 +476,8 @@ private struct TodayHero: View {
                 }
                 Spacer()
                 VStack(alignment: .trailing, spacing: Spacing.xs) {
-                    Text("\(snapshot.subjects.count) subjects")
-                    Text("\(snapshot.totalMarks) marks")
+                    Text(String.localizedStringWithFormat(AppL10n.string("marks.hero.subjectCount"), snapshot.subjects.count))
+                    Text(String.localizedStringWithFormat(AppL10n.string("subject.markCount"), snapshot.totalMarks))
                 }
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(Brand.onAccent.opacity(0.72))
@@ -476,8 +516,8 @@ private struct TodayNavigationRow: View {
 }
 
 private struct TodayInfoRow: View {
-    let title: String
-    let subtitle: String
+    let title: Text
+    let subtitle: Text
     let systemImage: String
     let tint: Color
 
@@ -488,10 +528,10 @@ private struct TodayInfoRow: View {
                 .frame(width: 32, height: 32)
                 .background(tint.opacity(0.12), in: RoundedRectangle(cornerRadius: Radius.sm, style: .continuous))
             VStack(alignment: .leading, spacing: Spacing.xs) {
-                Text(title)
+                title
                     .font(.subheadline.weight(.bold))
                     .lineLimit(2)
-                Text(subtitle)
+                subtitle
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(2)
@@ -529,12 +569,16 @@ private struct TodayRiskRow: View {
 
     private var subtitle: String {
         guard let misses = subject.missesUntilLimit else {
-            return "\(subject.missedLessons) / \(subject.totalLessons) missed lessons"
+            return String(
+                format: AppL10n.string("absence.risk.missed"),
+                subject.missedLessons,
+                subject.totalLessons
+            )
         }
         if misses == 0 {
-            return "At or over the school limit"
+            return AppL10n.string("absence.risk.overLimit")
         }
-        return "\(misses) more missed lessons reaches the limit"
+        return String(format: AppL10n.string("absence.risk.untilLimit"), misses)
     }
 
     private var tint: Color {
@@ -574,9 +618,9 @@ struct TrendRow: View {
     private var detail: String {
         let marks = trend.latestMarkCount - trend.firstMarkCount
         if marks > 0 {
-            return "\(marks) new marks"
+            return String(format: AppL10n.string("marks.trends.newMarks"), marks)
         }
-        return "Average movement"
+        return AppL10n.string("marks.trends.movement")
     }
 }
 
@@ -612,11 +656,19 @@ struct TrendSparkline: View {
 
 struct GradeTrendsView: View {
     enum Range: String, CaseIterable, Identifiable {
-        case thirty = "30 days"
-        case ninety = "90 days"
-        case schoolYear = "School year"
+        case thirty
+        case ninety
+        case schoolYear
 
         var id: String { rawValue }
+
+        var title: LocalizedStringKey {
+            switch self {
+            case .thirty: "marks.trends.range30"
+            case .ninety: "marks.trends.range90"
+            case .schoolYear: "marks.trends.schoolYear"
+            }
+        }
     }
 
     let trends: [SubjectGradeTrend]
@@ -624,9 +676,9 @@ struct GradeTrendsView: View {
 
     var body: some View {
         List {
-            Picker("Range", selection: $selectedRange) {
+            Picker("marks.trends.range", selection: $selectedRange) {
                 ForEach(Range.allCases) { range in
-                    Text(range.rawValue).tag(range)
+                    Text(range.title).tag(range)
                 }
             }
             .pickerStyle(.segmented)
@@ -640,7 +692,7 @@ struct GradeTrendsView: View {
                         iconSize: 28
                     )
                 } description: {
-                    Text("Cloud trends start after Gradey records grade snapshots.")
+                    Text("today.trends.cloudSubtitle")
                 }
                     .listRowSeparator(.hidden)
             } else {
@@ -649,7 +701,7 @@ struct GradeTrendsView: View {
                 }
             }
         }
-        .navigationTitle("Grade trends")
+        .navigationTitle("marks.trends.title")
         .gradelyNavigationTitleDisplayMode(.inline)
     }
 

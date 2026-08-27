@@ -10794,25 +10794,25 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nejprve vyber poskytovatele a vyhledejte svou školu. Pokud ji nenajdete, můžeš zadat adresu ručně."
+            "value" : "Vyhledej svou školu. Pokud ji nenajdeš, můžeš zadat adresu ručně."
           }
         },
         "cs-US" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "nejprve vyber poskytovatele a vyhledejte svou školu. pokud ji nenajdete, můžeš zadat adresu ručně."
+            "value" : "vyhledej svou školu. pokud ji nenajdeš, můžeš zadat adresu ručně."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "First choose your provider and find your school. If it is not listed, enter its address manually."
+            "value" : "Find your school. If it is not listed, enter its address manually."
           }
         },
         "en-CO" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "first choose your provider and find your school. if it is not listed, enter its address manually."
+            "value" : "find your school. if it is not listed, enter its address manually."
           }
         }
       }

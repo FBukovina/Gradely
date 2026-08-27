@@ -99,6 +99,8 @@ final class GradelyUITests: XCTestCase {
         appleButton.tap()
 
         XCTAssertTrue(app.textFields["schoolURLField"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["provider-eduPage"].exists)
+        XCTAssertFalse(app.buttons["provider-bakalari"].exists)
         XCTAssertTrue(app.buttons["onboardingBackButton"].exists)
         app.buttons["onboardingBackButton"].tap()
         XCTAssertTrue(app.buttons["gradeyIDAppleButton"].waitForExistence(timeout: 5))
@@ -352,6 +354,8 @@ final class GradelyUITests: XCTestCase {
         XCTAssertTrue(app.textFields["schoolSearchField"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.textFields["schoolURLField"].exists)
         XCTAssertTrue(app.buttons["schoolContinueButton"].exists)
+        XCTAssertFalse(app.buttons["provider-eduPage"].exists)
+        XCTAssertFalse(app.buttons["provider-bakalari"].exists)
         XCTAssertFalse(app.textFields["usernameField"].exists)
         XCTAssertFalse(app.secureTextFields["passwordField"].exists)
 
@@ -668,7 +672,7 @@ final class GradelyUITests: XCTestCase {
         XCTAssertTrue(app.descendants(matching: .any)["creditsOpenSideLink"].exists)
         XCTAssertTrue(app.descendants(matching: .any)["creditsTeam"].exists)
         XCTAssertTrue(app.descendants(matching: .any)["creditsBakalariAttribution"].exists)
-        XCTAssertTrue(app.descendants(matching: .any)["creditsEduPageAttribution"].exists)
+        XCTAssertFalse(app.descendants(matching: .any)["creditsEduPageAttribution"].exists)
         XCTAssertTrue(app.buttons["modalDismissButton"].isHittable)
 
         RunLoop.current.run(until: Date(timeIntervalSinceNow: 0.8))

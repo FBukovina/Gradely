@@ -13,6 +13,35 @@ enum SchoolProvider: String, Codable, CaseIterable, Equatable, Sendable, Identif
         }
     }
 
+    /// EduPage stays in the binary for existing sessions, but new sign-in and
+    /// credits hide it until it is ready to ship again.
+    var isOfferedForNewSignIn: Bool {
+        isOfferedForNewSignIn(arguments: ProcessInfo.processInfo.arguments)
+    }
+
+    func isOfferedForNewSignIn(arguments: [String]) -> Bool {
+        switch self {
+        case .bakalari:
+            true
+        case .eduPage:
+            arguments.contains("-uiTestingShowEduPage")
+                || arguments.contains("-uiTestingEduPageTwoFactor")
+                || arguments.contains("-uiTestingEduPageChildSelection")
+        }
+    }
+
+    static var offeredForNewSignIn: [SchoolProvider] {
+        offeredForNewSignIn(arguments: ProcessInfo.processInfo.arguments)
+    }
+
+    static func offeredForNewSignIn(arguments: [String]) -> [SchoolProvider] {
+        allCases.filter { $0.isOfferedForNewSignIn(arguments: arguments) }
+    }
+
+    static var showsSignInPicker: Bool {
+        offeredForNewSignIn.count > 1
+    }
+
     var capabilities: SchoolProviderCapabilities {
         switch self {
         case .bakalari:

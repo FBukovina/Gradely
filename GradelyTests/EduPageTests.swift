@@ -3,6 +3,14 @@ import Testing
 @testable import Gradely
 
 struct EduPageTests {
+    @Test func eduPageSignInIsHiddenUnlessUITestOverride() {
+        #expect(SchoolProvider.bakalari.isOfferedForNewSignIn(arguments: []))
+        #expect(!SchoolProvider.eduPage.isOfferedForNewSignIn(arguments: []))
+        #expect(SchoolProvider.offeredForNewSignIn(arguments: []) == [.bakalari])
+        #expect(SchoolProvider.eduPage.isOfferedForNewSignIn(arguments: ["-uiTestingShowEduPage"]))
+        #expect(SchoolProvider.eduPage.isOfferedForNewSignIn(arguments: ["-uiTestingEduPageTwoFactor"]))
+    }
+
     @Test func normalizesEduPageSubdomainAndRejectsForeignHosts() throws {
         #expect(try EduPageURLNormalizer.normalizedBaseURL(from: "my-school").absoluteString == "https://my-school.edupage.org")
         #expect(try EduPageURLNormalizer.normalizedBaseURL(from: "https://my-school.edupage.org/login").absoluteString == "https://my-school.edupage.org")

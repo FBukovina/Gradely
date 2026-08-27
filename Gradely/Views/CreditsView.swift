@@ -18,7 +18,9 @@ struct CreditsView: View {
                         header
                         team
                         bakalariAttribution
-                        eduPageAttribution
+                        if SchoolProvider.eduPage.isOfferedForNewSignIn {
+                            eduPageAttribution
+                        }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 20)

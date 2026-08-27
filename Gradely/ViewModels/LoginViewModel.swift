@@ -158,6 +158,7 @@ final class LoginViewModel {
     }
 
     func changeProvider(_ provider: SchoolProvider) {
+        guard provider.isOfferedForNewSignIn else { return }
         self.provider = provider
         schoolURL = ""
         schoolSearchText = ""

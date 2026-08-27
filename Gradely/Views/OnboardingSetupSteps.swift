@@ -211,7 +211,9 @@ struct OnboardingSchoolStep: View {
 
             SettingsModalSurface(padding: Spacing.lg) {
                 VStack(alignment: .leading, spacing: Spacing.md) {
-                    providerPicker
+                    if SchoolProvider.showsSignInPicker {
+                        providerPicker
+                    }
 
                     if viewModel.provider == .bakalari {
                         schoolSearchPicker
@@ -397,7 +399,7 @@ struct OnboardingSchoolStep: View {
                 set: { viewModel.changeProvider($0) }
             )
         ) {
-            ForEach(SchoolProvider.allCases) { provider in
+            ForEach(SchoolProvider.offeredForNewSignIn) { provider in
                 Text(provider.displayName).tag(provider)
             }
         }

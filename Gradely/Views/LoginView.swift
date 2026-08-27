@@ -197,7 +197,9 @@ struct LoginView: View {
 
     private var schoolSelectionContent: some View {
         VStack(alignment: .leading, spacing: Spacing.lg) {
-            providerChooser
+            if SchoolProvider.showsSignInPicker {
+                providerChooser
+            }
 
             SettingsModalSurface(padding: Spacing.lg) {
                 VStack(alignment: .leading, spacing: Spacing.lg) {
@@ -239,7 +241,7 @@ struct LoginView: View {
                 .font(.gradelyDisplay(size: 20, relativeTo: .title3))
 
             HStack(spacing: Spacing.sm) {
-                ForEach(SchoolProvider.allCases) { provider in
+                ForEach(SchoolProvider.offeredForNewSignIn) { provider in
                     Button {
                         viewModel.changeProvider(provider)
                     } label: {

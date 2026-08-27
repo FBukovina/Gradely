@@ -36,6 +36,14 @@
 				<string>gradely</string>
 			</array>
 		</dict>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>intercom-$(INTERCOM_APP_ID)</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>intercom-$(INTERCOM_APP_ID)</string>
+			</array>
+		</dict>
 	</array>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>

@@ -357,6 +357,13 @@ struct GradeyAIView: View {
                 }
 
                 consentDetail(
+                    icon: "sparkles",
+                    title: "gradey.ai.consent.system.title",
+                    message: "gradey.ai.consent.system.message"
+                )
+                .accessibilityIdentifier("gradeyAIAIActDisclosure")
+
+                consentDetail(
                     icon: "chart.bar.doc.horizontal",
                     title: "gradey.ai.consent.schoolData.title",
                     message: "gradey.ai.consent.schoolData.message"
@@ -1011,6 +1018,12 @@ private struct GradeyAIMessageBubble: View {
             }
 
             VStack(alignment: message.role == .user ? .trailing : .leading, spacing: Spacing.sm) {
+                if message.role == .assistant, !message.content.isEmpty {
+                    Text("gradey.ai.act.generated")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                }
+
                 if message.content.isEmpty, message.status == .streaming {
                     ProgressView()
                         .controlSize(.small)

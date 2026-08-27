@@ -15,23 +15,12 @@ enum IntercomIdentity {
         identify(userID: account.id, email: account.email, name: account.fullName)
     }
 
-    static func identify(userID: String, email: String?, name: String?) {
-        #if os(iOS) && canImport(Intercom)
-        guard IntercomConfiguration.isConfigured, AgeAttestationStore.allowsAppUse() else { return }
-        let trimmedID = userID.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmedID.isEmpty else { return }
-
-        let attributes = ICMUserAttributes()
-        attributes.userId = trimmedID
-        if let email, !email.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            attributes.email = email
-        }
-        if let name, !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            attributes.name = name
-        }
-
-        Intercom.loginUser(with: attributes) { _ in }
-        #endif
+    static func identify(userID _: String, email _: String?, name _: String?) {
+        // Intercom Messenger Security (JWT / identity verification) rejects
+        // identified iOS sessions that have no user_hash/JWT. That shows
+        // "Something's gone wrong / Content could not be loaded" on device.
+        // Stay unidentified until a server-issued JWT exists.
+        loginUnidentified()
     }
 
     static func reset() {
@@ -47,11 +36,13 @@ enum IntercomIdentity {
         #if os(iOS) && canImport(Intercom)
         guard IntercomConfiguration.isConfigured, AgeAttestationStore.allowsAppUse() else { return }
         if Intercom.isUserLoggedIn() {
-            Intercom.present()
-            return
+            Intercom.logout()
         }
-        Intercom.loginUnidentifiedUser { _ in
-            Intercom.present()
+        Intercom.loginUnidentifiedUser { result in
+            DispatchQueue.main.async {
+                guard case .success = result else { return }
+                Intercom.present()
+            }
         }
         #endif
     }

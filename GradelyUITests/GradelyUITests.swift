@@ -828,6 +828,7 @@ final class GradelyUITests: XCTestCase {
         aiButton.tap()
 
         XCTAssertTrue(app.descendants(matching: .any)["gradeyAIConsentView"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.descendants(matching: .any)["gradeyAIAIActDisclosure"].exists)
         let consentButton = app.buttons["gradeyAIConsentButton"]
         XCTAssertTrue(consentButton.waitForExistence(timeout: 3))
         consentButton.tap()
@@ -853,6 +854,7 @@ final class GradelyUITests: XCTestCase {
         aiButton.tap()
 
         XCTAssertTrue(app.descendants(matching: .any)["gradeyAIConsentView"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.descendants(matching: .any)["gradeyAIAIActDisclosure"].exists)
         XCTAssertTrue(app.descendants(matching: .any)["gradeyAIServiceUnavailableBanner"].exists)
         XCTAssertFalse(app.descendants(matching: .any)["gradeyAIUnavailable"].exists)
 

@@ -176,25 +176,33 @@ struct GradeyAIWatchView: View {
 
     @ViewBuilder
     private func bubbleBody(_ message: WatchAIChatMessage) -> some View {
-        Group {
-            if message.text.isEmpty && message.isStreaming {
-                ProgressView()
-                    .controlSize(.mini)
-                    .tint(WatchBrand.primary)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 8)
-                    .accessibilityLabel("watch.ai.responding")
-            } else {
-                Text(message.text)
-                    .font(.caption)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 6)
+        VStack(alignment: message.role == .user ? .trailing : .leading, spacing: 2) {
+            Group {
+                if message.text.isEmpty && message.isStreaming {
+                    ProgressView()
+                        .controlSize(.mini)
+                        .tint(WatchBrand.primary)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 8)
+                        .accessibilityLabel("watch.ai.responding")
+                } else {
+                    Text(message.text)
+                        .font(.caption)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 6)
+                }
             }
-        }
-        .foregroundStyle(message.role == .user ? WatchBrand.onAccent : .white)
-        .background {
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(message.role == .user ? AnyShapeStyle(WatchBrand.gradient) : AnyShapeStyle(.white.opacity(0.08)))
+            .foregroundStyle(message.role == .user ? WatchBrand.onAccent : .white)
+            .background {
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(message.role == .user ? AnyShapeStyle(WatchBrand.gradient) : AnyShapeStyle(.white.opacity(0.08)))
+            }
+
+            if message.role == .assistant, !message.text.isEmpty {
+                Text("watch.ai.generated")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
         }
     }
 }

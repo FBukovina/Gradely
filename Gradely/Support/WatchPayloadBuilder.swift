@@ -45,12 +45,12 @@ enum WatchPayloadBuilder {
     ) -> GradelyWatchTimetable {
         let weekdayFormatter = DateFormatter()
         weekdayFormatter.calendar = calendar
-        weekdayFormatter.locale = .current
+        weekdayFormatter.locale = AppLanguageOverride.locale
         weekdayFormatter.setLocalizedDateFormatFromTemplate("EEE")
 
         let detailFormatter = DateFormatter()
         detailFormatter.calendar = calendar
-        detailFormatter.locale = .current
+        detailFormatter.locale = AppLanguageOverride.locale
         detailFormatter.setLocalizedDateFormatFromTemplate("d MMM")
 
         return GradelyWatchTimetable(
@@ -150,16 +150,7 @@ enum WatchPayloadBuilder {
     }
 
     private static func fallbackWeekdayTitle(for dayOfWeek: Int) -> String {
-        switch dayOfWeek {
-        case 1: return "Mon"
-        case 2: return "Tue"
-        case 3: return "Wed"
-        case 4: return "Thu"
-        case 5: return "Fri"
-        case 6: return "Sat"
-        case 7: return "Sun"
-        default: return "Day"
-        }
+        TimetableDates.weekdayAbbreviation(dayOfWeek: dayOfWeek)
     }
 
     private static func emptyToNil(_ value: String) -> String? {

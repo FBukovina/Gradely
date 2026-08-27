@@ -158,7 +158,9 @@ enum AbsenceSummary {
             AbsenceMonthSummary(
                 id: TimetableDates.apiDateString(month),
                 monthDate: month,
-                title: month.formatted(.dateTime.month(.wide).year()),
+                title: month.formatted(
+                    Date.FormatStyle(locale: AppLanguageOverride.locale).month(.wide).year()
+                ),
                 counts: counts
             )
         }

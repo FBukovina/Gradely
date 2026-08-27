@@ -139,3 +139,37 @@ struct TimetableTests {
         #expect(week.weekStart == TimetableDates.monday(of: Date()))
     }
 }
+
+struct TimetableDateFormattingTests {
+    private var pragueCalendar: Calendar {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Europe/Prague")!
+        return calendar
+    }
+
+    @Test func weekRangeTitleFollowsLocale() throws {
+        let monday = try #require(
+            pragueCalendar.date(from: DateComponents(year: 2026, month: 8, day: 24, hour: 12))
+        )
+
+        let english = TimetableDates.weekRangeTitle(weekStart: monday, locale: Locale(identifier: "en_US"))
+        #expect(english.localizedCaseInsensitiveContains("Aug"))
+
+        let czech = TimetableDates.weekRangeTitle(weekStart: monday, locale: Locale(identifier: "cs_CZ"))
+        #expect(!czech.localizedCaseInsensitiveContains("Aug"))
+        #expect(czech.localizedCaseInsensitiveContains("srp") || czech.contains("8"))
+    }
+
+    @Test func weekdayAbbreviationFollowsLocale() throws {
+        let monday = try #require(
+            pragueCalendar.date(from: DateComponents(year: 2026, month: 8, day: 24, hour: 12))
+        )
+
+        let english = TimetableDates.weekdayAbbreviation(monday, locale: Locale(identifier: "en_US"))
+        #expect(english.localizedCaseInsensitiveContains("mon"))
+
+        let czech = TimetableDates.weekdayAbbreviation(monday, locale: Locale(identifier: "cs_CZ"))
+        #expect(czech.localizedCaseInsensitiveContains("po"))
+        #expect(!czech.localizedCaseInsensitiveContains("mon"))
+    }
+}

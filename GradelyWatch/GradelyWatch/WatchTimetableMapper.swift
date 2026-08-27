@@ -362,16 +362,11 @@ enum WatchTimetableMapper {
     }
 
     private static func fallbackWeekdayTitle(for dayOfWeek: Int) -> String {
-        switch dayOfWeek {
-        case 1: return "Mon"
-        case 2: return "Tue"
-        case 3: return "Wed"
-        case 4: return "Thu"
-        case 5: return "Fri"
-        case 6: return "Sat"
-        case 7: return "Sun"
-        default: return "Day"
-        }
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.locale = .current
+        let symbols = calendar.shortWeekdaySymbols
+        let index = dayOfWeek % 7
+        return symbols.indices.contains(index) ? symbols[index] : ""
     }
 
     private static func emptyToNil(_ value: String) -> String? {

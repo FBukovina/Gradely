@@ -33,15 +33,15 @@ struct NextLessonWidget: Widget {
                 }
                 .widgetURL(NextLessonWidgetConstants.timetableDeepLink)
         }
-        .configurationDisplayName("Next Lesson")
+        .configurationDisplayName("widget.nextLesson.name")
         .description(configurationDescription)
     }
 
-    private var configurationDescription: String {
+    private var configurationDescription: LocalizedStringResource {
         #if os(macOS)
-        return "See your current or next subject on the desktop."
+        LocalizedStringResource("widget.nextLesson.description.desktop")
         #else
-        return "See your current or next subject on the Lock Screen."
+        LocalizedStringResource("widget.nextLesson.description.lockScreen")
         #endif
     }
 }
@@ -143,11 +143,11 @@ private struct NextLessonWidgetView: View {
         case .lesson(let lesson, let timing):
             accessoryLessonView(lesson: lesson, timing: timing)
         case .noSnapshot:
-            accessoryEmptyView(title: "Open Gradey", subtitle: "Load timetable", systemImage: "calendar")
+            accessoryEmptyView(title: String(localized: "widget.empty.open"), subtitle: String(localized: "widget.empty.load"), systemImage: "calendar")
         case .noLessons:
-            accessoryEmptyView(title: "No lessons", subtitle: "Open Gradey", systemImage: "calendar.badge.checkmark")
+            accessoryEmptyView(title: String(localized: "widget.empty.noLessons"), subtitle: String(localized: "widget.empty.open"), systemImage: "calendar.badge.checkmark")
         case .stale:
-            accessoryEmptyView(title: "Open Gradey", subtitle: "Refresh timetable", systemImage: "arrow.clockwise")
+            accessoryEmptyView(title: String(localized: "widget.empty.open"), subtitle: String(localized: "widget.empty.refresh"), systemImage: "arrow.clockwise")
         }
     }
 
@@ -157,11 +157,11 @@ private struct NextLessonWidgetView: View {
         case .lesson(let lesson, let timing):
             systemLessonView(lesson: lesson, timing: timing)
         case .noSnapshot:
-            systemEmptyView(title: "Open Gradey", subtitle: "Load your timetable to show the next lesson.", systemImage: "calendar")
+            systemEmptyView(title: String(localized: "widget.empty.open"), subtitle: String(localized: "widget.empty.load.detail"), systemImage: "calendar")
         case .noLessons:
-            systemEmptyView(title: "No lessons", subtitle: "Your timetable is clear for now.", systemImage: "calendar.badge.checkmark")
+            systemEmptyView(title: String(localized: "widget.empty.noLessons"), subtitle: String(localized: "widget.empty.noLessons.detail"), systemImage: "calendar.badge.checkmark")
         case .stale:
-            systemEmptyView(title: "Refresh timetable", subtitle: "Open Gradey to update this widget.", systemImage: "arrow.clockwise")
+            systemEmptyView(title: String(localized: "widget.empty.refresh"), subtitle: String(localized: "widget.empty.refresh.detail"), systemImage: "arrow.clockwise")
         }
     }
 
@@ -298,13 +298,13 @@ private struct NextLessonWidgetView: View {
         case .none:
             return nil
         case .canceled:
-            return "Canceled"
+            return String(localized: "widget.change.canceled")
         case .substitution:
-            return "Changed"
+            return String(localized: "widget.change.changed")
         case .roomChanged:
-            return "Room"
+            return String(localized: "widget.change.room")
         case .added:
-            return "Added"
+            return String(localized: "widget.change.added")
         }
     }
 
@@ -324,9 +324,9 @@ private struct NextLessonWidgetView: View {
     private func timingText(for timing: NextLessonWidgetTiming) -> String {
         switch timing {
         case .current:
-            return "Now"
+            return String(localized: "widget.timing.now")
         case .upcoming:
-            return "Next"
+            return String(localized: "widget.timing.next")
         }
     }
 

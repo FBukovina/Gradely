@@ -335,7 +335,7 @@ enum StravaCZFormatters {
 
     nonisolated private static func displayFormatter() -> DateFormatter {
         let formatter = DateFormatter()
-        formatter.locale = .autoupdatingCurrent
+        formatter.locale = AppLanguageOverride.locale
         formatter.dateStyle = .medium
         formatter.timeStyle = .none
         return formatter

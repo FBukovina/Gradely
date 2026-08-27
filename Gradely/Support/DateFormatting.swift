@@ -29,7 +29,7 @@ enum MarkDateFormatter {
         }
 
         return date.formatted(
-            .dateTime
+            Date.FormatStyle(locale: AppLanguageOverride.locale)
                 .day()
                 .month(.defaultDigits)
                 .year()
@@ -39,6 +39,7 @@ enum MarkDateFormatter {
     static func relativeDate(_ string: String, relativeTo now: Date = Date()) -> String {
         guard let date = date(from: string) else { return "" }
         let formatter = RelativeDateTimeFormatter()
+        formatter.locale = AppLanguageOverride.locale
         formatter.unitsStyle = .full
         return formatter.localizedString(for: date, relativeTo: now)
     }
@@ -87,12 +88,42 @@ enum TimetableDates {
         apiFormatter.string(from: date)
     }
 
-    /// Localized Monday–Friday range label, e.g. "8 – 12 Jun".
-    static func weekRangeTitle(weekStart monday: Date) -> String {
+    /// Localized Monday–Friday range label, e.g. "8 – 12 Jun" / "8.–12. čvn".
+    static func weekRangeTitle(
+        weekStart monday: Date,
+        locale: Locale = AppLanguageOverride.locale
+    ) -> String {
         let friday = weekCalendar.date(byAdding: .day, value: 4, to: monday) ?? monday
+        let dayMonth = Date.FormatStyle(locale: locale).day().month(.abbreviated)
         guard monday < friday else {
-            return monday.formatted(.dateTime.day().month(.abbreviated))
+            return monday.formatted(dayMonth)
         }
-        return (monday..<friday).formatted(.interval.day().month(.abbreviated))
+        return (monday..<friday).formatted(.interval.day().month(.abbreviated).locale(locale))
+    }
+
+    static func weekdayAbbreviation(
+        _ date: Date,
+        locale: Locale = AppLanguageOverride.locale
+    ) -> String {
+        date.formatted(Date.FormatStyle(locale: locale).weekday(.abbreviated))
+    }
+
+    static func dayNumber(
+        _ date: Date,
+        locale: Locale = AppLanguageOverride.locale
+    ) -> String {
+        date.formatted(Date.FormatStyle(locale: locale).day())
+    }
+
+    /// API `DayOfWeek` is 1 = Monday … 7 = Sunday; `shortWeekdaySymbols[0]` is Sunday.
+    static func weekdayAbbreviation(
+        dayOfWeek: Int,
+        locale: Locale = AppLanguageOverride.locale
+    ) -> String {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.locale = locale
+        let symbols = calendar.shortWeekdaySymbols
+        let index = dayOfWeek % 7
+        return symbols.indices.contains(index) ? symbols[index] : ""
     }
 }

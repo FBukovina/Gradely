@@ -22,9 +22,9 @@ enum GradeyAIError: LocalizedError, Equatable {
         case .invalidResponse, .invalidStream:
             return AppL10n.string("gradey.account.error.invalidResponse")
         case .invalidPrompt:
-            return "Enter a message between 1 and 2,000 characters."
+            return AppL10n.string("gradey.ai.error.invalidPrompt")
         case .requestTooLarge:
-            return "The selected school context is too large to send. Refresh it and try again."
+            return AppL10n.string("gradey.ai.error.requestTooLarge")
         case .unauthenticated:
             return AppL10n.string("gradey.ai.error.unauthenticated")
         case .server(_, let message, _):

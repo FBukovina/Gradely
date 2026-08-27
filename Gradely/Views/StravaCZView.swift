@@ -313,7 +313,7 @@ private struct StravaCZDayCard: View {
         guard let date else { return nil }
 
         let formatter = DateFormatter()
-        formatter.locale = .autoupdatingCurrent
+        formatter.locale = AppLanguageOverride.locale
         formatter.timeZone = TimeZone(secondsFromGMT: 0)
         formatter.dateFormat = "EEEE"
         return formatter.string(from: date)

@@ -159,7 +159,7 @@ private struct TodaySummaryCard: View {
                     GradelyIcon(systemName: "forward.fill")
                         .font(.caption.weight(.bold))
                         .foregroundStyle(.secondary)
-                    Text("Next: \(lessonTitle(next))")
+                    Text(String(format: AppL10n.string("timetable.summary.next"), lessonTitle(next)))
                         .font(.caption.weight(.semibold))
                         .lineLimit(1)
                     Spacer(minLength: 0)
@@ -193,35 +193,42 @@ private struct TodaySummaryCard: View {
     private var title: String {
         switch summary.state {
         case .empty:
-            return "No school today"
+            return AppL10n.string("timetable.summary.empty.title")
         case .beforeSchool:
-            return "School starts soon"
+            return AppL10n.string("timetable.summary.beforeSchool.title")
         case .current:
-            return "Now: \(summary.currentLesson.map(lessonTitle) ?? "Lesson")"
+            return String(
+                format: AppL10n.string("timetable.summary.now.title"),
+                summary.currentLesson.map(lessonTitle) ?? AppL10n.string("timetable.summary.lessonFallback")
+            )
         case .betweenLessons:
-            return "Between lessons"
+            return AppL10n.string("timetable.summary.between.title")
         case .afterSchool:
-            return "Done for today"
+            return AppL10n.string("timetable.summary.after.title")
         }
     }
 
     private var subtitle: String? {
         switch summary.state {
         case .empty:
-            return "There are no lessons in today's timetable."
+            return AppL10n.string("timetable.summary.empty.message")
         case .beforeSchool, .betweenLessons:
             guard let next = summary.nextLesson else { return nil }
             if let minutes = summary.minutesUntilNext {
-                return "\(lessonTitle(next)) starts in \(minutes) min"
+                return String(format: AppL10n.string("timetable.summary.nextIn"), lessonTitle(next), minutes)
             }
-            return "\(lessonTitle(next)) is next"
+            return String(format: AppL10n.string("timetable.summary.nextIs"), lessonTitle(next))
         case .current:
             if let minutes = summary.minutesRemainingInCurrent {
-                return "\(minutes) min remaining"
+                return String(format: AppL10n.string("timetable.summary.remaining"), minutes)
             }
             return nil
         case .afterSchool:
-            return summary.hasChanges ? "Check today's changes before you close the day." : "All listed lessons are over."
+            return AppL10n.string(
+                summary.hasChanges
+                    ? "timetable.summary.after.changes"
+                    : "timetable.summary.after.done"
+            )
         }
     }
 
@@ -238,9 +245,12 @@ private struct TodaySummaryCard: View {
     private var changeSummary: String {
         let count = summary.changedLessons.count
         if count == 1, let lesson = summary.changedLessons.first {
-            return "1 change today: \(lessonTitle(lesson))"
+            return String(format: AppL10n.string("timetable.summary.changes.one"), lessonTitle(lesson))
         }
-        return "\(count) changes today"
+        let key: String.LocalizationValue = (2...4).contains(count)
+            ? "timetable.summary.changes.few"
+            : "timetable.summary.changes.many"
+        return String(format: AppL10n.string(key), count)
     }
 
     private func lessonTitle(_ lesson: ScheduledLesson) -> String {
@@ -367,16 +377,14 @@ private struct DayChip: View {
 
     private var weekdaySymbol: String {
         if let date = day.date {
-            return date.formatted(.dateTime.weekday(.abbreviated))
+            return TimetableDates.weekdayAbbreviation(date)
         }
-        let symbols = Calendar.current.shortWeekdaySymbols
-        let index = day.dayOfWeek % 7 // API: 1 = Monday … 7 = Sunday; symbols[0] = Sunday
-        return symbols.indices.contains(index) ? symbols[index] : ""
+        return TimetableDates.weekdayAbbreviation(dayOfWeek: day.dayOfWeek)
     }
 
     private var dayNumber: String {
         guard let date = day.date else { return "" }
-        return date.formatted(.dateTime.day())
+        return TimetableDates.dayNumber(date)
     }
 }
 

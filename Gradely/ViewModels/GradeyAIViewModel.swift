@@ -752,7 +752,7 @@ final class GradeyAIViewModel {
     private static func contextWarning(for snapshot: GradeyAIContextSnapshot) -> String? {
         guard !snapshot.unavailableSections.isEmpty else { return nil }
         let sections = snapshot.unavailableSections.map(\.rawValue).joined(separator: ", ")
-        return "Some school context is unavailable or stale: \(sections)."
+        return String(format: AppL10n.string("gradey.ai.context.stale"), sections)
     }
 
     private func userFacingMessage(for error: Error) -> String {

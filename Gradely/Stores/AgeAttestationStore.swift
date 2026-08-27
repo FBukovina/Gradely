@@ -6,17 +6,23 @@ enum AgeAttestationKind: String, Codable, Equatable, Sendable {
     case thirteenToFifteenWithParent
     case underThirteen
 
+    /// EU storefronts only: GDPR Art. 8 parental consent, no COPPA hard stop.
     var allowsAppUse: Bool {
+        true
+    }
+
+    var needsParentalConsent: Bool {
         switch self {
-        case .sixteenOrOlder, .thirteenToFifteenWithParent:
-            true
-        case .underThirteen:
+        case .sixteenOrOlder:
             false
+        case .thirteenToFifteenWithParent, .underThirteen:
+            true
         }
     }
 }
 
-/// COPPA (under 13) and GDPR Art. 8 (Czech digital consent age is 15).
+/// GDPR Art. 8 for European storefronts. Uses the GDPR default digital-consent
+/// age of 16. Under-16 use, including under 13, needs a parent or guardian.
 /// Stores a self-attestation only — no birth date.
 @Observable
 final class AgeAttestationStore {
@@ -47,11 +53,6 @@ final class AgeAttestationStore {
 
     func confirm(_ kind: AgeAttestationKind) {
         self.kind = kind
-    }
-
-    func clearBlockedChoice() {
-        guard kind == .underThirteen else { return }
-        kind = nil
     }
 
     private func persist() {

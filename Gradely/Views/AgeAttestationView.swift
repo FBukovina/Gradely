@@ -2,15 +2,13 @@ import SwiftUI
 
 struct AgeAttestationView: View {
     @Bindable var store: AgeAttestationStore
-    @State private var pendingTeenConfirmation = false
+    @State private var pendingParentalKind: AgeAttestationKind?
     @State private var parentConfirmed = false
 
     var body: some View {
         Group {
-            if store.kind == .underThirteen {
-                blocked
-            } else if pendingTeenConfirmation {
-                teenConfirmation
+            if pendingParentalKind != nil {
+                parentalConfirmation
             } else {
                 chooser
             }
@@ -38,8 +36,7 @@ struct AgeAttestationView: View {
                     subtitle: "age.gate.teen.subtitle",
                     identifier: "ageAttestationTeenButton"
                 ) {
-                    pendingTeenConfirmation = true
-                    parentConfirmed = false
+                    beginParentalConfirmation(for: .thirteenToFifteenWithParent)
                 }
 
                 ageChoiceButton(
@@ -47,7 +44,7 @@ struct AgeAttestationView: View {
                     subtitle: "age.gate.underThirteen.subtitle",
                     identifier: "ageAttestationUnderThirteenButton"
                 ) {
-                    store.confirm(.underThirteen)
+                    beginParentalConfirmation(for: .underThirteen)
                 }
 
                 Link(destination: AppLinks.privacyPolicyURL) {
@@ -61,10 +58,12 @@ struct AgeAttestationView: View {
         }
     }
 
-    private var teenConfirmation: some View {
+    private var parentalConfirmation: some View {
         OnboardingStepScaffold(
             icon: "checkmark.shield",
-            title: "age.gate.teen.title",
+            title: pendingParentalKind == .underThirteen
+                ? "age.gate.underThirteen.title"
+                : "age.gate.teen.title",
             message: "age.gate.teen.confirm"
         ) {
             VStack(alignment: .leading, spacing: Spacing.lg) {
@@ -76,7 +75,8 @@ struct AgeAttestationView: View {
                 .accessibilityIdentifier("ageAttestationParentToggle")
 
                 Button {
-                    store.confirm(.thirteenToFifteenWithParent)
+                    guard let pendingParentalKind else { return }
+                    store.confirm(pendingParentalKind)
                 } label: {
                     Text("age.gate.teen.continue")
                 }
@@ -85,7 +85,7 @@ struct AgeAttestationView: View {
                 .accessibilityIdentifier("ageAttestationTeenContinue")
 
                 Button("age.gate.blocked.change") {
-                    pendingTeenConfirmation = false
+                    pendingParentalKind = nil
                     parentConfirmed = false
                 }
                 .font(.subheadline.weight(.semibold))
@@ -95,18 +95,9 @@ struct AgeAttestationView: View {
         }
     }
 
-    private var blocked: some View {
-        OnboardingStepScaffold(
-            icon: "xmark.shield",
-            title: "age.gate.blocked.title",
-            message: "age.gate.blocked.body"
-        ) {
-            Button("age.gate.blocked.change") {
-                store.clearBlockedChoice()
-            }
-            .buttonStyle(PrimaryButtonStyle())
-            .accessibilityIdentifier("ageAttestationBlockedChange")
-        }
+    private func beginParentalConfirmation(for kind: AgeAttestationKind) {
+        pendingParentalKind = kind
+        parentConfirmed = false
     }
 
     private func ageChoiceButton(

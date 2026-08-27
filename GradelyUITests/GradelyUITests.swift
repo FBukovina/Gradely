@@ -71,6 +71,11 @@ final class GradelyUITests: XCTestCase {
         XCTAssertTrue(app.buttons["ageAttestationTeenButton"].exists)
         XCTAssertTrue(app.buttons["ageAttestationUnderThirteenButton"].exists)
         XCTAssertFalse(app.tabBars.buttons.element(boundBy: 0).exists)
+
+        app.buttons["ageAttestationUnderThirteenButton"].tap()
+        XCTAssertTrue(app.descendants(matching: .any)["ageAttestationParentToggle"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["ageAttestationTeenContinue"].exists)
+        XCTAssertFalse(app.buttons["ageAttestationBlockedChange"].exists)
     }
 
     @MainActor

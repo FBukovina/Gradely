@@ -358,7 +358,7 @@ struct AppStoreLegalLinksTests {
 }
 
 struct AgeAttestationStoreTests {
-    @Test func sixteenAndTeenAllowUseAndUnderThirteenBlocks() throws {
+    @Test func everyAttestedAgeAllowsUseIncludingUnderThirteen() throws {
         let suiteName = "AgeAttestation.\(UUID().uuidString)"
         let defaults = try #require(UserDefaults(suiteName: suiteName))
         defer { defaults.removePersistentDomain(forName: suiteName) }
@@ -369,18 +369,17 @@ struct AgeAttestationStoreTests {
 
         store.confirm(.underThirteen)
         #expect(store.kind == .underThirteen)
-        #expect(!store.allowsAppUse)
+        #expect(store.allowsAppUse)
+        #expect(AgeAttestationKind.underThirteen.needsParentalConsent)
         #expect(defaults.string(forKey: AgeAttestationStore.storageKey) == AgeAttestationKind.underThirteen.rawValue)
-
-        store.clearBlockedChoice()
-        #expect(store.kind == nil)
-        #expect(!store.allowsAppUse)
 
         store.confirm(.thirteenToFifteenWithParent)
         #expect(store.allowsAppUse)
+        #expect(AgeAttestationKind.thirteenToFifteenWithParent.needsParentalConsent)
 
         store.confirm(.sixteenOrOlder)
         #expect(store.allowsAppUse)
+        #expect(!AgeAttestationKind.sixteenOrOlder.needsParentalConsent)
         #expect(defaults.string(forKey: AgeAttestationStore.storageKey) == AgeAttestationKind.sixteenOrOlder.rawValue)
         #expect(AgeAttestationStore.allowsAppUse(userDefaults: defaults))
     }

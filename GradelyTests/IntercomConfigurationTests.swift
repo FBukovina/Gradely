@@ -38,7 +38,8 @@ struct IntercomConfigurationTests {
     }
 
     @Test func unidentifiedLoginRequiresAgeAttestation() throws {
-        #expect(!AgeAttestationKind.underThirteen.allowsAppUse)
+        #expect(AgeAttestationKind.underThirteen.allowsAppUse)
+        #expect(AgeAttestationKind.underThirteen.needsParentalConsent)
         #expect(AgeAttestationKind.sixteenOrOlder.allowsAppUse)
         #expect(AgeAttestationKind.thirteenToFifteenWithParent.allowsAppUse)
     }

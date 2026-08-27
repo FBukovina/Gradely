@@ -1738,9 +1738,9 @@ private extension GradeyAccountHubView {
         switch AgeAttestationStore.shared.kind {
         case .sixteenOrOlder:
             "settings.privacy.age.sixteen"
-        case .thirteenToFifteenWithParent:
+        case .thirteenToFifteenWithParent, .underThirteen:
             "settings.privacy.age.teen"
-        case .underThirteen, nil:
+        case nil:
             "settings.privacy.age.unknown"
         }
     }

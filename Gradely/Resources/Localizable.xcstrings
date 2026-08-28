@@ -9167,25 +9167,25 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Podmínky používání"
+            "value" : "Podmínky používání (EULA)"
           }
         },
         "cs-US" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "podmínky používání"
+            "value" : "podmínky používání (eula)"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Terms of Use"
+            "value" : "Terms of Use (EULA)"
           }
         },
         "en-CO" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "terms of use"
+            "value" : "terms of use (eula)"
           }
         }
       }

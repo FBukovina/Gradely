@@ -355,6 +355,43 @@ struct AppStoreLegalLinksTests {
         let englishTerms = AppLinks.helpURL(path: "articles/11-terms-and-conditions", languageCode: "en")
         #expect(englishTerms.path.hasPrefix("/en/"))
     }
+
+    @Test func standardAppleEULAIsTheLicensedApplicationAgreement() {
+        #expect(
+            AppLinks.standardAppleEULAURL.absoluteString
+                == "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/"
+        )
+    }
+
+    @Test func appStoreDescriptionFooterIncludesFunctionalEULAAndPrivacyLinks() {
+        let english = AppLinks.appStoreDescriptionLegalFooter(languageCode: "en")
+        let englishPrivacy = AppLinks.helpURL(path: "articles/10-privacy-policy", languageCode: "en")
+        let englishTerms = AppLinks.helpURL(path: "articles/11-terms-and-conditions", languageCode: "en")
+        #expect(english.contains("Terms of Use (EULA): \(AppLinks.standardAppleEULAURL.absoluteString)"))
+        #expect(english.contains("Gradey Terms of Use: \(englishTerms.absoluteString)"))
+        #expect(english.contains("Privacy Policy: \(englishPrivacy.absoluteString)"))
+
+        let czech = AppLinks.appStoreDescriptionLegalFooter(languageCode: "cs")
+        let czechPrivacy = AppLinks.helpURL(path: "articles/10-privacy-policy", languageCode: "cs")
+        let czechTerms = AppLinks.helpURL(path: "articles/11-terms-and-conditions", languageCode: "cs")
+        #expect(czech.contains("Podmínky používání (EULA): \(AppLinks.standardAppleEULAURL.absoluteString)"))
+        #expect(czech.contains("Podmínky používání Gradey: \(czechTerms.absoluteString)"))
+        #expect(czech.contains("Zásady ochrany osobních údajů: \(czechPrivacy.absoluteString)"))
+    }
+
+    @Test func macAppStoreDescriptionFooterFilesMatchTheCanonicalCopy() throws {
+        let repoRoot = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let enFile = repoRoot.appending(path: "AppStore/macos/description-legal-footer.en.txt")
+        let csFile = repoRoot.appending(path: "AppStore/macos/description-legal-footer.cs.txt")
+        let enContents = try String(contentsOf: enFile, encoding: .utf8)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let csContents = try String(contentsOf: csFile, encoding: .utf8)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        #expect(enContents == AppLinks.appStoreDescriptionLegalFooter(languageCode: "en"))
+        #expect(csContents == AppLinks.appStoreDescriptionLegalFooter(languageCode: "cs"))
+    }
 }
 
 struct AgeAttestationStoreTests {

@@ -1,0 +1,106 @@
+GRADEY END USER LICENSE AGREEMENT
+
+English
+=======
+
+These Terms of Use ("Terms") are an agreement between you and Open Side (openside.tech), operated by Filip Bukovina ("Open Side", "we", "us"), for the Gradey app. By downloading, installing or using Gradey you accept these Terms. If you do not accept them, do not use Gradey.
+
+The current English text is published at https://help.bukovinafilip.com/en/articles/11-terms-and-conditions. The Czech text is at https://help.bukovinafilip.com/cs/articles/11-terms-and-conditions. The Privacy Policy is at https://help.bukovinafilip.com/en/articles/10-privacy-policy (Czech: https://help.bukovinafilip.com/cs/articles/10-privacy-policy).
+
+Apple's Licensed Application End User License Agreement also applies: https://www.apple.com/legal/internet-services/itunes/dev/stdeula/
+
+1. Who we are and what Gradey is
+Gradey (Apple bundle identifier com.bukovinafilip.BakalariMarks) is an unofficial client that helps students and parents view marks, absences, timetable, canteen and meals and related school information from systems such as Bakaláři, EduPage and Strava.cz. It runs on iPhone, iPad, Apple Watch, widgets and macOS under the same bundle identifier. Gradey is published by Open Side / Filip Bukovina. It is not an official product of Bakaláři, EduPage, Strava.cz or of any school.
+
+2. Unofficial client
+Gradey talks to school systems in an unofficial way. Those systems can change, rate-limit, break or block unofficial clients at any time. We do not guarantee that Gradey will keep working with any school, module, API or feature. You use Gradey at your own risk.
+
+3. Eligibility
+Gradey is intended for students and parents in Czechia and the European Union. You must be allowed to use Apple's App Store and to enter into these Terms. If you are a minor under the law of your country, a parent or guardian must agree to these Terms and supervise your use where that is required.
+
+4. Gradey ID
+Some features require a Gradey ID created with Sign in with Apple. You are responsible for the Apple ID you use and for activity on your Gradey account.
+
+5. Linked school accounts
+You may link Bakaláři, EduPage and/or Strava.cz credentials. You must have the right to use those credentials. Do not use another person's account without permission. School credentials may be stored so Gradey can sync school data. Details are in the Privacy Policy.
+
+6. School data is provided as-is
+Marks, absences, timetable, meals and other school data are copied from the school system as that system returns them. The official school system remains the source of truth.
+
+7. Gradey AI
+Gradey AI is optional and requires in-app privacy consent. Daily AI limits depend on a support subscription and tier. AI output can be wrong, incomplete or out of date.
+
+8. Support subscriptions and tips
+Gradey may offer optional support subscriptions and consumable tips. These are not a "Gradey Pro" unlock of core school features. Marks, timetable and absences work without a paid subscription. Paid support tiers raise Gradey AI daily limits and related support perks.
+
+Auto-renewable subscription product identifiers currently include:
+- support.standard.monthly — Standard support, monthly
+- support.standard.yearly — Standard support, yearly
+- support.plus.monthly — Plus support, monthly
+- support.plus.yearly — Plus support, yearly
+
+Payment is charged to your Apple ID at confirmation of purchase. A support subscription automatically renews unless you cancel at least 24 hours before the end of the current period. Manage or cancel in Settings → Apple ID → Subscriptions, or use Manage Subscriptions in the Gradey app. Deleting the app does not cancel a subscription.
+
+Restore Purchases is available in the app so you can restore a support subscription bought with the same Apple ID.
+
+9. Disclaimer and liability
+Gradey is provided "as is" and "as available". To the maximum extent permitted by law we disclaim implied warranties of merchantability, fitness for a particular purpose and non-infringement. Nothing in these Terms limits liability that cannot be limited under mandatory law. If you are a consumer in the EU, you keep the mandatory rights of your country of residence.
+
+10. Governing law
+These Terms are governed by the law of the Czech Republic, excluding conflict-of-law rules that would refer to another law, subject to mandatory consumer venue rules.
+
+11. Contact
+Open Side / Filip Bukovina — openside.tech. Email: filip@openside.tech.
+
+
+Čeština
+=======
+
+Tyto Podmínky používání ("Podmínky") jsou smlouvou mezi vámi a Open Side (openside.tech), provozovaným Filipem Bukovinou ("Open Side", "my"), pro aplikaci Gradey. Stažením, instalací nebo používáním Gradey tyto Podmínky přijímáte. Pokud je nepřijímáte, Gradey nepoužívejte.
+
+Aktuální anglický text je na https://help.bukovinafilip.com/en/articles/11-terms-and-conditions. Český text je na https://help.bukovinafilip.com/cs/articles/11-terms-and-conditions. Zásady ochrany osobních údajů: https://help.bukovinafilip.com/cs/articles/10-privacy-policy.
+
+Platí také standardní licenční smlouva Apple: https://www.apple.com/legal/internet-services/itunes/dev/stdeula/
+
+1. Kdo jsme a co je Gradey
+Gradey (bundle identifier com.bukovinafilip.BakalariMarks) je neoficiální klient, který studentům a rodičům pomáhá prohlížet známky, absence, rozvrh, jídelnu a související školní informace ze systémů jako Bakaláři, EduPage a Strava.cz. Běží na iPhonu, iPadu, Apple Watch, widgetech a macOS pod stejným identifikátorem. Gradey vydává Open Side / Filip Bukovina. Nejde o oficiální produkt Bakaláři, EduPage, Strava.cz ani žádné školy.
+
+2. Neoficiální klient
+Gradey se ke školním systémům připojuje neoficiálně. Tyto systémy se mohou kdykoli změnit, omezit nebo zablokovat neoficiální klienty. Negarantujeme, že Gradey bude dál fungovat s jakoukoli školou, modulem nebo API. Gradey používáte na vlastní riziko.
+
+3. Způsobilost
+Gradey je určen studentům a rodičům v Česku a Evropské unii. Musíte mít oprávnění používat App Store a uzavřít tyto Podmínky. Pokud jste nezletilí, musí s Podmínkami souhlasit rodič nebo zákonný zástupce.
+
+4. Gradey ID
+Některé funkce vyžadují Gradey ID vytvořené přes Přihlášení přes Apple. Zodpovídáte za Apple ID, které používáte, a za aktivitu na svém účtu Gradey.
+
+5. Propojené školní účty
+Můžete propojit přihlašovací údaje Bakaláři, EduPage a/nebo Strava.cz. Musíte mít právo tyto údaje používat. Školní přihlašovací údaje se mohou ukládat kvůli synchronizaci. Podrobnosti jsou v Zásadách ochrany osobních údajů.
+
+6. Školní data jsou tak, jak je systém vrátí
+Známky, absence, rozvrh, jídla a další školní data se kopírují ze školního systému. Oficiální školní systém zůstává zdrojem pravdy.
+
+7. Gradey AI
+Gradey AI je volitelné a vyžaduje souhlas se zpracováním. Denní limity AI závisí na podpůrném předplatném a tarifu. Výstup AI může být chybný, neúplný nebo zastaralý.
+
+8. Podpůrná předplatná a spropitné
+Gradey může nabízet volitelná podpůrná předplatná a jednorázové spropitné. Nejde o odemčení "Gradey Pro". Známky, rozvrh a absence fungují bez placeného předplatného. Placené tarify zvyšují denní limity Gradey AI.
+
+Identifikátory automaticky obnovovaných předplatných aktuálně zahrnují:
+- support.standard.monthly — Standard, měsíčně
+- support.standard.yearly — Standard, ročně
+- support.plus.monthly — Plus, měsíčně
+- support.plus.yearly — Plus, ročně
+
+Platba se strhne z Apple ID při potvrzení nákupu. Předplatné se obnovuje automaticky, pokud ho nezrušíte nejméně 24 hodin před koncem období. Spravovat nebo zrušit ho můžete v Nastavení → Apple ID → Předplatná, nebo v aplikaci Gradey. Smazání aplikace předplatné neruší.
+
+Obnovení nákupů je v aplikaci k dispozici, abyste mohli obnovit předplatné koupené pod stejným Apple ID.
+
+9. Vyloučení záruk a odpovědnosti
+Gradey se poskytuje "tak, jak je" a "jak je k dispozici". V maximálním rozsahu povoleném právem vylučujeme předpokládané záruky. Nic v těchto Podmínkách neomezuje odpovědnost, kterou nelze omezit. Pokud jste spotřebitel v EU, zachováváte si povinná práva země bydliště.
+
+10. Rozhodné právo
+Tyto Podmínky se řídí právem České republiky, s výjimkou kolizních norem, které by odkazovaly na jiné právo, a s výhradou kogentních pravidel o příslušnosti u spotřebitelů.
+
+11. Kontakt
+Open Side / Filip Bukovina — openside.tech. E-mail: filip@openside.tech.

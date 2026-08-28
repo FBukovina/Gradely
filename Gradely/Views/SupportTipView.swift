@@ -301,21 +301,21 @@ struct SupportTipOptionsContent: View {
             }
 
             HStack(spacing: Spacing.md) {
-                Link(destination: AppLinks.privacyPolicyURL) {
-                    Text("legal.privacyPolicy")
-                        .font(.footnote.weight(.semibold))
-                }
-                .accessibilityIdentifier("supportLegalPrivacyLink")
+                AppLegalTextLink(
+                    title: "legal.privacyPolicy",
+                    url: AppLinks.privacyPolicyURL,
+                    accessibilityIdentifier: "supportLegalPrivacyLink"
+                )
 
                 Text("·")
                     .foregroundStyle(.tertiary)
                     .accessibilityHidden(true)
 
-                Link(destination: AppLinks.termsOfUseURL) {
-                    Text("legal.termsOfUse")
-                        .font(.footnote.weight(.semibold))
-                }
-                .accessibilityIdentifier("supportLegalTermsLink")
+                AppLegalTextLink(
+                    title: "legal.termsOfUse",
+                    url: AppLinks.termsOfUseURL,
+                    accessibilityIdentifier: "supportLegalTermsLink"
+                )
             }
             .foregroundStyle(Brand.primary)
         }
@@ -520,6 +520,28 @@ private struct SupportTipRow: View {
         .accessibilityLabel("\(tip.title), \(tip.localizedPrice)")
         .accessibilityAddTraits(.isButton)
         .accessibilityIdentifier("supportTip-\(tip.id)")
+    }
+}
+
+/// Opens legal URLs with `openURL` so the paywall links stay tappable on macOS
+/// sheets, where SwiftUI `Link` plus custom styling can stop working.
+private struct AppLegalTextLink: View {
+    let title: LocalizedStringKey
+    let url: URL
+    let accessibilityIdentifier: String
+    @Environment(\.openURL) private var openURL
+
+    var body: some View {
+        Button {
+            openURL(url)
+        } label: {
+            Text(title)
+                .font(.footnote.weight(.semibold))
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier(accessibilityIdentifier)
+        .accessibilityValue(url.absoluteString)
+        .accessibilityAddTraits(.isLink)
     }
 }
 

@@ -215,8 +215,7 @@ struct LoginView: View {
                 }
             }
 
-            if ProcessInfo.processInfo.arguments.contains("-uiTestingMockAPI"),
-               viewModel.provider == .bakalari,
+            if viewModel.provider == .bakalari,
                !isSchoolSearchFocused {
                 Button {
                     viewModel.fillDemoAccount()

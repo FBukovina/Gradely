@@ -319,9 +319,9 @@ struct OnboardingView: View {
             journey: journey,
             accountIntent: viewModel.accountIntent,
             authClient: gradeyAuthClient,
-            onContinueWithoutAccount: journey == .upgrade
-                ? { Task { await chooseGuestMode() } }
-                : nil,
+            onContinueWithoutAccount: {
+                Task { await chooseGuestMode() }
+            },
             onSignedIn: {
                 Task { await completeGradeyIDSignIn() }
             }
@@ -585,7 +585,6 @@ struct OnboardingView: View {
     }
 
     private func chooseGuestMode() async {
-        guard journey == .upgrade else { return }
         isWorking = true
         await appViewModel.continueWithoutAccount()
         viewModel.chooseGuest()

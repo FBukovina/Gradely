@@ -246,8 +246,7 @@ struct OnboardingSchoolStep: View {
                 }
             }
 
-            if ProcessInfo.processInfo.arguments.contains("-uiTestingMockAPI"),
-               viewModel.provider == .bakalari {
+            if viewModel.provider == .bakalari {
                 Button {
                     viewModel.fillDemoAccount()
                     advanceToCredentials()

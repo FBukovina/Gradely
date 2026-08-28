@@ -10679,25 +10679,25 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Udělej si soukromé Gradey ID přes Apple, synchronizujte nastavení mezi zařízeními a zapni oznámení. Nemusíš si pamatovat žádné další heslo."
+            "value" : "Udělej si soukromé Gradey ID přes Apple, synchronizujte nastavení mezi zařízeními a zapni oznámení. Můžeš také pokračovat bez něj a školu připojit hned."
           }
         },
         "cs-US" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "udělej si soukromé Gradey ID přes Apple, ať se nastavení syncne a notifikace fungujou. žádný extra heslo."
+            "value" : "udělej si soukromé Gradey ID přes Apple, ať se nastavení syncne a notifikace fungujou. nebo pokračuj bez něj a školu připoj hned."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Create your private Gradey ID with Apple to sync settings across devices and enable notifications. There is no separate password to remember."
+            "value" : "Create your private Gradey ID with Apple to sync settings across devices and enable notifications. You can also continue without it and connect school now."
           }
         },
         "en-CO" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "create a private Gradey ID with Apple to sync settings and turn on notifications. no extra password to remember."
+            "value" : "create a private Gradey ID with Apple to sync settings and turn on notifications. or skip it and connect school now."
           }
         }
       }

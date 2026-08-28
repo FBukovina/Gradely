@@ -99,7 +99,7 @@ final class GradelyUITests: XCTestCase {
         XCTAssertTrue(appleButton.waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["onboardingProgressLabel"].exists)
         XCTAssertEqual(app.buttons.matching(identifier: "gradeyIDAppleButton").count, 1)
-        XCTAssertFalse(app.buttons["gradeyIDBypassButton"].exists)
+        XCTAssertTrue(app.buttons["gradeyIDBypassButton"].waitForExistence(timeout: 5))
         XCTAssertFalse(app.buttons["gradeyIDMockSignInButton"].exists)
         appleButton.tap()
 
@@ -140,6 +140,36 @@ final class GradelyUITests: XCTestCase {
         // stays completed and does not appear again.
         XCTAssertTrue(app.textFields["schoolURLField"].waitForExistence(timeout: 5))
         XCTAssertFalse(app.buttons["onboardingPrimaryButton"].exists)
+    }
+
+    @MainActor
+    func testNewUserOnboardingAllowsGuestThenDemoSchool() throws {
+        let app = XCUIApplication()
+        app.launchArguments = [
+            "-uiTestingMockAPI",
+            "-uiTestingShowOnboarding",
+            "-uiTestingResetOnboarding",
+            "-uiTestingRequiresGradeyID",
+            "-uiTestingGradeyIDSignedOut",
+            "-uiTestingResetGuestMode"
+        ]
+        app.launch()
+
+        XCTAssertTrue(app.buttons["onboardingPrimaryButton"].waitForExistence(timeout: 5))
+        app.buttons["onboardingPrimaryButton"].tap()
+
+        XCTAssertTrue(app.buttons["gradeyIDBypassButton"].waitForExistence(timeout: 5))
+        app.buttons["gradeyIDBypassButton"].tap()
+
+        XCTAssertTrue(app.textFields["schoolURLField"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["demoAccountButton"].waitForExistence(timeout: 5))
+        app.buttons["demoAccountButton"].tap()
+        app.buttons["loginButton"].tap()
+
+        XCTAssertTrue(app.buttons["onboardingFinishButton"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["onboardingNotificationsNotNowButton"].exists)
+        app.buttons["onboardingFinishButton"].tap()
+        XCTAssertTrue(app.scrollViews["todayScrollView"].waitForExistence(timeout: 5))
     }
 
     @MainActor
@@ -1074,7 +1104,7 @@ final class GradelyUITests: XCTestCase {
 
         app.buttons["onboardingBackButton"].tap()
         XCTAssertTrue(app.buttons["gradeyIDAppleButton"].waitForExistence(timeout: 5))
-        XCTAssertFalse(app.buttons["gradeyIDBypassButton"].exists)
+        XCTAssertTrue(app.buttons["gradeyIDBypassButton"].waitForExistence(timeout: 5))
         XCTAssertFalse(app.scrollViews["accountHubScroll"].exists)
     }
 

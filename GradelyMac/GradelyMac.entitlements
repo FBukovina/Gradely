@@ -18,13 +18,5 @@
 	<string>$(APP_ATTEST_ENVIRONMENT)</string>
 	<key>com.apple.security.network.client</key>
 	<true/>
-	<key>keychain-access-groups</key>
-	<array>
-		<string>$(AppIdentifierPrefix)com.bukovinafilip.BakalariMarks</string>
-	</array>
-	<key>com.apple.security.keychain-access-groups</key>
-	<array>
-		<string>$(AppIdentifierPrefix)com.bukovinafilip.BakalariMarks</string>
-	</array>
 </dict>
 </plist>

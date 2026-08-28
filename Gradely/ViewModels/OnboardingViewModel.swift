@@ -266,8 +266,8 @@ final class OnboardingViewModel {
         switch journey {
         case .newUser:
             currentStep == .ready
-                && accountMode == .gradeyID
                 && hasSchoolConnection
+                && accountMode != .undecided
         case .upgrade:
             currentStep == .support
                 && (accountMode != .gradeyID || hasRecordedUpgradeMigration)
@@ -339,12 +339,16 @@ final class OnboardingViewModel {
     }
 
     func chooseGuest() {
-        guard journey == .upgrade else { return }
         accountMode = .guest
         notificationStatus = .unavailable
         schoolCloudLinkStatus = .notApplicable
         mealsCloudLinkStatus = .notApplicable
-        setStep(.support)
+        switch journey {
+        case .upgrade:
+            setStep(.support)
+        case .newUser:
+            setStep(hasSchoolConnection ? nextStepAfterSchool : .school)
+        }
     }
 
     func markSignedIn() {
@@ -494,18 +498,24 @@ final class OnboardingViewModel {
         switch journey {
         case .newUser:
             guard savedStep != .welcome else { return .welcome }
-            guard accountMode == .gradeyID else { return .account }
-            guard hasSchoolConnection else { return .school }
+            switch accountMode {
+            case .undecided:
+                return .account
+            case .guest:
+                return hasSchoolConnection ? .ready : .school
+            case .gradeyID:
+                guard hasSchoolConnection else { return .school }
 
-            if savedStep == .ready {
-                return .ready
+                if savedStep == .ready {
+                    return .ready
+                }
+                if savedStep == .notifications,
+                   schoolCloudLinkStatus == .linked,
+                   notificationStatus == .notDetermined {
+                    return .notifications
+                }
+                return nextStepAfterSchool
             }
-            if savedStep == .notifications,
-               schoolCloudLinkStatus == .linked,
-               notificationStatus == .notDetermined {
-                return .notifications
-            }
-            return nextStepAfterSchool
 
         case .upgrade:
             if accountMode == .gradeyID || savedStep == .support {

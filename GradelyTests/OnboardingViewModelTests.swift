@@ -114,7 +114,7 @@ struct OnboardingViewModelTests {
         #expect(store.loadProgress() == .initial(for: .upgrade))
     }
 
-    @Test func newUserJourneyRequiresGradeyIDAndNeverAcceptsGuestChoice() {
+    @Test func newUserJourneyAllowsGuestThenRequiresSchool() {
         let store = InMemoryOnboardingProgressStore()
         let viewModel = OnboardingViewModel(journey: .newUser, progressStore: store)
 
@@ -124,10 +124,16 @@ struct OnboardingViewModelTests {
         viewModel.advanceFromWelcome()
         viewModel.chooseGuest()
 
-        #expect(viewModel.currentStep == .account)
-        #expect(viewModel.accountMode == .undecided)
-        #expect(!viewModel.finish())
-        #expect(store.savedProgress == OnboardingProgress(journey: .newUser, step: .account))
+        #expect(viewModel.accountMode == .guest)
+        #expect(viewModel.currentStep == .school)
+        #expect(!viewModel.visibleSteps.contains(.notifications))
+        #expect(!viewModel.canFinish)
+
+        viewModel.markSchoolConnected(cloudLink: .notApplicable)
+        #expect(viewModel.currentStep == .ready)
+        #expect(viewModel.canFinish)
+        #expect(viewModel.finish())
+        #expect(store.savedProgress == nil)
     }
 
     @Test func newUserHappyPathConnectsSchoolOffersNotificationsAndFinishes() {

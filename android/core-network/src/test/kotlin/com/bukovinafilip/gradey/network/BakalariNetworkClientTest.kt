@@ -3,6 +3,12 @@ package com.bukovinafilip.gradey.network
 import com.bukovinafilip.gradey.model.Subject
 import com.bukovinafilip.gradey.model.SubjectInfo
 import com.google.common.truth.Truth.assertThat
+import java.io.IOException
+import java.net.UnknownHostException
+import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.async
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -115,9 +121,12 @@ class BakalariNetworkClientTest {
 
         assertThat(failure).isInstanceOf(BakalariApiException::class.java)
         failure as BakalariApiException
+        assertThat(failure).isInstanceOf(BakalariHttpException::class.java)
+        assertThat(failure.kind).isEqualTo(BakalariErrorKind.HTTP)
         assertThat(failure.statusCode).isEqualTo(503)
         assertThat(failure.message).isEqualTo("The Bakaláři server is temporarily unavailable (HTTP 503).")
         assertThat(failure.message).doesNotContain("proxy secret")
+        assertThat(failure.cause).isNull()
     }
 
     @Test
@@ -128,8 +137,97 @@ class BakalariNetworkClientTest {
 
         assertThat(failure).isInstanceOf(BakalariApiException::class.java)
         failure as BakalariApiException
+        assertThat(failure).isInstanceOf(BakalariDecodingException::class.java)
+        assertThat(failure.kind).isEqualTo(BakalariErrorKind.DECODING)
         assertThat(failure.statusCode).isNull()
         assertThat(failure.message).isEqualTo("The school returned data Gradey could not read.")
+    }
+
+    @Test
+    fun authenticationStatusesHaveAnExplicitTypedFailure() = runTest {
+        listOf(401, 403).forEach { statusCode ->
+            server.enqueue(MockResponse().setResponseCode(statusCode).setBody("private server response"))
+
+            val failure = runCatching { client.fetchMarks(baseURL(), "private-token") }.exceptionOrNull()
+
+            assertThat(failure).isInstanceOf(BakalariAuthenticationException::class.java)
+            failure as BakalariAuthenticationException
+            assertThat(failure.kind).isEqualTo(BakalariErrorKind.AUTHENTICATION)
+            assertThat(failure.statusCode).isEqualTo(statusCode)
+            assertThat(failure.message).doesNotContain("private server response")
+            assertThat(failure.cause).isNull()
+        }
+    }
+
+    @Test
+    fun emptySuccessResponseHasAnExplicitInvalidResponseFailure() = runTest {
+        server.enqueue(jsonResponse(""))
+
+        val failure = runCatching { client.fetchMarks(baseURL(), "token") }.exceptionOrNull()
+
+        assertThat(failure).isInstanceOf(BakalariInvalidResponseException::class.java)
+        failure as BakalariInvalidResponseException
+        assertThat(failure.kind).isEqualTo(BakalariErrorKind.INVALID_RESPONSE)
+    }
+
+    @Test
+    fun socketTimeoutHasAnExplicitTimeoutFailure() = runTest {
+        val timeoutClient = BakalariNetworkClient(
+            okhttp3.OkHttpClient.Builder()
+                .readTimeout(50, TimeUnit.MILLISECONDS)
+                .callTimeout(100, TimeUnit.MILLISECONDS)
+                .build(),
+        )
+        server.enqueue(jsonResponse(LOGIN_RESPONSE).setBodyDelay(5, TimeUnit.SECONDS))
+
+        val failure = runCatching { timeoutClient.login(baseURL(), "student", "password") }.exceptionOrNull()
+
+        assertThat(failure).isInstanceOf(BakalariTimeoutException::class.java)
+        assertThat((failure as BakalariTimeoutException).kind).isEqualTo(BakalariErrorKind.TIMEOUT)
+    }
+
+    @Test
+    fun unavailableHostHasAnExplicitOfflineFailure() = runTest {
+        val offlineClient = BakalariNetworkClient(
+            okhttp3.OkHttpClient.Builder()
+                .addInterceptor { throw UnknownHostException("test offline") }
+                .build(),
+        )
+
+        val failure = runCatching { offlineClient.fetchMarks(baseURL(), "token") }.exceptionOrNull()
+
+        assertThat(failure).isInstanceOf(BakalariOfflineException::class.java)
+        assertThat((failure as BakalariOfflineException).kind).isEqualTo(BakalariErrorKind.OFFLINE)
+        assertThat(failure.message).doesNotContain("test offline")
+    }
+
+    @Test
+    fun otherIoFailureHasAnExplicitTransportFailure() = runTest {
+        val transportClient = BakalariNetworkClient(
+            okhttp3.OkHttpClient.Builder()
+                .addInterceptor { throw IOException("private TLS detail") }
+                .build(),
+        )
+
+        val failure = runCatching { transportClient.fetchMarks(baseURL(), "token") }.exceptionOrNull()
+
+        assertThat(failure).isInstanceOf(BakalariTransportException::class.java)
+        assertThat((failure as BakalariTransportException).kind).isEqualTo(BakalariErrorKind.TRANSPORT)
+        assertThat(failure.message).doesNotContain("private TLS detail")
+    }
+
+    @Test
+    fun coroutineCancellationIsPropagatedWithoutNetworkErrorWrapping() = runTest {
+        server.enqueue(MockResponse().setSocketPolicy(okhttp3.mockwebserver.SocketPolicy.NO_RESPONSE))
+        val request = async { client.fetchMarks(baseURL(), "token") }
+        server.takeRequest(2, TimeUnit.SECONDS)
+
+        request.cancel()
+        request.cancelAndJoin()
+        val failure = runCatching { request.await() }.exceptionOrNull()
+
+        assertThat(failure).isInstanceOf(CancellationException::class.java)
+        assertThat(failure).isNotInstanceOf(BakalariApiException::class.java)
     }
 
     @Test

@@ -93,7 +93,7 @@ Verification evidence (2026-08-30): school tokens and fallback credentials remai
 
 ## Bakaláři HTTP, parsing, and compatibility
 
-- [ ] Introduce typed Android errors for invalid response, HTTP status/body, decoding, authentication, timeout, cancellation, and offline failure.
+- [x] Introduce typed Android errors for invalid response, HTTP status/body, decoding, authentication, timeout, cancellation, and offline failure.
 - [x] Parse readable Bakaláři login error bodies without exposing raw HTML or secrets.
 - [x] Verify percent-encoded login/refresh forms and JSON what-if bodies against iOS fixtures.
 - [x] Add request/connect/read timeouts and cancellation-aware OkHttp coroutine execution.
@@ -101,12 +101,14 @@ Verification evidence (2026-08-30): school tokens and fallback credentials remai
 - [x] Preserve previous content when an optional endpoint or background refresh fails.
 - [x] Harden JSON decoding for nullable, missing, malformed, numeric/string, and server-version differences found in real Bakaláři responses.
 - [x] Verify dates and timetable week boundaries in Europe/Prague, including daylight-saving changes and device timezones.
-- [ ] Add fixture tests for empty data, partial data, malformed data, 401/403, 404 optional endpoints, 5xx, timeout, offline, and refresh rejection.
-- [ ] Confirm no credentials, tokens, or sensitive response bodies are logged.
+- [x] Add fixture tests for empty data, partial data, malformed data, 401/403, 404 optional endpoints, 5xx, timeout, offline, and refresh rejection.
+- [x] Confirm no credentials, tokens, or sensitive response bodies are logged.
 
 Verification evidence (2026-08-30): repository tests cover optional user/absence 404s, cached user and per-subject absence retention, cancellation propagation, rejected refresh plus rejected credential login, missing fallback credentials, and transient offline re-login failure. Unrecoverable authentication clears only the stored school session, retains scoped cache entries, and is handled by the app shell as a reconnect transition with visible feature state reset. Network fixtures also cover missing collections/mark fields, comma-decimal and malformed weights, the real object-shaped Bakaláři class, legacy string classes, preferred organization names, numeric timetable hour IDs, missing timetable display fields, and unknown response fields.
 
 Date verification (2026-08-30): app startup, cache lookup, refresh, repository mapping, and timetable fallback now derive the school day in `Europe/Prague`, independent of the device timezone. JVM tests pin instants across both 2026 Prague DST transitions, Sunday-to-Monday week boundaries, duplicate atoms, missing dates/hours/references, raw whitespace-sensitive IDs, sorting, and change mapping.
+
+Error verification (2026-08-30): Bakaláři transport now distinguishes safe HTTP, authentication, invalid/empty response, decoding, timeout, offline, and other I/O failures while propagating coroutine cancellation unchanged. MockWebServer and repository tests cover empty and partial payloads, malformed success bodies, 401/403, optional 404s, 5xx HTML, socket timeout, offline DNS failure, generic transport failure, cancellation, and refresh rejection. Raw HTTP bodies are discarded from outward exception causes, user messages are bounded/sanitized, and a production-source scan found no request/response logger, credential logging, token logging, `println`, or stack-trace printing.
 
 ## Cache and offline behavior
 

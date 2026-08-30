@@ -9,6 +9,7 @@ import com.bukovinafilip.gradey.model.Subject
 import com.bukovinafilip.gradey.model.TimetableResponse
 import com.bukovinafilip.gradey.model.AbsenceResponse
 import com.bukovinafilip.gradey.model.UserResponse
+import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.encodeToString
@@ -16,15 +17,72 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import java.io.InterruptedIOException
+import java.io.IOException
+import java.net.ConnectException
+import java.net.NoRouteToHostException
+import java.net.SocketTimeoutException
+import java.net.UnknownHostException
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 import java.util.concurrent.TimeUnit
 
-class BakalariApiException(
+enum class BakalariErrorKind {
+    INVALID_RESPONSE,
+    HTTP,
+    AUTHENTICATION,
+    DECODING,
+    TIMEOUT,
+    OFFLINE,
+    TRANSPORT,
+}
+
+open class BakalariApiException(
     val statusCode: Int?,
     message: String,
     cause: Throwable? = null,
+    val kind: BakalariErrorKind = if (statusCode == null) BakalariErrorKind.INVALID_RESPONSE else BakalariErrorKind.HTTP,
 ) : RuntimeException(message, cause)
+
+class BakalariHttpException(statusCode: Int, message: String) :
+    BakalariApiException(statusCode, message, kind = BakalariErrorKind.HTTP)
+
+class BakalariAuthenticationException(statusCode: Int, message: String) :
+    BakalariApiException(statusCode, message, kind = BakalariErrorKind.AUTHENTICATION)
+
+class BakalariInvalidResponseException : BakalariApiException(
+    statusCode = null,
+    message = "The school returned an empty or invalid response.",
+    kind = BakalariErrorKind.INVALID_RESPONSE,
+)
+
+class BakalariDecodingException(cause: Throwable) : BakalariApiException(
+    statusCode = null,
+    message = "The school returned data Gradey could not read.",
+    cause = cause,
+    kind = BakalariErrorKind.DECODING,
+)
+
+class BakalariTimeoutException(cause: Throwable) : BakalariApiException(
+    statusCode = null,
+    message = "The Bakaláři request timed out. Please try again.",
+    cause = cause,
+    kind = BakalariErrorKind.TIMEOUT,
+)
+
+class BakalariOfflineException(cause: Throwable) : BakalariApiException(
+    statusCode = null,
+    message = "Bakaláři could not be reached. Check your internet connection and try again.",
+    cause = cause,
+    kind = BakalariErrorKind.OFFLINE,
+)
+
+class BakalariTransportException(cause: Throwable) : BakalariApiException(
+    statusCode = null,
+    message = "The Bakaláři connection failed. Please try again.",
+    cause = cause,
+    kind = BakalariErrorKind.TRANSPORT,
+)
 
 class BakalariNetworkClient(
     private val okHttpClient: OkHttpClient = defaultHttpClient(),
@@ -129,28 +187,37 @@ class BakalariNetworkClient(
     private suspend inline fun <reified T> execute(request: Request): T {
         val body = try {
             okHttpClient.executeString(request)
+        } catch (error: CancellationException) {
+            throw error
         } catch (error: GradeyApiException) {
-            throw BakalariApiException(
-                statusCode = error.statusCode,
-                message = readableHTTPError(error.statusCode, error.responseBody),
-                cause = error,
-            )
+            val message = readableHTTPError(error.statusCode, error.responseBody)
+            if (error.statusCode == 401 || error.statusCode == 403) {
+                throw BakalariAuthenticationException(error.statusCode, message)
+            }
+            // Do not retain the raw response body as an outward exception cause.
+            throw BakalariHttpException(error.statusCode, message)
+        } catch (error: SocketTimeoutException) {
+            throw BakalariTimeoutException(error)
+        } catch (error: InterruptedIOException) {
+            throw BakalariTimeoutException(error)
+        } catch (error: UnknownHostException) {
+            throw BakalariOfflineException(error)
+        } catch (error: ConnectException) {
+            throw BakalariOfflineException(error)
+        } catch (error: NoRouteToHostException) {
+            throw BakalariOfflineException(error)
+        } catch (error: IOException) {
+            throw BakalariTransportException(error)
         }
+
+        if (body.isBlank()) throw BakalariInvalidResponseException()
 
         return try {
             GradeyJson.decodeFromString(body)
         } catch (error: SerializationException) {
-            throw BakalariApiException(
-                statusCode = null,
-                message = "The school returned data Gradey could not read.",
-                cause = error,
-            )
+            throw BakalariDecodingException(error)
         } catch (error: IllegalArgumentException) {
-            throw BakalariApiException(
-                statusCode = null,
-                message = "The school returned data Gradey could not read.",
-                cause = error,
-            )
+            throw BakalariDecodingException(error)
         }
     }
 

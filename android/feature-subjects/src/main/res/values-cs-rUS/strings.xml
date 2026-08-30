@@ -91,4 +91,7 @@
         <item quantity="other">%1$d nových známek</item>
     </plurals>
     <string name="marks_trends_movement">vývoj průměru</string>
+    <string name="marks_refresh_failed_title">známky se nepodařilo aktualizovat</string>
+    <string name="marks_refresh_failed_cached">ukazují se naposledy uložené známky.</string>
+    <string name="marks_refresh_retry">zkusit znovu</string>
 </resources>

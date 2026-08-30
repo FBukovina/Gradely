@@ -77,4 +77,7 @@
         <item quantity="other">%1$d new marks</item>
     </plurals>
     <string name="marks_trends_movement">Average movement</string>
+    <string name="marks_refresh_failed_title">Couldn’t refresh marks</string>
+    <string name="marks_refresh_failed_cached">Showing your last saved marks.</string>
+    <string name="marks_refresh_retry">Try again</string>
 </resources>

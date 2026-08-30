@@ -175,6 +175,7 @@ private fun GradeyApp(
     var schoolLoginError by remember { mutableStateOf<String?>(null) }
     var schoolDirectoryError by remember { mutableStateOf<String?>(null) }
     var dataError by remember { mutableStateOf<String?>(null) }
+    var marksRefreshError by remember { mutableStateOf<String?>(null) }
     var profileError by remember { mutableStateOf<String?>(null) }
     var isUpdatingProfile by remember { mutableStateOf(false) }
     var ageAttestationKind by remember { mutableStateOf(graph.ageAttestationStore.kind) }
@@ -339,6 +340,7 @@ private fun GradeyApp(
         reconnectLinkedAccount = null
         selectedTab = AppTab.TODAY
         dataError = null
+        marksRefreshError = null
         schoolLoginError = "Your Bakaláři session expired. Please reconnect your school account."
         phase = AppPhase.NEEDS_SCHOOL
     }
@@ -378,6 +380,7 @@ private fun GradeyApp(
         reconnectLinkedAccount = null
         selectedTab = AppTab.TODAY
         dataError = null
+        marksRefreshError = null
         schoolLoginError = null
     }
 
@@ -500,6 +503,7 @@ private fun GradeyApp(
                 activation.tokenPayload.makeStoredSession(activation.account),
             )
             dashboard = null
+            marksRefreshError = null
             absence = null
             timetable = null
             stravaMenu = null
@@ -557,6 +561,7 @@ private fun GradeyApp(
 
     suspend fun refreshSignedInData(forceRefresh: Boolean = false) {
         dataError = null
+        marksRefreshError = null
         val failures = mutableListOf<Throwable>()
         try {
             dashboard = graph.schoolRepository.loadDashboard(forceRefresh = forceRefresh)
@@ -567,6 +572,7 @@ private fun GradeyApp(
             return
         } catch (error: Throwable) {
             failures += error
+            marksRefreshError = error.userFacingMessage()
         }
         try {
             absence = graph.schoolRepository.loadAbsence(forceRefresh = forceRefresh)
@@ -1139,6 +1145,7 @@ private fun GradeyApp(
                     onPredictSubjectAverage = { subject, markText, weight ->
                         graph.schoolRepository.predictSubjectAverage(subject, markText, weight)
                     },
+                    refreshErrorMessage = marksRefreshError,
                     isRefreshing = isLoading,
                     onRefresh = {
                         if (!isLoading) {

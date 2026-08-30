@@ -154,7 +154,7 @@ Cache verification (2026-08-30): Today and Marks now render from a cached/loaded
 
 ## Subjects and marks
 
-- [ ] Implement cache-first loading, empty, first-load error/retry, refresh, and retained-content refresh failure states.
+- [x] Implement cache-first loading, empty, first-load error/retry, refresh, and retained-content refresh failure states.
 - [x] Match the current iOS overall average, subject count, mark count, 90-day movement summary, and grade bands (the old best/watch cards are no longer rendered by iOS).
 - [x] Implement subject search and search-empty state.
 - [x] Implement focus/average/name sorting with the same focus score inputs as iOS.
@@ -163,6 +163,8 @@ Cache verification (2026-08-30): Today and Marks now render from a cached/loaded
 - [x] Grade parsing, weighted averages, overall average, grade bands, formatted averages, and theoretical-average logic have JVM unit coverage.
 
 Subject search verification (2026-08-30): the Marks overview keeps its full unfiltered hero metrics while filtering the directory by subject name, abbreviation, or stable ID. Search is case-insensitive, diacritic-insensitive, whitespace/token aware, retains the active query across subject detail navigation, provides a clear action, and shows the localized iOS search-empty copy in all four Android language configurations. JVM tests cover blank-query ordering, Czech diacritics, abbreviation and multi-token matching, and true empty results. Focus sorting and row trend indicators now consume the account-scoped grade-history trends described below.
+
+Marks-state verification (2026-08-30): Android restores the school-scoped cached dashboard before starting its network refresh, renders localized empty and search-empty states, and uses the full loading/error/retry surface when no dashboard is available. If a later dashboard refresh fails, the loaded Marks content remains visible with a Marks-specific warning and retry action; absence and timetable failures do not create a misleading Marks warning. Reconnect, disconnect, and linked-account activation clear the transient warning, while the repository's scoped caches prevent one school account's marks from crossing into another account.
 
 ## Subject detail, grade history, and calculator
 

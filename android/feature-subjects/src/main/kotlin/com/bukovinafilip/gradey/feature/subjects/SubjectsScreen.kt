@@ -148,6 +148,7 @@ fun SubjectsScreen(
     absence: AbsenceResponse,
     gradeTrends: List<SubjectGradeTrend> = emptyList(),
     onPredictSubjectAverage: suspend (Subject, String, Int) -> Double? = { _, _, _ -> null },
+    refreshErrorMessage: String? = null,
     isRefreshing: Boolean,
     onRefresh: () -> Unit,
     onOpenAccount: () -> Unit,
@@ -172,6 +173,7 @@ fun SubjectsScreen(
             subjects = subjects,
             absence = absence,
             gradeTrends = gradeTrends,
+            refreshErrorMessage = refreshErrorMessage,
             sortMode = sortMode,
             onSortModeChange = { sortMode = it },
             searchQuery = searchQuery,
@@ -200,6 +202,7 @@ private fun SubjectsOverview(
     subjects: List<Subject>,
     absence: AbsenceResponse,
     gradeTrends: List<SubjectGradeTrend>,
+    refreshErrorMessage: String?,
     sortMode: SubjectSortMode,
     onSortModeChange: (SubjectSortMode) -> Unit,
     searchQuery: String,
@@ -271,6 +274,15 @@ private fun SubjectsOverview(
                     onOpenGradeyTools = onOpenGradeyTools,
                 )
             }
+            if (refreshErrorMessage != null) {
+                item {
+                    MarksRefreshErrorCard(
+                        errorMessage = refreshErrorMessage,
+                        isRefreshing = isRefreshing,
+                        onRetry = onRefresh,
+                    )
+                }
+            }
             item { OverallAverageCard(subjects) }
             if (recentTrends.isNotEmpty()) {
                 item { GradeMovementSection(recentTrends) }
@@ -295,6 +307,70 @@ private fun SubjectsOverview(
                             stringResource(R.string.marks_search_empty)
                         },
                         onOpenSubject = onOpenSubject,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MarksRefreshErrorCard(
+    errorMessage: String,
+    isRefreshing: Boolean,
+    onRetry: () -> Unit,
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        color = Color(0xFFFFE9EC),
+    ) {
+        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
+            Text(
+                text = stringResource(R.string.marks_refresh_failed_title),
+                color = DangerRed,
+                fontSize = 15.sp,
+                lineHeight = 18.sp,
+                fontWeight = FontWeight.Bold,
+            )
+            Spacer(Modifier.height(3.dp))
+            Text(
+                text = stringResource(R.string.marks_refresh_failed_cached),
+                color = Color(0xFF71333B),
+                fontSize = 13.sp,
+                lineHeight = 17.sp,
+            )
+            Text(
+                text = errorMessage,
+                color = MutedText,
+                fontSize = 12.sp,
+                lineHeight = 16.sp,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Spacer(Modifier.height(8.dp))
+            Surface(
+                onClick = onRetry,
+                enabled = !isRefreshing,
+                shape = RoundedCornerShape(10.dp),
+                color = Color.White.copy(alpha = 0.8f),
+                contentColor = DangerRed,
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    if (isRefreshing) {
+                        CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
+                    } else {
+                        Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
+                    }
+                    Text(
+                        text = stringResource(R.string.marks_refresh_retry),
+                        fontSize = 13.sp,
+                        lineHeight = 16.sp,
+                        fontWeight = FontWeight.Bold,
                     )
                 }
             }

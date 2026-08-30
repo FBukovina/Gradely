@@ -56,6 +56,7 @@ import com.bukovinafilip.gradey.feature.subjects.SubjectsScreen
 import com.bukovinafilip.gradey.feature.timetable.TimetableScreen
 import com.bukovinafilip.gradey.feature.today.TodayScreen
 import com.bukovinafilip.gradey.domain.SchoolSessionExpiredException
+import com.bukovinafilip.gradey.domain.GradeySessionExpiredException
 import com.bukovinafilip.gradey.domain.TimetableDates
 import com.bukovinafilip.gradey.domain.WearPayloadBuilder
 import com.bukovinafilip.gradey.model.AbsenceResponse
@@ -121,6 +122,8 @@ private fun GradeyApp(
     var schoolLoginError by remember { mutableStateOf<String?>(null) }
     var schoolDirectoryError by remember { mutableStateOf<String?>(null) }
     var dataError by remember { mutableStateOf<String?>(null) }
+    var profileError by remember { mutableStateOf<String?>(null) }
+    var isUpdatingProfile by remember { mutableStateOf(false) }
     var account by remember { mutableStateOf<GradeyAccount?>(null) }
     var linkedAccounts by remember { mutableStateOf<List<LinkedSchoolAccount>>(emptyList()) }
     var directorySchools by remember { mutableStateOf<List<SchoolDirectorySchool>>(emptyList()) }
@@ -265,7 +268,37 @@ private fun GradeyApp(
 
     LaunchedEffect(Unit) {
         val authSession = if (graph.isGradeyCloudConfigured) {
-            runCatching { graph.gradeyAuthRepository.bootstrapSession() }.getOrNull()
+            val restored = try {
+                graph.gradeyAuthRepository.bootstrapSession()
+            } catch (error: CancellationException) {
+                throw error
+            } catch (_: Throwable) {
+                null
+            }
+            if (restored == null) {
+                null
+            } else {
+                try {
+                    val valid = graph.gradeyAuthRepository.validSession()
+                    try {
+                        valid.copy(account = graph.gradeyAuthRepository.refreshAccount())
+                    } catch (error: CancellationException) {
+                        throw error
+                    } catch (_: GradeySessionExpiredException) {
+                        null
+                    } catch (_: Throwable) {
+                        // Profile refresh is opportunistic; retain the encrypted account snapshot.
+                        valid
+                    }
+                } catch (error: CancellationException) {
+                    throw error
+                } catch (_: GradeySessionExpiredException) {
+                    null
+                } catch (_: Throwable) {
+                    // A temporary cloud outage must not discard the restored account or school session.
+                    restored
+                }
+            }
         } else {
             null
         }
@@ -487,6 +520,28 @@ private fun GradeyApp(
                 AppTab.ACCOUNT -> AccountScreen(
                     account = account,
                     linkedAccounts = linkedAccounts,
+                    isUpdatingFullName = isUpdatingProfile,
+                    profileErrorMessage = profileError,
+                    onUpdateFullName = { fullName ->
+                        scope.launch {
+                            isUpdatingProfile = true
+                            profileError = null
+                            try {
+                                account = graph.gradeyAuthRepository.updateFullName(fullName)
+                            } catch (error: CancellationException) {
+                                throw error
+                            } catch (error: GradeySessionExpiredException) {
+                                account = null
+                                authError = error.userFacingMessage()
+                                selectedTab = AppTab.TODAY
+                                phase = AppPhase.SIGNED_OUT
+                            } catch (error: Throwable) {
+                                profileError = error.userFacingMessage()
+                            } finally {
+                                isUpdatingProfile = false
+                            }
+                        }
+                    },
                     onSignOut = {
                         scope.launch {
                             graph.stravaCZRepository.logout()

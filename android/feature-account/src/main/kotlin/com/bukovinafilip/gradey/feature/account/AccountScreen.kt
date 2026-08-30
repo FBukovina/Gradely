@@ -1,6 +1,8 @@
 package com.bukovinafilip.gradey.feature.account
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -8,6 +10,7 @@ import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -16,6 +19,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import com.bukovinafilip.gradey.model.GradeyAccount
 import com.bukovinafilip.gradey.model.LinkedSchoolAccount
 import com.bukovinafilip.gradey.ui.GradeyHero
@@ -28,17 +32,51 @@ import com.bukovinafilip.gradey.ui.MetadataRow
 fun AccountScreen(
     account: GradeyAccount?,
     linkedAccounts: List<LinkedSchoolAccount>,
+    isUpdatingFullName: Boolean = false,
+    profileErrorMessage: String? = null,
+    onUpdateFullName: (String) -> Unit = {},
     onSignOut: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var notifications by remember { mutableStateOf(true) }
+    var fullNameDraft by remember(account?.id, account?.fullName) {
+        mutableStateOf(account?.fullName.orEmpty())
+    }
+    val normalizedFullName = fullNameDraft.trim()
+    val isNameValid = normalizedFullName.length in 1..80
+    val hasNameChanged = normalizedFullName != account?.fullName?.trim().orEmpty()
 
     GradeyScreen(modifier = modifier) {
-        GradeyHero("Account", account?.fullName ?: "Gradey ID")
+        GradeyHero("Account", account?.fullName ?: "Local-only mode")
         GradeySectionCard(title = "Profile") {
             Icon(Icons.Default.Person, contentDescription = null)
-            MetadataRow("Email", account?.email ?: "Demo")
-            MetadataRow("Account ID", account?.id ?: "local-demo")
+            MetadataRow("Email", account?.email ?: "Not connected")
+            MetadataRow("Account ID", account?.id ?: "No Gradey ID")
+            if (account != null) {
+                OutlinedTextField(
+                    value = fullNameDraft,
+                    onValueChange = { fullNameDraft = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !isUpdatingFullName,
+                    singleLine = true,
+                    label = { Text("Full name") },
+                    isError = hasNameChanged && !isNameValid,
+                    supportingText = {
+                        when {
+                            hasNameChanged && !isNameValid -> Text("Use between 1 and 80 characters.")
+                            profileErrorMessage != null -> Text(profileErrorMessage)
+                        }
+                    },
+                )
+                Button(
+                    onClick = { onUpdateFullName(normalizedFullName) },
+                    enabled = isNameValid && hasNameChanged && !isUpdatingFullName,
+                ) {
+                    Text(if (isUpdatingFullName) "Saving…" else "Save name")
+                }
+            } else {
+                Text("Gradey ID cloud features are not connected. Your Bakaláři data stays local on this device.")
+            }
             Button(onClick = onSignOut) { Text("Sign out") }
         }
         GradeySectionCard(title = "Notifications") {
@@ -46,7 +84,10 @@ fun AccountScreen(
             MetadataRow("New marks", if (notifications) "Enabled" else "Disabled")
             Switch(checked = notifications, onCheckedChange = { notifications = it })
         }
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(GradeySpacing.md)) {
+        LazyColumn(
+            verticalArrangement = Arrangement.spacedBy(GradeySpacing.md),
+            modifier = Modifier.padding(bottom = 8.dp),
+        ) {
             items(linkedAccounts, key = { it.id }) { linked ->
                 GradeySectionCard {
                     Text(linked.displayName)
@@ -58,4 +99,3 @@ fun AccountScreen(
         }
     }
 }
-

@@ -61,7 +61,12 @@ class AndroidGradeyGraph private constructor(
                             authSecureStore.save("gradey.auth.session", it, com.bukovinafilip.gradey.model.GradeyAuthSession.serializer())
                         }
                     },
-                    sessionLoader = { authSecureStore.load("gradey.auth.session", com.bukovinafilip.gradey.model.GradeyAuthSession.serializer()) },
+                    sessionLoader = {
+                        authSecureStore.loadOrClearInvalid(
+                            "gradey.auth.session",
+                            com.bukovinafilip.gradey.model.GradeyAuthSession.serializer(),
+                        )
+                    },
                 )
             } else {
                 LocalOnlyGradeyAuthRepository()

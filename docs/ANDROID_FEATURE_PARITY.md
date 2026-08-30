@@ -29,7 +29,7 @@ Last source audit: 2026-08-30 on `codex/android-monorepo`.
 - [x] The imported baseline passed `:app:assembleDebug`, `:wear:assembleDebug`, and JVM tests before the local Android Studio Gradle upgrades.
 - [x] Re-run the complete build and test suite with the current local AGP 9.3.2 / Gradle 9.5 / KSP 2.3.6 upgrades.
 - [x] Add Android CI that builds, tests, and checks resources/navigation from the monorepo path.
-- [ ] Keep the branch and pull request reviewable with no unrelated iOS changes.
+- [x] Keep the branch and pull request reviewable with no unrelated iOS changes.
 
 ## Supported provider scope
 
@@ -52,14 +52,16 @@ Last source audit: 2026-08-30 on `codex/android-monorepo`.
 
 ## Gradey ID and guest mode
 
-- [ ] Replace the hard-coded `demo-google-id-token` path with a real Credential Manager Google sign-in flow.
-- [ ] Restore and refresh Gradey auth sessions from encrypted storage with serialized refresh and explicit expired-session handling.
-- [ ] Implement Gradey ID profile refresh and full-name editing/validation.
+- [x] Replace the hard-coded `demo-google-id-token` path with a real Credential Manager Google sign-in flow.
+- [x] Restore and refresh Gradey auth sessions from encrypted storage with serialized refresh and explicit expired-session handling.
+- [x] Implement Gradey ID profile refresh and full-name editing/validation.
 - [ ] Implement “continue without account” guest mode and preserve local Bakaláři use without requiring Supabase configuration.
-- [ ] Make unavailable cloud configuration an honest Gradey ID capability state, never a switch to mock repositories.
+- [x] Make unavailable cloud configuration an honest Gradey ID capability state, never a switch to mock repositories.
 - [ ] Implement guest-to-Gradey-ID upgrade without losing the local school session.
 - [ ] Implement complete sign-out and school-only sign-out semantics matching iOS.
 - [x] DIFFERENT — Android uses Google sign-in; Sign in with Apple UI is not copied from iOS.
+
+Verification evidence (2026-08-30): Android uses Credential Manager's Google ID-token credential and exchanges it with Supabase; no demo token path remains. Gradey ID sessions restore from Keystore-backed encrypted preferences with corrupt-record cleanup, refresh within a 60-second expiry window, serialize concurrent refresh/sign-out mutations, retain rotated or omitted refresh-token fields safely, and clear only on explicit 400/401 refresh rejection or missing refresh credentials. MockWebServer tests cover one-request refresh fan-in, rejected refreshes, transient 5xx and transport failures, profile GET/PUT authorization, 1...80-character trimmed name validation, credential exchange, and a delayed-refresh/sign-out race. Startup keeps the restored account and Bakaláři session through temporary cloud/profile outages, while Account exposes canonical profile refresh and validated name editing. Builds without cloud configuration display a local-only capability state and use unavailable repositories rather than mocks.
 
 ## School discovery and Bakaláři login
 
@@ -87,7 +89,7 @@ Verification evidence (2026-08-30): Android decoded the live Bakaláři municipa
 - [x] Scope caches by provider/server/user/linked-account identity so accounts cannot see each other’s data.
 - [ ] Implement local linked-account persistence, cloud account linking, activation, reconnect, unlink, status, and per-account notification setting with real repositories.
 - [ ] Implement safe school account switching and reset all visible feature state after activation.
-- [ ] Preserve the local school session when a Gradey cloud call is temporarily unavailable.
+- [x] Preserve the local school session when a Gradey cloud call is temporarily unavailable.
 
 Verification evidence (2026-08-30): school tokens and fallback credentials remain in Android Keystore-backed encrypted preferences. The session store now writes a versioned `v2` envelope, migrates the prior raw `v1` Bakaláři record without signing the user out, rejects unknown future versions safely, clears both keys on explicit logout, and restores the saved session without making a Bakaláři request.
 

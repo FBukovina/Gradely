@@ -60,8 +60,18 @@ class SchoolSessionExpiredException(
     cause,
 )
 
+class GradeySessionExpiredException(
+    cause: Throwable? = null,
+) : IllegalStateException(
+    "Your Gradey ID session expired. Please sign in again.",
+    cause,
+)
+
 interface GradeyAuthRepository {
     suspend fun bootstrapSession(): GradeyAuthSession?
+    suspend fun validSession(): GradeyAuthSession
+    suspend fun refreshAccount(): GradeyAccount
+    suspend fun updateFullName(fullName: String): GradeyAccount
     suspend fun signInWithGoogle(idToken: String, accessToken: String? = null, fullName: String? = null): GradeyAuthSession
     suspend fun signOut()
 }

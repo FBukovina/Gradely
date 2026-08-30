@@ -7,6 +7,7 @@ import com.bukovinafilip.gradey.domain.GradeHistoryTrend
 import com.bukovinafilip.gradey.domain.LinkedAccountRepository
 import com.bukovinafilip.gradey.domain.StravaCZRepository
 import com.bukovinafilip.gradey.model.GradeyAuthSession
+import com.bukovinafilip.gradey.model.GradeyAccount
 import com.bukovinafilip.gradey.model.LinkedSchoolAccount
 import com.bukovinafilip.gradey.model.NotificationPreferences
 import com.bukovinafilip.gradey.model.StoredSession
@@ -21,15 +22,23 @@ class FeatureUnavailableException(message: String) : IllegalStateException(messa
 class LocalOnlyGradeyAuthRepository : GradeyAuthRepository {
     override suspend fun bootstrapSession(): GradeyAuthSession? = null
 
+    override suspend fun validSession(): GradeyAuthSession = unavailable()
+
+    override suspend fun refreshAccount(): GradeyAccount = unavailable()
+
+    override suspend fun updateFullName(fullName: String): GradeyAccount = unavailable()
+
     override suspend fun signInWithGoogle(
         idToken: String,
         accessToken: String?,
         fullName: String?,
-    ): GradeyAuthSession = throw FeatureUnavailableException(
-        "Gradey ID is not configured in this build. You can still use Bakaláři locally.",
-    )
+    ): GradeyAuthSession = unavailable()
 
     override suspend fun signOut() = Unit
+
+    private fun unavailable(): Nothing = throw FeatureUnavailableException(
+        "Gradey ID is not configured in this build. You can still use Bakaláři locally.",
+    )
 }
 
 class LocalLinkedAccountRepository(

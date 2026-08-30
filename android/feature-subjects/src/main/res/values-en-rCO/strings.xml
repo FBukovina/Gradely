@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="marks_search_prompt">search subjects</string>
+    <string name="marks_search_empty">no subjects</string>
+    <string name="marks_search_clear">clear subject search</string>
+</resources>

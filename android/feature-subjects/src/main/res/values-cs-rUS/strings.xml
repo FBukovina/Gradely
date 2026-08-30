@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="marks_search_prompt">hledat předměty</string>
+    <string name="marks_search_empty">žádné předměty</string>
+    <string name="marks_search_clear">vymazat hledání předmětů</string>
+</resources>

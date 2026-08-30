@@ -156,11 +156,13 @@ Cache verification (2026-08-30): Today and Marks now render from a cached/loaded
 
 - [ ] Implement cache-first loading, empty, first-load error/retry, refresh, and retained-content refresh failure states.
 - [ ] Match overall average, subject count, mark count, best/watch summary, and grade bands.
-- [ ] Implement subject search and search-empty state.
+- [x] Implement subject search and search-empty state.
 - [ ] Implement focus/average/name sorting with the same focus score inputs as iOS.
 - [ ] Show subject average, mark count, absence percentage, and recent trend direction on each row.
 - [ ] Navigate every subject row to its real detail screen and preserve back state.
 - [x] Grade parsing, weighted averages, overall average, grade bands, formatted averages, and theoretical-average logic have JVM unit coverage.
+
+Subject search verification (2026-08-30): the Marks overview keeps its full unfiltered hero metrics while filtering the directory by subject name, abbreviation, or stable ID. Search is case-insensitive, diacritic-insensitive, whitespace/token aware, retains the active query across subject detail navigation, provides a clear action, and shows the localized iOS search-empty copy in all four Android language configurations. JVM tests cover blank-query ordering, Czech diacritics, abbreviation and multi-token matching, and true empty results. The focus-sort row remains open because Android grade-history trends are not yet backed by a real repository, so claiming the iOS trend input would be premature.
 
 ## Subject detail, grade history, and calculator
 

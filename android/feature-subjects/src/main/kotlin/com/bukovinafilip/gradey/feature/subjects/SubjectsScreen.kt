@@ -33,13 +33,17 @@ import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -64,10 +68,12 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -77,6 +83,7 @@ import androidx.core.view.WindowCompat
 import com.bukovinafilip.gradey.domain.AbsenceRiskSummary
 import com.bukovinafilip.gradey.domain.GradeBand
 import com.bukovinafilip.gradey.domain.GradeMath
+import com.bukovinafilip.gradey.domain.SubjectDirectorySearch
 import com.bukovinafilip.gradey.model.AbsenceResponse
 import com.bukovinafilip.gradey.model.Mark
 import com.bukovinafilip.gradey.model.Subject
@@ -124,6 +131,7 @@ fun SubjectsScreen(
 ) {
     var selectedSubjectID by rememberSaveable { mutableStateOf<String?>(null) }
     var sortMode by remember { mutableStateOf(SubjectSortMode.Focus) }
+    var searchQuery by rememberSaveable { mutableStateOf("") }
     val selectedSubject = subjects.firstOrNull { it.id == selectedSubjectID }
 
     LaunchedEffect(selectedSubjectID, subjects) {
@@ -137,6 +145,8 @@ fun SubjectsScreen(
             absence = absence,
             sortMode = sortMode,
             onSortModeChange = { sortMode = it },
+            searchQuery = searchQuery,
+            onSearchQueryChange = { searchQuery = it },
             isRefreshing = isRefreshing,
             onRefresh = onRefresh,
             onOpenAccount = onOpenAccount,
@@ -160,6 +170,8 @@ private fun SubjectsOverview(
     absence: AbsenceResponse,
     sortMode: SubjectSortMode,
     onSortModeChange: (SubjectSortMode) -> Unit,
+    searchQuery: String,
+    onSearchQueryChange: (String) -> Unit,
     isRefreshing: Boolean,
     onRefresh: () -> Unit,
     onOpenAccount: () -> Unit,
@@ -170,9 +182,12 @@ private fun SubjectsOverview(
     val absenceRows = remember(absence) {
         AbsenceRiskSummary.make(absence, absence.absencesPerSubject).subjects.associateBy { it.subjectName.subjectKey() }
     }
-    val sortedSubjects = remember(subjects, absenceRows, sortMode) {
+    val filteredSubjects = remember(subjects, searchQuery) {
+        SubjectDirectorySearch.results(searchQuery, subjects)
+    }
+    val sortedSubjects = remember(filteredSubjects, absenceRows, sortMode) {
         when (sortMode) {
-            SubjectSortMode.Focus -> subjects.sortedWith(
+            SubjectSortMode.Focus -> filteredSubjects.sortedWith(
                 compareByDescending<Subject> {
                     val average = GradeMath.subjectAverage(it) ?: -1.0
                     val absencePercentage = absenceRows[it.displayName.subjectKey()]?.absencePercentage ?: 0.0
@@ -180,13 +195,13 @@ private fun SubjectsOverview(
                 }.thenBy { it.displayName },
             )
 
-            SubjectSortMode.Average -> subjects.sortedWith(
+            SubjectSortMode.Average -> filteredSubjects.sortedWith(
                 compareBy<Subject> { GradeMath.subjectAverage(it) ?: Double.MAX_VALUE }.thenBy { it.displayName },
             )
 
             SubjectSortMode.Alphabetical -> {
                 val collator = Collator.getInstance(Locale.forLanguageTag("cs-CZ"))
-                subjects.sortedWith { first, second -> collator.compare(first.displayName, second.displayName) }
+                filteredSubjects.sortedWith { first, second -> collator.compare(first.displayName, second.displayName) }
             }
         }
     }
@@ -215,18 +230,61 @@ private fun SubjectsOverview(
             }
             item { OverallAverageCard(subjects) }
             item {
+                SubjectSearchField(
+                    query = searchQuery,
+                    onQueryChange = onSearchQueryChange,
+                )
+            }
+            item {
                 Column {
                     SubjectsSectionHeader(sortMode = sortMode, onSortModeChange = onSortModeChange)
                     Spacer(Modifier.height(12.dp))
                     SubjectsCard(
                         subjects = sortedSubjects,
                         absenceByName = absenceRows,
+                        emptyMessage = if (searchQuery.isBlank()) {
+                            "No subjects available"
+                        } else {
+                            stringResource(R.string.marks_search_empty)
+                        },
                         onOpenSubject = onOpenSubject,
                     )
                 }
             }
         }
     }
+}
+
+@Composable
+private fun SubjectSearchField(
+    query: String,
+    onQueryChange: (String) -> Unit,
+) {
+    val prompt = stringResource(R.string.marks_search_prompt)
+    OutlinedTextField(
+        value = query,
+        onValueChange = onQueryChange,
+        modifier = Modifier.fillMaxWidth(),
+        singleLine = true,
+        placeholder = { Text(prompt) },
+        leadingIcon = {
+            Icon(Icons.Default.Search, contentDescription = null)
+        },
+        trailingIcon = if (query.isNotEmpty()) {
+            {
+                IconButton(onClick = { onQueryChange("") }) {
+                    Icon(Icons.Default.Close, contentDescription = stringResource(R.string.marks_search_clear))
+                }
+            }
+        } else {
+            null
+        },
+        keyboardOptions = KeyboardOptions(
+            keyboardType = KeyboardType.Text,
+            imeAction = ImeAction.Search,
+        ),
+        shape = RoundedCornerShape(16.dp),
+    )
 }
 
 @Composable
@@ -470,6 +528,7 @@ private fun SortSegment(
 private fun SubjectsCard(
     subjects: List<Subject>,
     absenceByName: Map<String, com.bukovinafilip.gradey.domain.AbsenceSubjectSummary>,
+    emptyMessage: String,
     onOpenSubject: (Subject) -> Unit,
 ) {
     Surface(
@@ -485,7 +544,7 @@ private fun SubjectsCard(
                     .height(68.dp),
                 contentAlignment = Alignment.Center,
             ) {
-                Text("No subjects available", color = MutedText, fontSize = 14.sp)
+                Text(emptyMessage, color = MutedText, fontSize = 14.sp)
             }
         } else {
             Column {

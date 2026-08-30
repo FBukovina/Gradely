@@ -3,6 +3,7 @@ package com.bukovinafilip.gradey.data
 import com.bukovinafilip.gradey.domain.BakalariClient
 import com.bukovinafilip.gradey.domain.AbsenceSubjectResolutionFailure
 import com.bukovinafilip.gradey.domain.AbsenceSubjectResolutionSource
+import com.bukovinafilip.gradey.domain.AbsenceLessonSelections
 import com.bukovinafilip.gradey.domain.SchoolSessionExpiredException
 import com.bukovinafilip.gradey.model.Absence
 import com.bukovinafilip.gradey.model.AbsencePerSubject
@@ -417,6 +418,56 @@ class AndroidSchoolRepositoryTest {
     }
 
     @Test
+    fun manualSelectionsPersistInSchoolScopeAndRecomputePartialDay() = runTest {
+        val session = validSession()
+        val otherSession = validSession().copy(linkedAccountID = "other-school")
+        val cache = RoomGradeyCache(InMemoryCacheEntryDao(), GradeyJson)
+        cache.saveMarks(session.cacheScope, MarksResponse())
+        cache.saveRawTimetable(
+            session.cacheScope,
+            "2026-01-26",
+            TimetableResponse(
+                subjects = listOf(
+                    TimetableEntity("math", "MAT", "Mathematics"),
+                    TimetableEntity("czech", "CJ", "Czech"),
+                    TimetableEntity("english", "AJ", "English"),
+                ),
+                days = listOf(
+                    TimetableDayDTO(
+                        date = "2026-02-01",
+                        atoms = listOf(
+                            TimetableAtom(hourID = "1", subjectID = "math"),
+                            TimetableAtom(hourID = "2", subjectID = "czech"),
+                            TimetableAtom(hourID = "3", subjectID = "english"),
+                        ),
+                    ),
+                ),
+            ),
+        )
+        val repository = repository(
+            client = FakeBakalariClient(),
+            sessions = InMemorySchoolSessionStorage(session),
+            cache = cache,
+            dateProvider = { LocalDate.of(2026, 2, 1) },
+        )
+        val response = AbsenceResponse(absences = listOf(Absence("2026-02-01", ok = 2)))
+
+        val unresolved = repository.resolveAbsenceSubjects(response)
+        val partialDay = unresolved.unresolvedPartialDays.single()
+        val selected = partialDay.lessons.take(2).map { it.id }.toSet()
+        repository.saveManualAbsenceLessonSelections(mapOf(partialDay.dateKey to selected))
+        val recomputed = repository.resolveAbsenceSubjects(response)
+
+        assertThat(cache.loadAbsenceLessonSelections(session.cacheScope)).isEqualTo(
+            AbsenceLessonSelections(mapOf(partialDay.dateKey to selected.sorted())),
+        )
+        assertThat(cache.loadAbsenceLessonSelections(otherSession.cacheScope)).isNull()
+        assertThat(recomputed.unresolvedPartialDays).isEmpty()
+        assertThat(recomputed.appliedManualSelectionCount).isEqualTo(2)
+        assertThat(recomputed.subjects.map { it.base }).containsExactly(1, 1, 0).inOrder()
+    }
+
+    @Test
     fun `what-if prediction uses the authenticated endpoint and parses its returned average`() = runTest {
         val subject = Subject(
             subjectInfo = SubjectInfo(id = "math", name = "Mathematics"),
@@ -622,8 +673,11 @@ class AndroidSchoolRepositoryTest {
         val cache = RoomGradeyCache(InMemoryCacheEntryDao(), GradeyJson)
         val unrelatedScope = "bakalari-other.example.cz-unrelated"
         val unrelated = DashboardData(MarksResponse(), user = UserResponse("Other Student"))
+        val selections = AbsenceLessonSelections(mapOf("2026-02-01" to listOf("lesson-1")))
         cache.saveDashboard(session.cacheScope, DashboardData(MarksResponse()))
         cache.saveDashboard(unrelatedScope, unrelated)
+        cache.saveAbsenceLessonSelections(session.cacheScope, selections)
+        cache.saveAbsenceLessonSelections(unrelatedScope, selections)
         cache.saveNextLessonSnapshot(
             NextLessonWidgetSnapshot(
                 cachedAtEpochMillis = 1,
@@ -636,8 +690,10 @@ class AndroidSchoolRepositoryTest {
 
         assertThat(sessions.load()).isNull()
         assertThat(cache.loadDashboard(session.cacheScope)).isNull()
+        assertThat(cache.loadAbsenceLessonSelections(session.cacheScope)).isNull()
         assertThat(cache.loadNextLessonSnapshot()).isNull()
         assertThat(cache.loadDashboard(unrelatedScope)).isEqualTo(unrelated)
+        assertThat(cache.loadAbsenceLessonSelections(unrelatedScope)).isEqualTo(selections)
     }
 
     private fun repository(

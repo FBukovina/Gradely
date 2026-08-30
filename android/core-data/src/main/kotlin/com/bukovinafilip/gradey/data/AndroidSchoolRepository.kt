@@ -2,6 +2,7 @@ package com.bukovinafilip.gradey.data
 
 import com.bukovinafilip.gradey.domain.BakalariClient
 import com.bukovinafilip.gradey.domain.AbsenceSubjectFallback
+import com.bukovinafilip.gradey.domain.AbsenceLessonSelections
 import com.bukovinafilip.gradey.domain.AbsenceSubjectResolution
 import com.bukovinafilip.gradey.domain.AbsenceSubjectResolutionFailure
 import com.bukovinafilip.gradey.domain.AbsenceSubjectResolutionProgress
@@ -214,22 +215,39 @@ class AndroidSchoolRepository(
             )
         }
 
-        val subjects = AbsenceSubjectFallback.makeSubjects(
+        val manualSelections = cache.loadAbsenceLessonSelections(session.cacheScope) ?: AbsenceLessonSelections()
+        val fallback = AbsenceSubjectFallback.makeResult(
             response = response,
             timetables = timetableLoad.responses,
             markSubjects = markSubjects,
             validDateRange = term.start..term.endInclusive,
+            manualSelections = manualSelections,
         )
         val source = when {
-            subjects.isEmpty() -> AbsenceSubjectResolutionSource.UNAVAILABLE
+            fallback.subjects.isEmpty() -> AbsenceSubjectResolutionSource.UNAVAILABLE
             timetableLoad.failedWeeks > 0 -> AbsenceSubjectResolutionSource.PARTIAL_SYNTHESIZED
             else -> AbsenceSubjectResolutionSource.SYNTHESIZED
         }
         return AbsenceSubjectResolution(
-            subjects = subjects,
+            subjects = fallback.subjects,
             source = source,
             loadedWeeks = timetableLoad.responses.size,
             totalWeeks = term.weekStarts.size,
+            unresolvedPartialDays = fallback.unresolvedPartialDays,
+            appliedManualSelectionCount = fallback.appliedManualSelectionCount,
+        )
+    }
+
+    override suspend fun saveManualAbsenceLessonSelections(selections: Map<String, Set<String>>) {
+        val session = validSession()
+        val current = cache.loadAbsenceLessonSelections(session.cacheScope) ?: AbsenceLessonSelections()
+        val merged = current.selectedLessonIDsByDate.toMutableMap()
+        selections.forEach { (dateKey, lessonIDs) ->
+            merged[dateKey] = lessonIDs.sorted()
+        }
+        cache.saveAbsenceLessonSelections(
+            session.cacheScope,
+            AbsenceLessonSelections(merged.toSortedMap()),
         )
     }
 

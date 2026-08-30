@@ -81,6 +81,7 @@ import com.bukovinafilip.gradey.domain.GradeHistoryTrends
 import com.bukovinafilip.gradey.domain.GradeyStartupDestination
 import com.bukovinafilip.gradey.domain.AbsencePresentationState
 import com.bukovinafilip.gradey.domain.AbsencePresentationStates
+import com.bukovinafilip.gradey.domain.AbsencePartialDayCandidate
 import com.bukovinafilip.gradey.domain.AbsenceSubjectResolutionFailure
 import com.bukovinafilip.gradey.domain.AbsenceSubjectResolutionProgress
 import com.bukovinafilip.gradey.domain.SchoolSessionExpiredException
@@ -225,6 +226,7 @@ private fun GradeyApp(
     var absenceSubjectProgress by remember { mutableStateOf<AbsenceSubjectResolutionProgress?>(null) }
     var absenceSubjectWarning by remember { mutableStateOf<String?>(null) }
     var absenceSubjectError by remember { mutableStateOf<String?>(null) }
+    var absencePartialDays by remember { mutableStateOf<List<AbsencePartialDayCandidate>>(emptyList()) }
     var absenceSubjectResolutionJob by remember { mutableStateOf<Job?>(null) }
     var absenceSubjectResolutionAttempt by remember { mutableIntStateOf(0) }
     var timetable by remember { mutableStateOf<TimetableWeek?>(null) }
@@ -289,6 +291,7 @@ private fun GradeyApp(
         absenceSubjectProgress = null
         absenceSubjectWarning = null
         absenceSubjectError = null
+        absencePartialDays = emptyList()
     }
 
     fun startAbsenceSubjectResolution(response: AbsenceResponse) {
@@ -300,6 +303,7 @@ private fun GradeyApp(
         absenceSubjectProgress = null
         absenceSubjectWarning = null
         absenceSubjectError = null
+        absencePartialDays = emptyList()
 
         if (response.absencesPerSubject.isNotEmpty() || response.absences.isEmpty()) {
             isResolvingAbsenceSubjects = false
@@ -318,6 +322,7 @@ private fun GradeyApp(
                     absenceSubjectError = context.getString(AbsenceR.string.absence_subjects_error_no_timetable)
                 } else {
                     absence = response.copy(absencesPerSubject = resolution.subjects)
+                    absencePartialDays = resolution.unresolvedPartialDays
                     if (resolution.isPartial) {
                         absenceSubjectWarning = context.getString(AbsenceR.string.absence_subjects_partial_warning)
                     }
@@ -335,6 +340,16 @@ private fun GradeyApp(
                 }
             }
         }
+    }
+
+    suspend fun saveManualAbsenceSelections(selections: Map<String, Set<String>>): String? = try {
+        graph.schoolRepository.saveManualAbsenceLessonSelections(selections)
+        absenceSourceResponse?.let(::startAbsenceSubjectResolution)
+        null
+    } catch (error: CancellationException) {
+        throw error
+    } catch (error: Throwable) {
+        error.userFacingMessage()
     }
 
     suspend fun loadCachedSignedInData() {
@@ -1424,6 +1439,7 @@ private fun GradeyApp(
                             subjectResolutionProgress = absenceSubjectProgress,
                             subjectResolutionWarning = absenceSubjectWarning,
                             subjectResolutionError = absenceSubjectError,
+                            unresolvedPartialDays = absencePartialDays,
                             onRefresh = {
                                 if (!isLoading) {
                                     scope.launch {
@@ -1439,6 +1455,7 @@ private fun GradeyApp(
                             onRetrySubjectResolution = {
                                 absenceSourceResponse?.let(::startAbsenceSubjectResolution)
                             },
+                            onSaveManualSelections = ::saveManualAbsenceSelections,
                             onOpenAccount = { selectedTab = AppTab.ACCOUNT },
                             onOpenGradeyTools = { isGradeyAIPresented = true },
                             modifier = Modifier.fillMaxSize(),

@@ -13,6 +13,7 @@ import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.temporal.TemporalAdjusters
 import java.util.Locale
+import kotlinx.serialization.Serializable
 
 enum class AbsenceSubjectResolutionSource {
     OFFICIAL,
@@ -37,8 +38,46 @@ data class AbsenceSubjectResolution(
     val loadedWeeks: Int = 0,
     val totalWeeks: Int = 0,
     val failure: AbsenceSubjectResolutionFailure? = null,
+    val unresolvedPartialDays: List<AbsencePartialDayCandidate> = emptyList(),
+    val appliedManualSelectionCount: Int = 0,
 ) {
     val isPartial: Boolean get() = source == AbsenceSubjectResolutionSource.PARTIAL_SYNTHESIZED
+}
+
+@Serializable
+data class AbsenceLessonSelections(
+    val selectedLessonIDsByDate: Map<String, List<String>> = emptyMap(),
+) {
+    fun selectedLessonIDs(dateKey: String): Set<String> =
+        selectedLessonIDsByDate[dateKey].orEmpty().toSet()
+}
+
+data class AbsencePartialDayCandidate(
+    val dateKey: String,
+    val requiredSelectionCount: Int,
+    val selectedLessonIDs: List<String>,
+    val lessons: List<AbsenceLessonCandidate>,
+)
+
+data class AbsenceSubjectFallbackResult(
+    val subjects: List<AbsencePerSubject>,
+    val unresolvedPartialDays: List<AbsencePartialDayCandidate>,
+    val appliedManualSelectionCount: Int,
+)
+
+object AbsenceManualSelectionPolicy {
+    fun toggle(current: Set<String>, lessonID: String, requiredSelectionCount: Int): Set<String> {
+        val selected = current.toMutableSet()
+        if (!selected.remove(lessonID) && selected.size < requiredSelectionCount) selected += lessonID
+        return selected
+    }
+
+    fun canSave(
+        days: List<AbsencePartialDayCandidate>,
+        drafts: Map<String, Set<String>>,
+    ): Boolean = days.isNotEmpty() && days.all { day ->
+        drafts[day.dateKey].orEmpty().size == day.requiredSelectionCount
+    }
 }
 
 data class AbsenceTerm(
@@ -85,9 +124,28 @@ object AbsenceSubjectFallback {
         timetables: List<TimetableResponse>,
         markSubjects: List<Subject>,
         validDateRange: ClosedRange<LocalDate>,
-    ): List<AbsencePerSubject> {
-        if (response.absencesPerSubject.isNotEmpty()) return response.absencesPerSubject
-        if (response.absences.isEmpty() || timetables.isEmpty()) return emptyList()
+        manualSelections: AbsenceLessonSelections = AbsenceLessonSelections(),
+    ): List<AbsencePerSubject> = makeResult(
+        response = response,
+        timetables = timetables,
+        markSubjects = markSubjects,
+        validDateRange = validDateRange,
+        manualSelections = manualSelections,
+    ).subjects
+
+    fun makeResult(
+        response: AbsenceResponse,
+        timetables: List<TimetableResponse>,
+        markSubjects: List<Subject>,
+        validDateRange: ClosedRange<LocalDate>,
+        manualSelections: AbsenceLessonSelections = AbsenceLessonSelections(),
+    ): AbsenceSubjectFallbackResult {
+        if (response.absencesPerSubject.isNotEmpty()) {
+            return AbsenceSubjectFallbackResult(response.absencesPerSubject, emptyList(), 0)
+        }
+        if (response.absences.isEmpty() || timetables.isEmpty()) {
+            return AbsenceSubjectFallbackResult(emptyList(), emptyList(), 0)
+        }
 
         val absencesByDate = response.absences
             .mapNotNull { absence -> AbsenceTerms.parseDate(absence.date)?.let { it to absence } }
@@ -96,12 +154,15 @@ object AbsenceSubjectFallback {
         val catalog = SubjectCatalog(markSubjects)
         val totals = linkedMapOf<String, MutableSubjectTotal>()
         var assignedAnyFullDay = false
+        var appliedManualSelectionCount = 0
+        val unresolvedPartialDays = linkedMapOf<String, AbsencePartialDayCandidate>()
 
         timetables.forEach { timetable ->
             timetable.days.forEach { day ->
                 val date = AbsenceTerms.parseDate(day.date) ?: return@forEach
                 if (date !in validDateRange) return@forEach
-                val lessons = countableLessons(day.atoms, timetable.subjects, catalog)
+                val dateKey = TimetableDates.apiDateString(date)
+                val lessons = countableLessons(dateKey, day.atoms, timetable, catalog)
                 if (lessons.isEmpty()) return@forEach
 
                 lessons.forEach { lesson ->
@@ -112,12 +173,32 @@ object AbsenceSubjectFallback {
                 if (absentHours >= lessons.size) {
                     lessons.forEach { lesson -> totals.getValue(lesson.key).base += 1 }
                     assignedAnyFullDay = true
+                } else if (absentHours > 0) {
+                    val validLessonIDs = lessons.mapTo(mutableSetOf()) { it.id }
+                    val selectedLessonIDs = manualSelections.selectedLessonIDs(dateKey).intersect(validLessonIDs)
+                    if (selectedLessonIDs.size == absentHours) {
+                        lessons.filter { it.id in selectedLessonIDs }.forEach { lesson ->
+                            totals.getValue(lesson.key).base += 1
+                            appliedManualSelectionCount += 1
+                        }
+                        assignedAnyFullDay = true
+                    } else {
+                        unresolvedPartialDays[dateKey] = AbsencePartialDayCandidate(
+                            dateKey = dateKey,
+                            requiredSelectionCount = minOf(absentHours, lessons.size),
+                            selectedLessonIDs = selectedLessonIDs.sorted(),
+                            lessons = lessons.map(CountableLesson::candidate),
+                        )
+                    }
                 }
             }
         }
 
-        if (!assignedAnyFullDay) return emptyList()
-        return totals.values
+        val unresolved = unresolvedPartialDays.values.sortedBy(AbsencePartialDayCandidate::dateKey)
+        if (!assignedAnyFullDay && unresolved.isEmpty()) {
+            return AbsenceSubjectFallbackResult(emptyList(), emptyList(), 0)
+        }
+        val subjects = totals.values
             .filter { it.lessonsCount > 0 }
             .map { total ->
                 AbsencePerSubject(
@@ -126,31 +207,72 @@ object AbsenceSubjectFallback {
                     base = total.base,
                 )
             }
+        return AbsenceSubjectFallbackResult(subjects, unresolved, appliedManualSelectionCount)
     }
 
     private fun countableLessons(
+        dateKey: String,
         atoms: List<TimetableAtom>,
-        timetableSubjects: List<TimetableEntity>,
+        timetable: TimetableResponse,
         catalog: SubjectCatalog,
-    ): List<ResolvedLesson> {
-        val subjectsByID = timetableSubjects.associateBy { it.id }
+    ): List<CountableLesson> {
+        val subjectsByID = timetable.subjects.associateBy { it.id }
+        val hoursByID = timetable.hours.associateBy { it.id }
+        val hourOrder = timetable.hours.mapIndexed { index, hour -> hour.id to index }.toMap()
         val seen = mutableSetOf<String>()
         return atoms.mapNotNull { atom ->
             if (LessonChangeKind.fromApi(atom.change?.changeType) == LessonChangeKind.CANCELED) return@mapNotNull null
             val rawReference = atom.subjectID?.trim().orEmpty()
             if (rawReference.isEmpty()) return@mapNotNull null
-            val entity = subjectsByID[rawReference] ?: timetableSubjects.firstOrNull { candidate ->
+            val entity = subjectsByID[rawReference] ?: timetable.subjects.firstOrNull { candidate ->
                 listOf(candidate.id, candidate.abbrev, candidate.name)
                     .filterNotNull()
                     .any { normalize(it) == normalize(rawReference) }
             }
-            val resolved = catalog.resolve(entity?.id ?: rawReference, entity)
-            if (!seen.add("${atom.hourID}#${resolved.key}")) return@mapNotNull null
-            resolved
-        }
+            val subject = catalog.resolve(entity?.id ?: rawReference, entity)
+            if (!seen.add("${atom.hourID}#${subject.key}")) return@mapNotNull null
+            val hour = hoursByID[atom.hourID]
+            val caption = hour?.caption?.trim().orEmpty().ifEmpty { atom.hourID }
+            val timeRange = listOf(hour?.beginTime, hour?.endTime)
+                .mapNotNull { it?.trim()?.takeIf(String::isNotEmpty) }
+                .joinToString("-")
+            CountableLesson(
+                id = "lesson-$dateKey-${atom.hourID}-${storageSafe(subject.key)}",
+                dateKey = dateKey,
+                hourID = atom.hourID,
+                hourCaption = caption,
+                timeRange = timeRange,
+                key = subject.key,
+                displayName = subject.displayName,
+            )
+        }.sortedWith(
+            compareBy<CountableLesson> { hourOrder[it.hourID] ?: Int.MAX_VALUE }
+                .thenBy(CountableLesson::hourID)
+                .thenBy(CountableLesson::displayName),
+        )
     }
 
-    private data class ResolvedLesson(val key: String, val displayName: String)
+    private data class ResolvedSubject(val key: String, val displayName: String)
+
+    private data class CountableLesson(
+        val id: String,
+        val dateKey: String,
+        val hourID: String,
+        val hourCaption: String,
+        val timeRange: String,
+        val key: String,
+        val displayName: String,
+    ) {
+        val candidate: AbsenceLessonCandidate get() = AbsenceLessonCandidate(
+            id = id,
+            dateKey = dateKey,
+            hourID = hourID,
+            hourCaption = hourCaption,
+            timeRange = timeRange,
+            subjectKey = key,
+            subjectName = displayName,
+        )
+    }
 
     private data class MutableSubjectTotal(
         val displayName: String,
@@ -169,9 +291,9 @@ object AbsenceSubjectFallback {
                 }
             }
         }
-        private val resolvedByKey = linkedMapOf<String, ResolvedLesson>()
+        private val resolvedByKey = linkedMapOf<String, ResolvedSubject>()
 
-        fun resolve(rawID: String, entity: TimetableEntity?): ResolvedLesson {
+        fun resolve(rawID: String, entity: TimetableEntity?): ResolvedSubject {
             val normalizedRawID = normalize(rawID)
             val key = if (normalizedRawID.isNotEmpty()) "raw-$normalizedRawID" else {
                 "text-${normalize(entity?.name ?: entity?.abbrev.orEmpty()).ifEmpty { "unknown" }}"
@@ -184,10 +306,16 @@ object AbsenceSubjectFallback {
                     ?: entity?.name?.trim()?.takeIf(String::isNotEmpty)
                     ?: entity?.abbrev?.trim()?.takeIf(String::isNotEmpty)
                     ?: rawID.trim().ifEmpty { "Subject" }
-                ResolvedLesson(key, displayName)
+                ResolvedSubject(key, displayName)
             }
         }
     }
+
+    private fun storageSafe(value: String): String = normalize(value)
+        .replace(Regex("[^a-z0-9]+"), "-")
+        .trim('-')
+        .ifEmpty { "unknown" }
+        .take(80)
 
     internal fun normalize(value: String): String = Normalizer.normalize(value.trim(), Normalizer.Form.NFD)
         .replace(Regex("\\p{M}+"), "")

@@ -29,6 +29,13 @@
     <string name="absence_subjects_partial_warning">some timetable weeks could not be loaded. this is a partial estimate.</string>
     <string name="absence_subjects_error_title">could not calculate subject absence</string>
     <string name="absence_subjects_error_no_timetable">timetable could not be loaded, so subject absence cannot be calculated.</string>
+    <string name="absence_manual_callout_title">exact lessons needed</string>
+    <string name="absence_manual_callout_message">%1$d days have partial absence. choose the exact lessons so they can count toward subjects.</string>
+    <string name="absence_manual_callout_button">choose lessons</string>
+    <string name="absence_manual_selected_count">selected %1$d of %2$d lessons</string>
+    <string name="absence_manual_title">choose missed lessons</string>
+    <string name="absence_manual_cancel">cancel</string>
+    <string name="absence_manual_save">save</string>
     <string name="absence_days_empty">no daily absence.</string>
     <string name="absence_months_empty">no monthly absence.</string>
     <string name="absence_total">total</string>

@@ -2,6 +2,7 @@ package com.bukovinafilip.gradey.feature.absence
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -32,14 +33,18 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -64,6 +69,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.bukovinafilip.gradey.domain.AbsenceDaySummary
 import com.bukovinafilip.gradey.domain.AbsenceMonthSummary
+import com.bukovinafilip.gradey.domain.AbsenceManualSelectionPolicy
+import com.bukovinafilip.gradey.domain.AbsencePartialDayCandidate
 import com.bukovinafilip.gradey.domain.AbsencePresentationState
 import com.bukovinafilip.gradey.domain.AbsenceRiskSummary
 import com.bukovinafilip.gradey.domain.AbsenceSubjectResolutionProgress
@@ -73,6 +80,8 @@ import com.bukovinafilip.gradey.domain.AbsenceTimelineSummary
 import com.bukovinafilip.gradey.model.AbsenceCounts
 import com.bukovinafilip.gradey.model.AbsenceResponse
 import java.time.format.DateTimeFormatter
+import java.time.LocalDate
+import kotlinx.coroutines.launch
 import kotlin.math.ceil
 import kotlin.math.max
 
@@ -191,13 +200,20 @@ fun AbsenceScreen(
     subjectResolutionProgress: AbsenceSubjectResolutionProgress?,
     subjectResolutionWarning: String?,
     subjectResolutionError: String?,
+    unresolvedPartialDays: List<AbsencePartialDayCandidate>,
     onRefresh: () -> Unit,
     onRetrySubjectResolution: () -> Unit,
+    onSaveManualSelections: suspend (Map<String, Set<String>>) -> String?,
     onOpenAccount: () -> Unit,
     onOpenGradeyTools: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var mode by rememberSaveable { mutableStateOf(AbsenceMode.Subjects) }
+    var isManualSheetPresented by rememberSaveable { mutableStateOf(false) }
+    var manualDrafts by remember { mutableStateOf<Map<String, Set<String>>>(emptyMap()) }
+    var manualSelectionError by remember { mutableStateOf<String?>(null) }
+    var isSavingManualSelections by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
     val locale = LocalConfiguration.current.locales[0]
     val timeline = remember(response) { AbsenceTimeline.make(response) }
     val riskSummary = remember(response) {
@@ -246,7 +262,15 @@ fun AbsenceScreen(
                             progress = subjectResolutionProgress,
                             warning = subjectResolutionWarning,
                             error = subjectResolutionError,
+                            unresolvedPartialDays = unresolvedPartialDays,
                             onRetry = onRetrySubjectResolution,
+                            onChooseLessons = {
+                                manualDrafts = unresolvedPartialDays.associate { day ->
+                                    day.dateKey to day.selectedLessonIDs.toSet()
+                                }
+                                manualSelectionError = null
+                                isManualSheetPresented = true
+                            },
                         )
                     }
                 }
@@ -270,6 +294,46 @@ fun AbsenceScreen(
                 }
             }
         }
+    }
+
+    if (isManualSheetPresented) {
+        ManualAbsenceLessonSelectionSheet(
+            days = unresolvedPartialDays,
+            drafts = manualDrafts,
+            locale = locale,
+            errorMessage = manualSelectionError,
+            isSaving = isSavingManualSelections,
+            onToggle = { dateKey, lessonID ->
+                val day = unresolvedPartialDays.firstOrNull { it.dateKey == dateKey }
+                    ?: return@ManualAbsenceLessonSelectionSheet
+                val selected = AbsenceManualSelectionPolicy.toggle(
+                    current = manualDrafts[dateKey].orEmpty(),
+                    lessonID = lessonID,
+                    requiredSelectionCount = day.requiredSelectionCount,
+                )
+                manualDrafts = manualDrafts + (dateKey to selected)
+            },
+            onDismiss = {
+                if (!isSavingManualSelections) {
+                    manualSelectionError = null
+                    isManualSheetPresented = false
+                }
+            },
+            onSave = {
+                scope.launch {
+                    isSavingManualSelections = true
+                    manualSelectionError = try {
+                        onSaveManualSelections(manualDrafts)
+                    } finally {
+                        isSavingManualSelections = false
+                    }
+                    if (manualSelectionError == null) {
+                        manualDrafts = emptyMap()
+                        isManualSheetPresented = false
+                    }
+                }
+            },
+        )
     }
 }
 
@@ -546,7 +610,9 @@ private fun SubjectsCard(
     progress: AbsenceSubjectResolutionProgress?,
     warning: String?,
     error: String?,
+    unresolvedPartialDays: List<AbsencePartialDayCandidate>,
     onRetry: () -> Unit,
+    onChooseLessons: () -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         if (!warning.isNullOrBlank()) {
@@ -563,6 +629,36 @@ private fun SubjectsCard(
                 ) {
                     Icon(Icons.Default.Error, contentDescription = null, tint = LateOrange)
                     Text(warning, color = Color.Black, fontSize = 14.sp, lineHeight = 19.sp)
+                }
+            }
+        }
+        if (!isResolving && error.isNullOrBlank() && unresolvedPartialDays.isNotEmpty()) {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp),
+                color = SoftTeal,
+                shadowElevation = 1.dp,
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Text(
+                        stringResource(R.string.absence_manual_callout_title),
+                        color = AccentTeal,
+                        fontSize = 15.sp,
+                        lineHeight = 20.sp,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Text(
+                        stringResource(R.string.absence_manual_callout_message, unresolvedPartialDays.size),
+                        color = MutedText,
+                        fontSize = 14.sp,
+                        lineHeight = 19.sp,
+                    )
+                    Button(onClick = onChooseLessons) {
+                        Text(stringResource(R.string.absence_manual_callout_button))
+                    }
                 }
             }
         }
@@ -629,6 +725,139 @@ private fun SubjectsCard(
                         if (index != subjects.lastIndex) {
                             HorizontalDivider(color = Color(0xFFC6C6C8), thickness = 0.33.dp)
                         }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ManualAbsenceLessonSelectionSheet(
+    days: List<AbsencePartialDayCandidate>,
+    drafts: Map<String, Set<String>>,
+    locale: java.util.Locale,
+    errorMessage: String?,
+    isSaving: Boolean,
+    onToggle: (dateKey: String, lessonID: String) -> Unit,
+    onDismiss: () -> Unit,
+    onSave: () -> Unit,
+) {
+    val canSave = AbsenceManualSelectionPolicy.canSave(days, drafts)
+    val dateFormatter = remember(locale) { DateTimeFormatter.ofPattern("EEE d. M.", locale) }
+
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 18.dp, end = 18.dp, bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text(
+                stringResource(R.string.absence_manual_title),
+                color = Color.Black,
+                fontSize = 21.sp,
+                lineHeight = 26.sp,
+                fontWeight = FontWeight.Bold,
+            )
+            if (!errorMessage.isNullOrBlank()) {
+                Text(errorMessage, color = MissedRed, fontSize = 14.sp, lineHeight = 19.sp)
+            }
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 520.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                days.forEach { day ->
+                    item(key = "header-${day.dateKey}") {
+                        val dateLabel = runCatching { LocalDate.parse(day.dateKey).format(dateFormatter) }
+                            .getOrDefault(day.dateKey)
+                        Column(modifier = Modifier.padding(top = 6.dp)) {
+                            Text(
+                                dateLabel,
+                                color = Color.Black,
+                                fontSize = 16.sp,
+                                lineHeight = 21.sp,
+                                fontWeight = FontWeight.SemiBold,
+                            )
+                            Text(
+                                stringResource(
+                                    R.string.absence_manual_selected_count,
+                                    drafts[day.dateKey].orEmpty().size,
+                                    day.requiredSelectionCount,
+                                ),
+                                color = MutedText,
+                                fontSize = 13.sp,
+                                lineHeight = 17.sp,
+                            )
+                        }
+                    }
+                    day.lessons.forEach { lesson ->
+                        item(key = lesson.id) {
+                            val isSelected = lesson.id in drafts[day.dateKey].orEmpty()
+                            Surface(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable(enabled = !isSaving) {
+                                        onToggle(day.dateKey, lesson.id)
+                                    },
+                                shape = RoundedCornerShape(14.dp),
+                                color = if (isSelected) SoftTeal else CardWhite,
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 11.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            "${lesson.hourCaption}. ${lesson.subjectName}",
+                                            color = Color.Black,
+                                            fontSize = 15.sp,
+                                            lineHeight = 20.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                        )
+                                        if (lesson.timeRange.isNotBlank()) {
+                                            Text(
+                                                lesson.timeRange,
+                                                color = MutedText,
+                                                fontSize = 13.sp,
+                                                lineHeight = 17.sp,
+                                            )
+                                        }
+                                    }
+                                    Text(
+                                        if (isSelected) "✓" else "○",
+                                        color = if (isSelected) AccentTeal else MutedText,
+                                        fontSize = 22.sp,
+                                        lineHeight = 24.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                TextButton(enabled = !isSaving, onClick = onDismiss) {
+                    Text(stringResource(R.string.absence_manual_cancel))
+                }
+                Button(enabled = canSave && !isSaving, onClick = onSave) {
+                    if (isSaving) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp),
+                            color = Color.White,
+                            strokeWidth = 2.dp,
+                        )
+                    } else {
+                        Text(stringResource(R.string.absence_manual_save))
                     }
                 }
             }

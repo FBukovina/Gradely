@@ -9,6 +9,7 @@ import com.bukovinafilip.gradey.model.StravaCZMenu
 import com.bukovinafilip.gradey.model.TimetableResponse
 import com.bukovinafilip.gradey.model.TimetableWeek
 import com.bukovinafilip.gradey.domain.NextLessonSnapshotBuilder
+import com.bukovinafilip.gradey.domain.AbsenceLessonSelections
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
@@ -25,6 +26,12 @@ class RoomGradeyCache(
 
     suspend fun loadAbsence(scope: String): AbsenceResponse? = load(key("absence-v2", scope), AbsenceResponse.serializer())
     suspend fun saveAbsence(scope: String, data: AbsenceResponse) = save(key("absence-v2", scope), data, AbsenceResponse.serializer())
+
+    suspend fun loadAbsenceLessonSelections(scope: String): AbsenceLessonSelections? =
+        load(key("absence-lesson-selections-v1", scope), AbsenceLessonSelections.serializer())
+
+    suspend fun saveAbsenceLessonSelections(scope: String, selections: AbsenceLessonSelections) =
+        save(key("absence-lesson-selections-v1", scope), selections, AbsenceLessonSelections.serializer())
 
     suspend fun loadTimetable(scope: String, weekStart: String): TimetableWeek? =
         load(key("timetable-week", "$scope-$weekStart"), TimetableWeek.serializer())
@@ -65,6 +72,7 @@ class RoomGradeyCache(
         dao.clearPrefix("marks:$scope")
         dao.clearPrefix("absence:$scope")
         dao.clearPrefix("absence-v2:$scope")
+        dao.clearPrefix("absence-lesson-selections-v1:$scope")
         dao.clearPrefix("timetable-week:$scope")
         dao.clearPrefix("timetable-raw:$scope")
     }

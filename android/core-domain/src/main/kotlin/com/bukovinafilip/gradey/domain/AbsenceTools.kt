@@ -155,6 +155,8 @@ data class AbsenceLessonCandidate(
     val id: String,
     val dateKey: String,
     val hourID: String,
+    val hourCaption: String = hourID,
+    val timeRange: String = "",
     val subjectKey: String,
     val subjectName: String,
 )

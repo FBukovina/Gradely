@@ -23,6 +23,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.bukovinafilip.gradey.model.AgeAttestationKind
 import com.bukovinafilip.gradey.model.AppLanguage
@@ -160,6 +161,9 @@ fun AccountScreen(
                 },
             )
             Text("Gradey asks for age confirmation before school data, support chat, or AI leave the device for our servers.")
+        }
+        GradeySectionCard(title = stringResource(R.string.bakalari_attribution_title)) {
+            Text(stringResource(R.string.bakalari_attribution_message))
         }
         if (account != null) {
             Column(

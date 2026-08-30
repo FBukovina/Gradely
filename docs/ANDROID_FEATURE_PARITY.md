@@ -37,7 +37,9 @@ Last source audit: 2026-08-30 on `codex/android-monorepo`.
 - [x] Migrate or safely reject any locally stored Android EduPage session without crashing startup.
 - [x] N/A — EduPage login, two-factor approval, child selection, child switching, and EduPage timetable parsing will not be ported to Android.
 - [x] Make all Android school/account copy consistently say Bakaláři rather than implying multiple school providers.
-- [ ] Preserve Bakaláři attribution and relevant legal/source acknowledgement.
+- [x] Preserve Bakaláři attribution and relevant legal/source acknowledgement.
+
+Bakaláři attribution verification (2026-08-30): Android Account now presents the same explicit notice as iOS that Gradey uses an unofficial integration and is neither a Bakaláři product nor affiliated with or endorsed by Bakaláři software. The title and full notice are packaged for standard English, standard Czech, English Chronically Online, and Czech Chronically Online configurations; Android resource merging and lint verify every locale contains the required keys.
 
 ## Startup, age gate, onboarding, and language
 

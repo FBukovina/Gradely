@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="bakalari_attribution_title">Bakaláři support</string>
+    <string name="bakalari_attribution_message">This unofficial integration talks to Bakaláři school systems. Gradey is not a Bakaláři product and is not affiliated with or endorsed by Bakaláři software.</string>
+</resources>

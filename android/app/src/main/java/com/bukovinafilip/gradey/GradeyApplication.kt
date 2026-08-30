@@ -4,12 +4,14 @@ import android.app.Application
 import com.bukovinafilip.gradey.data.AndroidGradeyConfig
 import com.bukovinafilip.gradey.data.AndroidGradeyGraph
 import com.bukovinafilip.gradey.data.GradeyCacheOwner
+import com.bukovinafilip.gradey.push.GradeyMessagingService
 import com.revenuecat.purchases.Purchases
 import com.revenuecat.purchases.PurchasesConfiguration
 
 class GradeyApplication : Application(), GradeyCacheOwner {
     lateinit var graph: AndroidGradeyGraph
         private set
+    val graphIfReady: AndroidGradeyGraph? get() = if (::graph.isInitialized) graph else null
 
     override val gradeyCache get() = graph.cache
 
@@ -17,6 +19,7 @@ class GradeyApplication : Application(), GradeyCacheOwner {
         super.onCreate()
 
         configureGradeyFirebase(this)
+        GradeyMessagingService.createNotificationChannel(this)
 
         if (BuildConfig.REVENUECAT_ANDROID_KEY.isNotBlank()) {
             Purchases.configure(PurchasesConfiguration.Builder(this, BuildConfig.REVENUECAT_ANDROID_KEY).build())

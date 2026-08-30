@@ -48,6 +48,8 @@ class AndroidGradeyGraph private constructor(
     val onboardingProgressStore: OnboardingProgressStore,
     val appLanguageStore: AppLanguageStore,
     val mealsTabPreferenceStore: MealsTabPreferenceStore,
+    val notificationPreferencesStore: NotificationPreferencesStore,
+    val pushRegistrationStore: PushRegistrationStore,
     val isGradeyCloudConfigured: Boolean,
     val googleWebClientId: String,
 ) {
@@ -161,6 +163,8 @@ class AndroidGradeyGraph private constructor(
                 onboardingProgressStore = OnboardingProgressStore(context, GradeyJson),
                 appLanguageStore = AppLanguageStore(context),
                 mealsTabPreferenceStore = MealsTabPreferenceStore(context),
+                notificationPreferencesStore = NotificationPreferencesStore(context, GradeyJson),
+                pushRegistrationStore = PushRegistrationStore(context),
                 isGradeyCloudConfigured = supabase.isConfigured,
                 googleWebClientId = config.googleWebClientId,
             )

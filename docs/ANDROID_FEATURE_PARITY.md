@@ -287,8 +287,8 @@ Strava.cz verification (2026-08-30): Android now uses the same public Strava.cz 
 - [ ] Implement profile/avatar summary, full-name edit, Gradey ID/local status, and session sign-out actions.
 - [ ] Implement Bakaláři account list/status, add another, activate, reconnect, per-account alerts, unlink confirmation, and sync metadata.
 - [ ] Implement Strava.cz connection status, link, retry cloud link, and unlink.
-- [ ] Implement device notification permission status/action and lock-screen detail choices.
-- [ ] Implement quiet hours, start/end, timezone display, persistence, and cloud update rollback/error handling.
+- [x] Implement device notification permission status/action and lock-screen detail choices.
+- [x] Implement quiet hours, start/end, timezone display, persistence, and cloud update rollback/error handling.
 - [ ] Show age-attestation state and legal privacy/terms links.
 - [ ] Implement data export creation/share state and two-stage account deletion confirmation.
 - [ ] Implement language, Chronically Online, and Show Meals tab preferences.
@@ -306,24 +306,28 @@ Strava.cz verification (2026-08-30): Android now uses the same public Strava.cz 
 
 ## Notifications and push
 
-- [ ] Request notification permission only from the onboarding/settings actions that require it.
-- [ ] Obtain and refresh the FCM token and register it as platform `android` only with a valid Gradey session.
-- [ ] Handle token rotation, sign-out, denied permission, missing Firebase configuration, retry, and duplicate registration safely.
-- [ ] Open marks/subjects or timetable from notification/deep-link payloads as appropriate.
-- [ ] Apply lock-screen detail and quiet-hours preferences consistently with the backend.
+- [x] Request notification permission only from the onboarding/settings actions that require it.
+- [x] Obtain and refresh the FCM token and register it as platform `android` only with a valid Gradey session.
+- [x] Handle token rotation, sign-out, denied permission, missing Firebase configuration, retry, and duplicate registration safely.
+- [x] Open marks/subjects or timetable from notification/deep-link payloads as appropriate.
+- [x] Apply lock-screen detail and quiet-hours preferences consistently with the backend.
 - [ ] Verify foreground, background, terminated, and tapped-notification behavior.
 - [x] DIFFERENT — Android uses FCM and notification channels; iOS uses APNs.
+
+Notification implementation evidence (2026-08-30): Android now creates the backend-matching `new_marks` channel, uses an FCM small icon, displays foreground payloads, and lets FCM display the existing notification payload while backgrounded. Registration checks runtime permission, Firebase configuration, cloud configuration, and a refreshed valid Gradey session before sending platform `android`; a mutex plus a hashed account/token/environment identity prevents duplicates, while failed attempts remain uncommitted for the next startup retry. Token rotation re-enters the same path and full Gradey sign-out clears the identity. The Account screen exposes live device status/system settings, canonical new-mark, lock-screen, and quiet-hour controls with local persistence, current-IANA-timezone updates, cloud writes, and rollback on error. JVM tests cover identity rotation/deduplication, preference persistence/corruption recovery, exact Supabase request contracts, and safe route variants. The end-to-end notification behavior row remains open until a real configured device receives foreground, background, terminated, and tapped deliveries.
 
 ## Navigation and deep links
 
 - [ ] Replace the single enum/switch shell with state-restorable Navigation Compose routes and ViewModels.
-- [ ] Use stable bottom navigation with Today, Subjects, Absence, Timetable, and optional Meals; Account remains a modal/destination, not a bottom tab.
-- [ ] Fix the current context-dependent Meals tab appearance.
+- [x] Use stable bottom navigation with Today, Subjects, Absence, Timetable, and optional Meals; Account remains a modal/destination, not a bottom tab.
+- [x] Fix the current context-dependent Meals tab appearance.
 - [ ] Preserve selected tab and nested destination across rotation/process recreation where safe.
-- [ ] Support `gradey://marks`, `gradey://subjects`, and path variants.
-- [ ] Support `gradey://timetable` and path variants from cold and warm starts.
-- [ ] Reset relevant feature/navigation state after school account changes and sign-out.
+- [x] Support `gradey://marks`, `gradey://subjects`, and path variants.
+- [x] Support `gradey://timetable` and path variants from cold and warm starts.
+- [x] Reset relevant feature/navigation state after school account changes and sign-out.
 - [ ] Verify every toolbar button, card shortcut, row, retry, dialog action, and back action reaches a functioning destination.
+
+Navigation verification evidence (2026-08-30): the bottom bar is a stable Today/Subjects/Absence/Timetable list with Meals controlled only by the persisted Show Meals preference; Account is reachable as a separate destination and is never emitted as a bottom item. The selected tab is now saveable across recreation. A strict Gradey/Gradely URI parser maps `marks` and `subjects` host/path variants to Subjects and `timetable` variants to Timetable, rejects unrelated schemes/routes, handles the launch intent, and handles subsequent `onNewIntent` events for warm notification taps. Account activation, school disconnect, full sign-out, and hiding the active Meals tab all reset feature/navigation state. Pure JVM route tests cover the accepted and rejected forms.
 
 ## Design system, Hugeicons, accessibility, and visual fidelity
 
@@ -341,7 +345,7 @@ Strava.cz verification (2026-08-30): Android now uses the same public Strava.cz 
 
 - [x] Publish a real next-lesson snapshot after successful timetable loads and clear it on school sign-out.
 - [x] Match no-snapshot, no-lessons, stale, current, upcoming, room/time, and timetable-change widget states.
-- [ ] Wire widget refresh/timeline updates and `gradey://timetable` navigation.
+- [x] Wire widget refresh/timeline updates and `gradey://timetable` navigation.
 - [ ] Replace Wear demo payloads with phone sync and/or secure direct Bakaláři refresh.
 - [ ] Match current lesson progress, upcoming lessons, remaining day, stale/error/signed-out, and manual refresh states.
 - [ ] Implement Wear complications for supported Android families where platform APIs allow.

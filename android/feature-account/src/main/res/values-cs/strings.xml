@@ -6,4 +6,19 @@
     <string name="meals_tab_setting_message">Zobrazit jídla ze Strava.cz v hlavní navigaci.</string>
     <string name="meals_manage_from_tab">Toto připojení můžete spravovat na kartě Jídla.</string>
     <string name="meals_unlink_message">Tímto odpojíte Strava.cz na tomto zařízení a odeberete jídelnu z Gradey ID.</string>
+    <string name="notifications_gradey_id_required">Nastavení cloudových oznámení vyžaduje Gradey ID.</string>
+    <string name="notifications_device_permission">Oprávnění zařízení</string>
+    <string name="notifications_enabled">Zapnuto</string>
+    <string name="notifications_disabled">Vypnuto</string>
+    <string name="notifications_open_system_settings">Otevřít nastavení oznámení</string>
+    <string name="notifications_new_marks">Nové známky</string>
+    <string name="notifications_lock_screen_detail">Podrobnosti na zamčené obrazovce</string>
+    <string name="notifications_private_summary">Soukromé shrnutí</string>
+    <string name="notifications_mark_and_subject">Známka a předmět</string>
+    <string name="notifications_full_details">Úplné podrobnosti</string>
+    <string name="notifications_quiet_hours">Doba klidu</string>
+    <string name="notifications_quiet_start">Začátek v %1$s</string>
+    <string name="notifications_quiet_end">Konec v %1$s</string>
+    <string name="notifications_time_zone">Časové pásmo: %1$s</string>
+    <string name="notifications_saving">Ukládání nastavení oznámení…</string>
 </resources>

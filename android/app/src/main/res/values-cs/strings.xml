@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Gradey</string>
+    <string name="notification_channel_new_marks">Nové známky</string>
+    <string name="notification_channel_new_marks_description">Upozornění, když škola přidá novou známku</string>
+    <string name="notification_new_mark_title">Nová známka</string>
+    <string name="notification_new_mark_body">V Gradey je k dispozici nová známka.</string>
+</resources>

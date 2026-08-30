@@ -6,6 +6,7 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.enableEdgeToEdge
@@ -58,7 +59,9 @@ import androidx.credentials.ClearCredentialStateRequest
 import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
+import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.bukovinafilip.gradey.feature.absence.AbsenceScreen
 import com.bukovinafilip.gradey.feature.absence.AbsenceStateScreen
 import com.bukovinafilip.gradey.feature.absence.R as AbsenceR
@@ -105,6 +108,7 @@ import com.bukovinafilip.gradey.model.GradeyAccount
 import com.bukovinafilip.gradey.model.LinkedAccountProvider
 import com.bukovinafilip.gradey.model.LinkedSchoolAccount
 import com.bukovinafilip.gradey.model.NewMarkEvent
+import com.bukovinafilip.gradey.model.NotificationPreferences
 import com.bukovinafilip.gradey.model.OnboardingJourney
 import com.bukovinafilip.gradey.model.OnboardingProgress
 import com.bukovinafilip.gradey.model.OnboardingStep
@@ -117,6 +121,7 @@ import com.bukovinafilip.gradey.ui.GradeyTheme
 import com.bukovinafilip.gradey.ui.GradeyHero
 import com.bukovinafilip.gradey.ui.GradeyScreen
 import com.bukovinafilip.gradey.ui.GradeySectionCard
+import com.bukovinafilip.gradey.push.GradeyPushRegistration
 import com.bukovinafilip.gradey.widgets.updateNextLessonWidgets
 import com.bukovinafilip.gradey.wear.PhoneWearSyncPublisher
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
@@ -124,15 +129,22 @@ import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.time.ZoneId
 
 class MainActivity : ComponentActivity() {
+    private var deepLinkSequence = 0L
+    private val deepLinkRequests = MutableStateFlow(DeepLinkRequest())
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (savedInstanceState == null) acceptDeepLink(intent)
         enableEdgeToEdge()
         setContent {
             val graph = (application as GradeyApplication).graph
+            val deepLinkRequest by deepLinkRequests.collectAsStateWithLifecycle()
             var appLanguage by remember { mutableStateOf(graph.appLanguageStore.selection) }
             val localizedContext = remember(appLanguage) {
                 graph.appLanguageStore.localizedContext(this@MainActivity, appLanguage)
@@ -149,11 +161,23 @@ class MainActivity : ComponentActivity() {
                             graph.appLanguageStore.selection = selection
                             appLanguage = selection
                         },
-                        initialTab = if (intent?.data?.host == "timetable" || intent?.data?.path == "/timetable") AppTab.TIMETABLE else AppTab.TODAY,
+                        initialTab = gradeyDeepLinkDestination(intent?.dataString).toAppTab() ?: AppTab.TODAY,
+                        deepLinkRequest = deepLinkRequest,
                     )
                 }
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        acceptDeepLink(intent)
+    }
+
+    private fun acceptDeepLink(intent: Intent?) {
+        deepLinkSequence += 1
+        deepLinkRequests.value = DeepLinkRequest(deepLinkSequence, intent?.dataString)
     }
 }
 
@@ -173,6 +197,20 @@ private enum class AppTab(val label: String) {
     ACCOUNT("Account"),
 }
 
+private fun DeepLinkDestination?.toAppTab(): AppTab? = when (this) {
+    DeepLinkDestination.SUBJECTS -> AppTab.SUBJECTS
+    DeepLinkDestination.TIMETABLE -> AppTab.TIMETABLE
+    null -> null
+}
+
+private fun android.content.Context.notificationsAreEnabled(): Boolean =
+    NotificationManagerCompat.from(this).areNotificationsEnabled() &&
+        (
+            Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+                ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) ==
+                PackageManager.PERMISSION_GRANTED
+            )
+
 private data class GradeHistorySnapshot(
     val linkedAccountID: String?,
     val trends: List<SubjectGradeTrend>,
@@ -190,11 +228,12 @@ private fun GradeyApp(
     appLanguage: AppLanguage,
     onAppLanguageChange: (AppLanguage) -> Unit,
     initialTab: AppTab,
+    deepLinkRequest: DeepLinkRequest,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var phase by remember { mutableStateOf(AppPhase.CHECKING) }
-    var selectedTab by remember { mutableStateOf(initialTab) }
+    var selectedTab by rememberSaveable { mutableStateOf(initialTab) }
     var isGradeyAIPresented by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
     var authError by remember { mutableStateOf<String?>(null) }
@@ -244,13 +283,47 @@ private fun GradeyApp(
     var showMealsTab by remember { mutableStateOf(graph.mealsTabPreferenceStore.isVisible) }
     var gradeHistorySnapshot by remember { mutableStateOf<GradeHistorySnapshot?>(null) }
     var gradeHistoryRefreshError by remember { mutableStateOf<String?>(null) }
+    var notificationPreferences by remember {
+        mutableStateOf(graph.notificationPreferencesStore.preferences)
+    }
+    var isUpdatingNotificationPreferences by remember { mutableStateOf(false) }
+    var notificationPreferencesError by remember { mutableStateOf<String?>(null) }
+    var notificationPermissionGranted by remember {
+        mutableStateOf(context.notificationsAreEnabled())
+    }
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
+    ) { granted ->
+        notificationPermissionGranted = granted || context.notificationsAreEnabled()
+        if (notificationPermissionGranted) {
+            scope.launch { GradeyPushRegistration.refreshIfEligible(context.applicationContext, graph) }
+        }
+        onboardingProgress?.let { current ->
+            val ready = current.copy(step = OnboardingStep.READY)
+            graph.onboardingProgressStore.saveProgress(ready)
+            onboardingProgress = ready
+        }
+    }
+    val notificationSettingsLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult(),
     ) {
-        val current = onboardingProgress ?: return@rememberLauncherForActivityResult
-        val ready = current.copy(step = OnboardingStep.READY)
-        graph.onboardingProgressStore.saveProgress(ready)
-        onboardingProgress = ready
+        notificationPermissionGranted = context.notificationsAreEnabled()
+        if (notificationPermissionGranted) {
+            scope.launch { GradeyPushRegistration.refreshIfEligible(context.applicationContext, graph) }
+        }
+    }
+
+    LaunchedEffect(deepLinkRequest.sequence) {
+        gradeyDeepLinkDestination(deepLinkRequest.rawUri).toAppTab()?.let { destination ->
+            selectedTab = destination
+            isGradeyAIPresented = false
+        }
+    }
+
+    LaunchedEffect(account?.id, notificationPermissionGranted) {
+        if (account != null && notificationPermissionGranted) {
+            GradeyPushRegistration.refreshIfEligible(context.applicationContext, graph)
+        }
     }
 
     suspend fun runWithLoading(block: suspend () -> Unit) {
@@ -662,22 +735,62 @@ private fun GradeyApp(
         isRefreshingLinkedAccounts = true
         linkedAccountError = null
         try {
-            val refresh = refreshRetainingContent(linkedAccounts) {
-                graph.linkedAccountRepository.refreshAccounts().linkedAccounts
-            }
-            linkedAccounts = refresh.value
-            when (val error = refresh.failure) {
-                is GradeySessionExpiredException -> {
-                    account = null
-                    authError = error.userFacingMessage()
-                    phase = AppPhase.SIGNED_OUT
-                }
-
-                null -> Unit
-                else -> linkedAccountError = error.userFacingMessage()
-            }
+            val snapshot = graph.linkedAccountRepository.refreshAccounts()
+            linkedAccounts = snapshot.linkedAccounts
+            notificationPreferences = snapshot.notificationPreferences
+            graph.notificationPreferencesStore.preferences = snapshot.notificationPreferences
+            notificationPreferencesError = null
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: GradeySessionExpiredException) {
+            account = null
+            authError = error.userFacingMessage()
+            phase = AppPhase.SIGNED_OUT
+        } catch (error: Throwable) {
+            linkedAccountError = error.userFacingMessage()
         } finally {
             isRefreshingLinkedAccounts = false
+        }
+    }
+
+    suspend fun updateNotificationPreferences(updated: NotificationPreferences) {
+        if (
+            account == null ||
+            isGuestMode ||
+            !graph.isGradeyCloudConfigured ||
+            isUpdatingNotificationPreferences
+        ) return
+
+        val previous = notificationPreferences
+        val prepared = updated.copy(
+            quietHoursStartMinute = updated.quietHoursStartMinute.coerceIn(0, 1439),
+            quietHoursEndMinute = updated.quietHoursEndMinute.coerceIn(0, 1439),
+            quietHoursTimeZone = ZoneId.systemDefault().id,
+        )
+        notificationPreferences = prepared
+        graph.notificationPreferencesStore.preferences = prepared
+        notificationPreferencesError = null
+        isUpdatingNotificationPreferences = true
+        try {
+            val session = graph.gradeyAuthRepository.validSession()
+            graph.devicePushTokenClient.updateNotificationPreferences(prepared, session)
+        } catch (error: CancellationException) {
+            notificationPreferences = previous
+            graph.notificationPreferencesStore.preferences = previous
+            throw error
+        } catch (error: GradeySessionExpiredException) {
+            notificationPreferences = previous
+            graph.notificationPreferencesStore.preferences = previous
+            graph.pushRegistrationStore.clear()
+            account = null
+            authError = error.userFacingMessage()
+            phase = AppPhase.SIGNED_OUT
+        } catch (error: Throwable) {
+            notificationPreferences = previous
+            graph.notificationPreferencesStore.preferences = previous
+            notificationPreferencesError = error.userFacingMessage()
+        } finally {
+            isUpdatingNotificationPreferences = false
         }
     }
 
@@ -1026,16 +1139,22 @@ private fun GradeyApp(
         openStoredSchoolOrLogin()
     }
 
-    fun notificationsAreEnabled(): Boolean =
-        Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
-            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) ==
-            PackageManager.PERMISSION_GRANTED
+    suspend fun signOutGradeyIdentity() {
+        try {
+            graph.gradeyAuthRepository.signOut()
+        } finally {
+            graph.pushRegistrationStore.clear()
+            graph.notificationPreferencesStore.clear()
+            notificationPreferences = NotificationPreferences.Default
+            notificationPreferencesError = null
+        }
+    }
 
     LaunchedEffect(ageAttestationKind) {
         if (ageAttestationKind == null) return@LaunchedEffect
         if (isGuestMode) {
             try {
-                graph.gradeyAuthRepository.signOut()
+                signOutGradeyIdentity()
             } catch (error: CancellationException) {
                 throw error
             } catch (_: Throwable) {
@@ -1228,7 +1347,7 @@ private fun GradeyApp(
                             isGuestMode = true
                             account = null
                             try {
-                                graph.gradeyAuthRepository.signOut()
+                                signOutGradeyIdentity()
                                 clearLinkedAccountsForLocalMode()
                                 advanceOnboardingAfterAccountChoice()
                             } catch (error: CancellationException) {
@@ -1273,7 +1392,7 @@ private fun GradeyApp(
                     onEnable = {
                         if (
                             Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-                            !notificationsAreEnabled()
+                            !notificationPermissionGranted
                         ) {
                             notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
                         } else {
@@ -1289,7 +1408,7 @@ private fun GradeyApp(
 
                 OnboardingStep.READY -> OnboardingReadyScreen(
                     isGuestMode = isGuestMode,
-                    notificationsEnabled = notificationsAreEnabled(),
+                    notificationsEnabled = notificationPermissionGranted,
                     onFinish = {
                         scope.launch {
                             isLoading = true
@@ -1384,7 +1503,7 @@ private fun GradeyApp(
                     isGuestMode = true
                     account = null
                     try {
-                        graph.gradeyAuthRepository.signOut()
+                        signOutGradeyIdentity()
                         clearLinkedAccountsForLocalMode()
                         openStoredSchoolOrLogin()
                     } catch (error: CancellationException) {
@@ -1722,6 +1841,10 @@ private fun GradeyApp(
                     isRefreshingLinkedAccounts = isRefreshingLinkedAccounts,
                     mutatingLinkedAccountID = mutatingLinkedAccountID,
                     showMealsTab = showMealsTab,
+                    notificationPreferences = notificationPreferences,
+                    notificationPermissionGranted = notificationPermissionGranted,
+                    isUpdatingNotificationPreferences = isUpdatingNotificationPreferences,
+                    notificationPreferencesErrorMessage = notificationPreferencesError,
                     onUpdateFullName = { fullName ->
                         scope.launch {
                             isUpdatingProfile = true
@@ -1773,6 +1896,17 @@ private fun GradeyApp(
                     onToggleLinkedNotifications = { linked, enabled ->
                         scope.launch { updateLinkedAccountNotifications(linked, enabled) }
                     },
+                    onOpenNotificationSettings = {
+                        notificationSettingsLauncher.launch(
+                            Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(
+                                Settings.EXTRA_APP_PACKAGE,
+                                context.packageName,
+                            ),
+                        )
+                    },
+                    onUpdateNotificationPreferences = { preferences ->
+                        scope.launch { updateNotificationPreferences(preferences) }
+                    },
                     onUnlinkLinkedAccount = { linked ->
                         scope.launch { unlinkLinkedAccount(linked) }
                     },
@@ -1792,7 +1926,7 @@ private fun GradeyApp(
                                 }
 
                                 disconnectStravaCZ()
-                                graph.gradeyAuthRepository.signOut()
+                                signOutGradeyIdentity()
                                 disconnectSchool()
                                 clearLinkedAccountsForLocalMode()
                                 try {

@@ -1,7 +1,9 @@
 package com.bukovinafilip.gradey.feature.account
 
+import android.app.TimePickerDialog
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -14,6 +16,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -23,6 +26,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.bukovinafilip.gradey.model.AgeAttestationKind
@@ -31,12 +36,15 @@ import com.bukovinafilip.gradey.model.GradeyAccount
 import com.bukovinafilip.gradey.model.LinkedSchoolAccount
 import com.bukovinafilip.gradey.model.LinkedAccountStatus
 import com.bukovinafilip.gradey.model.LinkedAccountProvider
+import com.bukovinafilip.gradey.model.NotificationLockScreenDetail
+import com.bukovinafilip.gradey.model.NotificationPreferences
 import com.bukovinafilip.gradey.ui.AppLanguagePicker
 import com.bukovinafilip.gradey.ui.GradeyHero
 import com.bukovinafilip.gradey.ui.GradeyScreen
 import com.bukovinafilip.gradey.ui.GradeySectionCard
 import com.bukovinafilip.gradey.ui.GradeySpacing
 import com.bukovinafilip.gradey.ui.MetadataRow
+import java.util.Locale
 
 @Composable
 fun AccountScreen(
@@ -53,19 +61,25 @@ fun AccountScreen(
     isRefreshingLinkedAccounts: Boolean = false,
     mutatingLinkedAccountID: String? = null,
     showMealsTab: Boolean = true,
+    notificationPreferences: NotificationPreferences = NotificationPreferences.Default,
+    notificationPermissionGranted: Boolean = false,
+    isUpdatingNotificationPreferences: Boolean = false,
+    notificationPreferencesErrorMessage: String? = null,
     onUpdateFullName: (String) -> Unit = {},
     onConnectGradeyId: () -> Unit = {},
     onRefreshLinkedAccounts: () -> Unit = {},
     onActivateLinkedAccount: (LinkedSchoolAccount) -> Unit = {},
     onReconnectLinkedAccount: (LinkedSchoolAccount) -> Unit = {},
     onToggleLinkedNotifications: (LinkedSchoolAccount, Boolean) -> Unit = { _, _ -> },
+    onOpenNotificationSettings: () -> Unit = {},
+    onUpdateNotificationPreferences: (NotificationPreferences) -> Unit = {},
     onUnlinkLinkedAccount: (LinkedSchoolAccount) -> Unit = {},
     onAppLanguageChange: (AppLanguage) -> Unit = {},
     onShowMealsTabChange: (Boolean) -> Unit = {},
     onSignOut: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var notifications by remember { mutableStateOf(true) }
+    val context = LocalContext.current
     var pendingUnlink by remember { mutableStateOf<LinkedSchoolAccount?>(null) }
     var fullNameDraft by remember(account?.id, account?.fullName) {
         mutableStateOf(account?.fullName.orEmpty())
@@ -73,6 +87,17 @@ fun AccountScreen(
     val normalizedFullName = fullNameDraft.trim()
     val isNameValid = normalizedFullName.length in 1..80
     val hasNameChanged = normalizedFullName != account?.fullName?.trim().orEmpty()
+    val notificationControlsEnabled = account != null && !isUpdatingNotificationPreferences
+
+    fun showTimePicker(minuteOfDay: Int, onChange: (Int) -> Unit) {
+        TimePickerDialog(
+            context,
+            { _, hour, minute -> onChange(hour * 60 + minute) },
+            minuteOfDay.coerceIn(0, 1439) / 60,
+            minuteOfDay.coerceIn(0, 1439) % 60,
+            true,
+        ).show()
+    }
 
     GradeyScreen(modifier = modifier.verticalScroll(rememberScrollState())) {
         GradeyHero("Account", account?.fullName ?: "Local-only mode")
@@ -121,10 +146,110 @@ fun AccountScreen(
         GradeySectionCard(title = "Notifications") {
             Icon(Icons.Default.Notifications, contentDescription = null)
             if (account == null) {
-                Text("Cloud notification settings require a Gradey ID.")
+                Text(stringResource(R.string.notifications_gradey_id_required))
             } else {
-                MetadataRow("New marks", if (notifications) "Enabled" else "Disabled")
-                Switch(checked = notifications, onCheckedChange = { notifications = it })
+                MetadataRow(
+                    stringResource(R.string.notifications_device_permission),
+                    stringResource(
+                        if (notificationPermissionGranted) R.string.notifications_enabled else R.string.notifications_disabled,
+                    ),
+                )
+                OutlinedButton(onClick = onOpenNotificationSettings) {
+                    Text(stringResource(R.string.notifications_open_system_settings))
+                }
+
+                MetadataRow(
+                    stringResource(R.string.notifications_new_marks),
+                    stringResource(
+                        if (notificationPreferences.newMarksEnabled) R.string.notifications_enabled else R.string.notifications_disabled,
+                    ),
+                )
+                Switch(
+                    checked = notificationPreferences.newMarksEnabled,
+                    onCheckedChange = {
+                        onUpdateNotificationPreferences(notificationPreferences.copy(newMarksEnabled = it))
+                    },
+                    enabled = notificationControlsEnabled,
+                )
+
+                Text(stringResource(R.string.notifications_lock_screen_detail))
+                NotificationLockScreenDetail.entries.forEach { detail ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        RadioButton(
+                            selected = notificationPreferences.lockScreenDetail == detail,
+                            onClick = {
+                                onUpdateNotificationPreferences(
+                                    notificationPreferences.copy(lockScreenDetail = detail),
+                                )
+                            },
+                            enabled = notificationControlsEnabled && notificationPreferences.newMarksEnabled,
+                        )
+                        Text(stringResource(detail.labelResource()))
+                    }
+                }
+
+                MetadataRow(
+                    stringResource(R.string.notifications_quiet_hours),
+                    stringResource(
+                        if (notificationPreferences.quietHoursEnabled) R.string.notifications_enabled else R.string.notifications_disabled,
+                    ),
+                )
+                Switch(
+                    checked = notificationPreferences.quietHoursEnabled,
+                    onCheckedChange = {
+                        onUpdateNotificationPreferences(notificationPreferences.copy(quietHoursEnabled = it))
+                    },
+                    enabled = notificationControlsEnabled && notificationPreferences.newMarksEnabled,
+                )
+                OutlinedButton(
+                    onClick = {
+                        showTimePicker(notificationPreferences.quietHoursStartMinute) { minute ->
+                            onUpdateNotificationPreferences(
+                                notificationPreferences.copy(quietHoursStartMinute = minute),
+                            )
+                        }
+                    },
+                    enabled = notificationControlsEnabled && notificationPreferences.quietHoursEnabled,
+                ) {
+                    Text(
+                        stringResource(
+                            R.string.notifications_quiet_start,
+                            formatMinute(notificationPreferences.quietHoursStartMinute),
+                        ),
+                    )
+                }
+                OutlinedButton(
+                    onClick = {
+                        showTimePicker(notificationPreferences.quietHoursEndMinute) { minute ->
+                            onUpdateNotificationPreferences(
+                                notificationPreferences.copy(quietHoursEndMinute = minute),
+                            )
+                        }
+                    },
+                    enabled = notificationControlsEnabled && notificationPreferences.quietHoursEnabled,
+                ) {
+                    Text(
+                        stringResource(
+                            R.string.notifications_quiet_end,
+                            formatMinute(notificationPreferences.quietHoursEndMinute),
+                        ),
+                    )
+                }
+                Text(
+                    stringResource(
+                        R.string.notifications_time_zone,
+                        notificationPreferences.quietHoursTimeZone,
+                    ),
+                )
+                if (isUpdatingNotificationPreferences) {
+                    Text(stringResource(R.string.notifications_saving))
+                }
+                if (!notificationPreferencesErrorMessage.isNullOrBlank()) {
+                    Text(notificationPreferencesErrorMessage)
+                }
             }
         }
         GradeySectionCard(title = androidx.compose.ui.res.stringResource(com.bukovinafilip.gradey.ui.R.string.language_title)) {
@@ -273,3 +398,16 @@ private fun LinkedAccountStatus.displayName(): String = when (this) {
     LinkedAccountStatus.LINKING -> "Linking"
     LinkedAccountStatus.FAILED -> "Failed"
 }
+
+private fun NotificationLockScreenDetail.labelResource(): Int = when (this) {
+    NotificationLockScreenDetail.PRIVATE_SUMMARY -> R.string.notifications_private_summary
+    NotificationLockScreenDetail.MARK_AND_SUBJECT -> R.string.notifications_mark_and_subject
+    NotificationLockScreenDetail.FULL_DETAILS -> R.string.notifications_full_details
+}
+
+private fun formatMinute(minuteOfDay: Int): String = String.format(
+    Locale.getDefault(),
+    "%02d:%02d",
+    minuteOfDay.coerceIn(0, 1439) / 60,
+    minuteOfDay.coerceIn(0, 1439) % 60,
+)

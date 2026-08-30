@@ -6,4 +6,19 @@
     <string name="meals_tab_setting_message">show Strava.cz meals in the main navigation.</string>
     <string name="meals_manage_from_tab">manage this connection from the meals tab.</string>
     <string name="meals_unlink_message">this disconnects Strava.cz on this device and removes the canteen from your Gradey ID.</string>
+    <string name="notifications_gradey_id_required">cloud notification settings require a Gradey ID.</string>
+    <string name="notifications_device_permission">device permission</string>
+    <string name="notifications_enabled">enabled</string>
+    <string name="notifications_disabled">disabled</string>
+    <string name="notifications_open_system_settings">open notification settings</string>
+    <string name="notifications_new_marks">new marks</string>
+    <string name="notifications_lock_screen_detail">lock-screen detail</string>
+    <string name="notifications_private_summary">private summary</string>
+    <string name="notifications_mark_and_subject">mark and subject</string>
+    <string name="notifications_full_details">full details</string>
+    <string name="notifications_quiet_hours">quiet hours</string>
+    <string name="notifications_quiet_start">starts at %1$s</string>
+    <string name="notifications_quiet_end">ends at %1$s</string>
+    <string name="notifications_time_zone">time zone: %1$s</string>
+    <string name="notifications_saving">saving notification settings…</string>
 </resources>

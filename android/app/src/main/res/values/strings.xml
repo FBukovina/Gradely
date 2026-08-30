@@ -1,4 +1,7 @@
 <resources>
     <string name="app_name">Gradey</string>
+    <string name="notification_channel_new_marks">New marks</string>
+    <string name="notification_channel_new_marks_description">Updates when a school posts a new mark</string>
+    <string name="notification_new_mark_title">New mark</string>
+    <string name="notification_new_mark_body">A new mark is available in Gradey.</string>
 </resources>
-

@@ -99,12 +99,12 @@ Verification evidence (2026-08-30): school tokens and fallback credentials remai
 - [x] Add request/connect/read timeouts and cancellation-aware OkHttp coroutine execution.
 - [x] Treat user and absence endpoints as optional where iOS does, without failing marks/dashboard.
 - [x] Preserve previous content when an optional endpoint or background refresh fails.
-- [ ] Harden JSON decoding for nullable, missing, malformed, numeric/string, and server-version differences found in real Bakaláři responses.
+- [x] Harden JSON decoding for nullable, missing, malformed, numeric/string, and server-version differences found in real Bakaláři responses.
 - [ ] Verify dates and timetable week boundaries in Europe/Prague, including daylight-saving changes and device timezones.
 - [ ] Add fixture tests for empty data, partial data, malformed data, 401/403, 404 optional endpoints, 5xx, timeout, offline, and refresh rejection.
 - [ ] Confirm no credentials, tokens, or sensitive response bodies are logged.
 
-Verification evidence (2026-08-30): repository tests cover optional user/absence 404s, cached user and per-subject absence retention, cancellation propagation, rejected refresh plus rejected credential login, missing fallback credentials, and transient offline re-login failure. Unrecoverable authentication clears only the stored school session, retains scoped cache entries, and is handled by the app shell as a reconnect transition with visible feature state reset.
+Verification evidence (2026-08-30): repository tests cover optional user/absence 404s, cached user and per-subject absence retention, cancellation propagation, rejected refresh plus rejected credential login, missing fallback credentials, and transient offline re-login failure. Unrecoverable authentication clears only the stored school session, retains scoped cache entries, and is handled by the app shell as a reconnect transition with visible feature state reset. Network fixtures also cover missing collections/mark fields, comma-decimal and malformed weights, the real object-shaped Bakaláři class, legacy string classes, preferred organization names, numeric timetable hour IDs, missing timetable display fields, and unknown response fields.
 
 ## Cache and offline behavior
 

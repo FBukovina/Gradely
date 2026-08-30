@@ -3,6 +3,7 @@ package com.bukovinafilip.gradey.domain
 import com.bukovinafilip.gradey.model.AbsencePerSubject
 import com.bukovinafilip.gradey.model.AbsenceResponse
 import com.bukovinafilip.gradey.model.Absence
+import com.bukovinafilip.gradey.model.ClassInfo
 import com.bukovinafilip.gradey.model.DashboardData
 import com.bukovinafilip.gradey.model.DemoFixture
 import com.bukovinafilip.gradey.model.Mark
@@ -58,7 +59,12 @@ object DemoData {
         ),
     )
 
-    val user = UserResponse(fullName = "Alex Novak", schoolName = "Gradey Demo School", classAbbrev = "3.A", userUID = "demo-user")
+    val user = UserResponse(
+        fullName = "Alex Novak",
+        schoolName = "Gradey Demo School",
+        userClass = ClassInfo(id = "3a", abbrev = "3.A", name = "3.A"),
+        userUID = "demo-user",
+    )
 
     private val timetableHours = listOf(
         TimetableHour("1", "1", "08:00", "08:45"),

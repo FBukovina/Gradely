@@ -220,7 +220,9 @@ class AndroidSchoolRepository(
         withBakalariRetry(session) { bakalariClient.fetchTimetable(it.baseURL, it.accessToken, weekStart) }
 
     private fun UserResponse.resolvedFor(session: StoredSession): UserResponse =
-        if (schoolName != null) this else copy(schoolName = session.linkedAccountSchoolName)
+        displaySchoolName?.let { resolved ->
+            if (resolved == schoolName) this else copy(schoolName = resolved)
+        } ?: copy(schoolName = session.linkedAccountSchoolName)
 }
 
 interface SchoolSessionStorage {

@@ -2,11 +2,27 @@
 
 package com.bukovinafilip.gradey.model
 
+import kotlinx.serialization.KSerializer
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.descriptors.PrimitiveKind
+import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
+import kotlinx.serialization.descriptors.SerialDescriptor
+import kotlinx.serialization.encoding.Decoder
+import kotlinx.serialization.encoding.Encoder
+import kotlinx.serialization.json.JsonDecoder
+import kotlinx.serialization.json.JsonEncoder
+import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.decodeFromJsonElement
+import kotlinx.serialization.json.doubleOrNull
+import kotlinx.serialization.json.encodeToJsonElement
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
+import java.text.Normalizer
 import java.util.Locale
+import java.util.UUID
 import kotlin.math.max
 
 @Serializable
@@ -149,7 +165,7 @@ data class Subject(
     @SerialName("PointsOnly")
     val pointsOnly: Boolean = false,
     @SerialName("MarkPredictionEnabled")
-    val markPredictionEnabled: Boolean = true,
+    val markPredictionEnabled: Boolean = false,
 ) {
     val id: String get() = subjectInfo.id
     val displayName: String get() = subjectInfo.name.ifBlank { subjectInfo.abbrev.ifBlank { id } }
@@ -158,7 +174,7 @@ data class Subject(
 @Serializable
 data class SubjectInfo(
     @SerialName("Id")
-    val id: String,
+    val id: String = "",
     @SerialName("Abbrev")
     val abbrev: String = "",
     @SerialName("Name")
@@ -168,31 +184,46 @@ data class SubjectInfo(
 @Serializable
 data class Mark(
     @SerialName("MarkDate")
-    val markDate: String? = null,
+    val markDate: String? = "",
+    @SerialName("EditDate")
+    val editDate: String? = null,
     @SerialName("Caption")
     val caption: String? = null,
     @SerialName("Theme")
     val theme: String? = null,
     @SerialName("MarkText")
-    val markText: String,
+    val markText: String = "",
     @SerialName("TeacherId")
     val teacherID: String? = null,
     @SerialName("Type")
-    val type: String? = null,
+    val type: String? = "",
     @SerialName("TypeNote")
     val typeNote: String? = null,
     @SerialName("Weight")
+    @Serializable(with = FlexibleNullableDoubleSerializer::class)
     val weight: Double? = null,
     @SerialName("SubjectId")
-    val subjectID: String,
+    val subjectID: String = "",
+    @SerialName("IsNew")
+    val isNew: Boolean = false,
     @SerialName("IsPoints")
     val isPoints: Boolean = false,
     @SerialName("Id")
-    val id: String,
+    val id: String = UUID.randomUUID().toString(),
     @SerialName("PointsText")
     val pointsText: String? = null,
     @SerialName("MaxPoints")
     val maxPoints: Int? = null,
+    @SerialName("CalculatedMarkText")
+    val calculatedMarkText: String? = null,
+    @SerialName("ClassRankText")
+    val classRankText: String? = null,
+    @SerialName("ConfirmedWhen")
+    val confirmedWhen: String? = null,
+    @SerialName("ConfirmedBy")
+    val confirmedBy: String? = null,
+    @SerialName("MarkConfirmationState")
+    val markConfirmationState: String? = null,
 )
 
 @Serializable
@@ -202,9 +233,32 @@ data class UserResponse(
     @SerialName("SchoolName")
     val schoolName: String? = null,
     @SerialName("Class")
-    val classAbbrev: String? = null,
+    @Serializable(with = FlexibleNullableClassInfoSerializer::class)
+    val userClass: ClassInfo? = null,
     @SerialName("UserUID")
     val userUID: String? = null,
+    @SerialName("SchoolOrganizationName")
+    val schoolOrganizationName: String? = null,
+    @SerialName("UserType")
+    val userType: String? = null,
+    @SerialName("UserTypeText")
+    val userTypeText: String? = null,
+    @SerialName("StudyYear")
+    val studyYear: Int? = null,
+) {
+    val classAbbrev: String? get() = userClass?.abbrev
+    val displaySchoolName: String? get() = schoolOrganizationName.displayableSchoolName()
+        ?: schoolName.displayableSchoolName()
+}
+
+@Serializable
+data class ClassInfo(
+    @SerialName("Id")
+    val id: String = "",
+    @SerialName("Abbrev")
+    val abbrev: String = "",
+    @SerialName("Name")
+    val name: String? = null,
 )
 
 @Serializable
@@ -297,13 +351,14 @@ data class TimetableResponse(
 @Serializable
 data class TimetableHour(
     @SerialName("Id")
-    val id: String,
+    @Serializable(with = FlexibleStringSerializer::class)
+    val id: String = "",
     @SerialName("Caption")
-    val caption: String,
+    val caption: String = "",
     @SerialName("BeginTime")
-    val beginTime: String,
+    val beginTime: String = "",
     @SerialName("EndTime")
-    val endTime: String,
+    val endTime: String = "",
 )
 
 @Serializable
@@ -311,19 +366,20 @@ data class TimetableDayDTO(
     @SerialName("Atoms")
     val atoms: List<TimetableAtom> = emptyList(),
     @SerialName("DayOfWeek")
-    val dayOfWeek: Int,
+    val dayOfWeek: Int = 0,
     @SerialName("Date")
-    val date: String,
+    val date: String = "",
     @SerialName("DayDescription")
     val dayDescription: String = "",
     @SerialName("DayType")
-    val dayType: String = "",
+    val dayType: String = "WorkDay",
 )
 
 @Serializable
 data class TimetableAtom(
     @SerialName("HourId")
-    val hourID: String,
+    @Serializable(with = FlexibleStringSerializer::class)
+    val hourID: String = "",
     @SerialName("SubjectId")
     val subjectID: String? = null,
     @SerialName("TeacherId")
@@ -351,7 +407,7 @@ data class TimetableChange(
 @Serializable
 data class TimetableEntity(
     @SerialName("Id")
-    val id: String,
+    val id: String = "",
     @SerialName("Abbrev")
     val abbrev: String? = null,
     @SerialName("Name")
@@ -361,7 +417,7 @@ data class TimetableEntity(
 @Serializable
 data class TimetableGroup(
     @SerialName("Id")
-    val id: String,
+    val id: String = "",
     @SerialName("Abbrev")
     val abbrev: String? = null,
     @SerialName("Name")
@@ -664,3 +720,73 @@ data class DemoFixture(
 )
 
 fun Mark.normalizedWeight(): Double = max(0.0001, weight ?: 1.0)
+
+private fun String?.displayableSchoolName(): String? {
+    val trimmed = this?.trim()?.takeIf(String::isNotEmpty) ?: return null
+    val normalized = Normalizer.normalize(trimmed, Normalizer.Form.NFD)
+        .replace(Regex("\\p{M}+"), "")
+        .lowercase(Locale.ROOT)
+        .split(Regex("\\s+"))
+        .joinToString(" ")
+    return trimmed.takeUnless { normalized == "nazev skoly" }
+}
+
+object FlexibleStringSerializer : KSerializer<String> {
+    override val descriptor: SerialDescriptor = PrimitiveSerialDescriptor("FlexibleString", PrimitiveKind.STRING)
+
+    override fun deserialize(decoder: Decoder): String {
+        val jsonDecoder = decoder as? JsonDecoder ?: return decoder.decodeString()
+        val value = jsonDecoder.decodeJsonElement()
+        return if (value is JsonPrimitive && value !is JsonNull) value.content else ""
+    }
+
+    override fun serialize(encoder: Encoder, value: String) = encoder.encodeString(value)
+}
+
+@OptIn(ExperimentalSerializationApi::class)
+object FlexibleNullableDoubleSerializer : KSerializer<Double?> {
+    override val descriptor: SerialDescriptor = PrimitiveSerialDescriptor("FlexibleNullableDouble", PrimitiveKind.DOUBLE)
+
+    override fun deserialize(decoder: Decoder): Double? {
+        val jsonDecoder = decoder as? JsonDecoder ?: return decoder.decodeDouble()
+        val value = jsonDecoder.decodeJsonElement()
+        if (value !is JsonPrimitive || value is JsonNull) return null
+        return value.doubleOrNull ?: value.content.replace(',', '.').toDoubleOrNull()
+    }
+
+    override fun serialize(encoder: Encoder, value: Double?) {
+        if (value == null) encoder.encodeNull() else encoder.encodeDouble(value)
+    }
+}
+
+@OptIn(ExperimentalSerializationApi::class)
+object FlexibleNullableClassInfoSerializer : KSerializer<ClassInfo?> {
+    override val descriptor: SerialDescriptor = ClassInfo.serializer().descriptor
+
+    override fun deserialize(decoder: Decoder): ClassInfo? {
+        val jsonDecoder = decoder as? JsonDecoder
+            ?: return decoder.decodeSerializableValue(ClassInfo.serializer())
+        return when (val value = jsonDecoder.decodeJsonElement()) {
+            JsonNull -> null
+            is JsonPrimitive -> value.content.trim().takeIf(String::isNotEmpty)?.let { abbrev ->
+                ClassInfo(abbrev = abbrev, name = abbrev)
+            }
+            else -> runCatching {
+                jsonDecoder.json.decodeFromJsonElement(ClassInfo.serializer(), value)
+            }.getOrNull()
+        }
+    }
+
+    override fun serialize(encoder: Encoder, value: ClassInfo?) {
+        if (value == null) {
+            encoder.encodeNull()
+            return
+        }
+        val jsonEncoder = encoder as? JsonEncoder
+        if (jsonEncoder == null) {
+            encoder.encodeSerializableValue(ClassInfo.serializer(), value)
+        } else {
+            jsonEncoder.encodeJsonElement(jsonEncoder.json.encodeToJsonElement(ClassInfo.serializer(), value))
+        }
+    }
+}

@@ -132,6 +132,103 @@ class BakalariNetworkClientTest {
         assertThat(failure.message).isEqualTo("The school returned data Gradey could not read.")
     }
 
+    @Test
+    fun marksAcceptStringWeightAndMissingOptionalFields() = runTest {
+        server.enqueue(
+            jsonResponse(
+                """
+                {
+                  "ServerSpecificField":{"ignored":true},
+                  "Subjects":[{
+                    "Marks":[
+                      {"Weight":"2,5","MarkText":"1","IsNew":true},
+                      {"Weight":{"unexpected":true},"MarkText":"2"}
+                    ],
+                    "Subject":{"Id":"math","Abbrev":"M","Name":"Mathematics"}
+                  }]
+                }
+                """.trimIndent(),
+            ),
+        )
+
+        val marks = client.fetchMarks(baseURL(), "token").subjects.single()
+
+        assertThat(marks.marks[0].weight).isEqualTo(2.5)
+        assertThat(marks.marks[0].isNew).isTrue()
+        assertThat(marks.marks[0].subjectID).isEmpty()
+        assertThat(marks.marks[1].weight).isNull()
+        assertThat(marks.marks[0].id).isNotEmpty()
+        assertThat(marks.marks[0].id).isNotEqualTo(marks.marks[1].id)
+        assertThat(marks.markPredictionEnabled).isFalse()
+    }
+
+    @Test
+    fun missingTopLevelCollectionsUseEmptyDefaults() = runTest {
+        server.enqueue(jsonResponse("{}"))
+
+        val marks = client.fetchMarks(baseURL(), "token")
+
+        assertThat(marks.subjects).isEmpty()
+    }
+
+    @Test
+    fun userDecodesRealClassObjectAndPreferredOrganizationName() = runTest {
+        server.enqueue(
+            jsonResponse(
+                """
+                {
+                  "UserUID":"student-id",
+                  "FullName":"Student Name",
+                  "Class":{"Id":"class-id","Abbrev":"3.A","Name":"Third A"},
+                  "SchoolOrganizationName":" Real School ",
+                  "SchoolName":"Název školy",
+                  "UserType":"student",
+                  "UserTypeText":"Student",
+                  "StudyYear":3
+                }
+                """.trimIndent(),
+            ),
+        )
+
+        val user = client.fetchUser(baseURL(), "token")
+
+        assertThat(user.classAbbrev).isEqualTo("3.A")
+        assertThat(user.displaySchoolName).isEqualTo("Real School")
+        assertThat(user.studyYear).isEqualTo(3)
+    }
+
+    @Test
+    fun userAcceptsLegacyStringClassFromExistingAndroidCacheShape() = runTest {
+        server.enqueue(jsonResponse("""{"FullName":"Student","Class":"4.B"}"""))
+
+        val user = client.fetchUser(baseURL(), "token")
+
+        assertThat(user.classAbbrev).isEqualTo("4.B")
+    }
+
+    @Test
+    fun timetableAcceptsNumericHourIdsAndMissingDisplayFields() = runTest {
+        server.enqueue(
+            jsonResponse(
+                """
+                {
+                  "Hours":[{"Id":1}],
+                  "Days":[{"Atoms":[{"HourId":1}]}],
+                  "Classes":[]
+                }
+                """.trimIndent(),
+            ),
+        )
+
+        val timetable = client.fetchTimetable(baseURL(), "token", "2026-08-24")
+
+        assertThat(timetable.hours.single().id).isEqualTo("1")
+        assertThat(timetable.hours.single().caption).isEmpty()
+        assertThat(timetable.days.single().atoms.single().hourID).isEqualTo("1")
+        assertThat(timetable.days.single().dayType).isEqualTo("WorkDay")
+        assertThat(timetable.classes).isEmpty()
+    }
+
     private fun baseURL(): String = server.url("/").toString().removeSuffix("/")
 
     private fun jsonResponse(body: String): MockResponse = MockResponse()

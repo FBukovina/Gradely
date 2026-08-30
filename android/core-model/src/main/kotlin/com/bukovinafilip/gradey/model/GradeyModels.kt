@@ -19,6 +19,43 @@ enum class SchoolProvider {
 }
 
 @Serializable
+data class SchoolDirectoryMunicipality(
+    val name: String,
+    val schoolCount: Int,
+)
+
+@Serializable
+data class SchoolDirectorySchool(
+    val id: String,
+    val name: String,
+    val town: String,
+    val schoolURL: String,
+) {
+    val trimmedName: String get() = name.trim()
+    val trimmedTown: String get() = town.trim()
+    val trimmedSchoolURL: String get() = schoolURL.trim()
+}
+
+@Serializable
+data class CachedSchoolDirectory(
+    val schools: List<SchoolDirectorySchool>,
+    val cachedAtEpochMillis: Long,
+    val formatVersion: Int? = CURRENT_FORMAT_VERSION,
+) {
+    fun isStale(
+        nowEpochMillis: Long = System.currentTimeMillis(),
+        maxAgeMillis: Long = DEFAULT_MAX_AGE_MILLIS,
+    ): Boolean = nowEpochMillis - cachedAtEpochMillis >= maxAgeMillis
+
+    val isCurrentFormat: Boolean get() = formatVersion == CURRENT_FORMAT_VERSION
+
+    companion object {
+        const val CURRENT_FORMAT_VERSION = 2
+        const val DEFAULT_MAX_AGE_MILLIS = 7L * 24 * 60 * 60 * 1_000
+    }
+}
+
+@Serializable
 data class BakalariCredentials(
     val username: String,
     val password: String,

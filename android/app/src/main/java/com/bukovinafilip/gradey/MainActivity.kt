@@ -59,6 +59,7 @@ import com.bukovinafilip.gradey.model.AbsenceResponse
 import com.bukovinafilip.gradey.model.DashboardData
 import com.bukovinafilip.gradey.model.GradeyAccount
 import com.bukovinafilip.gradey.model.LinkedSchoolAccount
+import com.bukovinafilip.gradey.model.SchoolDirectorySchool
 import com.bukovinafilip.gradey.model.StravaCZMenu
 import com.bukovinafilip.gradey.model.TimetableWeek
 import com.bukovinafilip.gradey.ui.GradeyTheme
@@ -67,6 +68,7 @@ import com.bukovinafilip.gradey.ui.GradeyScreen
 import com.bukovinafilip.gradey.ui.GradeySectionCard
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 
@@ -113,9 +115,13 @@ private fun GradeyApp(
     var isLoading by remember { mutableStateOf(false) }
     var authError by remember { mutableStateOf<String?>(null) }
     var schoolLoginError by remember { mutableStateOf<String?>(null) }
+    var schoolDirectoryError by remember { mutableStateOf<String?>(null) }
     var dataError by remember { mutableStateOf<String?>(null) }
     var account by remember { mutableStateOf<GradeyAccount?>(null) }
     var linkedAccounts by remember { mutableStateOf<List<LinkedSchoolAccount>>(emptyList()) }
+    var directorySchools by remember { mutableStateOf<List<SchoolDirectorySchool>>(emptyList()) }
+    var isSchoolDirectoryLoading by remember { mutableStateOf(false) }
+    var hasLoadedSchoolDirectory by remember { mutableStateOf(false) }
     var dashboard by remember { mutableStateOf<DashboardData?>(null) }
     var absence by remember { mutableStateOf<AbsenceResponse?>(null) }
     var timetable by remember { mutableStateOf<TimetableWeek?>(null) }
@@ -137,6 +143,42 @@ private fun GradeyApp(
         graph.schoolRepository.loadCachedTimetable(LocalDate.now().toString())?.let { timetable = it }
         graph.stravaCZRepository.loadCachedMenu()?.let { stravaMenu = it }
         linkedAccounts = runCatching { graph.linkedAccountRepository.localAccounts() }.getOrDefault(emptyList())
+    }
+
+    suspend fun loadSchoolDirectory(forceRefresh: Boolean = false) {
+        if (isSchoolDirectoryLoading || (hasLoadedSchoolDirectory && !forceRefresh)) return
+        hasLoadedSchoolDirectory = true
+        schoolDirectoryError = null
+
+        val cachedDirectory = try {
+            graph.schoolDirectoryRepository.loadCachedDirectory()
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: Throwable) {
+            null
+        }
+        if (cachedDirectory != null) directorySchools = cachedDirectory.schools
+
+        val shouldRefresh = forceRefresh ||
+            cachedDirectory == null ||
+            cachedDirectory.isStale() ||
+            !cachedDirectory.isCurrentFormat
+        if (!shouldRefresh) return
+
+        isSchoolDirectoryLoading = directorySchools.isEmpty()
+        try {
+            directorySchools = graph.schoolDirectoryRepository.refreshDirectory()
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: Throwable) {
+            hasLoadedSchoolDirectory = false
+            if (directorySchools.isEmpty()) {
+                schoolDirectoryError =
+                    "We couldn't load the Bakaláři school directory. You can still enter the school URL manually."
+            }
+        } finally {
+            isSchoolDirectoryLoading = false
+        }
     }
 
     suspend fun loadTimetable(weekContaining: String): Throwable? {
@@ -218,6 +260,11 @@ private fun GradeyApp(
         AppPhase.NEEDS_SCHOOL -> SchoolLoginScreen(
             isLoading = isLoading,
             errorMessage = schoolLoginError,
+            directorySchools = directorySchools,
+            isDirectoryLoading = isSchoolDirectoryLoading,
+            directoryErrorMessage = schoolDirectoryError,
+            onLoadDirectory = { scope.launch { loadSchoolDirectory() } },
+            onRetryDirectory = { scope.launch { loadSchoolDirectory(forceRefresh = true) } },
             onLogin = { school, username, password ->
                 scope.launch {
                     isLoading = true

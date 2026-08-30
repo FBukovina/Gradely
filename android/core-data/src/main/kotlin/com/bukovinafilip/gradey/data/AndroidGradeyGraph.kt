@@ -7,8 +7,10 @@ import com.bukovinafilip.gradey.domain.GradeyAuthRepository
 import com.bukovinafilip.gradey.domain.GradeyHistoryRepository
 import com.bukovinafilip.gradey.domain.LinkedAccountRepository
 import com.bukovinafilip.gradey.domain.SchoolRepository
+import com.bukovinafilip.gradey.domain.SchoolDirectoryRepository
 import com.bukovinafilip.gradey.domain.StravaCZRepository
 import com.bukovinafilip.gradey.network.BakalariNetworkClient
+import com.bukovinafilip.gradey.network.BakalariSchoolDirectoryClient
 import com.bukovinafilip.gradey.network.DemoAwareBakalariClient
 import com.bukovinafilip.gradey.network.GradeyJson
 import com.bukovinafilip.gradey.network.SupabaseConfiguration
@@ -24,6 +26,7 @@ data class AndroidGradeyConfig(
 
 class AndroidGradeyGraph private constructor(
     val schoolRepository: SchoolRepository,
+    val schoolDirectoryRepository: SchoolDirectoryRepository,
     val gradeyAuthRepository: GradeyAuthRepository,
     val linkedAccountRepository: LinkedAccountRepository,
     val historyRepository: GradeyHistoryRepository,
@@ -65,6 +68,10 @@ class AndroidGradeyGraph private constructor(
                     bakalariClient = DemoAwareBakalariClient(BakalariNetworkClient()),
                     sessionStore = sessionStore,
                     cache = cache,
+                ),
+                schoolDirectoryRepository = AndroidSchoolDirectoryRepository(
+                    client = BakalariSchoolDirectoryClient(),
+                    storage = RoomSchoolDirectoryStorage(cache),
                 ),
                 gradeyAuthRepository = authRepository,
                 linkedAccountRepository = LocalLinkedAccountRepository(linkedAccountStore),

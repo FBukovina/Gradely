@@ -1,6 +1,7 @@
 package com.bukovinafilip.gradey.domain
 
 import com.bukovinafilip.gradey.model.AbsenceResponse
+import com.bukovinafilip.gradey.model.CachedSchoolDirectory
 import com.bukovinafilip.gradey.model.DashboardData
 import com.bukovinafilip.gradey.model.GradeyAccount
 import com.bukovinafilip.gradey.model.GradeyAuthSession
@@ -8,6 +9,8 @@ import com.bukovinafilip.gradey.model.LinkedSchoolAccount
 import com.bukovinafilip.gradey.model.MarksResponse
 import com.bukovinafilip.gradey.model.NotificationPreferences
 import com.bukovinafilip.gradey.model.SchoolProvider
+import com.bukovinafilip.gradey.model.SchoolDirectoryMunicipality
+import com.bukovinafilip.gradey.model.SchoolDirectorySchool
 import com.bukovinafilip.gradey.model.StoredSession
 import com.bukovinafilip.gradey.model.StravaCZMeal
 import com.bukovinafilip.gradey.model.StravaCZMenu
@@ -23,6 +26,16 @@ interface BakalariClient {
     suspend fun fetchUser(baseURL: String, accessToken: String): com.bukovinafilip.gradey.model.UserResponse
     suspend fun fetchTimetable(baseURL: String, accessToken: String, date: String): com.bukovinafilip.gradey.model.TimetableResponse
     suspend fun predictSubject(baseURL: String, accessToken: String, subject: Subject, markText: String, weight: Int): Subject
+}
+
+interface SchoolDirectoryClient {
+    suspend fun fetchMunicipalities(): List<SchoolDirectoryMunicipality>
+    suspend fun fetchSchools(municipalityName: String): List<SchoolDirectorySchool>
+}
+
+interface SchoolDirectoryRepository {
+    suspend fun loadCachedDirectory(): CachedSchoolDirectory?
+    suspend fun refreshDirectory(): List<SchoolDirectorySchool>
 }
 
 interface SchoolRepository {

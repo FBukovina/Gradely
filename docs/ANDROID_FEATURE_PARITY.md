@@ -63,15 +63,18 @@ Last source audit: 2026-08-30 on `codex/android-monorepo`.
 
 ## School discovery and Bakaláři login
 
-- [ ] Port municipality and school directory discovery from `sluzby.bakalari.cz`, including bounded concurrency, retry, timeout, deduplication, sorting, and healthy-cache replacement rules.
-- [ ] Show cached school search immediately and refresh it only when stale or on retry.
-- [ ] Implement searchable school selection, no-results, loading, partial-cache, and lookup-error states.
-- [ ] Retain a clearly explained manual school URL path.
+- [x] Port municipality and school directory discovery from `sluzby.bakalari.cz`, including bounded concurrency, retry, timeout, deduplication, sorting, and healthy-cache replacement rules.
+- [x] Show cached school search immediately and refresh it only when stale or on retry.
+- [x] Implement diacritic-insensitive searchable school selection, no-results, loading, and retained partial-cache states.
+- [x] Verify the visible initial lookup-error and retry interaction end to end with the directory unavailable.
+- [x] Retain a clearly explained manual school URL path.
 - [x] Bakaláři base URL normalization and validation logic has JVM coverage for scheme, host, path, and insecure/invalid inputs.
 - [ ] Match iOS credential validation, password visibility, loading, cancellation, retry, readable server error, and demo-account behavior.
-- [ ] Never prefill production login fields with demo credentials.
+- [x] Never prefill production login fields with demo credentials.
 - [ ] Keep the intentional App Review demo account isolated to the documented demo host and exact credentials.
 - [ ] Verify login against representative real Bakaláři server versions.
+
+Verification evidence (2026-08-30): Android decoded the live Bakaláři municipality/town responses, completed healthy coverage under the iOS deadline, cached 2,777 unique schools, restored that cache without a loading flash after a cold restart, found `Adršpach` from the unaccented query `adrspach`, filled the selected URL, retained the manual URL path, showed the offline lookup error, and completed a live retry after connectivity returned.
 
 ## Bakaláři session and account lifecycle
 

@@ -1,6 +1,7 @@
 package com.bukovinafilip.gradey.data
 
 import com.bukovinafilip.gradey.model.AbsenceResponse
+import com.bukovinafilip.gradey.model.CachedSchoolDirectory
 import com.bukovinafilip.gradey.model.DashboardData
 import com.bukovinafilip.gradey.model.MarksResponse
 import com.bukovinafilip.gradey.model.NextLessonWidgetSnapshot
@@ -38,6 +39,12 @@ class RoomGradeyCache(
 
     suspend fun loadStravaMenu(scope: String): StravaCZMenu? = load(key("strava-menu", scope), StravaCZMenu.serializer())
     suspend fun saveStravaMenu(scope: String, menu: StravaCZMenu) = save(key("strava-menu", scope), menu, StravaCZMenu.serializer())
+
+    suspend fun loadSchoolDirectory(): CachedSchoolDirectory? =
+        load("school-directory-v2", CachedSchoolDirectory.serializer())
+
+    suspend fun saveSchoolDirectory(directory: CachedSchoolDirectory) =
+        save("school-directory-v2", directory, CachedSchoolDirectory.serializer())
 
     suspend fun loadNextLessonSnapshot(): NextLessonWidgetSnapshot? =
         load("next-lesson-widget-snapshot", NextLessonWidgetSnapshot.serializer())

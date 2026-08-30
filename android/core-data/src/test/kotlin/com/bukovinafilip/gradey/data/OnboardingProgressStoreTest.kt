@@ -48,6 +48,18 @@ class OnboardingProgressStoreTest {
     }
 
     @Test
+    fun `hidden debug restart reopens the requested journey after completion`() {
+        val backend = Backend(completed = true)
+        val store = backend.store()
+        val restarted = OnboardingProgress(OnboardingJourney.UPGRADE, OnboardingStep.WELCOME)
+
+        store.restart(restarted)
+
+        assertThat(store.isCompleted).isFalse()
+        assertThat(backend.store().resolve(hasSchoolSession = true)).isEqualTo(restarted)
+    }
+
+    @Test
     fun `legacy step-only progress is repaired and corrupt progress is cleared`() {
         val backend = Backend(progress = "meals")
         assertThat(backend.store().loadProgress()).isEqualTo(

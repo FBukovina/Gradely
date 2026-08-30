@@ -292,21 +292,25 @@ Strava.cz verification (2026-08-30): Android now uses the same public Strava.cz 
 - [x] Show age-attestation state and legal privacy/terms links.
 - [x] Implement data export creation/share state and two-stage account deletion confirmation.
 - [x] Implement language, Chronically Online, and Show Meals tab preferences.
-- [ ] Implement support chat/equivalent, support purchase screen, contact email, GitHub, privacy, terms, credits, version, and build rows.
-- [ ] Preserve the hidden version-tap debug unlock and provide safe Android debug actions or mark individual actions `N/A`.
+- [x] Implement support chat/equivalent, support purchase screen, contact email, GitHub, privacy, terms, credits, version, and build rows.
+- [x] Preserve the hidden version-tap debug unlock and provide safe Android debug actions or mark individual actions `N/A`.
 - [ ] Make every visible row/action functional; no dead routes or explanatory placeholder controls.
 
 Account-hub implementation evidence (2026-08-30): the profile surface now includes a visual initials avatar with connected-photo state, email/account identity, validated full-name editing, Gradey ID versus local-only status, and the existing complete sign-out path. Connected services can add another Bakaláři account with a cancelable return to Account, activate or reconnect an account, change per-school alerts, show action-required reasons plus last-polled/last-synced timestamps, and confirm unlinking. The same surface reports local Strava.cz state, opens the real Meals connect/manage flow, retries a failed Gradey ID cloud link with progress/error state, and uses the existing unlink path that clears local Strava data. Privacy shows the durable age attestation and locale-appropriate privacy/terms links. The existing language picker covers system/English/Czech plus the Chronically Online voice toggle, while Show Meals persists independently. App compilation and feature lint verify the production wiring and all four resource configurations.
 
 Privacy-data verification (2026-08-30): the authenticated Android client now calls the existing `request-data-export` and `delete-account` functions with a refreshed Gradey session. Export validates the response as JSON, writes only to the app cache, and shares it through a non-exported read-grant `FileProvider`; progress and bounded errors remain on the Account screen. Deletion requires two explicit confirmations, calls the server before local teardown, then clears Gradey auth, linked accounts, notification/push state, school/grade caches, Strava session, widget/Wear state, and Credential Manager state before returning to signed out. MockWebServer tests assert both endpoint paths, methods, empty request bodies, authorization, and export response passthrough.
 
+Support-about verification (2026-08-31): Account now opens a functioning Support & About destination containing the locale-aware help center, Android support equivalent, developer email, GitHub repository, privacy policy, terms, credits/team attribution, version, and build rows. The version row preserves the seven-tap hidden unlock; the resulting Android debug panel only clears local caches or restarts onboarding and explicitly leaves the school account untouched. All external rows launch their real URL or email intent, credits reproduce the iOS OpenSide/team/Bakaláři attribution without introducing EduPage, and all new copy exists in the four Android language configurations.
+
 ## Support and purchases
 
-- [ ] Integrate RevenueCat Android offerings, entitlements, restore, purchase, manage-subscription, loading, empty, pending, canceled, success, and error states.
-- [ ] Match Standard/Plus tier semantics, monthly/yearly options, savings, renewal copy, and signed-in requirements.
-- [ ] Propagate the current support tier to Gradey AI and Wear.
+- [x] Integrate RevenueCat Android offerings, entitlements, restore, purchase, manage-subscription, loading, empty, pending, canceled, success, and error states.
+- [x] Match Standard/Plus tier semantics, monthly/yearly options, savings, renewal copy, and signed-in requirements.
+- [x] Propagate the current support tier to Gradey AI and Wear.
 - [x] DIFFERENT — subscription management opens the appropriate Google Play surface rather than Apple subscription settings.
-- [ ] Decide and document an Android support-chat equivalent for Intercom, then implement it or mark it `N/A` with product approval.
+- [x] DIFFERENT — Android uses the locale-aware Gradey help center plus an email handoff as its support-chat equivalent; iOS continues to use Intercom Messenger.
+
+Support-purchase verification (2026-08-31): Android now logs RevenueCat into the same Gradey account identity that the AI backend resolves, loads the `support` and `tips` offerings, maps custom package/product/base-plan identifiers, and recognizes `support`/`support_plus` entitlements with Plus precedence. The screen covers monthly/yearly Standard and Plus choices, iOS-equivalent 5/10/25 AI limits, early-access benefits, yearly savings, signed-in subscription requirements, one-time tips, active/renewal state, restore, Google Play management, auto-renewal legal copy, empty/configuration failures, cancellation, payment-pending, success, and bounded errors. Entitlement changes update the AI surface and a versioned credential-free phone-to-Wear payload; pure JVM tests cover package and entitlement rules, and focused compilation covers the RevenueCat production wiring plus phone/Wear consumers.
 
 ## Notifications and push
 

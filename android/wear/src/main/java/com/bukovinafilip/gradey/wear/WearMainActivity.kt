@@ -18,6 +18,7 @@ import androidx.wear.compose.material.Text
 import com.bukovinafilip.gradey.domain.WearLessonSelector
 import com.bukovinafilip.gradey.model.GradeyWearLessonSelection
 import com.bukovinafilip.gradey.model.GradeyWearSyncPayload
+import com.bukovinafilip.gradey.model.GradeySupportTier
 import com.bukovinafilip.gradey.model.NextLessonWidgetTiming
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
@@ -75,6 +76,18 @@ private fun WearGradeyScreen(
                 Text(
                     listOfNotNull(user.fullName, user.classAbbrev).joinToString(" · "),
                     style = MaterialTheme.typography.caption1,
+                )
+            }
+        }
+        if (payload?.supportTier != null && payload.supportTier != GradeySupportTier.NONE) {
+            item {
+                Text(
+                    when (payload.supportTier) {
+                        GradeySupportTier.PLUS -> "Plus supporter"
+                        GradeySupportTier.STANDARD -> "Standard supporter"
+                        GradeySupportTier.NONE -> ""
+                    },
+                    style = MaterialTheme.typography.caption2,
                 )
             }
         }

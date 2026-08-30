@@ -67,6 +67,7 @@ import com.bukovinafilip.gradey.feature.absence.AbsenceScreen
 import com.bukovinafilip.gradey.feature.absence.AbsenceStateScreen
 import com.bukovinafilip.gradey.feature.absence.R as AbsenceR
 import com.bukovinafilip.gradey.feature.account.AccountScreen
+import com.bukovinafilip.gradey.feature.account.SupportScreen
 import com.bukovinafilip.gradey.feature.auth.AgeAttestationScreen
 import com.bukovinafilip.gradey.feature.auth.GradeyCheckingScreen
 import com.bukovinafilip.gradey.feature.auth.GradeyIdLoginScreen
@@ -106,6 +107,7 @@ import com.bukovinafilip.gradey.model.AgeAttestationKind
 import com.bukovinafilip.gradey.model.AppLanguage
 import com.bukovinafilip.gradey.model.DashboardData
 import com.bukovinafilip.gradey.model.GradeyAccount
+import com.bukovinafilip.gradey.model.GradeySupportTier
 import com.bukovinafilip.gradey.model.LinkedAccountProvider
 import com.bukovinafilip.gradey.model.LinkedSchoolAccount
 import com.bukovinafilip.gradey.model.NewMarkEvent
@@ -117,6 +119,10 @@ import com.bukovinafilip.gradey.model.SchoolDirectorySchool
 import com.bukovinafilip.gradey.model.StravaCZMenu
 import com.bukovinafilip.gradey.model.StravaCZMeal
 import com.bukovinafilip.gradey.model.StravaCZStoredSession
+import com.bukovinafilip.gradey.model.SupportCatalog
+import com.bukovinafilip.gradey.model.SupportEntitlement
+import com.bukovinafilip.gradey.model.SupportPlanOption
+import com.bukovinafilip.gradey.model.SupportPurchaseOutcome
 import com.bukovinafilip.gradey.model.TimetableWeek
 import com.bukovinafilip.gradey.ui.GradeyTheme
 import com.bukovinafilip.gradey.ui.GradeyHero
@@ -160,6 +166,7 @@ class MainActivity : ComponentActivity() {
                 GradeyTheme {
                     GradeyApp(
                         graph = graph,
+                        activity = this@MainActivity,
                         appLanguage = appLanguage,
                         onAppLanguageChange = { selection ->
                             graph.appLanguageStore.selection = selection
@@ -229,6 +236,7 @@ private data class MealsSnapshot(
 @Composable
 private fun GradeyApp(
     graph: com.bukovinafilip.gradey.data.AndroidGradeyGraph,
+    activity: ComponentActivity,
     appLanguage: AppLanguage,
     onAppLanguageChange: (AppLanguage) -> Unit,
     initialTab: AppTab,
@@ -239,6 +247,7 @@ private fun GradeyApp(
     var phase by remember { mutableStateOf(AppPhase.CHECKING) }
     var selectedTab by rememberSaveable { mutableStateOf(initialTab) }
     var isGradeyAIPresented by remember { mutableStateOf(false) }
+    var isSupportPresented by rememberSaveable { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
     var authError by remember { mutableStateOf<String?>(null) }
     var schoolLoginError by remember { mutableStateOf<String?>(null) }
@@ -251,6 +260,14 @@ private fun GradeyApp(
     var isExportingData by remember { mutableStateOf(false) }
     var isDeletingAccount by remember { mutableStateOf(false) }
     var privacyDataError by remember { mutableStateOf<String?>(null) }
+    val supportService = remember { RevenueCatSupportService() }
+    var supportCatalog by remember { mutableStateOf<SupportCatalog?>(null) }
+    var supportTier by remember { mutableStateOf(GradeySupportTier.NONE) }
+    var resolvedSupportIdentityKey by remember { mutableStateOf<String?>(null) }
+    var isSupportLoading by remember { mutableStateOf(false) }
+    var purchasingSupportOptionID by remember { mutableStateOf<String?>(null) }
+    var isRestoringSupport by remember { mutableStateOf(false) }
+    var supportMessage by remember { mutableStateOf<String?>(null) }
     var ageAttestationKind by remember { mutableStateOf(graph.ageAttestationStore.kind) }
     var isGuestMode by remember { mutableStateOf(graph.guestModeStore.isEnabled) }
     var onboardingProgress by remember { mutableStateOf<OnboardingProgress?>(null) }
@@ -640,7 +657,7 @@ private fun GradeyApp(
         try {
             PhoneWearSyncPublisher.publish(
                 context.applicationContext,
-                WearPayloadBuilder.signedIn(loaded, dashboard?.user),
+                WearPayloadBuilder.signedIn(loaded, dashboard?.user, supportTier),
             )
         } catch (error: CancellationException) {
             throw error
@@ -1264,6 +1281,135 @@ private fun GradeyApp(
             privacyDataError = error.userFacingMessage()
         } finally {
             isDeletingAccount = false
+        }
+    }
+
+    suspend fun publishCurrentWearState() {
+        val currentTimetable = timetable ?: return
+        try {
+            PhoneWearSyncPublisher.publish(
+                context.applicationContext,
+                WearPayloadBuilder.signedIn(currentTimetable, dashboard?.user, supportTier),
+            )
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: Throwable) {
+            // Support purchases must succeed even when no Wear OS device is paired.
+        }
+    }
+
+    fun applySupportEntitlement(entitlement: SupportEntitlement) {
+        supportTier = entitlement.tier
+        supportCatalog = supportCatalog?.copy(
+            entitlement = entitlement,
+            managementURL = entitlement.managementURL ?: supportCatalog?.managementURL,
+        )
+    }
+
+    suspend fun loadSupportCatalog() {
+        if (isSupportLoading || purchasingSupportOptionID != null || isRestoringSupport) return
+        isSupportLoading = true
+        supportMessage = null
+        try {
+            val loaded = supportService.loadCatalog(account?.id.takeUnless { isGuestMode })
+            supportCatalog = loaded
+            supportTier = loaded.entitlement.tier
+            supportMessage = if (loaded.isEmpty) {
+                context.getString(com.bukovinafilip.gradey.feature.account.R.string.support_empty)
+            } else {
+                null
+            }
+            publishCurrentWearState()
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Throwable) {
+            supportCatalog = null
+            supportMessage = error.userFacingMessage()
+        } finally {
+            isSupportLoading = false
+        }
+    }
+
+    suspend fun purchaseSupportOption(optionID: String, requiresGradeyID: Boolean) {
+        if (purchasingSupportOptionID != null || isRestoringSupport) return
+        if (requiresGradeyID && (account == null || isGuestMode)) {
+            supportMessage = context.getString(
+                com.bukovinafilip.gradey.feature.account.R.string.support_sign_in_required,
+            )
+            return
+        }
+        purchasingSupportOptionID = optionID
+        supportMessage = null
+        try {
+            val result = supportService.purchase(activity, optionID)
+            applySupportEntitlement(result.entitlement)
+            supportMessage = when (result.outcome) {
+                SupportPurchaseOutcome.SUCCESS -> {
+                    supportCatalog = supportService.loadCatalog(account?.id.takeUnless { isGuestMode })
+                    supportTier = supportCatalog?.entitlement?.tier ?: result.entitlement.tier
+                    context.getString(com.bukovinafilip.gradey.feature.account.R.string.support_thank_you)
+                }
+                SupportPurchaseOutcome.PENDING -> context.getString(
+                    com.bukovinafilip.gradey.feature.account.R.string.support_purchase_pending,
+                )
+                SupportPurchaseOutcome.CANCELLED -> context.getString(
+                    com.bukovinafilip.gradey.feature.account.R.string.support_purchase_cancelled,
+                )
+            }
+            publishCurrentWearState()
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Throwable) {
+            supportMessage = error.userFacingMessage()
+        } finally {
+            purchasingSupportOptionID = null
+        }
+    }
+
+    suspend fun restoreSupportPurchases() {
+        if (isRestoringSupport || purchasingSupportOptionID != null) return
+        isRestoringSupport = true
+        supportMessage = null
+        try {
+            val restored = supportService.restore(account?.id.takeUnless { isGuestMode })
+            applySupportEntitlement(restored)
+            supportCatalog = supportService.loadCatalog(account?.id.takeUnless { isGuestMode })
+            supportTier = supportCatalog?.entitlement?.tier ?: restored.tier
+            supportMessage = if (restored.tier == GradeySupportTier.NONE) {
+                context.getString(com.bukovinafilip.gradey.feature.account.R.string.support_restore_none)
+            } else {
+                context.getString(com.bukovinafilip.gradey.feature.account.R.string.support_restored)
+            }
+            publishCurrentWearState()
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Throwable) {
+            supportMessage = error.userFacingMessage()
+        } finally {
+            isRestoringSupport = false
+        }
+    }
+
+    LaunchedEffect(phase, account?.id, isGuestMode) {
+        if (phase == AppPhase.CHECKING) return@LaunchedEffect
+        val identityKey = account?.id?.takeUnless { isGuestMode } ?: "anonymous"
+        supportCatalog = null
+        supportMessage = null
+        if (resolvedSupportIdentityKey != identityKey) supportTier = GradeySupportTier.NONE
+        if (!supportService.isConfigured) {
+            supportTier = GradeySupportTier.NONE
+            resolvedSupportIdentityKey = identityKey
+            return@LaunchedEffect
+        }
+        try {
+            val entitlement = supportService.syncIdentity(account?.id.takeUnless { isGuestMode })
+            supportTier = entitlement.tier
+            resolvedSupportIdentityKey = identityKey
+            publishCurrentWearState()
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: Throwable) {
+            // Preserve a resolved tier through a temporary outage, but never across identities.
         }
     }
 
@@ -1947,7 +2093,132 @@ private fun GradeyApp(
                     onOpenGradeyTools = { isGradeyAIPresented = true },
                     modifier = standardScreenModifier,
                 )
-                AppTab.ACCOUNT -> AccountScreen(
+                AppTab.ACCOUNT -> if (isSupportPresented) {
+                    SupportScreen(
+                        catalog = supportCatalog,
+                        isSignedIn = account != null && !isGuestMode,
+                        isConfigured = supportService.isConfigured,
+                        isLoading = isSupportLoading,
+                        purchasingOptionID = purchasingSupportOptionID,
+                        isRestoring = isRestoringSupport,
+                        message = supportMessage,
+                        appVersion = BuildConfig.VERSION_NAME,
+                        appBuild = BuildConfig.VERSION_CODE.toString(),
+                        onBack = { isSupportPresented = false },
+                        onReload = { scope.launch { loadSupportCatalog() } },
+                        onPurchasePlan = { plan: SupportPlanOption ->
+                            scope.launch { purchaseSupportOption(plan.id, requiresGradeyID = true) }
+                        },
+                        onPurchaseTip = { optionID ->
+                            scope.launch { purchaseSupportOption(optionID, requiresGradeyID = false) }
+                        },
+                        onRestore = { scope.launch { restoreSupportPurchases() } },
+                        onManageSubscription = {
+                            val url = supportCatalog?.managementURL
+                                ?: "https://play.google.com/store/account/subscriptions?package=${activity.packageName}"
+                            runCatching {
+                                activity.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                            }
+                        },
+                        onOpenHelpCenter = {
+                            val language = if (appLanguage.pickerLanguage == AppLanguage.CZECH) "cs" else "en"
+                            runCatching {
+                                activity.startActivity(
+                                    Intent(
+                                        Intent.ACTION_VIEW,
+                                        Uri.parse("https://help.bukovinafilip.com/$language"),
+                                    ),
+                                )
+                            }
+                        },
+                        onEmailDeveloper = {
+                            runCatching {
+                                activity.startActivity(
+                                    Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:filip@openside.tech")),
+                                )
+                            }
+                        },
+                        onOpenGitHub = {
+                            runCatching {
+                                activity.startActivity(
+                                    Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/FBukovina/Gradely")),
+                                )
+                            }
+                        },
+                        onOpenPrivacyPolicy = {
+                            val language = if (appLanguage.pickerLanguage == AppLanguage.CZECH) "cs" else "en"
+                            runCatching {
+                                activity.startActivity(
+                                    Intent(
+                                        Intent.ACTION_VIEW,
+                                        Uri.parse("https://help.bukovinafilip.com/$language/articles/10-privacy-policy"),
+                                    ),
+                                )
+                            }
+                        },
+                        onOpenTermsOfUse = {
+                            val language = if (appLanguage.pickerLanguage == AppLanguage.CZECH) "cs" else "en"
+                            runCatching {
+                                activity.startActivity(
+                                    Intent(
+                                        Intent.ACTION_VIEW,
+                                        Uri.parse("https://help.bukovinafilip.com/$language/articles/11-terms-and-conditions"),
+                                    ),
+                                )
+                            }
+                        },
+                        onOpenOpenSide = {
+                            runCatching {
+                                activity.startActivity(
+                                    Intent(Intent.ACTION_VIEW, Uri.parse("https://openside.tech")),
+                                )
+                            }
+                        },
+                        onEmailGraphics = {
+                            runCatching {
+                                activity.startActivity(
+                                    Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:tom@openside.tech")),
+                                )
+                            }
+                        },
+                        onClearCache = {
+                            scope.launch {
+                                graph.cache?.clearAll()
+                                dashboard = null
+                                absence = null
+                                resetAbsenceSubjectResolution()
+                                resetTimetableState()
+                                gradeHistorySnapshot = null
+                                stravaMenu = null
+                                try {
+                                    updateNextLessonWidgets(context.applicationContext)
+                                } catch (error: CancellationException) {
+                                    throw error
+                                } catch (_: Throwable) {
+                                    // Cache clearing is complete even if a widget host cannot refresh.
+                                }
+                                supportMessage = context.getString(
+                                    com.bukovinafilip.gradey.feature.account.R.string.support_cache_cleared,
+                                )
+                            }
+                        },
+                        onRestartOnboarding = {
+                            scope.launch {
+                                val journey = if (graph.schoolRepository.currentStoredSession() == null) {
+                                    OnboardingJourney.NEW_USER
+                                } else {
+                                    OnboardingJourney.UPGRADE
+                                }
+                                val restarted = OnboardingProgress.initial(journey)
+                                graph.onboardingProgressStore.restart(restarted)
+                                isSupportPresented = false
+                                onboardingProgress = restarted
+                            }
+                        },
+                        modifier = standardScreenModifier,
+                    )
+                } else {
+                    AccountScreen(
                     account = account,
                     linkedAccounts = linkedAccounts,
                     appLanguage = appLanguage,
@@ -2077,6 +2348,10 @@ private fun GradeyApp(
                     onDeleteAccount = {
                         scope.launch { deleteGradeyAccount() }
                     },
+                    onOpenSupport = {
+                        supportMessage = null
+                        isSupportPresented = true
+                    },
                     onUnlinkLinkedAccount = { linked ->
                         scope.launch { unlinkLinkedAccount(linked) }
                     },
@@ -2119,6 +2394,7 @@ private fun GradeyApp(
                     },
                     modifier = standardScreenModifier,
                 )
+                }
             }
 
             val selectedTabHasUsableContent = when (selectedTab) {
@@ -2163,6 +2439,7 @@ private fun GradeyApp(
                 GradeyAIScreen(
                     repository = graph.gradeyAIRepository,
                     isGuestMode = isGuestMode,
+                    supportTier = supportTier,
                     onOpenAccount = {
                         isGradeyAIPresented = false
                         selectedTab = AppTab.ACCOUNT

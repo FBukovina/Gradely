@@ -90,6 +90,11 @@ class OnboardingProgressStore internal constructor(
         writeCompleted(true)
     }
 
+    fun restart(progress: OnboardingProgress) {
+        writeCompleted(false)
+        saveProgress(progress)
+    }
+
     private companion object {
         const val PREFERENCES_NAME = "gradey-preferences"
         const val PROGRESS_KEY = "onboarding.progress.v2"

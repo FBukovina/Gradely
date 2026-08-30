@@ -2,6 +2,7 @@ package com.bukovinafilip.gradey.domain
 
 import com.bukovinafilip.gradey.model.ClassInfo
 import com.bukovinafilip.gradey.model.GradeyWearSyncPayload
+import com.bukovinafilip.gradey.model.GradeySupportTier
 import com.bukovinafilip.gradey.model.LessonChangeKind
 import com.bukovinafilip.gradey.model.NextLessonWidgetChangeKind
 import com.bukovinafilip.gradey.model.ScheduledDay
@@ -39,6 +40,7 @@ class WearPayloadBuilderTest {
         val payload = WearPayloadBuilder.signedIn(
             week = week,
             user = user,
+            supportTier = GradeySupportTier.PLUS,
             generatedAtEpochMillis = 123,
             locale = Locale.US,
         )
@@ -46,6 +48,7 @@ class WearPayloadBuilderTest {
         assertThat(payload.schemaVersion).isEqualTo(GradeyWearSyncPayload.CURRENT_SCHEMA_VERSION)
         assertThat(payload.isSignedIn).isTrue()
         assertThat(payload.auth).isNull()
+        assertThat(payload.supportTier).isEqualTo(GradeySupportTier.PLUS)
         assertThat(payload.user?.fullName).isEqualTo("Student Name")
         assertThat(payload.user?.schoolName).isEqualTo("Real School")
         assertThat(payload.user?.classAbbrev).isEqualTo("3A")

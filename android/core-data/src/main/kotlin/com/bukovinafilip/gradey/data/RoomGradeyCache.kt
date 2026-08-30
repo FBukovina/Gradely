@@ -102,6 +102,8 @@ class RoomGradeyCache(
         clearNextLessonSnapshot()
     }
 
+    suspend fun clearAll() = dao.clearAll()
+
     private suspend fun <T> load(key: String, serializer: KSerializer<T>): T? {
         val entity = dao.load(key) ?: return null
         return runCatching { json.decodeFromString(serializer, entity.payload) }.getOrNull()

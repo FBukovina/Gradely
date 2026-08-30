@@ -96,6 +96,7 @@ fun AccountScreen(
     onOpenTermsOfUse: () -> Unit = {},
     onExportData: () -> Unit = {},
     onDeleteAccount: () -> Unit = {},
+    onOpenSupport: () -> Unit = {},
     onUnlinkLinkedAccount: (LinkedSchoolAccount) -> Unit = {},
     onAppLanguageChange: (AppLanguage) -> Unit = {},
     onShowMealsTabChange: (Boolean) -> Unit = {},
@@ -375,6 +376,12 @@ fun AccountScreen(
                 if (linkedAccounts.isEmpty() && !isRefreshingLinkedAccounts) {
                     Text("No school account is linked to this Gradey ID yet.")
                 }
+            }
+        }
+        GradeySectionCard(title = stringResource(R.string.support_title)) {
+            Text(stringResource(R.string.support_message))
+            Button(onClick = onOpenSupport) {
+                Text(stringResource(R.string.support_open))
             }
         }
         GradeySectionCard(title = "Privacy & data") {

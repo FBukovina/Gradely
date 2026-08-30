@@ -32,4 +32,8 @@
     <string name="gradey_ai_chat_next">conversation history and chat streaming are not available in this Android build yet.</string>
     <string name="gradey_ai_identity_anonymous">private guest AI identity</string>
     <string name="gradey_ai_identity_linked">linked to your Gradey ID</string>
+    <string name="gradey_ai_support_tier">support tier: %1$s</string>
+    <string name="gradey_ai_support_free">free</string>
+    <string name="gradey_ai_support_standard">standard</string>
+    <string name="gradey_ai_support_plus">plus</string>
 </resources>

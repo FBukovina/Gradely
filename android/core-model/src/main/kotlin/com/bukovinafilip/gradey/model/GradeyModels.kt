@@ -936,12 +936,13 @@ data class GradeyWearSyncPayload(
     val schemaVersion: Int = CURRENT_SCHEMA_VERSION,
     val generatedAtEpochMillis: Long,
     val isSignedIn: Boolean,
+    val supportTier: GradeySupportTier = GradeySupportTier.NONE,
     val auth: GradeyWearAuth? = null,
     val user: GradeyWearUser? = null,
     val timetable: GradeyWearTimetable? = null,
 ) {
     companion object {
-        const val CURRENT_SCHEMA_VERSION = 2
+        const val CURRENT_SCHEMA_VERSION = 3
 
         fun signedOut(nowEpochMillis: Long = System.currentTimeMillis()) = GradeyWearSyncPayload(
             generatedAtEpochMillis = nowEpochMillis,

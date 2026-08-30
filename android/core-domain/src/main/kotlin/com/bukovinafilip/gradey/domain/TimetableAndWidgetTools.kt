@@ -6,6 +6,7 @@ import com.bukovinafilip.gradey.model.GradeyWearTimetable
 import com.bukovinafilip.gradey.model.GradeyWearTimetableDay
 import com.bukovinafilip.gradey.model.GradeyWearTimetableLesson
 import com.bukovinafilip.gradey.model.GradeyWearUser
+import com.bukovinafilip.gradey.model.GradeySupportTier
 import com.bukovinafilip.gradey.model.LessonChangeKind
 import com.bukovinafilip.gradey.model.NextLessonWidgetLesson
 import com.bukovinafilip.gradey.model.NextLessonWidgetChangeKind
@@ -264,11 +265,13 @@ object WearPayloadBuilder {
     fun signedIn(
         week: TimetableWeek,
         user: UserResponse? = null,
+        supportTier: GradeySupportTier = GradeySupportTier.NONE,
         generatedAtEpochMillis: Long = System.currentTimeMillis(),
         locale: Locale = Locale.getDefault(),
     ): GradeyWearSyncPayload = GradeyWearSyncPayload(
         generatedAtEpochMillis = generatedAtEpochMillis,
         isSignedIn = true,
+        supportTier = supportTier,
         user = user?.let {
             GradeyWearUser(
                 fullName = it.fullName,

@@ -32,4 +32,8 @@
     <string name="gradey_ai_chat_next">historie konverzací a streamování chatu v této sestavě pro Android zatím nejsou dostupné.</string>
     <string name="gradey_ai_identity_anonymous">soukromá identita hosta pro AI</string>
     <string name="gradey_ai_identity_linked">propojeno s tvým Gradey ID</string>
+    <string name="gradey_ai_support_tier">úroveň podpory: %1$s</string>
+    <string name="gradey_ai_support_free">zdarma</string>
+    <string name="gradey_ai_support_standard">standard</string>
+    <string name="gradey_ai_support_plus">plus</string>
 </resources>

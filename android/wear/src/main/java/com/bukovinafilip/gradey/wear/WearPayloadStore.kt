@@ -36,7 +36,7 @@ class WearPayloadStore(context: Context) {
 
     private companion object {
         const val PREFERENCES_NAME = "gradey-wear-sync"
-        const val PAYLOAD_KEY = "payload.v2"
+        const val PAYLOAD_KEY = "payload.v3"
         val JsonCodec = Json {
             ignoreUnknownKeys = true
             encodeDefaults = true

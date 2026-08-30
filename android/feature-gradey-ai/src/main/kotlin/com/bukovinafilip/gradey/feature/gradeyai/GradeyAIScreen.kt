@@ -47,6 +47,7 @@ import com.bukovinafilip.gradey.domain.GradeyAIEntryPolicy
 import com.bukovinafilip.gradey.domain.GradeyAIEntryState
 import com.bukovinafilip.gradey.model.GradeyAIIdentityTier
 import com.bukovinafilip.gradey.model.GradeyAIStatus
+import com.bukovinafilip.gradey.model.GradeySupportTier
 import com.bukovinafilip.gradey.ui.GradeyColors
 import com.bukovinafilip.gradey.ui.GradeyHero
 import com.bukovinafilip.gradey.ui.GradeySectionCard
@@ -58,6 +59,7 @@ import kotlinx.coroutines.launch
 fun GradeyAIScreen(
     repository: GradeyAIRepository,
     isGuestMode: Boolean,
+    supportTier: GradeySupportTier = GradeySupportTier.NONE,
     onOpenAccount: () -> Unit,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
@@ -155,7 +157,9 @@ fun GradeyAIScreen(
                     )
                 }
 
-                status != null -> item { GradeyAIStatusContent(status = status!!) }
+                status != null -> item {
+                    GradeyAIStatusContent(status = status!!, supportTier = supportTier)
+                }
             }
         }
     }
@@ -301,7 +305,7 @@ private fun ConsentDetail(icon: ImageVector, title: String, message: String) {
 }
 
 @Composable
-private fun GradeyAIStatusContent(status: GradeyAIStatus) {
+private fun GradeyAIStatusContent(status: GradeyAIStatus, supportTier: GradeySupportTier) {
     Column(verticalArrangement = Arrangement.spacedBy(GradeySpacing.lg)) {
         GradeyHero(
             title = stringResource(R.string.gradey_ai_ready_title),
@@ -335,6 +339,20 @@ private fun GradeyAIStatusContent(status: GradeyAIStatus) {
                         GradeyAIIdentityTier.ANONYMOUS -> R.string.gradey_ai_identity_anonymous
                         GradeyAIIdentityTier.LINKED -> R.string.gradey_ai_identity_linked
                     },
+                ),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodySmall,
+            )
+            Text(
+                text = stringResource(
+                    R.string.gradey_ai_support_tier,
+                    stringResource(
+                        when (supportTier) {
+                            GradeySupportTier.NONE -> R.string.gradey_ai_support_free
+                            GradeySupportTier.STANDARD -> R.string.gradey_ai_support_standard
+                            GradeySupportTier.PLUS -> R.string.gradey_ai_support_plus
+                        },
+                    ),
                 ),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 style = MaterialTheme.typography.bodySmall,

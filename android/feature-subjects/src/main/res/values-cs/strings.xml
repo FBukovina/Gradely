@@ -35,4 +35,17 @@
     <string name="mark_weight">Váha %1$s×</string>
     <string name="mark_weight_estimated">Odhadovaná váha %1$s×</string>
     <string name="mark_new">Nová</string>
+    <string name="subject_average">Průměr</string>
+    <string name="subject_predicted_average">Předpokládaný průměr</string>
+    <plurals name="subject_mark_count">
+        <item quantity="one">%1$d známka</item>
+        <item quantity="few">%1$d známky</item>
+        <item quantity="many">%1$d známek</item>
+        <item quantity="other">%1$d známek</item>
+    </plurals>
+    <string name="subject_absence">Absence %1$s %%</string>
+    <string name="subject_absence_unavailable">Absence —</string>
+    <string name="subject_notes_section">POZNÁMKY</string>
+    <string name="subject_note_label">Poznámka k předmětu</string>
+    <string name="subject_temporary_mark_label">Dočasná známka</string>
 </resources>

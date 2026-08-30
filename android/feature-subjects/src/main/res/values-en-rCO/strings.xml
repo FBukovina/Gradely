@@ -27,4 +27,15 @@
     <string name="mark_weight">weight %1$s×</string>
     <string name="mark_weight_estimated">estimated weight %1$s×</string>
     <string name="mark_new">new</string>
+    <string name="subject_average">average</string>
+    <string name="subject_predicted_average">predicted average</string>
+    <plurals name="subject_mark_count">
+        <item quantity="one">%1$d mark</item>
+        <item quantity="other">%1$d marks</item>
+    </plurals>
+    <string name="subject_absence">absence %1$s %%</string>
+    <string name="subject_absence_unavailable">absence —</string>
+    <string name="subject_notes_section">notes</string>
+    <string name="subject_note_label">subject note</string>
+    <string name="subject_temporary_mark_label">temporary mark</string>
 </resources>

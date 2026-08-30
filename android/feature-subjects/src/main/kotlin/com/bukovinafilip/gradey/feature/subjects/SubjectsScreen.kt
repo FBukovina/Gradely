@@ -93,6 +93,8 @@ import com.bukovinafilip.gradey.domain.MarkDateParser
 import com.bukovinafilip.gradey.domain.MarkPredictionInput
 import com.bukovinafilip.gradey.domain.MarkWeightBadgeKind
 import com.bukovinafilip.gradey.domain.SubjectDirectorySearch
+import com.bukovinafilip.gradey.domain.SubjectDetailNotes
+import com.bukovinafilip.gradey.domain.SubjectDetailNotesPolicy
 import com.bukovinafilip.gradey.model.AbsenceResponse
 import com.bukovinafilip.gradey.model.Mark
 import com.bukovinafilip.gradey.model.Subject
@@ -699,6 +701,7 @@ private fun SubjectDetail(
             )
         } ?: GradeMath.subjectAverage(subject)
     }
+    val notes = remember(subject) { SubjectDetailNotesPolicy.resolve(subject) }
 
     StatusBarAppearance(useDarkIcons = !isScrolled)
 
@@ -720,6 +723,12 @@ private fun SubjectDetail(
                     markCount = subject.marks.size,
                     absencePercentage = absenceRow?.absencePercentage,
                 )
+            }
+            if (notes.hasContent) {
+                item { Spacer(Modifier.height(16.dp)) }
+                item { SectionHeading(stringResource(R.string.subject_notes_section)) }
+                item { Spacer(Modifier.height(10.dp)) }
+                item { SubjectNotesCard(notes) }
             }
             item { Spacer(Modifier.height(16.dp)) }
             item { SectionHeading("AVERAGE OVER TIME") }
@@ -839,7 +848,9 @@ private fun SubjectAverageHero(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
-                text = if (predicted) "Predicted average" else "Average",
+                text = stringResource(
+                    if (predicted) R.string.subject_predicted_average else R.string.subject_average,
+                ),
                 color = Color.White,
                 fontSize = 17.sp,
                 lineHeight = 21.sp,
@@ -860,14 +871,86 @@ private fun SubjectAverageHero(
             ) {
                 DetailChip(
                     icon = { Icon(Icons.Default.Verified, contentDescription = null, modifier = Modifier.size(14.dp)) },
-                    text = "$markCount ${plural(markCount, "mark", "marks")}",
+                    text = pluralStringResource(R.plurals.subject_mark_count, markCount, markCount),
                 )
                 DetailChip(
                     icon = { Icon(Icons.Default.CalendarMonth, contentDescription = null, modifier = Modifier.size(14.dp)) },
-                    text = absencePercentage?.let { "Absence ${formatOneDecimal(it)} %" } ?: "Absence —",
+                    text = absencePercentage?.let {
+                        stringResource(R.string.subject_absence, formatOneDecimal(it))
+                    } ?: stringResource(R.string.subject_absence_unavailable),
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun SubjectNotesCard(notes: SubjectDetailNotes) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        color = CardWhite,
+        shadowElevation = 1.dp,
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            notes.subjectNote?.let { note ->
+                NoteBlock(
+                    label = stringResource(R.string.subject_note_label),
+                    value = note,
+                )
+            }
+            if (notes.subjectNote != null && notes.hasTemporaryContent) {
+                HorizontalDivider(color = DividerColor)
+            }
+            if (notes.hasTemporaryContent) {
+                Text(
+                    text = stringResource(R.string.subject_temporary_mark_label),
+                    color = MutedText,
+                    fontSize = 13.sp,
+                    lineHeight = 16.sp,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                notes.temporaryMark?.let { mark ->
+                    Text(
+                        text = mark,
+                        color = AccentTeal,
+                        fontSize = 22.sp,
+                        lineHeight = 26.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
+                notes.temporaryMarkNote?.let { note ->
+                    Text(
+                        text = note,
+                        color = Color.Black,
+                        fontSize = 15.sp,
+                        lineHeight = 20.sp,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun NoteBlock(label: String, value: String) {
+    Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+        Text(
+            text = label,
+            color = MutedText,
+            fontSize = 13.sp,
+            lineHeight = 16.sp,
+            fontWeight = FontWeight.SemiBold,
+        )
+        Text(
+            text = value,
+            color = Color.Black,
+            fontSize = 15.sp,
+            lineHeight = 20.sp,
+        )
     }
 }
 

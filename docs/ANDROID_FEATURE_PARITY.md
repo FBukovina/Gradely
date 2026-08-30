@@ -213,7 +213,7 @@ Marks-overview verification (2026-08-30): Android now matches the visible curren
 
 ## Absence
 
-- [ ] Implement cache-first initial/loading/loaded/empty/refresh/background-error states.
+- [x] Implement cache-first initial/loading/loaded/empty/refresh/background-error states.
 - [ ] Match total counts and all Bakaláři categories: ok, late, soon, school, distance teaching, unsolved, and missed.
 - [ ] Match Subjects/Days/Months segments, grouped totals, empty states, and month chart.
 - [x] Day/month aggregation and absence risk calculations have JVM unit coverage.
@@ -223,6 +223,8 @@ Marks-overview verification (2026-08-30): Android now matches the visible curren
 - [ ] Port partial-day/manual lesson selection, scoped persistence, save/recompute, and validation states.
 - [ ] Implement the interactive absence predictor sheet: future timetable loading, date navigation, lesson selection, projected totals, per-subject changes, threshold warnings, edit, and clear.
 - [ ] Verify fallback matching for subject aliases, abbreviations, diacritics, unknown lessons, holidays, and malformed dates.
+
+Absence-state verification (2026-08-30): Android now restores the school-scoped cached absence response before network work and resolves the tab through an explicit six-state policy matching iOS. With no response, the first request shows a localized loading surface and a completed failure shows its own full retry state; a successfully loaded response with no day or subject records remains a usable zero-data Absence screen rather than becoming an error. Cached or loaded content stays visible during refresh with the refresh control in progress, and a later Absence failure keeps that content plus a compact non-destructive warning. The warning and retry copy are driven by a dedicated Absence error channel, so dashboard, timetable, meals, history, and linked-account failures no longer masquerade as Absence failures. Seven JVM cases cover state precedence, empty data, retained refresh, and first-load fallback; existing retained-refresh/cache tests cover non-destructive cache behavior, focused app/feature compilation verifies the production wiring, and all four Android language configurations contain the new first-load copy.
 
 ## Timetable
 

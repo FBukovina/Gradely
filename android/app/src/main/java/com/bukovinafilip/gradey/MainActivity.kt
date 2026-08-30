@@ -59,6 +59,7 @@ import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
 import androidx.core.content.ContextCompat
 import com.bukovinafilip.gradey.feature.absence.AbsenceScreen
+import com.bukovinafilip.gradey.feature.absence.AbsenceStateScreen
 import com.bukovinafilip.gradey.feature.account.AccountScreen
 import com.bukovinafilip.gradey.feature.auth.AgeAttestationScreen
 import com.bukovinafilip.gradey.feature.auth.GradeyCheckingScreen
@@ -77,6 +78,8 @@ import com.bukovinafilip.gradey.feature.today.TodayStateScreen
 import com.bukovinafilip.gradey.domain.GradeySessionExpiredException
 import com.bukovinafilip.gradey.domain.GradeHistoryTrends
 import com.bukovinafilip.gradey.domain.GradeyStartupDestination
+import com.bukovinafilip.gradey.domain.AbsencePresentationState
+import com.bukovinafilip.gradey.domain.AbsencePresentationStates
 import com.bukovinafilip.gradey.domain.SchoolSessionExpiredException
 import com.bukovinafilip.gradey.domain.TimetableDates
 import com.bukovinafilip.gradey.domain.TodayPresentationState
@@ -192,6 +195,7 @@ private fun GradeyApp(
     var schoolDirectoryError by remember { mutableStateOf<String?>(null) }
     var dataError by remember { mutableStateOf<String?>(null) }
     var marksRefreshError by remember { mutableStateOf<String?>(null) }
+    var absenceRefreshError by remember { mutableStateOf<String?>(null) }
     var profileError by remember { mutableStateOf<String?>(null) }
     var isUpdatingProfile by remember { mutableStateOf(false) }
     var ageAttestationKind by remember { mutableStateOf(graph.ageAttestationStore.kind) }
@@ -365,6 +369,7 @@ private fun GradeyApp(
         isGradeyAIPresented = false
         dataError = null
         marksRefreshError = null
+        absenceRefreshError = null
         schoolLoginError = "Your Bakaláři session expired. Please reconnect your school account."
         phase = AppPhase.NEEDS_SCHOOL
     }
@@ -408,6 +413,7 @@ private fun GradeyApp(
         isGradeyAIPresented = false
         dataError = null
         marksRefreshError = null
+        absenceRefreshError = null
         schoolLoginError = null
     }
 
@@ -535,6 +541,7 @@ private fun GradeyApp(
             val associatedSession = graph.schoolRepository.associateCurrentSession(updated)
             dashboard = candidateDashboard
             absence = null
+            absenceRefreshError = null
             timetable = null
             gradeHistorySnapshot = null
             activeLinkedAccountID = updated.id
@@ -570,6 +577,7 @@ private fun GradeyApp(
             dashboard = null
             marksRefreshError = null
             absence = null
+            absenceRefreshError = null
             timetable = null
             stravaSession = null
             stravaMenu = null
@@ -629,6 +637,7 @@ private fun GradeyApp(
     suspend fun refreshSignedInData(forceRefresh: Boolean = false) {
         dataError = null
         marksRefreshError = null
+        absenceRefreshError = null
         val failures = mutableListOf<Throwable>()
         val dashboardRefresh = refreshRetainingContent(dashboard) {
             graph.schoolRepository.loadDashboard(forceRefresh = forceRefresh)
@@ -657,7 +666,10 @@ private fun GradeyApp(
             }
 
             null -> Unit
-            else -> failures += error
+            else -> {
+                failures += error
+                absenceRefreshError = error.userFacingMessage()
+            }
         }
         when (val timetableFailure = loadTimetable(TimetableDates.todayString())) {
             is SchoolSessionExpiredException -> {
@@ -1202,6 +1214,14 @@ private fun GradeyApp(
                 isLoading = isLoading,
                 hasError = dataError != null,
             )
+            val absencePresentationState = AbsencePresentationStates.resolve(
+                hasResponse = currentAbsence != null,
+                hasRecords = currentAbsence?.let {
+                    it.absences.isNotEmpty() || it.absencesPerSubject.isNotEmpty()
+                } == true,
+                isLoading = isLoading,
+                hasError = absenceRefreshError != null,
+            )
             when (selectedTab) {
                 AppTab.TODAY -> when (todayPresentationState) {
                     TodayPresentationState.INITIAL_LOADING,
@@ -1310,32 +1330,46 @@ private fun GradeyApp(
                     onRetry = { scope.launch { runWithLoading { refreshSignedInData(true) } } },
                     modifier = standardScreenModifier,
                 )
-                AppTab.ABSENCE -> if (currentAbsence != null) AbsenceScreen(
-                    response = currentAbsence,
-                    studentName = currentDashboard?.user?.fullName ?: "Student",
-                    isRefreshing = isLoading,
-                    onRefresh = {
-                        if (!isLoading) {
-                            scope.launch {
-                                isLoading = true
-                                try {
-                                    refreshSignedInData(forceRefresh = true)
-                                } finally {
-                                    isLoading = false
+                AppTab.ABSENCE -> when (absencePresentationState) {
+                    AbsencePresentationState.INITIAL_LOADING,
+                    AbsencePresentationState.FIRST_LOAD_ERROR,
+                    -> AbsenceStateScreen(
+                        state = absencePresentationState,
+                        errorMessage = absenceRefreshError,
+                        onRetry = { scope.launch { runWithLoading { refreshSignedInData(true) } } },
+                        modifier = standardScreenModifier,
+                    )
+
+                    else -> if (currentAbsence != null) {
+                        AbsenceScreen(
+                            response = currentAbsence,
+                            studentName = currentDashboard?.user?.fullName ?: "Student",
+                            isRefreshing = absencePresentationState == AbsencePresentationState.REFRESHING,
+                            onRefresh = {
+                                if (!isLoading) {
+                                    scope.launch {
+                                        isLoading = true
+                                        try {
+                                            refreshSignedInData(forceRefresh = true)
+                                        } finally {
+                                            isLoading = false
+                                        }
+                                    }
                                 }
-                            }
-                        }
-                    },
-                    onOpenAccount = { selectedTab = AppTab.ACCOUNT },
-                    onOpenGradeyTools = { isGradeyAIPresented = true },
-                    modifier = Modifier.fillMaxSize(),
-                ) else CoreDataUnavailableScreen(
-                    title = "Absence",
-                    isLoading = isLoading,
-                    errorMessage = dataError,
-                    onRetry = { scope.launch { runWithLoading { refreshSignedInData(true) } } },
-                    modifier = standardScreenModifier,
-                )
+                            },
+                            onOpenAccount = { selectedTab = AppTab.ACCOUNT },
+                            onOpenGradeyTools = { isGradeyAIPresented = true },
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                    } else {
+                        AbsenceStateScreen(
+                            state = AbsencePresentationState.FIRST_LOAD_ERROR,
+                            errorMessage = absenceRefreshError,
+                            onRetry = { scope.launch { runWithLoading { refreshSignedInData(true) } } },
+                            modifier = standardScreenModifier,
+                        )
+                    }
+                }
                 AppTab.TIMETABLE -> if (timetable != null) TimetableScreen(
                     week = timetable,
                     isRefreshing = isLoading,
@@ -1492,13 +1526,18 @@ private fun GradeyApp(
                 AppTab.STRAVACZ -> stravaMenu != null
                 AppTab.ACCOUNT -> false
             }
+            val selectedTabRefreshError = if (selectedTab == AppTab.ABSENCE) {
+                absenceRefreshError
+            } else {
+                dataError
+            }
             if (
                 selectedTab != AppTab.ACCOUNT &&
-                dataError != null &&
+                selectedTabRefreshError != null &&
                 selectedTabHasUsableContent
             ) {
                 DataRefreshWarning(
-                    message = dataError.orEmpty(),
+                    message = selectedTabRefreshError.orEmpty(),
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .padding(start = 16.dp, end = 16.dp, bottom = 88.dp),

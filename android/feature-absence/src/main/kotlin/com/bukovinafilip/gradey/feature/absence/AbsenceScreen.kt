@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -49,6 +50,7 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -58,6 +60,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.bukovinafilip.gradey.domain.AbsenceDaySummary
 import com.bukovinafilip.gradey.domain.AbsenceMonthSummary
+import com.bukovinafilip.gradey.domain.AbsencePresentationState
 import com.bukovinafilip.gradey.domain.AbsenceRiskSummary
 import com.bukovinafilip.gradey.domain.AbsenceSubjectSummary
 import com.bukovinafilip.gradey.domain.AbsenceTimeline
@@ -94,6 +97,89 @@ private enum class AbsenceMode(val label: String, val description: String) {
     Subjects("Subjects", "Show subjects"),
     Days("By days", "Show by days"),
     Months("By months", "Show by months"),
+}
+
+@Composable
+fun AbsenceStateScreen(
+    state: AbsencePresentationState,
+    errorMessage: String?,
+    onRetry: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(BackgroundBottom),
+        contentAlignment = Alignment.Center,
+    ) {
+        AbsenceBackgroundGlow()
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            Text(
+                text = stringResource(R.string.absence_title),
+                color = Color.Black,
+                fontSize = 30.sp,
+                lineHeight = 36.sp,
+                fontWeight = FontWeight.Bold,
+            )
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp),
+                color = CardWhite,
+                shadowElevation = 2.dp,
+            ) {
+                Column(
+                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 28.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    if (state == AbsencePresentationState.INITIAL_LOADING) {
+                        CircularProgressIndicator(color = AccentTeal)
+                        Text(
+                            text = stringResource(R.string.absence_loading),
+                            color = Color.Black,
+                            fontSize = 18.sp,
+                            lineHeight = 23.sp,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                        Text(
+                            text = stringResource(R.string.absence_loading_subtitle),
+                            color = MutedText,
+                            textAlign = TextAlign.Center,
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Default.Error,
+                            contentDescription = null,
+                            tint = RiskOrange,
+                            modifier = Modifier.size(34.dp),
+                        )
+                        Text(
+                            text = stringResource(R.string.absence_load_failed),
+                            color = Color.Black,
+                            fontSize = 18.sp,
+                            lineHeight = 23.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            textAlign = TextAlign.Center,
+                        )
+                        Text(
+                            text = errorMessage ?: stringResource(R.string.absence_load_failed_subtitle),
+                            color = MutedText,
+                            textAlign = TextAlign.Center,
+                        )
+                        Button(onClick = onRetry) {
+                            Text(stringResource(R.string.absence_retry))
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 @Composable

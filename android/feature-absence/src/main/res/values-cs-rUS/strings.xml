@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="absence_title">absence</string>
+    <string name="absence_loading">načítám absenci…</string>
+    <string name="absence_loading_subtitle">po načtení se tu objeví tvoje docházka z Bakalářů.</string>
+    <string name="absence_load_failed">absenci se nepodařilo načíst</string>
+    <string name="absence_load_failed_subtitle">Gradey nedokázal načíst údaje o tvojí docházce.</string>
+    <string name="absence_retry">zkusit znovu</string>
+</resources>

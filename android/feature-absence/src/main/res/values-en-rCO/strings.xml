@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="absence_title">absence</string>
+    <string name="absence_loading">loading absence…</string>
+    <string name="absence_loading_subtitle">your Bakaláři attendance data will appear here after it loads.</string>
+    <string name="absence_load_failed">couldn’t load absence</string>
+    <string name="absence_load_failed_subtitle">Gradey couldn’t load your attendance data.</string>
+    <string name="absence_retry">try again</string>
+</resources>

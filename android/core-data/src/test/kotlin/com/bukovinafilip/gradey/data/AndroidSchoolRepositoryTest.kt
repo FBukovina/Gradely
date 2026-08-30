@@ -52,6 +52,28 @@ class AndroidSchoolRepositoryTest {
     }
 
     @Test
+    fun loginNormalizesInputAndPersistsTheReturnedTokenFamilyWithCredentials() = runTest {
+        val client = FakeBakalariClient()
+        val sessions = InMemorySchoolSessionStorage(null)
+        val repository = repository(client, sessions)
+
+        val session = repository.login(
+            schoolURL = " SCHOOL.EXAMPLE.CZ/login ",
+            username = "  student  ",
+            password = " secret with spaces ",
+        )
+
+        assertThat(client.loginCalls).isEqualTo(1)
+        assertThat(client.lastLoginBaseURL).isEqualTo("https://school.example.cz")
+        assertThat(client.lastLoginUsername).isEqualTo("student")
+        assertThat(client.lastLoginPassword).isEqualTo(" secret with spaces ")
+        assertThat(session.accessToken).isEqualTo("login-access")
+        assertThat(session.refreshToken).isEqualTo("login-refresh")
+        assertThat(session.bakalari).isEqualTo(BakalariCredentials("student", " secret with spaces "))
+        assertThat(sessions.load()).isEqualTo(session)
+    }
+
+    @Test
     fun `restore session replaces a reconnect candidate without network access`() = runTest {
         val original = validSession().copy(linkedAccountID = "original")
         val candidate = validSession().copy(
@@ -848,6 +870,7 @@ private class FakeBakalariClient : BakalariClient {
     var timetableCalls = 0
     val timetableDates = mutableListOf<String>()
     var predictionCalls = 0
+    var lastLoginBaseURL: String? = null
     var lastLoginUsername: String? = null
     var lastLoginPassword: String? = null
 
@@ -863,6 +886,7 @@ private class FakeBakalariClient : BakalariClient {
 
     override suspend fun login(baseURL: String, username: String, password: String): LoginResponse {
         loginCalls += 1
+        lastLoginBaseURL = baseURL
         lastLoginUsername = username
         lastLoginPassword = password
         return loginResult(baseURL, username, password)

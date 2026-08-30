@@ -367,8 +367,8 @@ Wear implementation evidence (2026-08-30): the hard-coded watch timetable was re
 
 ## Test, release, and completion gates
 
-- [ ] Add repository tests for login, refresh concurrency, access-token retry classification, refresh rejection fallback, logout, scoped cache, and account switch.
-- [ ] Add MockWebServer contract/fixture tests for every Bakaláři endpoint and error class used by Android.
+- [x] Add repository tests for login, refresh concurrency, access-token retry classification, refresh rejection fallback, logout, scoped cache, and account switch.
+- [x] Add MockWebServer contract/fixture tests for every Bakaláři endpoint and error class used by Android.
 - [ ] Add ViewModel tests for cache-first state, retained-content refresh failure, empty state, retry, expired session, and account change.
 - [ ] Add Compose navigation/interaction tests for every visible control and major state.
 - [ ] Add Room migration/corruption and encrypted-session migration tests.
@@ -379,3 +379,5 @@ Wear implementation evidence (2026-08-30): the hard-coded watch timetable was re
 - [ ] Perform a second independent iOS audit and add any missed functionality to this tracker.
 - [ ] Perform the final visual parity audit after functional parity is complete.
 - [ ] Confirm every non-`N/A` row above is checked before declaring Android parity complete.
+
+Automated contract evidence (2026-08-31): `AndroidSchoolRepositoryTest` directly covers normalized login and persisted credentials, shared refresh concurrency, access-token retry versus non-authentication failure classification, rejected-refresh credential fallback and terminal expiry, school-scoped cache isolation/retention, account activation/switching, and logout teardown. `BakalariNetworkClientTest` uses MockWebServer to assert the password and refresh grants plus the authenticated marks, absence, user, timetable, and what-if routes; fixtures cover compatible response variants, and tests exercise invalid response, HTTP, authentication, decoding, timeout, offline, transport, and cancellation behavior without exposing server bodies.

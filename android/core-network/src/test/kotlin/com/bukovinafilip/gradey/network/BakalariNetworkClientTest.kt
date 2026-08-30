@@ -291,7 +291,10 @@ class BakalariNetworkClientTest {
         )
 
         val marks = client.fetchMarks(baseURL(), "token").subjects.single()
+        val request = server.takeRequest()
 
+        assertThat(request.path).isEqualTo("/api/3/marks")
+        assertThat(request.getHeader("Authorization")).isEqualTo("Bearer token")
         assertThat(marks.marks[0].weight).isEqualTo(2.5)
         assertThat(marks.marks[0].isNew).isTrue()
         assertThat(marks.marks[0].subjectID).isEmpty()
@@ -330,7 +333,10 @@ class BakalariNetworkClientTest {
         )
 
         val user = client.fetchUser(baseURL(), "token")
+        val request = server.takeRequest()
 
+        assertThat(request.path).isEqualTo("/api/3/user")
+        assertThat(request.getHeader("Authorization")).isEqualTo("Bearer token")
         assertThat(user.classAbbrev).isEqualTo("3.A")
         assertThat(user.displaySchoolName).isEqualTo("Real School")
         assertThat(user.studyYear).isEqualTo(3)
@@ -360,7 +366,10 @@ class BakalariNetworkClientTest {
         )
 
         val timetable = client.fetchTimetable(baseURL(), "token", "2026-08-24")
+        val request = server.takeRequest()
 
+        assertThat(request.path).isEqualTo("/api/3/timetable/actual?date=2026-08-24")
+        assertThat(request.getHeader("Authorization")).isEqualTo("Bearer token")
         assertThat(timetable.hours.single().id).isEqualTo("1")
         assertThat(timetable.hours.single().caption).isEmpty()
         assertThat(timetable.days.single().atoms.single().hourID).isEqualTo("1")

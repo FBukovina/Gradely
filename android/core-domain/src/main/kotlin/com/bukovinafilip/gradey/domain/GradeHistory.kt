@@ -19,7 +19,12 @@ data class SubjectGradeTrend(
     val firstMarkCount: Int,
     val latestMarkCount: Int,
     val events: List<GradeHistoryEvent>,
-)
+) {
+    val displayName: String
+        get() = subjectAbbrev?.trim()?.takeIf(String::isNotEmpty)
+            ?: subjectName?.trim()?.takeIf(String::isNotEmpty)
+            ?: subjectID
+}
 
 object GradeHistoryTrends {
     fun make(events: List<GradeHistoryEvent>): List<SubjectGradeTrend> = events
@@ -53,6 +58,12 @@ object GradeHistoryTrends {
             compareByDescending<SubjectGradeTrend> { abs(it.averageDelta ?: 0.0) }
                 .thenBy(SubjectGradeTrend::subjectID),
         )
+
+    fun since(trends: List<SubjectGradeTrend>, cutoff: Instant): List<SubjectGradeTrend> = make(
+        trends.flatMap(SubjectGradeTrend::events).filter { event ->
+            event.capturedInstant()?.let { it >= cutoff } == true
+        },
+    )
 
     fun matching(subject: Subject, trends: List<SubjectGradeTrend>): SubjectGradeTrend? {
         trends.firstOrNull { it.subjectID == subject.id }?.let { return it }

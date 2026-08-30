@@ -8,6 +8,7 @@ import com.bukovinafilip.gradey.model.Subject
 import com.bukovinafilip.gradey.model.SubjectInfo
 import com.google.common.truth.Truth.assertThat
 import org.junit.Test
+import java.time.Instant
 import java.time.ZoneId
 
 class GradeHistoryTest {
@@ -42,6 +43,23 @@ class GradeHistoryTest {
         assertThat(GradeHistoryTrends.matching(subject, byName)?.subjectID).isEqualTo("remote")
         assertThat(GradeHistoryTrends.matching(subject, byAbbrev)?.subjectID).isEqualTo("remote")
         assertThat(GradeHistoryTrends.matching(subject, byID)?.subjectID).isEqualTo("local-id")
+    }
+
+    @Test
+    fun `recent trends rebuild the window and drop subjects without recent events`() {
+        val trends = GradeHistoryTrends.make(
+            listOf(
+                event(id = "old-math", subjectID = "math", average = 3.0, capturedAt = "2026-04-01T10:00:00Z"),
+                event(id = "new-math", subjectID = "math", average = 2.0, capturedAt = "2026-08-20T10:00:00Z"),
+                event(id = "old-english", subjectID = "eng", average = 1.5, capturedAt = "2026-03-01T10:00:00Z"),
+            ),
+        )
+
+        val recent = GradeHistoryTrends.since(trends, Instant.parse("2026-06-01T00:00:00Z"))
+
+        assertThat(recent.map { it.subjectID }).containsExactly("math")
+        assertThat(recent.single().events.map { it.id }).containsExactly("new-math")
+        assertThat(recent.single().displayName).isEqualTo("M")
     }
 
     @Test

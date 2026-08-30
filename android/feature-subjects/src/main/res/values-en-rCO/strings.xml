@@ -58,4 +58,23 @@
     <string name="subject_prediction_checking">checking with Bakaláři…</string>
     <string name="subject_prediction_exact">calculated by Bakaláři</string>
     <string name="subject_prediction_local">estimated locally</string>
+    <string name="marks_title">marks</string>
+    <string name="marks_overall_average">overall average</string>
+    <plurals name="marks_subject_count">
+        <item quantity="one">%1$d subject</item>
+        <item quantity="other">%1$d subjects</item>
+    </plurals>
+    <string name="marks_subjects_section">subjects</string>
+    <string name="marks_sort_focus">focus</string>
+    <string name="marks_sort_average">average</string>
+    <string name="marks_sort_name">a-z</string>
+    <string name="marks_empty">no subjects available</string>
+    <string name="marks_row_absence">%1$d%% absent</string>
+    <string name="marks_trends_section">grade movement</string>
+    <string name="marks_trends_range">90 days</string>
+    <plurals name="marks_trends_new_marks">
+        <item quantity="one">%1$d new mark</item>
+        <item quantity="other">%1$d new marks</item>
+    </plurals>
+    <string name="marks_trends_movement">average movement</string>
 </resources>

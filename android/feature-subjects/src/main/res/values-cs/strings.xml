@@ -68,4 +68,27 @@
     <string name="subject_prediction_checking">Ověřování přes Bakaláře…</string>
     <string name="subject_prediction_exact">Vypočítáno Bakaláři</string>
     <string name="subject_prediction_local">Místní odhad</string>
+    <string name="marks_title">Známky</string>
+    <string name="marks_overall_average">Celkový průměr</string>
+    <plurals name="marks_subject_count">
+        <item quantity="one">%1$d předmět</item>
+        <item quantity="few">%1$d předměty</item>
+        <item quantity="many">%1$d předmětu</item>
+        <item quantity="other">%1$d předmětů</item>
+    </plurals>
+    <string name="marks_subjects_section">PŘEDMĚTY</string>
+    <string name="marks_sort_focus">Priorita</string>
+    <string name="marks_sort_average">Průměr</string>
+    <string name="marks_sort_name">A-Z</string>
+    <string name="marks_empty">Žádné předměty</string>
+    <string name="marks_row_absence">%1$d%% absence</string>
+    <string name="marks_trends_section">VÝVOJ ZNÁMEK</string>
+    <string name="marks_trends_range">90 dní</string>
+    <plurals name="marks_trends_new_marks">
+        <item quantity="one">%1$d nová známka</item>
+        <item quantity="few">%1$d nové známky</item>
+        <item quantity="many">%1$d nových známek</item>
+        <item quantity="other">%1$d nových známek</item>
+    </plurals>
+    <string name="marks_trends_movement">Vývoj průměru</string>
 </resources>

@@ -111,6 +111,7 @@ import com.bukovinafilip.gradey.model.Subject
 import kotlinx.coroutines.CancellationException
 import java.text.Collator
 import java.text.Normalizer
+import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.temporal.ChronoUnit
@@ -135,10 +136,10 @@ private val WarningOrange = Color(0xFFE0921A)
 private val DangerRed = Color(0xFFD95461)
 private val PragueZone = ZoneId.of("Europe/Prague")
 
-private enum class SubjectSortMode(val label: String) {
-    Focus("Focus"),
-    Average("Average"),
-    Alphabetical("A-Z"),
+private enum class SubjectSortMode {
+    Focus,
+    Average,
+    Alphabetical,
 }
 
 @Composable
@@ -154,7 +155,7 @@ fun SubjectsScreen(
     modifier: Modifier = Modifier,
 ) {
     var selectedSubjectID by rememberSaveable { mutableStateOf<String?>(null) }
-    var sortMode by remember { mutableStateOf(SubjectSortMode.Focus) }
+    var sortMode by rememberSaveable { mutableStateOf(SubjectSortMode.Focus) }
     var searchQuery by rememberSaveable { mutableStateOf("") }
     val selectedSubject = subjects.firstOrNull { it.id == selectedSubjectID }
     val selectedTrend = remember(selectedSubject, gradeTrends) {
@@ -219,6 +220,12 @@ private fun SubjectsOverview(
     val trendsBySubjectID = remember(subjects, gradeTrends) {
         subjects.associate { it.id to GradeHistoryTrends.matching(it, gradeTrends) }
     }
+    val recentTrends = remember(gradeTrends) {
+        GradeHistoryTrends.since(
+            gradeTrends,
+            Instant.now().minus(90, ChronoUnit.DAYS),
+        ).take(4)
+    }
     val sortedSubjects = remember(filteredSubjects, absenceRows, trendsBySubjectID, sortMode) {
         when (sortMode) {
             SubjectSortMode.Focus -> filteredSubjects.sortedWith(
@@ -257,7 +264,7 @@ private fun SubjectsOverview(
         ) {
             item {
                 MarksHeader(
-                    title = "Marks",
+                    title = stringResource(R.string.marks_title),
                     isRefreshing = isRefreshing,
                     onRefresh = onRefresh,
                     onOpenAccount = onOpenAccount,
@@ -265,6 +272,9 @@ private fun SubjectsOverview(
                 )
             }
             item { OverallAverageCard(subjects) }
+            if (recentTrends.isNotEmpty()) {
+                item { GradeMovementSection(recentTrends) }
+            }
             item {
                 SubjectSearchField(
                     query = searchQuery,
@@ -280,7 +290,7 @@ private fun SubjectsOverview(
                         absenceByName = absenceRows,
                         trendsBySubjectID = trendsBySubjectID,
                         emptyMessage = if (searchQuery.isBlank()) {
-                            "No subjects available"
+                            stringResource(R.string.marks_empty)
                         } else {
                             stringResource(R.string.marks_search_empty)
                         },
@@ -453,7 +463,7 @@ private fun OverallAverageCard(subjects: List<Subject>) {
         ) {
             Column {
                 Text(
-                    text = "Overall average",
+                    text = stringResource(R.string.marks_overall_average),
                     color = Color(0xFF073C35),
                     fontSize = 14.sp,
                     lineHeight = 18.sp,
@@ -472,14 +482,14 @@ private fun OverallAverageCard(subjects: List<Subject>) {
                 verticalArrangement = Arrangement.spacedBy(1.dp),
             ) {
                 Text(
-                    text = "${subjects.size} ${plural(subjects.size, "subject", "subjects")}",
+                    text = pluralStringResource(R.plurals.marks_subject_count, subjects.size, subjects.size),
                     color = Color(0xFF073C35),
                     fontSize = 14.sp,
                     lineHeight = 18.sp,
                     fontWeight = FontWeight.Bold,
                 )
                 Text(
-                    text = "$totalMarks ${plural(totalMarks, "mark", "marks")}",
+                    text = pluralStringResource(R.plurals.subject_mark_count, totalMarks, totalMarks),
                     color = Color(0xFF073C35),
                     fontSize = 14.sp,
                     lineHeight = 18.sp,
@@ -502,7 +512,7 @@ private fun SubjectsSectionHeader(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        SectionHeading("SUBJECTS")
+        SectionHeading(stringResource(R.string.marks_subjects_section))
         Surface(
             modifier = Modifier
                 .width(173.dp)
@@ -549,8 +559,13 @@ private fun SortSegment(
         shadowElevation = if (selected) 1.dp else 0.dp,
     ) {
         Box(contentAlignment = Alignment.Center) {
+            val label = when (mode) {
+                SubjectSortMode.Focus -> stringResource(R.string.marks_sort_focus)
+                SubjectSortMode.Average -> stringResource(R.string.marks_sort_average)
+                SubjectSortMode.Alphabetical -> stringResource(R.string.marks_sort_name)
+            }
             Text(
-                text = mode.label,
+                text = label,
                 color = Color.Black,
                 fontSize = 14.sp,
                 lineHeight = 17.sp,
@@ -614,6 +629,7 @@ private fun SubjectRow(
     onClick: () -> Unit,
 ) {
     val average = GradeMath.subjectAverage(subject)
+    val (bandBackground, bandForeground) = GradeMath.band(average).subjectColors()
     val latestMark = MarkDateParser.newestFirst(subject.marks, PragueZone, Mark::markDate).firstOrNull()
     val trendDelta = trend?.averageDelta?.takeUnless { it == 0.0 }
     val trendDescription = trendDelta?.let { delta ->
@@ -636,12 +652,12 @@ private fun SubjectRow(
                 .width(44.dp)
                 .height(40.dp),
             shape = RoundedCornerShape(12.dp),
-            color = SoftTeal,
+            color = bandBackground,
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Text(
                     text = subject.subjectInfo.abbrev.ifBlank { subject.displayName.take(2) },
-                    color = Color(0xFF108A94),
+                    color = bandForeground,
                     fontSize = 17.sp,
                     lineHeight = 20.sp,
                     fontWeight = FontWeight.Bold,
@@ -663,7 +679,7 @@ private fun SubjectRow(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 val markCount = subject.marks.size
                 Text(
-                    text = "$markCount ${plural(markCount, "mark", "marks")}",
+                    text = pluralStringResource(R.plurals.subject_mark_count, markCount, markCount),
                     color = MutedText,
                     fontSize = 16.sp,
                     lineHeight = 19.sp,
@@ -703,13 +719,14 @@ private fun SubjectRow(
         ) {
             Text(
                 text = formatAverage(average),
-                color = Color(0xFF108A94),
+                color = bandForeground,
                 fontSize = 20.sp,
                 lineHeight = 23.sp,
                 fontWeight = FontWeight.Bold,
             )
             Text(
-                text = absencePercentage?.let { "${it.roundToInt()}% absent" } ?: "— absent",
+                text = absencePercentage?.let { stringResource(R.string.marks_row_absence, it.roundToInt()) }
+                    ?: stringResource(R.string.subject_absence_unavailable),
                 color = MutedText,
                 fontSize = 14.sp,
                 lineHeight = 17.sp,
@@ -724,6 +741,128 @@ private fun SubjectRow(
             tint = Color(0xFFC7C7CC),
             modifier = Modifier.size(22.dp),
         )
+    }
+}
+
+@Composable
+private fun GradeMovementSection(trends: List<SubjectGradeTrend>) {
+    Column {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            SectionHeading(stringResource(R.string.marks_trends_section))
+            Text(
+                text = stringResource(R.string.marks_trends_range),
+                color = MutedText,
+                fontSize = 13.sp,
+                lineHeight = 17.sp,
+                fontWeight = FontWeight.SemiBold,
+            )
+        }
+        Spacer(Modifier.height(12.dp))
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(14.dp),
+            color = CardWhite,
+            shadowElevation = 1.dp,
+        ) {
+            Column {
+                trends.forEachIndexed { index, trend ->
+                    GradeMovementRow(trend)
+                    if (index != trends.lastIndex) {
+                        HorizontalDivider(
+                            modifier = Modifier.padding(start = 16.dp),
+                            thickness = 0.5.dp,
+                            color = DividerColor.copy(alpha = 0.72f),
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun GradeMovementRow(trend: SubjectGradeTrend) {
+    val values = trend.events.mapNotNull { it.averageValue }
+    val (background, foreground) = GradeMath.band(trend.latestAverage).subjectColors()
+    val newMarks = (trend.latestMarkCount - trend.firstMarkCount).coerceAtLeast(0)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(62.dp)
+            .padding(horizontal = 14.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Surface(
+            modifier = Modifier
+                .width(76.dp)
+                .height(34.dp),
+            shape = RoundedCornerShape(10.dp),
+            color = background,
+        ) {
+            GradeMovementSparkline(values, foreground)
+        }
+        Spacer(Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = trend.displayName,
+                color = Color.Black,
+                fontSize = 15.sp,
+                lineHeight = 18.sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = if (newMarks > 0) {
+                    pluralStringResource(R.plurals.marks_trends_new_marks, newMarks, newMarks)
+                } else {
+                    stringResource(R.string.marks_trends_movement)
+                },
+                color = MutedText,
+                fontSize = 12.sp,
+                lineHeight = 15.sp,
+            )
+        }
+        trend.averageDelta?.let { delta ->
+            Text(
+                text = String.format(Locale.getDefault(), "%+.2f", delta),
+                color = if (delta > 0) DangerRed else AccentTeal,
+                fontSize = 15.sp,
+                lineHeight = 18.sp,
+                fontWeight = FontWeight.Bold,
+            )
+        }
+    }
+}
+
+@Composable
+private fun GradeMovementSparkline(values: List<Double>, color: Color) {
+    Canvas(modifier = Modifier.fillMaxSize().padding(horizontal = 6.dp, vertical = 7.dp)) {
+        if (values.isEmpty()) return@Canvas
+        val minimum = values.minOrNull() ?: return@Canvas
+        val maximum = values.maxOrNull() ?: return@Canvas
+        val range = (maximum - minimum).takeIf { it > 0.001 } ?: 1.0
+        val offsets = values.mapIndexed { index, value ->
+            val x = if (values.size == 1) size.width / 2f else size.width * index / values.lastIndex.toFloat()
+            val y = size.height * ((value - minimum) / range).toFloat()
+            Offset(x, y)
+        }
+        if (offsets.size > 1) {
+            val path = Path().apply {
+                moveTo(offsets.first().x, offsets.first().y)
+                offsets.drop(1).forEach { lineTo(it.x, it.y) }
+            }
+            drawPath(
+                path = path,
+                color = color,
+                style = Stroke(width = 1.8.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round),
+            )
+        }
+        offsets.forEach { drawCircle(color, radius = 2.dp.toPx(), center = it) }
     }
 }
 
@@ -1649,6 +1788,14 @@ private fun MarksBackgroundGlow() {
 }
 
 private fun Mark.gradeColors(): Pair<Color, Color> = when (GradeMath.band(this)) {
+    GradeBand.EXCELLENT -> SoftMint to ExcellentGreen
+    GradeBand.GOOD -> SoftTeal to Color(0xFF108A94)
+    GradeBand.AVERAGE -> Color(0xFFFFF0D7) to WarningOrange
+    GradeBand.POOR -> Color(0xFFFFE5E8) to DangerRed
+    GradeBand.NEUTRAL -> SoftGray to MutedText
+}
+
+private fun GradeBand.subjectColors(): Pair<Color, Color> = when (this) {
     GradeBand.EXCELLENT -> SoftMint to ExcellentGreen
     GradeBand.GOOD -> SoftTeal to Color(0xFF108A94)
     GradeBand.AVERAGE -> Color(0xFFFFF0D7) to WarningOrange

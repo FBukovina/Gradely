@@ -9,6 +9,7 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -23,6 +24,7 @@ fun GradeyIdLoginScreen(
     isLoading: Boolean,
     errorMessage: String? = null,
     onGoogleSignIn: () -> Unit,
+    onContinueWithoutAccount: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     GradeyScreen(modifier = modifier) {
@@ -43,6 +45,20 @@ fun GradeyIdLoginScreen(
             ) {
                 Icon(Icons.Default.Person, contentDescription = null)
                 Text(if (isLoading) "Signing in" else "Continue with Google")
+            }
+            if (onContinueWithoutAccount != null) {
+                OutlinedButton(
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !isLoading,
+                    onClick = onContinueWithoutAccount,
+                ) {
+                    Text("Continue without an account")
+                }
+                Text(
+                    "You can use Bakaláři locally and connect a Gradey ID later without signing in to school again.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
             if (!errorMessage.isNullOrBlank()) {
                 Text(

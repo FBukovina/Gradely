@@ -55,10 +55,12 @@ import com.bukovinafilip.gradey.feature.stravacz.StravaCZScreen
 import com.bukovinafilip.gradey.feature.subjects.SubjectsScreen
 import com.bukovinafilip.gradey.feature.timetable.TimetableScreen
 import com.bukovinafilip.gradey.feature.today.TodayScreen
-import com.bukovinafilip.gradey.domain.SchoolSessionExpiredException
 import com.bukovinafilip.gradey.domain.GradeySessionExpiredException
+import com.bukovinafilip.gradey.domain.GradeyStartupDestination
+import com.bukovinafilip.gradey.domain.SchoolSessionExpiredException
 import com.bukovinafilip.gradey.domain.TimetableDates
 import com.bukovinafilip.gradey.domain.WearPayloadBuilder
+import com.bukovinafilip.gradey.domain.selectGradeyStartupDestination
 import com.bukovinafilip.gradey.model.AbsenceResponse
 import com.bukovinafilip.gradey.model.DashboardData
 import com.bukovinafilip.gradey.model.GradeyAccount
@@ -124,6 +126,7 @@ private fun GradeyApp(
     var dataError by remember { mutableStateOf<String?>(null) }
     var profileError by remember { mutableStateOf<String?>(null) }
     var isUpdatingProfile by remember { mutableStateOf(false) }
+    var isGuestMode by remember { mutableStateOf(graph.guestModeStore.isEnabled) }
     var account by remember { mutableStateOf<GradeyAccount?>(null) }
     var linkedAccounts by remember { mutableStateOf<List<LinkedSchoolAccount>>(emptyList()) }
     var directorySchools by remember { mutableStateOf<List<SchoolDirectorySchool>>(emptyList()) }
@@ -228,6 +231,52 @@ private fun GradeyApp(
         phase = AppPhase.NEEDS_SCHOOL
     }
 
+    suspend fun disconnectSchool() {
+        graph.schoolRepository.logout()
+        try {
+            graph.stravaCZRepository.logout()
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: Throwable) {
+            // Bakaláři disconnect remains complete if the optional meals provider is unavailable.
+        }
+        try {
+            PhoneWearSyncPublisher.publish(
+                context.applicationContext,
+                com.bukovinafilip.gradey.model.GradeyWearSyncPayload.signedOut(),
+            )
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: Throwable) {
+            // School sign-out is complete even when no Wear OS device is paired.
+        }
+        try {
+            updateNextLessonWidgets(context.applicationContext)
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: Throwable) {
+            // The school session and cached widget data are already cleared.
+        }
+        dashboard = null
+        absence = null
+        timetable = null
+        stravaMenu = null
+        selectedTab = AppTab.TODAY
+        dataError = null
+        schoolLoginError = null
+    }
+
+    suspend fun clearLinkedAccountsForLocalMode() {
+        try {
+            graph.linkedAccountRepository.clearLocalAccounts()
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: Throwable) {
+            // A damaged optional linked-account snapshot must not block local Bakaláři use.
+        }
+        linkedAccounts = emptyList()
+    }
+
     suspend fun refreshSignedInData(forceRefresh: Boolean = false) {
         val failures = mutableListOf<Throwable>()
         try {
@@ -266,8 +315,30 @@ private fun GradeyApp(
         dataError = failures.firstOrNull()?.userFacingMessage()
     }
 
+    suspend fun openStoredSchoolOrLogin() {
+        val schoolSession = graph.schoolRepository.bootstrapSession()
+        if (schoolSession == null) {
+            phase = AppPhase.NEEDS_SCHOOL
+            return
+        }
+        phase = AppPhase.SIGNED_IN
+        loadCachedSignedInData()
+        refreshSignedInData()
+    }
+
     LaunchedEffect(Unit) {
-        val authSession = if (graph.isGradeyCloudConfigured) {
+        if (isGuestMode) {
+            try {
+                graph.gradeyAuthRepository.signOut()
+            } catch (error: CancellationException) {
+                throw error
+            } catch (_: Throwable) {
+                // Guest mode remains usable if the cloud logout endpoint is unavailable.
+            }
+            clearLinkedAccountsForLocalMode()
+        }
+
+        val authSession = if (graph.isGradeyCloudConfigured && !isGuestMode) {
             val restored = try {
                 graph.gradeyAuthRepository.bootstrapSession()
             } catch (error: CancellationException) {
@@ -303,11 +374,24 @@ private fun GradeyApp(
             null
         }
         account = authSession?.account
-        val schoolSession = runCatching { graph.schoolRepository.bootstrapSession() }.getOrNull()
-        phase = when {
-            graph.isGradeyCloudConfigured && authSession == null -> AppPhase.SIGNED_OUT
-            schoolSession == null -> AppPhase.NEEDS_SCHOOL
-            else -> AppPhase.SIGNED_IN
+        val schoolSession = try {
+            graph.schoolRepository.bootstrapSession()
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: Throwable) {
+            null
+        }
+        phase = when (
+            selectGradeyStartupDestination(
+                isCloudConfigured = graph.isGradeyCloudConfigured,
+                isGuestMode = isGuestMode,
+                hasGradeySession = authSession != null,
+                hasSchoolSession = schoolSession != null,
+            )
+        ) {
+            GradeyStartupDestination.SIGNED_OUT -> AppPhase.SIGNED_OUT
+            GradeyStartupDestination.NEEDS_SCHOOL -> AppPhase.NEEDS_SCHOOL
+            GradeyStartupDestination.SIGNED_IN -> AppPhase.SIGNED_IN
         }
         if (phase == AppPhase.SIGNED_IN) {
             loadCachedSignedInData()
@@ -335,11 +419,31 @@ private fun GradeyApp(
                             idToken = googleCredential.idToken,
                             fullName = googleCredential.displayName,
                         ).account
-                        phase = if (graph.schoolRepository.bootstrapSession() == null) {
-                            AppPhase.NEEDS_SCHOOL
-                        } else {
-                            AppPhase.SIGNED_IN
-                        }
+                        graph.guestModeStore.isEnabled = false
+                        isGuestMode = false
+                        openStoredSchoolOrLogin()
+                    } catch (error: CancellationException) {
+                        throw error
+                    } catch (error: Throwable) {
+                        authError = error.userFacingMessage()
+                    } finally {
+                        isLoading = false
+                    }
+                }
+            },
+            onContinueWithoutAccount = {
+                scope.launch {
+                    isLoading = true
+                    authError = null
+                    graph.guestModeStore.isEnabled = true
+                    isGuestMode = true
+                    account = null
+                    try {
+                        graph.gradeyAuthRepository.signOut()
+                        clearLinkedAccountsForLocalMode()
+                        openStoredSchoolOrLogin()
+                    } catch (error: CancellationException) {
+                        throw error
                     } catch (error: Throwable) {
                         authError = error.userFacingMessage()
                     } finally {
@@ -520,6 +624,8 @@ private fun GradeyApp(
                 AppTab.ACCOUNT -> AccountScreen(
                     account = account,
                     linkedAccounts = linkedAccounts,
+                    isGuestMode = isGuestMode,
+                    isGradeyIdAvailable = graph.isGradeyCloudConfigured,
                     isUpdatingFullName = isUpdatingProfile,
                     profileErrorMessage = profileError,
                     onUpdateFullName = { fullName ->
@@ -542,39 +648,43 @@ private fun GradeyApp(
                             }
                         }
                     },
+                    onConnectGradeyId = {
+                        graph.guestModeStore.isEnabled = false
+                        isGuestMode = false
+                        account = null
+                        authError = null
+                        profileError = null
+                        selectedTab = AppTab.TODAY
+                        phase = AppPhase.SIGNED_OUT
+                    },
                     onSignOut = {
                         scope.launch {
-                            graph.stravaCZRepository.logout()
-                            graph.gradeyAuthRepository.signOut()
-                            graph.schoolRepository.logout()
                             try {
-                                PhoneWearSyncPublisher.publish(
-                                    context.applicationContext,
-                                    com.bukovinafilip.gradey.model.GradeyWearSyncPayload.signedOut(),
-                                )
+                                if (isGuestMode || !graph.isGradeyCloudConfigured) {
+                                    disconnectSchool()
+                                    phase = AppPhase.NEEDS_SCHOOL
+                                    return@launch
+                                }
+
+                                graph.gradeyAuthRepository.signOut()
+                                disconnectSchool()
+                                clearLinkedAccountsForLocalMode()
+                                try {
+                                    CredentialManager.create(context).clearCredentialState(ClearCredentialStateRequest())
+                                } catch (error: CancellationException) {
+                                    throw error
+                                } catch (_: Throwable) {
+                                    // Credential Manager cleanup must not undo completed local sign-out.
+                                }
+                                graph.guestModeStore.isEnabled = false
+                                isGuestMode = false
+                                account = null
+                                phase = AppPhase.SIGNED_OUT
                             } catch (error: CancellationException) {
                                 throw error
-                            } catch (_: Throwable) {
-                                // Sign-out is complete even when no Wear OS device is paired.
+                            } catch (error: Throwable) {
+                                profileError = error.userFacingMessage()
                             }
-                            try {
-                                updateNextLessonWidgets(context.applicationContext)
-                            } catch (error: CancellationException) {
-                                throw error
-                            } catch (_: Throwable) {
-                                // The school session and cached widget data are already cleared.
-                            }
-                            graph.linkedAccountRepository.clearLocalAccounts()
-                            runCatching {
-                                CredentialManager.create(context).clearCredentialState(ClearCredentialStateRequest())
-                            }
-                            account = null
-                            dashboard = null
-                            absence = null
-                            timetable = null
-                            stravaMenu = null
-                            selectedTab = AppTab.TODAY
-                            phase = if (graph.isGradeyCloudConfigured) AppPhase.SIGNED_OUT else AppPhase.NEEDS_SCHOOL
                         }
                     },
                     modifier = standardScreenModifier,

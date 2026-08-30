@@ -55,13 +55,15 @@ Last source audit: 2026-08-30 on `codex/android-monorepo`.
 - [x] Replace the hard-coded `demo-google-id-token` path with a real Credential Manager Google sign-in flow.
 - [x] Restore and refresh Gradey auth sessions from encrypted storage with serialized refresh and explicit expired-session handling.
 - [x] Implement Gradey ID profile refresh and full-name editing/validation.
-- [ ] Implement “continue without account” guest mode and preserve local Bakaláři use without requiring Supabase configuration.
+- [x] Implement “continue without account” guest mode and preserve local Bakaláři use without requiring Supabase configuration.
 - [x] Make unavailable cloud configuration an honest Gradey ID capability state, never a switch to mock repositories.
-- [ ] Implement guest-to-Gradey-ID upgrade without losing the local school session.
-- [ ] Implement complete sign-out and school-only sign-out semantics matching iOS.
+- [x] Implement guest-to-Gradey-ID upgrade without losing the local school session.
+- [x] Implement complete sign-out and school-only sign-out semantics matching iOS.
 - [x] DIFFERENT — Android uses Google sign-in; Sign in with Apple UI is not copied from iOS.
 
 Verification evidence (2026-08-30): Android uses Credential Manager's Google ID-token credential and exchanges it with Supabase; no demo token path remains. Gradey ID sessions restore from Keystore-backed encrypted preferences with corrupt-record cleanup, refresh within a 60-second expiry window, serialize concurrent refresh/sign-out mutations, retain rotated or omitted refresh-token fields safely, and clear only on explicit 400/401 refresh rejection or missing refresh credentials. MockWebServer tests cover one-request refresh fan-in, rejected refreshes, transient 5xx and transport failures, profile GET/PUT authorization, 1...80-character trimmed name validation, credential exchange, and a delayed-refresh/sign-out race. Startup keeps the restored account and Bakaláři session through temporary cloud/profile outages, while Account exposes canonical profile refresh and validated name editing. Builds without cloud configuration display a local-only capability state and use unavailable repositories rather than mocks.
+
+Guest verification (2026-08-30): the sign-in gate offers an explicit local-only choice backed by the persisted `gradey.guestMode.enabled.v1` preference. Startup-policy tests cover configured signed-out, persisted guest, unconfigured local-only, needs-school, and fully signed-in combinations. Entering guest mode clears any Gradey ID session and cloud-linked snapshot but preserves the independent Bakaláři session; Account can return to Google sign-in, and a successful upgrade reloads the existing school immediately. Guest/local-only sign-out disconnects only Bakaláři and meals while retaining the guest choice, whereas Gradey ID sign-out clears cloud identity, linked accounts, school/meals sessions, Credential Manager state, widget data, and Wear data.
 
 ## School discovery and Bakaláři login
 

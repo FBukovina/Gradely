@@ -32,9 +32,12 @@ import com.bukovinafilip.gradey.ui.MetadataRow
 fun AccountScreen(
     account: GradeyAccount?,
     linkedAccounts: List<LinkedSchoolAccount>,
+    isGuestMode: Boolean = false,
+    isGradeyIdAvailable: Boolean = true,
     isUpdatingFullName: Boolean = false,
     profileErrorMessage: String? = null,
     onUpdateFullName: (String) -> Unit = {},
+    onConnectGradeyId: () -> Unit = {},
     onSignOut: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -75,14 +78,29 @@ fun AccountScreen(
                     Text(if (isUpdatingFullName) "Saving…" else "Save name")
                 }
             } else {
-                Text("Gradey ID cloud features are not connected. Your Bakaláři data stays local on this device.")
+                Text(
+                    if (isGuestMode) {
+                        "You're continuing without a Gradey ID. Your Bakaláři data stays local on this device."
+                    } else {
+                        "Gradey ID isn't configured in this build. Your Bakaláři data stays local on this device."
+                    },
+                )
+                if (isGuestMode && isGradeyIdAvailable) {
+                    Button(onClick = onConnectGradeyId) { Text("Connect Gradey ID") }
+                }
             }
-            Button(onClick = onSignOut) { Text("Sign out") }
+            Button(onClick = onSignOut) {
+                Text(if (account == null) "Disconnect Bakaláři" else "Sign out")
+            }
         }
         GradeySectionCard(title = "Notifications") {
             Icon(Icons.Default.Notifications, contentDescription = null)
-            MetadataRow("New marks", if (notifications) "Enabled" else "Disabled")
-            Switch(checked = notifications, onCheckedChange = { notifications = it })
+            if (account == null) {
+                Text("Cloud notification settings require a Gradey ID.")
+            } else {
+                MetadataRow("New marks", if (notifications) "Enabled" else "Disabled")
+                Switch(checked = notifications, onCheckedChange = { notifications = it })
+            }
         }
         LazyColumn(
             verticalArrangement = Arrangement.spacedBy(GradeySpacing.md),

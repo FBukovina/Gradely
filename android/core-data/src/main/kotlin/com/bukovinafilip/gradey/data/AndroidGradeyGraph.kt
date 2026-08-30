@@ -37,6 +37,7 @@ class AndroidGradeyGraph private constructor(
     val devicePushTokenClient: DevicePushTokenClient,
     val stravaCZRepository: StravaCZRepository,
     val cache: RoomGradeyCache?,
+    val guestModeStore: GradeyGuestModeStore,
     val isGradeyCloudConfigured: Boolean,
     val googleWebClientId: String,
 ) {
@@ -92,6 +93,7 @@ class AndroidGradeyGraph private constructor(
                 },
                 stravaCZRepository = UnavailableStravaCZRepository(),
                 cache = cache,
+                guestModeStore = GradeyGuestModeStore(context),
                 isGradeyCloudConfigured = supabase.isConfigured,
                 googleWebClientId = config.googleWebClientId,
             )

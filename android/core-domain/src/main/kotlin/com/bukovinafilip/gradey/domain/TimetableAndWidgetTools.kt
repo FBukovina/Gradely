@@ -14,6 +14,7 @@ import com.bukovinafilip.gradey.model.TimetableHour
 import com.bukovinafilip.gradey.model.TimetableResponse
 import com.bukovinafilip.gradey.model.TimetableWeek
 import java.time.DayOfWeek
+import java.time.Clock
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -21,9 +22,13 @@ import java.time.temporal.TemporalAdjusters
 
 object TimetableDates {
     private val ApiFormatter: DateTimeFormatter = DateTimeFormatter.ISO_LOCAL_DATE
-    private val PragueZone: ZoneId = ZoneId.of("Europe/Prague")
+    val SchoolZone: ZoneId = ZoneId.of("Europe/Prague")
 
-    fun monday(date: LocalDate = LocalDate.now(PragueZone)): LocalDate =
+    fun today(clock: Clock = Clock.systemUTC()): LocalDate = LocalDate.now(clock.withZone(SchoolZone))
+
+    fun todayString(clock: Clock = Clock.systemUTC()): String = apiDateString(today(clock))
+
+    fun monday(date: LocalDate = today()): LocalDate =
         date.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
 
     fun apiDateString(date: LocalDate): String = ApiFormatter.format(date)
@@ -33,7 +38,7 @@ object TimetableMapper {
     fun makeWeek(
         response: TimetableResponse,
         weekStart: String,
-        today: String = TimetableDates.apiDateString(LocalDate.now(ZoneId.of("Europe/Prague"))),
+        today: String = TimetableDates.todayString(),
     ): TimetableWeek {
         val subjects = index(response.subjects)
         val teachers = index(response.teachers)
@@ -159,4 +164,3 @@ object WearLessonSelector {
             ?: GradeyWearLessonSelection.NoLessons
     }
 }
-

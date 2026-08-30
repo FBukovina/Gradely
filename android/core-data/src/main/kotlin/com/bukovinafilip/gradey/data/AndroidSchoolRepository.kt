@@ -28,7 +28,7 @@ class AndroidSchoolRepository(
     private val bakalariClient: BakalariClient,
     private val sessionStore: SchoolSessionStorage,
     private val cache: RoomGradeyCache,
-    private val dateProvider: () -> LocalDate = LocalDate::now,
+    private val dateProvider: () -> LocalDate = { TimetableDates.today() },
 ) : SchoolRepository {
     private val refreshMutex = Mutex()
 

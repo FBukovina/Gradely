@@ -21,7 +21,6 @@ import com.bukovinafilip.gradey.model.TimetableResponse
 import com.bukovinafilip.gradey.model.TimetableWeek
 import com.bukovinafilip.gradey.model.UserResponse
 import java.time.LocalDate
-import java.time.ZoneId
 
 object DemoData {
     val math = Subject(
@@ -169,7 +168,7 @@ object DemoData {
         return TimetableMapper.makeWeek(
             response = timetableResponse(monday.toString()),
             weekStart = monday.toString(),
-            today = TimetableDates.apiDateString(LocalDate.now(ZoneId.of("Europe/Prague"))),
+            today = TimetableDates.todayString(),
         )
     }
 

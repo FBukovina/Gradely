@@ -809,7 +809,7 @@ private fun timetableDaySlots(week: TimetableWeek?, monday: LocalDate): List<Tim
 
 private fun weekMonday(week: TimetableWeek?): LocalDate {
     val parsed = week?.weekStart?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
-    return TimetableDates.monday(parsed ?: LocalDate.now())
+    return TimetableDates.monday(parsed ?: TimetableDates.today())
 }
 
 private fun formatWeekRange(monday: LocalDate): String {

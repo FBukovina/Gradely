@@ -56,6 +56,7 @@ import com.bukovinafilip.gradey.feature.subjects.SubjectsScreen
 import com.bukovinafilip.gradey.feature.timetable.TimetableScreen
 import com.bukovinafilip.gradey.feature.today.TodayScreen
 import com.bukovinafilip.gradey.domain.SchoolSessionExpiredException
+import com.bukovinafilip.gradey.domain.TimetableDates
 import com.bukovinafilip.gradey.model.AbsenceResponse
 import com.bukovinafilip.gradey.model.DashboardData
 import com.bukovinafilip.gradey.model.GradeyAccount
@@ -71,7 +72,6 @@ import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
-import java.time.LocalDate
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -141,7 +141,7 @@ private fun GradeyApp(
     suspend fun loadCachedSignedInData() {
         graph.schoolRepository.loadCachedDashboard()?.let { dashboard = it }
         graph.schoolRepository.loadCachedAbsence()?.let { absence = it }
-        graph.schoolRepository.loadCachedTimetable(LocalDate.now().toString())?.let { timetable = it }
+        graph.schoolRepository.loadCachedTimetable(TimetableDates.todayString())?.let { timetable = it }
         graph.stravaCZRepository.loadCachedMenu()?.let { stravaMenu = it }
         linkedAccounts = runCatching { graph.linkedAccountRepository.localAccounts() }.getOrDefault(emptyList())
     }
@@ -226,7 +226,7 @@ private fun GradeyApp(
         } catch (error: Throwable) {
             failures += error
         }
-        when (val timetableFailure = loadTimetable(LocalDate.now().toString())) {
+        when (val timetableFailure = loadTimetable(TimetableDates.todayString())) {
             is SchoolSessionExpiredException -> {
                 routeToSchoolReconnect()
                 return
@@ -424,7 +424,7 @@ private fun GradeyApp(
                             scope.launch {
                                 isLoading = true
                                 try {
-                                    dataError = loadTimetable(timetable?.weekStart ?: LocalDate.now().toString())?.userFacingMessage()
+                                    dataError = loadTimetable(timetable?.weekStart ?: TimetableDates.todayString())?.userFacingMessage()
                                 } finally {
                                     isLoading = false
                                 }
@@ -453,7 +453,7 @@ private fun GradeyApp(
                     onRetry = {
                         scope.launch {
                             runWithLoading {
-                                dataError = loadTimetable(LocalDate.now().toString())?.userFacingMessage()
+                                dataError = loadTimetable(TimetableDates.todayString())?.userFacingMessage()
                             }
                         }
                     },

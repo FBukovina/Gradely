@@ -113,6 +113,13 @@ class AndroidSchoolRepository(
         cache.saveRawTimetable(session.cacheScope, monday, response)
         val week = TimetableMapper.makeWeek(response, monday, TimetableDates.apiDateString(dateProvider()))
         cache.saveTimetable(session.cacheScope, monday, week)
+        try {
+            cache.updateNextLessonSnapshot(week)
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: Throwable) {
+            // Widget publication is best-effort and must not hide a successful timetable refresh.
+        }
         return week
     }
 

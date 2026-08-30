@@ -3,12 +3,15 @@ package com.bukovinafilip.gradey
 import android.app.Application
 import com.bukovinafilip.gradey.data.AndroidGradeyConfig
 import com.bukovinafilip.gradey.data.AndroidGradeyGraph
+import com.bukovinafilip.gradey.data.GradeyCacheOwner
 import com.revenuecat.purchases.Purchases
 import com.revenuecat.purchases.PurchasesConfiguration
 
-class GradeyApplication : Application() {
+class GradeyApplication : Application(), GradeyCacheOwner {
     lateinit var graph: AndroidGradeyGraph
         private set
+
+    override val gradeyCache get() = graph.cache
 
     override fun onCreate() {
         super.onCreate()

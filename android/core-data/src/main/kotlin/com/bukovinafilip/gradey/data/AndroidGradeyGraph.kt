@@ -24,6 +24,10 @@ data class AndroidGradeyConfig(
     val revenueCatAndroidKey: String,
 )
 
+interface GradeyCacheOwner {
+    val gradeyCache: RoomGradeyCache?
+}
+
 class AndroidGradeyGraph private constructor(
     val schoolRepository: SchoolRepository,
     val schoolDirectoryRepository: SchoolDirectoryRepository,

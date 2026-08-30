@@ -1,6 +1,8 @@
 package com.bukovinafilip.gradey.widgets
 
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.Composable
@@ -8,9 +10,12 @@ import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
+import androidx.glance.appwidget.action.actionStartActivity
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.provideContent
+import androidx.glance.appwidget.updateAll
 import androidx.glance.background
+import androidx.glance.action.clickable
 import androidx.glance.layout.Column
 import androidx.glance.layout.Spacer
 import androidx.glance.layout.fillMaxSize
@@ -22,11 +27,11 @@ import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
 import com.bukovinafilip.gradey.domain.NextLessonSelector
-import com.bukovinafilip.gradey.model.NextLessonWidgetLesson
+import com.bukovinafilip.gradey.data.GradeyCacheOwner
+import com.bukovinafilip.gradey.model.NextLessonWidgetChangeKind
 import com.bukovinafilip.gradey.model.NextLessonWidgetSelection
-import com.bukovinafilip.gradey.model.NextLessonWidgetSnapshot
-import java.time.LocalDate
-import java.time.ZoneId
+import com.bukovinafilip.gradey.model.NextLessonWidgetTiming
+import kotlinx.coroutines.CancellationException
 
 class NextLessonWidgetReceiver : GlanceAppWidgetReceiver() {
     override val glanceAppWidget: GlanceAppWidget = NextLessonWidget()
@@ -34,32 +39,21 @@ class NextLessonWidgetReceiver : GlanceAppWidgetReceiver() {
 
 class NextLessonWidget : GlanceAppWidget() {
     override suspend fun provideGlance(context: Context, id: GlanceId) {
+        val snapshot = try {
+            (context.applicationContext as? GradeyCacheOwner)?.gradeyCache?.loadNextLessonSnapshot()
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: Throwable) {
+            null
+        }
         provideContent {
-            NextLessonWidgetContent(selection = NextLessonSelector.select(sampleSnapshot()))
+            NextLessonWidgetContent(selection = NextLessonSelector.select(snapshot))
         }
     }
+}
 
-    private fun sampleSnapshot(): NextLessonWidgetSnapshot {
-        val zone = ZoneId.systemDefault()
-        val today = LocalDate.now(zone)
-        val start = today.atTime(8, 55).atZone(zone).toInstant().toEpochMilli()
-        val end = today.atTime(9, 40).atZone(zone).toInstant().toEpochMilli()
-        return NextLessonWidgetSnapshot(
-            cachedAtEpochMillis = System.currentTimeMillis(),
-            lessons = listOf(
-                NextLessonWidgetLesson(
-                    id = "demo-next",
-                    dayStartEpochMillis = today.atStartOfDay(zone).toInstant().toEpochMilli(),
-                    startEpochMillis = start,
-                    endEpochMillis = end,
-                    subjectName = "Mathematics",
-                    subjectAbbrev = "M",
-                    timeRange = "08:55-09:40",
-                    room = "12",
-                ),
-            ),
-        )
-    }
+suspend fun updateNextLessonWidgets(context: Context) {
+    NextLessonWidget().updateAll(context)
 }
 
 @Composable
@@ -67,14 +61,16 @@ private fun NextLessonWidgetContent(selection: NextLessonWidgetSelection) {
     Column(
         modifier = GlanceModifier
             .fillMaxSize()
+            .clickable(actionStartActivity(Intent(Intent.ACTION_VIEW, Uri.parse("gradey://timetable"))))
             .background(ColorProvider(Color(0xFFEAF8F3)))
             .cornerRadius(16.dp)
             .padding(14.dp),
     ) {
         when (selection) {
             is NextLessonWidgetSelection.Lesson -> {
+                val status = lessonStatus(selection)
                 Text(
-                    text = if (selection.timing.name == "CURRENT") "Now" else "Next",
+                    text = status,
                     style = TextStyle(color = ColorProvider(Color(0xFF137C68)), fontWeight = FontWeight.Bold),
                 )
                 Spacer(GlanceModifier.height(4.dp))
@@ -94,6 +90,18 @@ private fun NextLessonWidgetContent(selection: NextLessonWidgetSelection) {
             NextLessonWidgetSelection.Stale -> EmptyWidget("Refresh timetable", "Open Gradey")
         }
     }
+}
+
+private fun lessonStatus(selection: NextLessonWidgetSelection.Lesson): String {
+    val timing = if (selection.timing == NextLessonWidgetTiming.CURRENT) "Now" else "Next"
+    val change = when (selection.lesson.changeKind) {
+        NextLessonWidgetChangeKind.NONE -> null
+        NextLessonWidgetChangeKind.CANCELED -> "Canceled"
+        NextLessonWidgetChangeKind.SUBSTITUTION -> "Substitution"
+        NextLessonWidgetChangeKind.ROOM_CHANGED -> "Room changed"
+        NextLessonWidgetChangeKind.ADDED -> "Added"
+    }
+    return listOfNotNull(timing, change).joinToString(" · ")
 }
 
 @Composable

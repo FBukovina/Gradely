@@ -8,6 +8,7 @@ import com.bukovinafilip.gradey.model.NextLessonWidgetSnapshot
 import com.bukovinafilip.gradey.model.StravaCZMenu
 import com.bukovinafilip.gradey.model.TimetableResponse
 import com.bukovinafilip.gradey.model.TimetableWeek
+import com.bukovinafilip.gradey.domain.NextLessonSnapshotBuilder
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
@@ -51,6 +52,11 @@ class RoomGradeyCache(
 
     suspend fun saveNextLessonSnapshot(snapshot: NextLessonWidgetSnapshot) =
         save("next-lesson-widget-snapshot", snapshot, NextLessonWidgetSnapshot.serializer())
+
+    suspend fun updateNextLessonSnapshot(week: TimetableWeek, cachedAtEpochMillis: Long = System.currentTimeMillis()) =
+        saveNextLessonSnapshot(
+            NextLessonSnapshotBuilder.update(loadNextLessonSnapshot(), week, cachedAtEpochMillis),
+        )
 
     suspend fun clearNextLessonSnapshot() = dao.clear("next-lesson-widget-snapshot")
 

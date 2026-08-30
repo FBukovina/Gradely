@@ -259,8 +259,8 @@ Date verification (2026-08-30): app startup, cache lookup, refresh, repository m
 
 ## Android widget and Wear OS
 
-- [ ] Publish a real next-lesson snapshot after successful timetable loads and clear it on school sign-out.
-- [ ] Match no-snapshot, no-lessons, stale, current, upcoming, room/time, and timetable-change widget states.
+- [x] Publish a real next-lesson snapshot after successful timetable loads and clear it on school sign-out.
+- [x] Match no-snapshot, no-lessons, stale, current, upcoming, room/time, and timetable-change widget states.
 - [ ] Wire widget refresh/timeline updates and `gradey://timetable` navigation.
 - [ ] Replace Wear demo payloads with phone sync and/or secure direct Bakaláři refresh.
 - [ ] Match current lesson progress, upcoming lessons, remaining day, stale/error/signed-out, and manual refresh states.
@@ -268,6 +268,8 @@ Date verification (2026-08-30): app startup, cache lookup, refresh, repository m
 - [ ] Implement support-tier-gated Wear AI or mark it `DIFFERENT`/`N/A` with a documented product decision.
 - [x] DIFFERENT — Glance/AppWidget and Wear OS replace WidgetKit/watchOS; exact platform-only layouts and APIs are not copied.
 - [x] N/A — macOS widget and macOS app command surfaces have no Android counterpart.
+
+Verification evidence (2026-08-30): a successful Bakaláři timetable refresh now maps the real lesson subject, Prague-local start/end, room, teacher, and change kind into the persisted widget snapshot while retaining other cached weeks. Explicit school sign-out clears both its scoped cache and the widget snapshot. JVM tests cover missing, empty, stale, current, upcoming, and finished selection; multi-week replacement; invalid and overnight times; repository publication; and logout clearing. The Glance surface reads that store, exposes all timetable-change labels, and no longer contains a sample lesson.
 
 ## Test, release, and completion gates
 

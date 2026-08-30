@@ -68,6 +68,7 @@ import com.bukovinafilip.gradey.ui.GradeyTheme
 import com.bukovinafilip.gradey.ui.GradeyHero
 import com.bukovinafilip.gradey.ui.GradeyScreen
 import com.bukovinafilip.gradey.ui.GradeySectionCard
+import com.bukovinafilip.gradey.widgets.updateNextLessonWidgets
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import kotlinx.coroutines.CancellationException
@@ -185,6 +186,13 @@ private fun GradeyApp(
     suspend fun loadTimetable(weekContaining: String): Throwable? {
         return try {
             timetable = graph.schoolRepository.loadTimetable(weekContaining)
+            try {
+                updateNextLessonWidgets(context.applicationContext)
+            } catch (error: CancellationException) {
+                throw error
+            } catch (_: Throwable) {
+                // A launcher/widget host failure must not hide a successful timetable refresh.
+            }
             null
         } catch (error: CancellationException) {
             throw error
@@ -468,6 +476,13 @@ private fun GradeyApp(
                             graph.stravaCZRepository.logout()
                             graph.gradeyAuthRepository.signOut()
                             graph.schoolRepository.logout()
+                            try {
+                                updateNextLessonWidgets(context.applicationContext)
+                            } catch (error: CancellationException) {
+                                throw error
+                            } catch (_: Throwable) {
+                                // The school session and cached widget data are already cleared.
+                            }
                             graph.linkedAccountRepository.clearLocalAccounts()
                             runCatching {
                                 CredentialManager.create(context).clearCredentialState(ClearCredentialStateRequest())

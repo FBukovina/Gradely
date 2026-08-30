@@ -4,6 +4,7 @@ import com.bukovinafilip.gradey.model.GradeyWearLessonSelection
 import com.bukovinafilip.gradey.model.GradeyWearTimetable
 import com.bukovinafilip.gradey.model.LessonChangeKind
 import com.bukovinafilip.gradey.model.NextLessonWidgetLesson
+import com.bukovinafilip.gradey.model.NextLessonWidgetChangeKind
 import com.bukovinafilip.gradey.model.NextLessonWidgetSelection
 import com.bukovinafilip.gradey.model.NextLessonWidgetSnapshot
 import com.bukovinafilip.gradey.model.NextLessonWidgetTiming
@@ -130,6 +131,79 @@ object NextLessonSelector {
             .sorted()
             .distinct()
             .take(limit)
+    }
+}
+
+object NextLessonSnapshotBuilder {
+    fun update(
+        existing: NextLessonWidgetSnapshot?,
+        week: TimetableWeek,
+        cachedAtEpochMillis: Long = System.currentTimeMillis(),
+    ): NextLessonWidgetSnapshot {
+        val newLessons = lessons(week)
+        val weekStart = runCatching { LocalDate.parse(week.weekStart) }.getOrNull()
+        val retained = if (weekStart == null) {
+            existing?.lessons.orEmpty()
+        } else {
+            val start = weekStart.atStartOfDay(TimetableDates.SchoolZone).toInstant().toEpochMilli()
+            val end = weekStart.plusDays(7).atStartOfDay(TimetableDates.SchoolZone).toInstant().toEpochMilli()
+            existing?.lessons.orEmpty().filter { it.dayStartEpochMillis < start || it.dayStartEpochMillis >= end }
+        }
+        val combined = (retained + newLessons)
+            .associateBy(NextLessonWidgetLesson::id)
+            .values
+            .sortedWith(compareBy(NextLessonWidgetLesson::sortEpochMillis, NextLessonWidgetLesson::id))
+        return NextLessonWidgetSnapshot(cachedAtEpochMillis, combined)
+    }
+
+    fun lessons(week: TimetableWeek): List<NextLessonWidgetLesson> {
+        val weekStart = runCatching { LocalDate.parse(week.weekStart) }.getOrNull()
+        return week.days.flatMap { day ->
+            val date = day.date?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
+                ?: weekStart?.plusDays((day.dayOfWeek - 1).coerceAtLeast(0).toLong())
+                ?: return@flatMap emptyList()
+            val dayStart = date.atStartOfDay(TimetableDates.SchoolZone).toInstant().toEpochMilli()
+            day.lessons.map { lesson ->
+                val start = epochMillis(date, lesson.hour.beginTime)
+                var end = epochMillis(date, lesson.hour.endTime)
+                if (start != null && end != null && end < start) end = epochMillis(date.plusDays(1), lesson.hour.endTime)
+                NextLessonWidgetLesson(
+                    id = lesson.id,
+                    dayStartEpochMillis = dayStart,
+                    startEpochMillis = start,
+                    endEpochMillis = end,
+                    subjectName = lesson.subjectName,
+                    subjectAbbrev = lesson.subjectAbbrev,
+                    timeRange = timeRange(lesson.hour),
+                    room = lesson.roomAbbrev ?: lesson.roomName,
+                    teacher = lesson.teacherAbbrev ?: lesson.teacherName,
+                    changeKind = lesson.changeKind.toWidgetKind(),
+                )
+            }
+        }
+    }
+
+    private fun epochMillis(date: LocalDate, rawTime: String): Long? {
+        val parts = rawTime.trim().split(':')
+        if (parts.size != 2) return null
+        val hour = parts[0].toIntOrNull() ?: return null
+        val minute = parts[1].toIntOrNull() ?: return null
+        if (hour !in 0..23 || minute !in 0..59) return null
+        return date.atTime(hour, minute).atZone(TimetableDates.SchoolZone).toInstant().toEpochMilli()
+    }
+
+    private fun timeRange(hour: TimetableHour): String? {
+        val start = hour.beginTime.trim()
+        val end = hour.endTime.trim()
+        return if (start.isEmpty() || end.isEmpty()) null else "$start-$end"
+    }
+
+    private fun LessonChangeKind.toWidgetKind(): NextLessonWidgetChangeKind = when (this) {
+        LessonChangeKind.NONE -> NextLessonWidgetChangeKind.NONE
+        LessonChangeKind.CANCELED -> NextLessonWidgetChangeKind.CANCELED
+        LessonChangeKind.SUBSTITUTION -> NextLessonWidgetChangeKind.SUBSTITUTION
+        LessonChangeKind.ROOM_CHANGED -> NextLessonWidgetChangeKind.ROOM_CHANGED
+        LessonChangeKind.ADDED -> NextLessonWidgetChangeKind.ADDED
     }
 }
 

@@ -5,12 +5,15 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -363,7 +366,7 @@ private fun AbsenceSummaryCard(
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .height(140.dp),
+            .heightIn(min = 140.dp),
         shape = RoundedCornerShape(20.dp),
         color = CardWhite,
         shadowElevation = 2.dp,
@@ -451,11 +454,15 @@ private fun AbsenceIconTile() {
 }
 
 @Composable
+@OptIn(ExperimentalLayoutApi::class)
 private fun SummaryPills(counts: AbsenceCounts) {
-    Row {
-        Box(modifier = Modifier.width(68.dp)) { CountPill(AttendanceKind.Unresolved, counts.unsolved) }
-        Box(modifier = Modifier.width(68.dp)) { CountPill(AttendanceKind.Excused, counts.ok) }
-        CountPill(AttendanceKind.Late, counts.late)
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        AttendanceKind.entries
+            .filter { it.value(counts) > 0 }
+            .forEach { kind -> CountPill(kind, kind.value(counts)) }
     }
 }
 
@@ -669,14 +676,10 @@ private fun DayRow(day: AbsenceDaySummary) {
 
 @Composable
 private fun CompactCountPills(counts: AbsenceCounts) {
+    val categories = AttendanceKind.entries.filter { it.value(counts) > 0 }
     Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-        if (counts.unsolved > 0) CountPill(AttendanceKind.Unresolved, counts.unsolved)
-        if (counts.ok > 0) CountPill(AttendanceKind.Excused, counts.ok)
-        if (counts.missed > 0) CountPill(AttendanceKind.Missed, counts.missed)
-        if (counts.late > 0) CountPill(AttendanceKind.Late, counts.late)
-        if (counts.soon > 0) CountPill(AttendanceKind.Other, counts.soon)
-        if (counts.school > 0) CountPill(AttendanceKind.Other, counts.school)
-        if (counts.distanceTeaching > 0) CountPill(AttendanceKind.Other, counts.distanceTeaching)
+        categories.take(4).forEach { kind -> CountPill(kind, kind.value(counts)) }
+        if (categories.size > 4) OverflowPill(categories.size - 4)
     }
 }
 
@@ -693,11 +696,15 @@ private fun SectionHeading(text: String) {
 }
 
 @Composable
+@OptIn(ExperimentalLayoutApi::class)
 private fun MonthsChartCard(months: List<AbsenceMonthSummary>) {
+    val visibleCategories = AttendanceKind.entries.filter { kind ->
+        months.any { kind.value(it.counts) > 0 }
+    }
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .height(260.dp),
+            .heightIn(min = 260.dp),
         shape = RoundedCornerShape(20.dp),
         color = CardWhite,
         shadowElevation = 1.dp,
@@ -709,19 +716,16 @@ private fun MonthsChartCard(months: List<AbsenceMonthSummary>) {
                     .fillMaxWidth()
                     .height(189.dp),
             )
-            Row(
+            FlowRow(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(25.dp)
-                    .padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(20.dp),
+                    .padding(start = 16.dp, end = 16.dp, bottom = 14.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
-                LegendPill(AttendanceKind.Unresolved, "Unresolved absence")
-                LegendPill(AttendanceKind.Excused, "Excused absence")
-            }
-            Spacer(Modifier.height(5.dp))
-            Row(modifier = Modifier.padding(start = 16.dp)) {
-                LegendPill(AttendanceKind.Late, "Late arrivals")
+                visibleCategories.forEach { kind ->
+                    LegendPill(kind, kind.localizedLabel())
+                }
             }
         }
     }
@@ -829,13 +833,9 @@ private fun DrawScope.drawMonthBar(
     plotHeight: Float,
     axisMax: Int,
 ) {
-    val segments = listOf(
-        counts.ok to ExcusedGreen,
-        counts.unsolved to AccentTeal,
-        counts.missed to MissedRed,
-        counts.late to LateOrange,
-        (counts.soon + counts.school + counts.distanceTeaching) to NavigationTeal,
-    ).filter { it.first > 0 }
+    val segments = AttendanceKind.entries.mapNotNull { kind ->
+        kind.value(counts).takeIf { it > 0 }?.let { it to kind.foreground }
+    }
     var currentBottom = bottom
     segments.forEachIndexed { index, (value, color) ->
         val height = plotHeight * value.toFloat() / axisMax.toFloat()
@@ -909,13 +909,27 @@ private enum class AttendanceKind(
 ) {
     Unresolved(AccentTeal, SoftTeal),
     Excused(ExcusedGreen, SoftGreen),
-    Late(LateOrange, SoftOrange),
     Missed(MissedRed, SoftRed),
-    Other(NavigationTeal, SoftTeal),
+    Late(LateOrange, SoftOrange),
+    Early(RiskOrange, SoftOrange),
+    School(NavigationTeal, SoftTeal),
+    DistanceTeaching(NavigationTeal, SoftTeal),
+    ;
+
+    fun value(counts: AbsenceCounts): Int = when (this) {
+        Unresolved -> counts.unsolved
+        Excused -> counts.ok
+        Missed -> counts.missed
+        Late -> counts.late
+        Early -> counts.soon
+        School -> counts.school
+        DistanceTeaching -> counts.distanceTeaching
+    }
 }
 
 @Composable
 private fun CountPill(kind: AttendanceKind, count: Int) {
+    val accessibilityLabel = kind.localizedLabel()
     Surface(
         modifier = Modifier.height(25.dp),
         shape = RoundedCornerShape(13.dp),
@@ -923,7 +937,9 @@ private fun CountPill(kind: AttendanceKind, count: Int) {
         contentColor = kind.foreground,
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 7.dp),
+            modifier = Modifier
+                .semantics { contentDescription = "$accessibilityLabel: $count" }
+                .padding(horizontal = 7.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(3.dp),
         ) {
@@ -936,6 +952,24 @@ private fun CountPill(kind: AttendanceKind, count: Int) {
                 fontWeight = FontWeight.SemiBold,
             )
         }
+    }
+}
+
+@Composable
+private fun OverflowPill(count: Int) {
+    Surface(
+        modifier = Modifier.height(25.dp),
+        shape = RoundedCornerShape(13.dp),
+        color = SoftGray,
+    ) {
+        Text(
+            text = "+$count",
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+            color = MutedText,
+            fontSize = 13.sp,
+            lineHeight = 17.sp,
+            fontWeight = FontWeight.SemiBold,
+        )
     }
 }
 
@@ -969,10 +1003,23 @@ private fun AttendanceIcon(kind: AttendanceKind) {
     when (kind) {
         AttendanceKind.Unresolved -> Text("?", color = kind.foreground, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
         AttendanceKind.Excused -> Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(14.dp))
+        AttendanceKind.Missed -> Text("N", color = kind.foreground, fontSize = 13.sp, fontWeight = FontWeight.Bold)
         AttendanceKind.Late -> Text("P", color = kind.foreground, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-        AttendanceKind.Missed -> Text("!", color = kind.foreground, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-        AttendanceKind.Other -> Text("•", color = kind.foreground, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+        AttendanceKind.Early -> Text("O", color = kind.foreground, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+        AttendanceKind.School -> Text("–", color = kind.foreground, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+        AttendanceKind.DistanceTeaching -> Text("D", color = kind.foreground, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
     }
+}
+
+@Composable
+private fun AttendanceKind.localizedLabel(): String = when (this) {
+    AttendanceKind.Unresolved -> stringResource(R.string.absence_category_unsolved)
+    AttendanceKind.Excused -> stringResource(R.string.absence_category_ok)
+    AttendanceKind.Missed -> stringResource(R.string.absence_category_missed)
+    AttendanceKind.Late -> stringResource(R.string.absence_category_late)
+    AttendanceKind.Early -> stringResource(R.string.absence_category_soon)
+    AttendanceKind.School -> stringResource(R.string.absence_category_school)
+    AttendanceKind.DistanceTeaching -> stringResource(R.string.absence_category_distance_teaching)
 }
 
 @Composable

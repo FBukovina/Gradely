@@ -6,4 +6,11 @@
     <string name="absence_load_failed">couldn’t load absence</string>
     <string name="absence_load_failed_subtitle">Gradey couldn’t load your attendance data.</string>
     <string name="absence_retry">try again</string>
+    <string name="absence_category_unsolved">unresolved absence</string>
+    <string name="absence_category_ok">excused absence</string>
+    <string name="absence_category_missed">unexcused absence</string>
+    <string name="absence_category_late">late arrivals</string>
+    <string name="absence_category_soon">early departures</string>
+    <string name="absence_category_school">school event</string>
+    <string name="absence_category_distance_teaching">distance teaching</string>
 </resources>

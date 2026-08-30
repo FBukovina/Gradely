@@ -68,24 +68,37 @@ class AbsenceToolsTest {
     fun timelineAggregatesDailyRowsAndMonths() {
         val response = AbsenceResponse(
             absences = listOf(
-                Absence(date = "2026-04-07T08:00:00+02:00", ok = 2),
-                Absence(date = "2026-04-07T09:00:00+02:00", late = 1),
-                Absence(date = "2026-05-04", unsolved = 6),
+                Absence(
+                    date = "2026-04-07T08:00:00+02:00",
+                    ok = 2,
+                    late = 1,
+                    soon = 3,
+                    school = 4,
+                    distanceTeaching = 5,
+                    unsolved = 6,
+                    missed = 7,
+                ),
+                Absence(date = "2026-04-07T09:00:00+02:00", ok = 1),
+                Absence(date = "2026-05-04", unsolved = 2),
                 Absence(date = "not-a-date", ok = 99),
             ),
         )
 
         val timeline = AbsenceTimeline.make(response)
 
-        assertThat(timeline.total.total).isEqualTo(9)
-        assertThat(timeline.total.ok).isEqualTo(2)
+        assertThat(timeline.total.total).isEqualTo(31)
+        assertThat(timeline.total.ok).isEqualTo(3)
         assertThat(timeline.total.late).isEqualTo(1)
-        assertThat(timeline.total.unsolved).isEqualTo(6)
+        assertThat(timeline.total.soon).isEqualTo(3)
+        assertThat(timeline.total.school).isEqualTo(4)
+        assertThat(timeline.total.distanceTeaching).isEqualTo(5)
+        assertThat(timeline.total.unsolved).isEqualTo(8)
+        assertThat(timeline.total.missed).isEqualTo(7)
         assertThat(timeline.days).hasSize(2)
         assertThat(timeline.months.map { it.month }).containsExactly(
             YearMonth.of(2026, 4),
             YearMonth.of(2026, 5),
         ).inOrder()
-        assertThat(timeline.months.first().counts.total).isEqualTo(3)
+        assertThat(timeline.months.first().counts.total).isEqualTo(29)
     }
 }

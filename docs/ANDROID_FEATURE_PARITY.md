@@ -214,7 +214,7 @@ Marks-overview verification (2026-08-30): Android now matches the visible curren
 ## Absence
 
 - [x] Implement cache-first initial/loading/loaded/empty/refresh/background-error states.
-- [ ] Match total counts and all Bakaláři categories: ok, late, soon, school, distance teaching, unsolved, and missed.
+- [x] Match total counts and all Bakaláři categories: ok, late, soon, school, distance teaching, unsolved, and missed.
 - [ ] Match Subjects/Days/Months segments, grouped totals, empty states, and month chart.
 - [x] Day/month aggregation and absence risk calculations have JVM unit coverage.
 - [x] Absence what-if projection, duplicate lesson handling, threshold crossing, and unknown-baseline behavior have JVM unit coverage.
@@ -225,6 +225,8 @@ Marks-overview verification (2026-08-30): Android now matches the visible curren
 - [ ] Verify fallback matching for subject aliases, abbreviations, diacritics, unknown lessons, holidays, and malformed dates.
 
 Absence-state verification (2026-08-30): Android now restores the school-scoped cached absence response before network work and resolves the tab through an explicit six-state policy matching iOS. With no response, the first request shows a localized loading surface and a completed failure shows its own full retry state; a successfully loaded response with no day or subject records remains a usable zero-data Absence screen rather than becoming an error. Cached or loaded content stays visible during refresh with the refresh control in progress, and a later Absence failure keeps that content plus a compact non-destructive warning. The warning and retry copy are driven by a dedicated Absence error channel, so dashboard, timetable, meals, history, and linked-account failures no longer masquerade as Absence failures. Seven JVM cases cover state precedence, empty data, retained refresh, and first-load fallback; existing retained-refresh/cache tests cover non-destructive cache behavior, focused app/feature compilation verifies the production wiring, and all four Android language configurations contain the new first-load copy.
+
+Absence-category verification (2026-08-30): Android now preserves the same seven Bakaláři counters and order as iOS—unresolved, excused, unexcused/missed, late arrival, early departure, school event, and distance teaching—rather than collapsing the final three into a generic marker or omitting non-zero categories from the hero. Header chips wrap to expose every non-zero category; dense day/month rows keep the first four iOS-ordered categories plus an overflow count; and the monthly stack and legend retain separate values, symbols, colors, and localized accessibility labels for all seven. The shared timeline aggregation still excludes malformed-date rows and now has one fixture asserting every category independently plus the exact combined day, month, and overall totals. Focused domain tests and feature/app compilation pass, and English, Czech, and both lowercase voice configurations use the current iOS category wording.
 
 ## Timetable
 

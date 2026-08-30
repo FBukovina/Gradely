@@ -6,4 +6,11 @@
     <string name="absence_load_failed">Absenci se nepodařilo načíst</string>
     <string name="absence_load_failed_subtitle">Gradey nedokázal načíst údaje o tvojí docházce.</string>
     <string name="absence_retry">Zkusit znovu</string>
+    <string name="absence_category_unsolved">Nevyřešená absence</string>
+    <string name="absence_category_ok">Omluvená absence</string>
+    <string name="absence_category_missed">Neomluvená absence</string>
+    <string name="absence_category_late">Pozdní příchody</string>
+    <string name="absence_category_soon">Brzké odchody</string>
+    <string name="absence_category_school">Školní akce</string>
+    <string name="absence_category_distance_teaching">Distanční výuka</string>
 </resources>

@@ -57,6 +57,7 @@ import com.bukovinafilip.gradey.feature.timetable.TimetableScreen
 import com.bukovinafilip.gradey.feature.today.TodayScreen
 import com.bukovinafilip.gradey.domain.SchoolSessionExpiredException
 import com.bukovinafilip.gradey.domain.TimetableDates
+import com.bukovinafilip.gradey.domain.WearPayloadBuilder
 import com.bukovinafilip.gradey.model.AbsenceResponse
 import com.bukovinafilip.gradey.model.DashboardData
 import com.bukovinafilip.gradey.model.GradeyAccount
@@ -69,6 +70,7 @@ import com.bukovinafilip.gradey.ui.GradeyHero
 import com.bukovinafilip.gradey.ui.GradeyScreen
 import com.bukovinafilip.gradey.ui.GradeySectionCard
 import com.bukovinafilip.gradey.widgets.updateNextLessonWidgets
+import com.bukovinafilip.gradey.wear.PhoneWearSyncPublisher
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import kotlinx.coroutines.CancellationException
@@ -185,13 +187,24 @@ private fun GradeyApp(
 
     suspend fun loadTimetable(weekContaining: String): Throwable? {
         return try {
-            timetable = graph.schoolRepository.loadTimetable(weekContaining)
+            val loaded = graph.schoolRepository.loadTimetable(weekContaining)
+            timetable = loaded
             try {
                 updateNextLessonWidgets(context.applicationContext)
             } catch (error: CancellationException) {
                 throw error
             } catch (_: Throwable) {
                 // A launcher/widget host failure must not hide a successful timetable refresh.
+            }
+            try {
+                PhoneWearSyncPublisher.publish(
+                    context.applicationContext,
+                    WearPayloadBuilder.signedIn(loaded, dashboard?.user),
+                )
+            } catch (error: CancellationException) {
+                throw error
+            } catch (_: Throwable) {
+                // A missing/unpaired watch must not hide a successful timetable refresh.
             }
             null
         } catch (error: CancellationException) {
@@ -476,6 +489,16 @@ private fun GradeyApp(
                             graph.stravaCZRepository.logout()
                             graph.gradeyAuthRepository.signOut()
                             graph.schoolRepository.logout()
+                            try {
+                                PhoneWearSyncPublisher.publish(
+                                    context.applicationContext,
+                                    com.bukovinafilip.gradey.model.GradeyWearSyncPayload.signedOut(),
+                                )
+                            } catch (error: CancellationException) {
+                                throw error
+                            } catch (_: Throwable) {
+                                // Sign-out is complete even when no Wear OS device is paired.
+                            }
                             try {
                                 updateNextLessonWidgets(context.applicationContext)
                             } catch (error: CancellationException) {

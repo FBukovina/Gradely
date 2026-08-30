@@ -8,7 +8,7 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.bukovinafilip.gradey.wear"
+        applicationId = "com.bukovinafilip.gradey"
         minSdk = 26
         targetSdk = 36
         versionCode = 1

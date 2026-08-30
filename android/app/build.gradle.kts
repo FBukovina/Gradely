@@ -80,6 +80,7 @@ dependencies {
     implementation(libs.google.play.services.wearable)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.coroutines.play.services)
+    implementation(libs.kotlinx.serialization.json)
     implementation(libs.purchases)
     implementation(libs.purchases.ui)
     debugImplementation(libs.androidx.compose.ui.tooling)

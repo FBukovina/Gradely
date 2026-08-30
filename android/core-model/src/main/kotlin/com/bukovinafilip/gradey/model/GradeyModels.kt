@@ -712,6 +712,12 @@ sealed interface GradeyWearLessonSelection {
     data object Stale : GradeyWearLessonSelection
 }
 
+object GradeyWearSyncContract {
+    const val DATA_PATH = "/gradey/sync/v2"
+    const val PAYLOAD_KEY = "payload"
+    const val GENERATED_AT_KEY = "generatedAtEpochMillis"
+}
+
 @Serializable
 data class DemoFixture(
     val dashboard: DashboardData,

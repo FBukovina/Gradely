@@ -27,7 +27,7 @@ room = "2.7.0"
 securityCrypto = "1.1.0-alpha06"
 truth = "1.4.4"
 wearCompose = "1.4.1"
-wearable = "18.2.0"
+wearable = "20.0.1"
 work = "2.10.0"
 
 [libraries]

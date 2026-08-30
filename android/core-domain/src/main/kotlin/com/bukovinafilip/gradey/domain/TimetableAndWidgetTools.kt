@@ -1,7 +1,11 @@
 package com.bukovinafilip.gradey.domain
 
 import com.bukovinafilip.gradey.model.GradeyWearLessonSelection
+import com.bukovinafilip.gradey.model.GradeyWearSyncPayload
 import com.bukovinafilip.gradey.model.GradeyWearTimetable
+import com.bukovinafilip.gradey.model.GradeyWearTimetableDay
+import com.bukovinafilip.gradey.model.GradeyWearTimetableLesson
+import com.bukovinafilip.gradey.model.GradeyWearUser
 import com.bukovinafilip.gradey.model.LessonChangeKind
 import com.bukovinafilip.gradey.model.NextLessonWidgetLesson
 import com.bukovinafilip.gradey.model.NextLessonWidgetChangeKind
@@ -14,12 +18,15 @@ import com.bukovinafilip.gradey.model.TimetableEntity
 import com.bukovinafilip.gradey.model.TimetableHour
 import com.bukovinafilip.gradey.model.TimetableResponse
 import com.bukovinafilip.gradey.model.TimetableWeek
+import com.bukovinafilip.gradey.model.UserResponse
 import java.time.DayOfWeek
 import java.time.Clock
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.temporal.TemporalAdjusters
+import java.time.format.TextStyle
+import java.util.Locale
 
 object TimetableDates {
     private val ApiFormatter: DateTimeFormatter = DateTimeFormatter.ISO_LOCAL_DATE
@@ -237,4 +244,77 @@ object WearLessonSelector {
         return upcoming?.let { GradeyWearLessonSelection.Lesson(it, NextLessonWidgetTiming.UPCOMING) }
             ?: GradeyWearLessonSelection.NoLessons
     }
+}
+
+object WearPayloadBuilder {
+    fun signedIn(
+        week: TimetableWeek,
+        user: UserResponse? = null,
+        generatedAtEpochMillis: Long = System.currentTimeMillis(),
+        locale: Locale = Locale.getDefault(),
+    ): GradeyWearSyncPayload = GradeyWearSyncPayload(
+        generatedAtEpochMillis = generatedAtEpochMillis,
+        isSignedIn = true,
+        user = user?.let {
+            GradeyWearUser(
+                fullName = it.fullName,
+                schoolName = it.displaySchoolName,
+                classAbbrev = it.classAbbrev,
+            )
+        },
+        timetable = timetable(week, generatedAtEpochMillis, locale),
+    )
+
+    fun timetable(
+        week: TimetableWeek,
+        cachedAtEpochMillis: Long = System.currentTimeMillis(),
+        locale: Locale = Locale.getDefault(),
+    ): GradeyWearTimetable {
+        val weekStart = runCatching { LocalDate.parse(week.weekStart) }.getOrNull()
+        val widgetLessons = NextLessonSnapshotBuilder.lessons(week).associateBy { it.id }
+        val detailFormatter = DateTimeFormatter.ofPattern("d MMM", locale)
+        return GradeyWearTimetable(
+            weekStart = week.weekStart,
+            cachedAtEpochMillis = cachedAtEpochMillis,
+            days = week.days.map { day ->
+                val date = day.date?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
+                    ?: weekStart?.plusDays((day.dayOfWeek - 1).coerceAtLeast(0).toLong())
+                val dayStart = date
+                    ?.atStartOfDay(TimetableDates.SchoolZone)
+                    ?.toInstant()
+                    ?.toEpochMilli()
+                    ?: 0L
+                GradeyWearTimetableDay(
+                    id = day.id,
+                    date = day.date,
+                    dayStartEpochMillis = dayStart,
+                    weekdayTitle = date?.dayOfWeek?.getDisplayName(TextStyle.SHORT, locale)
+                        ?: fallbackWeekdayTitle(day.dayOfWeek, locale),
+                    detailTitle = date?.format(detailFormatter)
+                        ?: day.dayDescription.trim().takeIf(String::isNotEmpty),
+                    isToday = day.isToday,
+                    isSchoolDay = day.dayType.equals("WorkDay", ignoreCase = true),
+                    lessons = day.lessons.map { lesson ->
+                        val mapped = widgetLessons[lesson.id]
+                        GradeyWearTimetableLesson(
+                            id = lesson.id,
+                            dayStartEpochMillis = mapped?.dayStartEpochMillis ?: dayStart,
+                            startEpochMillis = mapped?.startEpochMillis,
+                            endEpochMillis = mapped?.endEpochMillis,
+                            subjectName = lesson.subjectName,
+                            subjectAbbrev = lesson.subjectAbbrev,
+                            timeRange = mapped?.timeRange,
+                            room = mapped?.room,
+                            teacher = mapped?.teacher,
+                            changeKind = mapped?.changeKind ?: NextLessonWidgetChangeKind.NONE,
+                        )
+                    },
+                )
+            },
+        )
+    }
+
+    private fun fallbackWeekdayTitle(dayOfWeek: Int, locale: Locale): String =
+        runCatching { DayOfWeek.of(dayOfWeek).getDisplayName(TextStyle.SHORT, locale) }
+            .getOrDefault(dayOfWeek.toString())
 }

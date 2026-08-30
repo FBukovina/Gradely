@@ -271,6 +271,8 @@ Date verification (2026-08-30): app startup, cache lookup, refresh, repository m
 
 Verification evidence (2026-08-30): a successful Bakaláři timetable refresh now maps the real lesson subject, Prague-local start/end, room, teacher, and change kind into the persisted widget snapshot while retaining other cached weeks. Explicit school sign-out clears both its scoped cache and the widget snapshot. JVM tests cover missing, empty, stale, current, upcoming, and finished selection; multi-week replacement; invalid and overnight times; repository publication; and logout clearing. The Glance surface reads that store, exposes all timetable-change labels, and no longer contains a sample lesson.
 
+Wear implementation evidence (2026-08-30): the hard-coded watch timetable was removed. The phone now publishes a versioned, sub-100-KB Data Layer item after successful timetable loads and publishes signed-out state on logout; it deliberately omits Bakaláři tokens and credentials. The Wear app now has the matching application ID required by Google Play services, receives changes in a path-filtered background listener, rejects unsupported payload schema versions, persists the last valid payload locally, and renders that real payload after cold start. JVM tests verify Prague/overnight lesson mapping, user metadata, timetable changes, and credential omission, and both APKs assemble. The Wear replacement row remains unchecked until delivery is exercised on a paired phone/watch or emulator pair.
+
 ## Test, release, and completion gates
 
 - [ ] Add repository tests for login, refresh concurrency, access-token retry classification, refresh rejection fallback, logout, scoped cache, and account switch.

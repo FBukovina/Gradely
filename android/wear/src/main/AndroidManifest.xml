@@ -3,6 +3,7 @@
     <uses-permission android:name="android.permission.INTERNET" />
 
     <application
+        android:name=".WearGradeyApplication"
         android:allowBackup="false"
         android:icon="@drawable/ic_gradey_logo"
         android:label="@string/app_name"
@@ -18,5 +19,16 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <service
+            android:name=".WearDataLayerListenerService"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.google.android.gms.wearable.DATA_CHANGED" />
+                <data
+                    android:scheme="wear"
+                    android:host="*"
+                    android:path="/gradey/sync/v2" />
+            </intent-filter>
+        </service>
     </application>
 </manifest>

@@ -3,6 +3,7 @@ package com.bukovinafilip.gradey.data
 import com.bukovinafilip.gradey.model.AbsenceResponse
 import com.bukovinafilip.gradey.model.CachedSchoolDirectory
 import com.bukovinafilip.gradey.model.DashboardData
+import com.bukovinafilip.gradey.model.GradeHistoryResponse
 import com.bukovinafilip.gradey.model.MarksResponse
 import com.bukovinafilip.gradey.model.NextLessonWidgetSnapshot
 import com.bukovinafilip.gradey.model.StravaCZMenu
@@ -49,6 +50,16 @@ class RoomGradeyCache(
     suspend fun saveStravaMenu(scope: String, menu: StravaCZMenu) = save(key("strava-menu", scope), menu, StravaCZMenu.serializer())
     suspend fun clearStravaMenu(scope: String) = dao.clear(key("strava-menu", scope))
 
+    suspend fun loadGradeHistory(scope: String): GradeHistoryResponse? =
+        load(key("grade-history", scope), GradeHistoryResponse.serializer())
+
+    suspend fun saveGradeHistory(scope: String, history: GradeHistoryResponse) =
+        save(key("grade-history", scope), history, GradeHistoryResponse.serializer())
+
+    suspend fun clearGradeHistory(scope: String) = dao.clear(key("grade-history", scope))
+
+    suspend fun clearAllGradeHistory() = dao.clearPrefix("grade-history:")
+
     suspend fun loadSchoolDirectory(): CachedSchoolDirectory? =
         load("school-directory-v2", CachedSchoolDirectory.serializer())
 
@@ -76,6 +87,19 @@ class RoomGradeyCache(
         dao.clearPrefix("absence-lesson-selections-v1:$scope")
         dao.clearPrefix("timetable-week:$scope")
         dao.clearPrefix("timetable-raw:$scope")
+    }
+
+    suspend fun clearAllSchoolData() {
+        listOf(
+            "dashboard:",
+            "marks:",
+            "absence:",
+            "absence-v2:",
+            "absence-lesson-selections-v1:",
+            "timetable-week:",
+            "timetable-raw:",
+        ).forEach { dao.clearPrefix(it) }
+        clearNextLessonSnapshot()
     }
 
     private suspend fun <T> load(key: String, serializer: KSerializer<T>): T? {

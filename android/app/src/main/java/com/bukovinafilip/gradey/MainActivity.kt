@@ -243,6 +243,7 @@ private fun GradeyApp(
     var submittingStravaMealID by remember { mutableStateOf<Int?>(null) }
     var showMealsTab by remember { mutableStateOf(graph.mealsTabPreferenceStore.isVisible) }
     var gradeHistorySnapshot by remember { mutableStateOf<GradeHistorySnapshot?>(null) }
+    var gradeHistoryRefreshError by remember { mutableStateOf<String?>(null) }
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
     ) {
@@ -381,6 +382,16 @@ private fun GradeyApp(
         stravaSession = runCatching { graph.stravaCZRepository.bootstrapSession() }.getOrNull()
         graph.stravaCZRepository.loadCachedMenu()?.let { stravaMenu = it }
         linkedAccounts = runCatching { graph.linkedAccountRepository.localAccounts() }.getOrDefault(emptyList())
+        val linkedAccountID = storedSession?.linkedAccountID
+        if (account != null && !isGuestMode && graph.isGradeyCloudConfigured && linkedAccountID != null) {
+            graph.historyRepository.loadCachedGradeHistory(linkedAccountID)?.let { history ->
+                gradeHistorySnapshot = GradeHistorySnapshot(
+                    linkedAccountID = linkedAccountID,
+                    trends = GradeHistoryTrends.make(history.events),
+                    recentNewMarkEvents = history.recentNewMarkEvents,
+                )
+            }
+        }
     }
 
     suspend fun linkCurrentStravaAccountIfNeeded(session: StravaCZStoredSession) {
@@ -578,6 +589,7 @@ private fun GradeyApp(
         resetAbsenceSubjectResolution()
         resetTimetableState()
         gradeHistorySnapshot = null
+        gradeHistoryRefreshError = null
         activeLinkedAccountID = null
         currentSchoolBaseURL = ""
         reconnectLinkedAccount = null
@@ -592,6 +604,7 @@ private fun GradeyApp(
 
     suspend fun disconnectSchool() {
         graph.schoolRepository.logout()
+        graph.historyRepository.clearAllCachedGradeHistory()
         try {
             PhoneWearSyncPublisher.publish(
                 context.applicationContext,
@@ -614,6 +627,7 @@ private fun GradeyApp(
         resetAbsenceSubjectResolution()
         resetTimetableState()
         gradeHistorySnapshot = null
+        gradeHistoryRefreshError = null
         activeLinkedAccountID = null
         currentSchoolBaseURL = ""
         reconnectLinkedAccount = null
@@ -635,6 +649,7 @@ private fun GradeyApp(
         }
         linkedAccounts = emptyList()
         gradeHistorySnapshot = null
+        gradeHistoryRefreshError = null
         activeLinkedAccountID = null
     }
 
@@ -669,10 +684,14 @@ private fun GradeyApp(
     suspend fun refreshGradeHistory() {
         if (account == null || isGuestMode || !graph.isGradeyCloudConfigured) {
             gradeHistorySnapshot = null
+            gradeHistoryRefreshError = null
             return
         }
         val linkedAccountID = graph.schoolRepository.currentStoredSession()?.linkedAccountID
-        if (gradeHistorySnapshot?.linkedAccountID != linkedAccountID) gradeHistorySnapshot = null
+        if (gradeHistorySnapshot?.linkedAccountID != linkedAccountID) {
+            gradeHistorySnapshot = null
+            gradeHistoryRefreshError = null
+        }
         val refresh = refreshRetainingContent(gradeHistorySnapshot) {
             val response = graph.historyRepository.gradeHistory(linkedAccountID, days = 400)
             GradeHistorySnapshot(
@@ -682,6 +701,7 @@ private fun GradeyApp(
             )
         }
         gradeHistorySnapshot = refresh.value
+        gradeHistoryRefreshError = refresh.failure?.userFacingMessage()
     }
 
     suspend fun linkCurrentSchoolIfNeeded(): Boolean {
@@ -753,6 +773,7 @@ private fun GradeyApp(
             absenceRefreshError = null
             resetTimetableState()
             gradeHistorySnapshot = null
+            gradeHistoryRefreshError = null
             activeLinkedAccountID = updated.id
             currentSchoolBaseURL = associatedSession.baseURL
             linkedAccounts = linkedAccounts
@@ -790,6 +811,7 @@ private fun GradeyApp(
             absenceRefreshError = null
             resetTimetableState()
             gradeHistorySnapshot = null
+            gradeHistoryRefreshError = null
             activeLinkedAccountID = activation.account.id
             selectedTab = AppTab.TODAY
             isGradeyAIPresented = false
@@ -835,7 +857,9 @@ private fun GradeyApp(
                 submittingStravaMealID = null
             } else if (activeLinkedAccountID == linked.id) {
                 graph.schoolRepository.disassociateCurrentSession(linked.id)
+                graph.historyRepository.clearCachedGradeHistory(linked.id)
                 gradeHistorySnapshot = null
+                gradeHistoryRefreshError = null
                 activeLinkedAccountID = null
             }
             linkedAccounts = graph.linkedAccountRepository.localAccounts()
@@ -1803,6 +1827,7 @@ private fun GradeyApp(
             val selectedTabRefreshError = when (selectedTab) {
                 AppTab.ABSENCE -> absenceRefreshError
                 AppTab.STRAVACZ -> null
+                AppTab.TODAY, AppTab.SUBJECTS -> dataError ?: gradeHistoryRefreshError
                 else -> dataError
             }
             if (

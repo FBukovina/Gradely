@@ -137,7 +137,10 @@ class AndroidGradeyGraph private constructor(
                 gradeyAuthRepository = authRepository,
                 linkedAccountRepository = linkedAccountRepository,
                 historyRepository = if (supabase.isConfigured) {
-                    SupabaseGradeyHistoryRepository(supabase, authRepository)
+                    CachedGradeyHistoryRepository(
+                        remote = SupabaseGradeyHistoryRepository(supabase, authRepository),
+                        cache = cache,
+                    )
                 } else {
                     EmptyGradeyHistoryRepository()
                 },

@@ -245,6 +245,30 @@ class AndroidSchoolRepositoryTest {
     }
 
     @Test
+    fun offlineExpiredSessionStillBootstrapsScopedCacheBeforeRefreshFailure() = runTest {
+        val session = expiredSession()
+        val cached = DashboardData(MarksResponse(), user = UserResponse("Offline Student"))
+        val cache = RoomGradeyCache(InMemoryCacheEntryDao(), GradeyJson)
+        cache.saveDashboard(session.cacheScope, cached)
+        val repository = repository(
+            FakeBakalariClient().apply {
+                refresh = { _, _ -> throw java.io.IOException("offline") }
+            },
+            InMemorySchoolSessionStorage(session),
+            cache,
+        )
+
+        assertThat(repository.bootstrapSession()).isEqualTo(session)
+        assertThat(repository.loadCachedDashboard()).isEqualTo(cached)
+
+        val failure = runCatching { repository.loadDashboard() }.exceptionOrNull()
+
+        assertThat(failure).isInstanceOf(java.io.IOException::class.java)
+        assertThat(repository.loadCachedDashboard()).isEqualTo(cached)
+        assertThat(repository.bootstrapSession()).isEqualTo(session)
+    }
+
+    @Test
     fun concurrentExpiredRequestsShareOneRefresh() = runTest {
         val client = FakeBakalariClient().apply {
             refresh = { _, _ ->
@@ -729,7 +753,7 @@ class AndroidSchoolRepositoryTest {
     }
 
     @Test
-    fun logoutClearsSessionScopedCacheAndWidgetSnapshot() = runTest {
+    fun logoutClearsAllLocalSchoolCachesAndWidgetSnapshot() = runTest {
         val session = validSession()
         val sessions = InMemorySchoolSessionStorage(session)
         val cache = RoomGradeyCache(InMemoryCacheEntryDao(), GradeyJson)
@@ -754,8 +778,8 @@ class AndroidSchoolRepositoryTest {
         assertThat(cache.loadDashboard(session.cacheScope)).isNull()
         assertThat(cache.loadAbsenceLessonSelections(session.cacheScope)).isNull()
         assertThat(cache.loadNextLessonSnapshot()).isNull()
-        assertThat(cache.loadDashboard(unrelatedScope)).isEqualTo(unrelated)
-        assertThat(cache.loadAbsenceLessonSelections(unrelatedScope)).isEqualTo(selections)
+        assertThat(cache.loadDashboard(unrelatedScope)).isNull()
+        assertThat(cache.loadAbsenceLessonSelections(unrelatedScope)).isNull()
     }
 
     private fun repository(

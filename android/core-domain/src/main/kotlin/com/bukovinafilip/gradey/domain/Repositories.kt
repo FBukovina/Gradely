@@ -52,6 +52,7 @@ interface SchoolRepository {
     suspend fun associateCurrentSession(account: LinkedSchoolAccount): StoredSession
     suspend fun disassociateCurrentSession(accountID: String): StoredSession?
     suspend fun logout()
+    suspend fun clearLocalCaches() = Unit
     suspend fun loadCachedDashboard(): DashboardData?
     suspend fun loadCachedAbsence(): AbsenceResponse?
     suspend fun loadDashboard(forceRefresh: Boolean = false): DashboardData
@@ -107,7 +108,10 @@ interface LinkedAccountRepository {
 }
 
 interface GradeyHistoryRepository {
+    suspend fun loadCachedGradeHistory(accountID: String?): GradeHistoryResponse? = null
     suspend fun gradeHistory(accountID: String?, days: Int? = 90): GradeHistoryResponse
+    suspend fun clearCachedGradeHistory(accountID: String?) = Unit
+    suspend fun clearAllCachedGradeHistory() = Unit
 }
 
 interface DevicePushTokenClient {

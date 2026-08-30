@@ -140,10 +140,11 @@ class AndroidSchoolRepository(
     }
 
     override suspend fun logout() {
-        sessionStore.load()?.let { cache.clearSchool(it.cacheScope) }
-        cache.clearNextLessonSnapshot()
         sessionStore.clear()
+        clearLocalCaches()
     }
+
+    override suspend fun clearLocalCaches() = cache.clearAllSchoolData()
 
     override suspend fun loadCachedDashboard(): DashboardData? =
         sessionStore.load()?.let { cache.loadDashboard(it.cacheScope) }

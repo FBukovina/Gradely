@@ -128,14 +128,16 @@ Error verification (2026-08-30): Bakaláři transport now distinguishes safe HTT
 
 ## Cache and offline behavior
 
-- [ ] Load scoped cached marks, absence, timetable weeks, meals, linked accounts, and grade history before refreshing.
-- [ ] Retain cached/loaded content on background refresh failure and expose a non-destructive stale/error indication.
-- [ ] Show full error/retry only when there is no usable content.
+- [x] Load scoped cached marks, absence, timetable weeks, meals, linked accounts, and grade history before refreshing.
+- [x] Retain cached/loaded content on background refresh failure and expose a non-destructive stale/error indication.
+- [x] Show full error/retry only when there is no usable content.
 - [x] Preserve multiple timetable weeks and their cache timestamps.
 - [x] Make force refresh refresh data rather than deleting usable cache before a network request succeeds.
-- [ ] Implement targeted cache clearing for current school, all school data, account reset, and sign-out.
+- [x] Implement targeted cache clearing for current school, all school data, account reset, and sign-out.
 - [x] Remove all refresh fallbacks to `DemoData` from production state.
-- [ ] Verify offline cold start, offline warm start, reconnect, expired offline session, and corrupt-cache recovery.
+- [x] Verify offline cold start, offline warm start, reconnect, expired offline session, and corrupt-cache recovery.
+
+Offline/cache verification (2026-08-30): signed-in startup now restores the account-scoped dashboard/marks, absence, current timetable week, Strava.cz menu, encrypted linked-account snapshot, and SHA-256-scoped Gradey grade history before any refresh. Every source refreshes independently: a failed Bakaláři, cloud-history, linked-account, timetable, absence, or meals request retains its prior value and surfaces a compact source-appropriate warning, while full retry replaces the screen only when no usable content exists. Successful history requests replace only their linked account's cache; malformed cached JSON is ignored without crashing and the next successful response repairs it. Explicit school disconnect and full account sign-out clear all local school caches, manual absence selections, grade history, and widget state while the separate Strava disconnect owns its canteen cache. Repository and domain tests cover cache-first ordering, offline warm/cold presentation, retained refresh failures, transient expired-session refresh and credential fallback, unrecoverable reconnect routing without cache loss, cross-account history isolation, targeted/all clearing, malformed-cache recovery, and cancellation propagation.
 
 Cache verification (2026-08-30): Today and Marks now render from a cached/loaded dashboard even when the optional absence request is unavailable, using any per-subject absence already embedded in the dashboard. A failed background refresh leaves existing content on-screen and displays a compact non-destructive warning; first-load errors retain the full retry surface. Repository tests prove forced dashboard and timetable failures do not delete their cached values, two timetable weeks and timestamps coexist under separate keys, and school logout clears only the active school scope while preserving an unrelated scope. Timetable week navigation now renders the requested scoped cache before refreshing, clears a previously displayed different week when the requested week has no usable cache, replaces cached content only after success, and retains it after refresh failure. The warning overlay is gated by usable content for the selected feature, so an unavailable feature receives its full retry state rather than a misleading background warning caused by another tab's cache. Cache-first loader tests cover cache/fresh ordering, retained content, missing and corrupt cache recovery, and cancellation.
 

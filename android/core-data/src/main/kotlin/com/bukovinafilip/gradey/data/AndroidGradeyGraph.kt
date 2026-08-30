@@ -42,6 +42,7 @@ class AndroidGradeyGraph private constructor(
     val ageAttestationStore: AgeAttestationStore,
     val guestModeStore: GradeyGuestModeStore,
     val onboardingProgressStore: OnboardingProgressStore,
+    val appLanguageStore: AppLanguageStore,
     val isGradeyCloudConfigured: Boolean,
     val googleWebClientId: String,
 ) {
@@ -140,6 +141,7 @@ class AndroidGradeyGraph private constructor(
                 ageAttestationStore = AgeAttestationStore(context),
                 guestModeStore = GradeyGuestModeStore(context),
                 onboardingProgressStore = OnboardingProgressStore(context, GradeyJson),
+                appLanguageStore = AppLanguageStore(context),
                 isGradeyCloudConfigured = supabase.isConfigured,
                 googleWebClientId = config.googleWebClientId,
             )

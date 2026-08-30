@@ -63,7 +63,6 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -1192,7 +1191,7 @@ private fun SectionHeading(text: String) {
 @Composable
 private fun StatusBarAppearance(useDarkIcons: Boolean) {
     val view = LocalView.current
-    val activity = LocalContext.current as? Activity
+    val activity = view.context as? Activity
     if (activity != null && !view.isInEditMode) {
         SideEffect {
             WindowCompat.getInsetsController(activity.window, view).isAppearanceLightStatusBars = useDarkIcons

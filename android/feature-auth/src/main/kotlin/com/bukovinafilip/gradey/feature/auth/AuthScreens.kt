@@ -28,10 +28,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import com.bukovinafilip.gradey.model.AgeAttestationKind
+import com.bukovinafilip.gradey.model.AppLanguage
 import com.bukovinafilip.gradey.model.OnboardingJourney
+import com.bukovinafilip.gradey.ui.AppLanguagePicker
 import com.bukovinafilip.gradey.ui.GradeyColors
 import com.bukovinafilip.gradey.ui.GradeyHero
 import com.bukovinafilip.gradey.ui.GradeyScreen
@@ -76,32 +79,72 @@ fun GradeyCheckingScreen(modifier: Modifier = Modifier) {
 @Composable
 fun OnboardingWelcomeScreen(
     journey: OnboardingJourney,
+    appLanguage: AppLanguage,
+    onAppLanguageChange: (AppLanguage) -> Unit,
     onContinue: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     GradeyScreen(modifier = modifier.statusBarsPadding().verticalScroll(rememberScrollState())) {
         GradeyHero(
-            title = if (journey == OnboardingJourney.UPGRADE) "Welcome to the new Gradey" else "Welcome to Gradey",
+            title = stringResource(
+                if (journey == OnboardingJourney.UPGRADE) {
+                    R.string.onboarding_upgrade_welcome_title
+                } else {
+                    R.string.onboarding_welcome_title
+                },
+            ),
             subtitle = if (journey == OnboardingJourney.UPGRADE) {
-                "Your Bakaláři connection is safe. Choose how you want to use the new Gradey ID features."
+                stringResource(R.string.onboarding_upgrade_welcome_body)
             } else {
-                "A calmer way to understand marks, absence, and what's next at school."
+                stringResource(R.string.onboarding_welcome_body)
             },
         )
-        GradeySectionCard(title = "What Gradey puts first") {
-            Text("Today at a glance — lessons, marks, absence risks, and meals in one place.")
-            Text("Useful insight — weighted averages, what-if calculations, and clear subject trends.")
-            Text("Private by default — school credentials remain encrypted and cloud features are optional.")
+        GradeySectionCard(title = stringResource(R.string.onboarding_benefits_title)) {
+            OnboardingBenefit(
+                title = stringResource(R.string.onboarding_welcome_benefit_today_title),
+                body = stringResource(R.string.onboarding_welcome_benefit_today_body),
+            )
+            OnboardingBenefit(
+                title = stringResource(R.string.onboarding_welcome_benefit_insights_title),
+                body = stringResource(R.string.onboarding_welcome_benefit_insights_body),
+            )
+            OnboardingBenefit(
+                title = stringResource(R.string.onboarding_welcome_benefit_extras_title),
+                body = stringResource(R.string.onboarding_welcome_benefit_extras_body),
+            )
         }
-        GradeySectionCard(title = "Language") {
-            Text("Gradey currently follows your Android system language. English, Czech, and the optional Chronically Online style are being completed next.")
+        GradeySectionCard(title = stringResource(com.bukovinafilip.gradey.ui.R.string.language_title)) {
+            AppLanguagePicker(
+                selection = appLanguage,
+                onSelectionChange = onAppLanguageChange,
+            )
         }
         Button(
             modifier = Modifier.fillMaxWidth(),
             onClick = onContinue,
         ) {
-            Text(if (journey == OnboardingJourney.UPGRADE) "Review account options" else "Get started")
+            Text(
+                stringResource(
+                    if (journey == OnboardingJourney.UPGRADE) {
+                        R.string.onboarding_upgrade_continue
+                    } else {
+                        R.string.onboarding_get_started
+                    },
+                ),
+            )
         }
+    }
+}
+
+@Composable
+private fun OnboardingBenefit(title: String, body: String) {
+    Column(verticalArrangement = Arrangement.spacedBy(GradeySpacing.xs)) {
+        Text(title, fontWeight = FontWeight.SemiBold)
+        Text(
+            body,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.bodyMedium,
+        )
     }
 }
 

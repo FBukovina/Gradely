@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="onboarding_welcome_title">čau, vítej v Gradey</string>
+    <string name="onboarding_welcome_body">známky, rozvrh, absence i školní lore. všechno na jednom místě.</string>
+    <string name="onboarding_upgrade_welcome_title">čau, vítej v novým Gradey</string>
+    <string name="onboarding_upgrade_welcome_body">tvoje připojení k Bakalářům je safe. vyber si, jak chceš používat nový funkce Gradey ID.</string>
+    <string name="onboarding_benefits_title">to důležitý</string>
+    <string name="onboarding_welcome_benefit_today_title">dnešek na jeden screenshot</string>
+    <string name="onboarding_welcome_benefit_today_body">rozvrh, nový známky a absence bez doomscrollu školního webu.</string>
+    <string name="onboarding_welcome_benefit_insights_title">chápeš, co se děje</string>
+    <string name="onboarding_welcome_benefit_insights_body">sleduj průměry, zkoušej si známky, plánuj absenci. ngl je to useful.</string>
+    <string name="onboarding_welcome_benefit_extras_title">pomoc a pingy</string>
+    <string name="onboarding_welcome_benefit_extras_body">zeptej se Gradey AI na známky nebo rozvrh a zůstaň v obraze díky notifikacím a widgetům.</string>
+    <string name="onboarding_get_started">jdem na to</string>
+    <string name="onboarding_upgrade_continue">mrkni na možnosti účtu</string>
+</resources>

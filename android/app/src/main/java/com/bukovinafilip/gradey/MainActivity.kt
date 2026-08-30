@@ -37,6 +37,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -47,6 +48,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -80,6 +82,7 @@ import com.bukovinafilip.gradey.domain.selectRestorableSchoolAccount
 import com.bukovinafilip.gradey.domain.selectSchoolAccountRequiringReconnect
 import com.bukovinafilip.gradey.model.AbsenceResponse
 import com.bukovinafilip.gradey.model.AgeAttestationKind
+import com.bukovinafilip.gradey.model.AppLanguage
 import com.bukovinafilip.gradey.model.DashboardData
 import com.bukovinafilip.gradey.model.GradeyAccount
 import com.bukovinafilip.gradey.model.LinkedSchoolAccount
@@ -105,11 +108,26 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            GradeyTheme {
-                GradeyApp(
-                    graph = (application as GradeyApplication).graph,
-                    initialTab = if (intent?.data?.host == "timetable" || intent?.data?.path == "/timetable") AppTab.TIMETABLE else AppTab.TODAY,
-                )
+            val graph = (application as GradeyApplication).graph
+            var appLanguage by remember { mutableStateOf(graph.appLanguageStore.selection) }
+            val localizedContext = remember(appLanguage) {
+                graph.appLanguageStore.localizedContext(this@MainActivity, appLanguage)
+            }
+            CompositionLocalProvider(
+                LocalContext provides localizedContext,
+                LocalConfiguration provides localizedContext.resources.configuration,
+            ) {
+                GradeyTheme {
+                    GradeyApp(
+                        graph = graph,
+                        appLanguage = appLanguage,
+                        onAppLanguageChange = { selection ->
+                            graph.appLanguageStore.selection = selection
+                            appLanguage = selection
+                        },
+                        initialTab = if (intent?.data?.host == "timetable" || intent?.data?.path == "/timetable") AppTab.TIMETABLE else AppTab.TODAY,
+                    )
+                }
             }
         }
     }
@@ -134,6 +152,8 @@ private enum class AppTab(val label: String) {
 @Composable
 private fun GradeyApp(
     graph: com.bukovinafilip.gradey.data.AndroidGradeyGraph,
+    appLanguage: AppLanguage,
+    onAppLanguageChange: (AppLanguage) -> Unit,
     initialTab: AppTab,
 ) {
     val context = LocalContext.current
@@ -722,6 +742,8 @@ private fun GradeyApp(
         when (progress.step) {
                 OnboardingStep.WELCOME -> OnboardingWelcomeScreen(
                     journey = progress.journey,
+                    appLanguage = appLanguage,
+                    onAppLanguageChange = onAppLanguageChange,
                     onContinue = {
                         persistOnboarding(progress.copy(step = OnboardingStep.ACCOUNT))
                         if (account != null || isGuestMode) {
@@ -1144,6 +1166,7 @@ private fun GradeyApp(
                 AppTab.ACCOUNT -> AccountScreen(
                     account = account,
                     linkedAccounts = linkedAccounts,
+                    appLanguage = appLanguage,
                     activeLinkedAccountID = activeLinkedAccountID,
                     ageAttestationKind = ageAttestationKind,
                     isGuestMode = isGuestMode,
@@ -1207,6 +1230,7 @@ private fun GradeyApp(
                     onUnlinkLinkedAccount = { linked ->
                         scope.launch { unlinkLinkedAccount(linked) }
                     },
+                    onAppLanguageChange = onAppLanguageChange,
                     onSignOut = {
                         scope.launch {
                             try {

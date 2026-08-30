@@ -25,9 +25,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.bukovinafilip.gradey.model.AgeAttestationKind
+import com.bukovinafilip.gradey.model.AppLanguage
 import com.bukovinafilip.gradey.model.GradeyAccount
 import com.bukovinafilip.gradey.model.LinkedSchoolAccount
 import com.bukovinafilip.gradey.model.LinkedAccountStatus
+import com.bukovinafilip.gradey.ui.AppLanguagePicker
 import com.bukovinafilip.gradey.ui.GradeyHero
 import com.bukovinafilip.gradey.ui.GradeyScreen
 import com.bukovinafilip.gradey.ui.GradeySectionCard
@@ -38,6 +40,7 @@ import com.bukovinafilip.gradey.ui.MetadataRow
 fun AccountScreen(
     account: GradeyAccount?,
     linkedAccounts: List<LinkedSchoolAccount>,
+    appLanguage: AppLanguage = AppLanguage.SYSTEM,
     activeLinkedAccountID: String? = null,
     ageAttestationKind: AgeAttestationKind? = null,
     isGuestMode: Boolean = false,
@@ -54,6 +57,7 @@ fun AccountScreen(
     onReconnectLinkedAccount: (LinkedSchoolAccount) -> Unit = {},
     onToggleLinkedNotifications: (LinkedSchoolAccount, Boolean) -> Unit = { _, _ -> },
     onUnlinkLinkedAccount: (LinkedSchoolAccount) -> Unit = {},
+    onAppLanguageChange: (AppLanguage) -> Unit = {},
     onSignOut: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -118,6 +122,12 @@ fun AccountScreen(
                 MetadataRow("New marks", if (notifications) "Enabled" else "Disabled")
                 Switch(checked = notifications, onCheckedChange = { notifications = it })
             }
+        }
+        GradeySectionCard(title = androidx.compose.ui.res.stringResource(com.bukovinafilip.gradey.ui.R.string.language_title)) {
+            AppLanguagePicker(
+                selection = appLanguage,
+                onSelectionChange = onAppLanguageChange,
+            )
         }
         if (account != null) {
             GradeySectionCard(title = "Connected schools") {

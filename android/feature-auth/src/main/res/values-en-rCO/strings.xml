@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="onboarding_welcome_title">hey, welcome to Gradey</string>
+    <string name="onboarding_welcome_body">marks, timetable, absences, and the school lore. all in one place.</string>
+    <string name="onboarding_upgrade_welcome_title">hey, welcome to the new Gradey</string>
+    <string name="onboarding_upgrade_welcome_body">your Bakaláři connection is safe. pick how you want to use the new Gradey ID stuff.</string>
+    <string name="onboarding_benefits_title">the important bits</string>
+    <string name="onboarding_welcome_benefit_today_title">your day, at a glance</string>
+    <string name="onboarding_welcome_benefit_today_body">timetable, new marks, and absences without the school portal spiral.</string>
+    <string name="onboarding_welcome_benefit_insights_title">know what’s going on</string>
+    <string name="onboarding_welcome_benefit_insights_body">follow averages, try hypothetical marks, plan future absences. ngl it’s useful.</string>
+    <string name="onboarding_welcome_benefit_extras_title">help and pings</string>
+    <string name="onboarding_welcome_benefit_extras_body">ask Gradey AI about marks or the timetable, then stay in the loop with notifications and widgets.</string>
+    <string name="onboarding_get_started">let’s go</string>
+    <string name="onboarding_upgrade_continue">check the account stuff</string>
+</resources>

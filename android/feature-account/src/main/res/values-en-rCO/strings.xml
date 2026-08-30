@@ -35,4 +35,15 @@
     <string name="connected_last_checked">last checked</string>
     <string name="privacy_policy">privacy policy</string>
     <string name="terms_of_use">terms of use</string>
+    <string name="export_data">create and share data export</string>
+    <string name="export_preparing">preparing export…</string>
+    <string name="delete_account">delete Gradey account</string>
+    <string name="delete_deleting">deleting account…</string>
+    <string name="delete_first_title">delete your Gradey account?</string>
+    <string name="delete_first_message">this permanently deletes your Gradey ID, linked services, notification settings, and cloud history. your school account itself is not deleted.</string>
+    <string name="delete_continue">continue</string>
+    <string name="delete_cancel">cancel</string>
+    <string name="delete_final_title">this cannot be undone</string>
+    <string name="delete_final_message">delete the account permanently and sign out on this device?</string>
+    <string name="delete_final_action">delete permanently</string>
 </resources>

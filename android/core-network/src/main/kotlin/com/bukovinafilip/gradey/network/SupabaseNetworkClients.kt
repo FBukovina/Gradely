@@ -219,7 +219,21 @@ class SupabaseDevicePushTokenClient(
         )
     }
 
-    private suspend inline fun <reified T> send(function: String, session: GradeyAuthSession, body: T) {
+    override suspend fun requestDataExport(gradeySession: GradeyAuthSession): String = send(
+        function = "request-data-export",
+        session = gradeySession,
+        body = EmptyFunctionRequest,
+    )
+
+    override suspend fun deleteAccount(gradeySession: GradeyAuthSession) {
+        send(
+            function = "delete-account",
+            session = gradeySession,
+            body = EmptyFunctionRequest,
+        )
+    }
+
+    private suspend inline fun <reified T> send(function: String, session: GradeyAuthSession, body: T): String {
         if (!configuration.isConfigured) throw IllegalStateException("Supabase is not configured.")
         val request = Request.Builder()
             .url(configuration.url.appendPath("functions/v1/$function"))
@@ -229,9 +243,12 @@ class SupabaseDevicePushTokenClient(
             .header("apikey", configuration.anonKey)
             .header("Authorization", session.authorizationHeader)
             .build()
-        okHttpClient.executeString(request)
+        return okHttpClient.executeString(request)
     }
 }
+
+@Serializable
+private data object EmptyFunctionRequest
 
 @Serializable
 private data class SignInWithIDTokenRequest(

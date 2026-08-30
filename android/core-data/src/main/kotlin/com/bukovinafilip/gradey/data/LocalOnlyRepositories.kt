@@ -149,4 +149,12 @@ class UnavailableDevicePushTokenClient : DevicePushTokenClient {
         preferences: NotificationPreferences,
         gradeySession: GradeyAuthSession,
     ) = throw FeatureUnavailableException("Notification preferences require Gradey ID configuration.")
+
+    override suspend fun requestDataExport(
+        gradeySession: GradeyAuthSession,
+    ): String = throw FeatureUnavailableException("Data export requires Gradey ID configuration.")
+
+    override suspend fun deleteAccount(
+        gradeySession: GradeyAuthSession,
+    ) = throw FeatureUnavailableException("Account deletion requires Gradey ID configuration.")
 }

@@ -15,6 +15,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -27,6 +28,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -76,6 +78,9 @@ fun AccountScreen(
     notificationPermissionGranted: Boolean = false,
     isUpdatingNotificationPreferences: Boolean = false,
     notificationPreferencesErrorMessage: String? = null,
+    isExportingData: Boolean = false,
+    isDeletingAccount: Boolean = false,
+    privacyDataErrorMessage: String? = null,
     onUpdateFullName: (String) -> Unit = {},
     onConnectGradeyId: () -> Unit = {},
     onRefreshLinkedAccounts: () -> Unit = {},
@@ -89,6 +94,8 @@ fun AccountScreen(
     onRetryStravaCloudLink: () -> Unit = {},
     onOpenPrivacyPolicy: () -> Unit = {},
     onOpenTermsOfUse: () -> Unit = {},
+    onExportData: () -> Unit = {},
+    onDeleteAccount: () -> Unit = {},
     onUnlinkLinkedAccount: (LinkedSchoolAccount) -> Unit = {},
     onAppLanguageChange: (AppLanguage) -> Unit = {},
     onShowMealsTabChange: (Boolean) -> Unit = {},
@@ -97,6 +104,7 @@ fun AccountScreen(
 ) {
     val context = LocalContext.current
     var pendingUnlink by remember { mutableStateOf<LinkedSchoolAccount?>(null) }
+    var deleteConfirmationStage by remember { mutableIntStateOf(0) }
     var fullNameDraft by remember(account?.id, account?.fullName) {
         mutableStateOf(account?.fullName.orEmpty())
     }
@@ -387,6 +395,38 @@ fun AccountScreen(
             OutlinedButton(onClick = onOpenTermsOfUse) {
                 Text(stringResource(R.string.terms_of_use))
             }
+            if (account != null) {
+                Button(
+                    onClick = onExportData,
+                    enabled = !isExportingData && !isDeletingAccount,
+                ) {
+                    Text(
+                        stringResource(
+                            if (isExportingData) R.string.export_preparing else R.string.export_data,
+                        ),
+                    )
+                }
+                Button(
+                    onClick = { deleteConfirmationStage = 1 },
+                    enabled = !isExportingData && !isDeletingAccount,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError,
+                    ),
+                ) {
+                    Text(
+                        stringResource(
+                            if (isDeletingAccount) R.string.delete_deleting else R.string.delete_account,
+                        ),
+                    )
+                }
+                if (!privacyDataErrorMessage.isNullOrBlank()) {
+                    Text(
+                        text = privacyDataErrorMessage,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+            }
         }
         GradeySectionCard(title = stringResource(R.string.bakalari_attribution_title)) {
             Text(stringResource(R.string.bakalari_attribution_message))
@@ -492,6 +532,49 @@ fun AccountScreen(
             },
             dismissButton = {
                 TextButton(onClick = { pendingUnlink = null }) { Text("Cancel") }
+            },
+        )
+    }
+
+    if (deleteConfirmationStage == 1) {
+        AlertDialog(
+            onDismissRequest = { deleteConfirmationStage = 0 },
+            title = { Text(stringResource(R.string.delete_first_title)) },
+            text = { Text(stringResource(R.string.delete_first_message)) },
+            confirmButton = {
+                Button(onClick = { deleteConfirmationStage = 2 }) {
+                    Text(stringResource(R.string.delete_continue))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { deleteConfirmationStage = 0 }) {
+                    Text(stringResource(R.string.delete_cancel))
+                }
+            },
+        )
+    } else if (deleteConfirmationStage == 2) {
+        AlertDialog(
+            onDismissRequest = { deleteConfirmationStage = 0 },
+            title = { Text(stringResource(R.string.delete_final_title)) },
+            text = { Text(stringResource(R.string.delete_final_message)) },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        deleteConfirmationStage = 0
+                        onDeleteAccount()
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError,
+                    ),
+                ) {
+                    Text(stringResource(R.string.delete_final_action))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { deleteConfirmationStage = 0 }) {
+                    Text(stringResource(R.string.delete_cancel))
+                }
             },
         )
     }

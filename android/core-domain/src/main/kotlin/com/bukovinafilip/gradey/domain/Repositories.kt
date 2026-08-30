@@ -117,6 +117,8 @@ interface GradeyHistoryRepository {
 interface DevicePushTokenClient {
     suspend fun registerDeviceToken(token: String, platform: String, environment: String, gradeySession: GradeyAuthSession)
     suspend fun updateNotificationPreferences(preferences: NotificationPreferences, gradeySession: GradeyAuthSession)
+    suspend fun requestDataExport(gradeySession: GradeyAuthSession): String
+    suspend fun deleteAccount(gradeySession: GradeyAuthSession)
 }
 
 interface GradeyAIRepository {

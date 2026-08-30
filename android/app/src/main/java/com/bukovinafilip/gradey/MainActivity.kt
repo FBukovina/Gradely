@@ -60,6 +60,7 @@ import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
 import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.FileProvider
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.bukovinafilip.gradey.feature.absence.AbsenceScreen
@@ -122,6 +123,7 @@ import com.bukovinafilip.gradey.ui.GradeyHero
 import com.bukovinafilip.gradey.ui.GradeyScreen
 import com.bukovinafilip.gradey.ui.GradeySectionCard
 import com.bukovinafilip.gradey.push.GradeyPushRegistration
+import com.bukovinafilip.gradey.network.GradeyJson
 import com.bukovinafilip.gradey.widgets.updateNextLessonWidgets
 import com.bukovinafilip.gradey.wear.PhoneWearSyncPublisher
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
@@ -132,6 +134,8 @@ import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
+import java.time.LocalDate
 import java.time.ZoneId
 
 class MainActivity : ComponentActivity() {
@@ -244,6 +248,9 @@ private fun GradeyApp(
     var absenceRefreshError by remember { mutableStateOf<String?>(null) }
     var profileError by remember { mutableStateOf<String?>(null) }
     var isUpdatingProfile by remember { mutableStateOf(false) }
+    var isExportingData by remember { mutableStateOf(false) }
+    var isDeletingAccount by remember { mutableStateOf(false) }
+    var privacyDataError by remember { mutableStateOf<String?>(null) }
     var ageAttestationKind by remember { mutableStateOf(graph.ageAttestationStore.kind) }
     var isGuestMode by remember { mutableStateOf(graph.guestModeStore.isEnabled) }
     var onboardingProgress by remember { mutableStateOf<OnboardingProgress?>(null) }
@@ -1165,6 +1172,101 @@ private fun GradeyApp(
         }
     }
 
+    suspend fun exportGradeyData() {
+        if (isExportingData || isDeletingAccount || account == null) return
+        isExportingData = true
+        privacyDataError = null
+        try {
+            val session = graph.gradeyAuthRepository.validSession()
+            val payload = graph.devicePushTokenClient.requestDataExport(session)
+            GradeyJson.parseToJsonElement(payload)
+            val exportDirectory = File(context.cacheDir, "exports")
+            check(exportDirectory.exists() || exportDirectory.mkdirs()) {
+                "Could not prepare the export folder."
+            }
+            val exportFile = File(exportDirectory, "gradey-data-${LocalDate.now()}.json")
+            exportFile.writeText(payload, Charsets.UTF_8)
+            val contentUri = FileProvider.getUriForFile(
+                context,
+                "${context.packageName}.files",
+                exportFile,
+            )
+            val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                type = "application/json"
+                putExtra(Intent.EXTRA_STREAM, contentUri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            context.startActivity(Intent.createChooser(shareIntent, "Share Gradey data"))
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: GradeySessionExpiredException) {
+            graph.pushRegistrationStore.clear()
+            account = null
+            authError = error.userFacingMessage()
+            phase = AppPhase.SIGNED_OUT
+        } catch (error: Throwable) {
+            privacyDataError = error.userFacingMessage()
+        } finally {
+            isExportingData = false
+        }
+    }
+
+    suspend fun deleteGradeyAccount() {
+        if (isDeletingAccount || isExportingData || account == null) return
+        isDeletingAccount = true
+        privacyDataError = null
+        try {
+            val session = graph.gradeyAuthRepository.validSession()
+            graph.devicePushTokenClient.deleteAccount(session)
+            withContext(NonCancellable) {
+                try {
+                    graph.stravaCZRepository.logout()
+                } catch (_: Throwable) {
+                    // Continue clearing all other local identity state.
+                }
+                stravaSession = null
+                stravaMenu = null
+                stravaError = null
+                try {
+                    signOutGradeyIdentity()
+                } catch (_: Throwable) {
+                    // The helper clears local Gradey state in its finally block.
+                }
+                try {
+                    disconnectSchool()
+                } catch (_: Throwable) {
+                    // Continue after a damaged optional cache or platform surface.
+                }
+                try {
+                    clearLinkedAccountsForLocalMode()
+                } catch (_: Throwable) {
+                    linkedAccounts = emptyList()
+                }
+                try {
+                    CredentialManager.create(context).clearCredentialState(ClearCredentialStateRequest())
+                } catch (_: Throwable) {
+                    // Account deletion and local cleanup are complete even if Google state remains cached.
+                }
+                graph.guestModeStore.isEnabled = false
+                isGuestMode = false
+                account = null
+                selectedTab = AppTab.TODAY
+                phase = AppPhase.SIGNED_OUT
+            }
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: GradeySessionExpiredException) {
+            graph.pushRegistrationStore.clear()
+            account = null
+            authError = error.userFacingMessage()
+            phase = AppPhase.SIGNED_OUT
+        } catch (error: Throwable) {
+            privacyDataError = error.userFacingMessage()
+        } finally {
+            isDeletingAccount = false
+        }
+    }
+
     LaunchedEffect(ageAttestationKind) {
         if (ageAttestationKind == null) return@LaunchedEffect
         if (isGuestMode) {
@@ -1865,6 +1967,9 @@ private fun GradeyApp(
                     notificationPermissionGranted = notificationPermissionGranted,
                     isUpdatingNotificationPreferences = isUpdatingNotificationPreferences,
                     notificationPreferencesErrorMessage = notificationPreferencesError,
+                    isExportingData = isExportingData,
+                    isDeletingAccount = isDeletingAccount,
+                    privacyDataErrorMessage = privacyDataError,
                     onUpdateFullName = { fullName ->
                         scope.launch {
                             isUpdatingProfile = true
@@ -1965,6 +2070,12 @@ private fun GradeyApp(
                                 ),
                             )
                         }
+                    },
+                    onExportData = {
+                        scope.launch { exportGradeyData() }
+                    },
+                    onDeleteAccount = {
+                        scope.launch { deleteGradeyAccount() }
                     },
                     onUnlinkLinkedAccount = { linked ->
                         scope.launch { unlinkLinkedAccount(linked) }

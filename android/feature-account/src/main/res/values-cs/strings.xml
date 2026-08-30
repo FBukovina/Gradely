@@ -35,4 +35,15 @@
     <string name="connected_last_checked">Poslední kontrola</string>
     <string name="privacy_policy">Zásady ochrany osobních údajů</string>
     <string name="terms_of_use">Podmínky používání</string>
+    <string name="export_data">Vytvořit a sdílet export dat</string>
+    <string name="export_preparing">Příprava exportu…</string>
+    <string name="delete_account">Smazat účet Gradey</string>
+    <string name="delete_deleting">Mazání účtu…</string>
+    <string name="delete_first_title">Smazat váš účet Gradey?</string>
+    <string name="delete_first_message">Tímto trvale smažete Gradey ID, propojené služby, nastavení oznámení a cloudovou historii. Samotný školní účet smazán nebude.</string>
+    <string name="delete_continue">Pokračovat</string>
+    <string name="delete_cancel">Zrušit</string>
+    <string name="delete_final_title">Tuto akci nelze vrátit zpět</string>
+    <string name="delete_final_message">Trvale smazat účet a odhlásit se na tomto zařízení?</string>
+    <string name="delete_final_action">Trvale smazat</string>
 </resources>

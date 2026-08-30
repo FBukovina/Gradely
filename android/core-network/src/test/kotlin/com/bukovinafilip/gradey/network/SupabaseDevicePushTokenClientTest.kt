@@ -69,14 +69,42 @@ class SupabaseDevicePushTokenClientTest {
         assertThat(body.getValue("quiet_hours_time_zone").jsonPrimitive.content).isEqualTo("Europe/Prague")
     }
 
+    @Test
+    fun `data export returns server json through authenticated endpoint`() = runTest {
+        val export = """{"schemaVersion":2,"profile":{"id":"account"}}"""
+        server.enqueue(success(export))
+
+        val result = client().requestDataExport(session)
+        val request = server.takeRequest()
+
+        assertThat(result).isEqualTo(export)
+        assertThat(request.path).isEqualTo("/functions/v1/request-data-export")
+        assertThat(request.method).isEqualTo("POST")
+        assertThat(request.getHeader("Authorization")).isEqualTo("Bearer access-token")
+        assertThat(request.body.readUtf8()).isEqualTo("{}")
+    }
+
+    @Test
+    fun `account deletion uses authenticated delete function`() = runTest {
+        server.enqueue(success())
+
+        client().deleteAccount(session)
+        val request = server.takeRequest()
+
+        assertThat(request.path).isEqualTo("/functions/v1/delete-account")
+        assertThat(request.method).isEqualTo("POST")
+        assertThat(request.getHeader("Authorization")).isEqualTo("Bearer access-token")
+        assertThat(request.body.readUtf8()).isEqualTo("{}")
+    }
+
     private fun client() = SupabaseDevicePushTokenClient(
         SupabaseConfiguration(server.url("/").toString(), "anon-key"),
     )
 
-    private fun success() = MockResponse()
+    private fun success(body: String = "{}") = MockResponse()
         .setResponseCode(200)
         .setHeader("Content-Type", "application/json")
-        .setBody("{}")
+        .setBody(body)
 
     private val session = GradeyAuthSession(
         accessToken = "access-token",

@@ -21,4 +21,18 @@
     <string name="notifications_quiet_end">ends at %1$s</string>
     <string name="notifications_time_zone">time zone: %1$s</string>
     <string name="notifications_saving">saving notification settings…</string>
+    <string name="profile_avatar">avatar</string>
+    <string name="profile_avatar_initials">initials</string>
+    <string name="profile_avatar_connected">connected profile photo</string>
+    <string name="connected_add_school">add another Bakaláři account</string>
+    <string name="connected_strava_device">Strava.cz on this device</string>
+    <string name="connected_status_connected">connected</string>
+    <string name="connected_status_not_connected">not connected</string>
+    <string name="connected_manage_strava">connect or manage Strava.cz</string>
+    <string name="connected_retry_strava">retry Gradey ID link</string>
+    <string name="connected_retrying_strava">retrying link…</string>
+    <string name="connected_last_synced">last synced</string>
+    <string name="connected_last_checked">last checked</string>
+    <string name="privacy_policy">privacy policy</string>
+    <string name="terms_of_use">terms of use</string>
 </resources>

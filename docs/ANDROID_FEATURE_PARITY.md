@@ -284,17 +284,19 @@ Strava.cz verification (2026-08-30): Android now uses the same public Strava.cz 
 ## Settings and account hub
 
 - [ ] Implement an adaptive settings overview with Account, Connected services, Notifications, Privacy & data, App preferences, and Support & about destinations.
-- [ ] Implement profile/avatar summary, full-name edit, Gradey ID/local status, and session sign-out actions.
-- [ ] Implement Bakaláři account list/status, add another, activate, reconnect, per-account alerts, unlink confirmation, and sync metadata.
-- [ ] Implement Strava.cz connection status, link, retry cloud link, and unlink.
+- [x] Implement profile/avatar summary, full-name edit, Gradey ID/local status, and session sign-out actions.
+- [x] Implement Bakaláři account list/status, add another, activate, reconnect, per-account alerts, unlink confirmation, and sync metadata.
+- [x] Implement Strava.cz connection status, link, retry cloud link, and unlink.
 - [x] Implement device notification permission status/action and lock-screen detail choices.
 - [x] Implement quiet hours, start/end, timezone display, persistence, and cloud update rollback/error handling.
-- [ ] Show age-attestation state and legal privacy/terms links.
+- [x] Show age-attestation state and legal privacy/terms links.
 - [ ] Implement data export creation/share state and two-stage account deletion confirmation.
-- [ ] Implement language, Chronically Online, and Show Meals tab preferences.
+- [x] Implement language, Chronically Online, and Show Meals tab preferences.
 - [ ] Implement support chat/equivalent, support purchase screen, contact email, GitHub, privacy, terms, credits, version, and build rows.
 - [ ] Preserve the hidden version-tap debug unlock and provide safe Android debug actions or mark individual actions `N/A`.
 - [ ] Make every visible row/action functional; no dead routes or explanatory placeholder controls.
+
+Account-hub implementation evidence (2026-08-30): the profile surface now includes a visual initials avatar with connected-photo state, email/account identity, validated full-name editing, Gradey ID versus local-only status, and the existing complete sign-out path. Connected services can add another Bakaláři account with a cancelable return to Account, activate or reconnect an account, change per-school alerts, show action-required reasons plus last-polled/last-synced timestamps, and confirm unlinking. The same surface reports local Strava.cz state, opens the real Meals connect/manage flow, retries a failed Gradey ID cloud link with progress/error state, and uses the existing unlink path that clears local Strava data. Privacy shows the durable age attestation and locale-appropriate privacy/terms links. The existing language picker covers system/English/Czech plus the Chronically Online voice toggle, while Show Meals persists independently. App compilation and feature lint verify the production wiring and all four resource configurations.
 
 ## Support and purchases
 

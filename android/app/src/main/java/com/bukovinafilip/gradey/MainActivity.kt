@@ -253,6 +253,7 @@ private fun GradeyApp(
     var currentSchoolBaseURL by remember { mutableStateOf("") }
     var reconnectLinkedAccount by remember { mutableStateOf<LinkedSchoolAccount?>(null) }
     var reconnectSchoolURL by remember { mutableStateOf("") }
+    var isAddingSchool by remember { mutableStateOf(false) }
     var linkedAccountError by remember { mutableStateOf<String?>(null) }
     var isRefreshingLinkedAccounts by remember { mutableStateOf(false) }
     var mutatingLinkedAccountID by remember { mutableStateOf<String?>(null) }
@@ -279,6 +280,7 @@ private fun GradeyApp(
     var stravaError by remember { mutableStateOf<String?>(null) }
     var isStravaLoading by remember { mutableStateOf(false) }
     var isStravaRefreshing by remember { mutableStateOf(false) }
+    var isRetryingStravaCloudLink by remember { mutableStateOf(false) }
     var submittingStravaMealID by remember { mutableStateOf<Int?>(null) }
     var showMealsTab by remember { mutableStateOf(graph.mealsTabPreferenceStore.isVisible) }
     var gradeHistorySnapshot by remember { mutableStateOf<GradeHistorySnapshot?>(null) }
@@ -467,19 +469,32 @@ private fun GradeyApp(
         }
     }
 
-    suspend fun linkCurrentStravaAccountIfNeeded(session: StravaCZStoredSession) {
-        if (account == null || isGuestMode || !graph.isGradeyCloudConfigured) return
-        try {
+    suspend fun linkCurrentStravaAccountIfNeeded(session: StravaCZStoredSession): Boolean {
+        if (account == null || isGuestMode || !graph.isGradeyCloudConfigured) return false
+        return try {
             // Re-link even when a cached record exists so the cloud receives the current
             // Strava session from this device, matching the iOS reconnect contract.
             graph.linkedAccountRepository.linkStravaCZAccount(session)
             linkedAccounts = graph.linkedAccountRepository.localAccounts()
             linkedAccountError = null
+            true
         } catch (error: CancellationException) {
             throw error
         } catch (error: Throwable) {
             // The local meals connection remains usable if optional cloud linking fails.
             linkedAccountError = error.userFacingMessage()
+            false
+        }
+    }
+
+    suspend fun retryStravaCloudLink() {
+        val session = stravaSession ?: return
+        if (isRetryingStravaCloudLink) return
+        isRetryingStravaCloudLink = true
+        try {
+            linkCurrentStravaAccountIfNeeded(session)
+        } finally {
+            isRetryingStravaCloudLink = false
         }
     }
 
@@ -1545,6 +1560,7 @@ private fun GradeyApp(
                         if (reconnectError != null) {
                             schoolLoginError = reconnectError
                         } else {
+                            isAddingSchool = false
                             phase = AppPhase.SIGNED_IN
                             loadCachedSignedInData()
                             refreshSignedInData()
@@ -1555,6 +1571,7 @@ private fun GradeyApp(
                             graph.schoolRepository.loadDashboard(forceRefresh = false)
                         }.getOrNull()
                         linkCurrentSchoolIfNeeded()
+                        isAddingSchool = false
                         phase = AppPhase.SIGNED_IN
                         loadCachedSignedInData()
                         refreshSignedInData()
@@ -1563,12 +1580,13 @@ private fun GradeyApp(
             },
             onCancelLogin = ::cancelSchoolLogin,
             onInputChanged = { schoolLoginError = null },
-            onBack = if (reconnectLinkedAccount == null) {
+            onBack = if (reconnectLinkedAccount == null && !isAddingSchool) {
                 null
             } else {
                 {
                     reconnectLinkedAccount = null
                     reconnectSchoolURL = ""
+                    isAddingSchool = false
                     schoolLoginError = null
                     phase = AppPhase.SIGNED_IN
                     selectedTab = AppTab.ACCOUNT
@@ -1841,6 +1859,8 @@ private fun GradeyApp(
                     isRefreshingLinkedAccounts = isRefreshingLinkedAccounts,
                     mutatingLinkedAccountID = mutatingLinkedAccountID,
                     showMealsTab = showMealsTab,
+                    isStravaConnectedOnDevice = stravaSession != null,
+                    isRetryingStravaCloudLink = isRetryingStravaCloudLink,
                     notificationPreferences = notificationPreferences,
                     notificationPermissionGranted = notificationPermissionGranted,
                     isUpdatingNotificationPreferences = isUpdatingNotificationPreferences,
@@ -1877,6 +1897,13 @@ private fun GradeyApp(
                     onRefreshLinkedAccounts = {
                         scope.launch { refreshLinkedAccountSnapshot() }
                     },
+                    onAddSchool = {
+                        isAddingSchool = true
+                        reconnectLinkedAccount = null
+                        reconnectSchoolURL = ""
+                        schoolLoginError = null
+                        phase = AppPhase.NEEDS_SCHOOL
+                    },
                     onActivateLinkedAccount = { linked ->
                         scope.launch {
                             if (activateLinkedAccount(linked)) refreshSignedInData()
@@ -1906,6 +1933,38 @@ private fun GradeyApp(
                     },
                     onUpdateNotificationPreferences = { preferences ->
                         scope.launch { updateNotificationPreferences(preferences) }
+                    },
+                    onOpenMeals = {
+                        if (!showMealsTab) {
+                            graph.mealsTabPreferenceStore.isVisible = true
+                            showMealsTab = true
+                        }
+                        selectedTab = AppTab.STRAVACZ
+                    },
+                    onRetryStravaCloudLink = {
+                        scope.launch { retryStravaCloudLink() }
+                    },
+                    onOpenPrivacyPolicy = {
+                        val language = if (appLanguage.pickerLanguage == AppLanguage.CZECH) "cs" else "en"
+                        runCatching {
+                            context.startActivity(
+                                Intent(
+                                    Intent.ACTION_VIEW,
+                                    Uri.parse("https://help.bukovinafilip.com/$language/articles/10-privacy-policy"),
+                                ),
+                            )
+                        }
+                    },
+                    onOpenTermsOfUse = {
+                        val language = if (appLanguage.pickerLanguage == AppLanguage.CZECH) "cs" else "en"
+                        runCatching {
+                            context.startActivity(
+                                Intent(
+                                    Intent.ACTION_VIEW,
+                                    Uri.parse("https://help.bukovinafilip.com/$language/articles/11-terms-and-conditions"),
+                                ),
+                            )
+                        }
                     },
                     onUnlinkLinkedAccount = { linked ->
                         scope.launch { unlinkLinkedAccount(linked) }

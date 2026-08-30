@@ -1,11 +1,14 @@
 package com.bukovinafilip.gradey.feature.account
 
 import android.app.TimePickerDialog
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -14,9 +17,11 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Button
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -44,6 +49,10 @@ import com.bukovinafilip.gradey.ui.GradeyScreen
 import com.bukovinafilip.gradey.ui.GradeySectionCard
 import com.bukovinafilip.gradey.ui.GradeySpacing
 import com.bukovinafilip.gradey.ui.MetadataRow
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
 import java.util.Locale
 
 @Composable
@@ -61,6 +70,8 @@ fun AccountScreen(
     isRefreshingLinkedAccounts: Boolean = false,
     mutatingLinkedAccountID: String? = null,
     showMealsTab: Boolean = true,
+    isStravaConnectedOnDevice: Boolean = false,
+    isRetryingStravaCloudLink: Boolean = false,
     notificationPreferences: NotificationPreferences = NotificationPreferences.Default,
     notificationPermissionGranted: Boolean = false,
     isUpdatingNotificationPreferences: Boolean = false,
@@ -68,11 +79,16 @@ fun AccountScreen(
     onUpdateFullName: (String) -> Unit = {},
     onConnectGradeyId: () -> Unit = {},
     onRefreshLinkedAccounts: () -> Unit = {},
+    onAddSchool: () -> Unit = {},
     onActivateLinkedAccount: (LinkedSchoolAccount) -> Unit = {},
     onReconnectLinkedAccount: (LinkedSchoolAccount) -> Unit = {},
     onToggleLinkedNotifications: (LinkedSchoolAccount, Boolean) -> Unit = { _, _ -> },
     onOpenNotificationSettings: () -> Unit = {},
     onUpdateNotificationPreferences: (NotificationPreferences) -> Unit = {},
+    onOpenMeals: () -> Unit = {},
+    onRetryStravaCloudLink: () -> Unit = {},
+    onOpenPrivacyPolicy: () -> Unit = {},
+    onOpenTermsOfUse: () -> Unit = {},
     onUnlinkLinkedAccount: (LinkedSchoolAccount) -> Unit = {},
     onAppLanguageChange: (AppLanguage) -> Unit = {},
     onShowMealsTabChange: (Boolean) -> Unit = {},
@@ -103,6 +119,37 @@ fun AccountScreen(
         GradeyHero("Account", account?.fullName ?: "Local-only mode")
         GradeySectionCard(title = "Profile") {
             Icon(Icons.Default.Person, contentDescription = null)
+            account?.let { signedInAccount ->
+                val avatarText = signedInAccount.fullName
+                    ?.trim()
+                    ?.firstOrNull()
+                    ?.uppercase()
+                    ?: signedInAccount.email?.firstOrNull()?.uppercase()
+                    ?: "G"
+                Surface(
+                    modifier = Modifier.size(64.dp),
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text(
+                            text = avatarText,
+                            style = MaterialTheme.typography.headlineMedium,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        )
+                    }
+                }
+                MetadataRow(
+                    stringResource(R.string.profile_avatar),
+                    stringResource(
+                        if (signedInAccount.avatarURL.isNullOrBlank()) {
+                            R.string.profile_avatar_initials
+                        } else {
+                            R.string.profile_avatar_connected
+                        },
+                    ),
+                )
+            }
             MetadataRow("Email", account?.email ?: "Not connected")
             MetadataRow("Account ID", account?.id ?: "No Gradey ID")
             if (account != null) {
@@ -268,6 +315,47 @@ fun AccountScreen(
                     "Your linked Bakaláři accounts are encrypted by Gradey and available on your signed-in devices.",
                 )
                 Button(
+                    onClick = onAddSchool,
+                    enabled = mutatingLinkedAccountID == null,
+                ) {
+                    Text(stringResource(R.string.connected_add_school))
+                }
+                MetadataRow(
+                    stringResource(R.string.connected_strava_device),
+                    stringResource(
+                        if (isStravaConnectedOnDevice) {
+                            R.string.connected_status_connected
+                        } else {
+                            R.string.connected_status_not_connected
+                        },
+                    ),
+                )
+                OutlinedButton(onClick = onOpenMeals) {
+                    Text(stringResource(R.string.connected_manage_strava))
+                }
+                val cloudStrava = linkedAccounts.firstOrNull {
+                    it.provider == LinkedAccountProvider.STRAVA_CZ
+                }
+                if (
+                    isStravaConnectedOnDevice &&
+                    (cloudStrava == null || cloudStrava.status != LinkedAccountStatus.ACTIVE)
+                ) {
+                    Button(
+                        onClick = onRetryStravaCloudLink,
+                        enabled = !isRetryingStravaCloudLink && mutatingLinkedAccountID == null,
+                    ) {
+                        Text(
+                            stringResource(
+                                if (isRetryingStravaCloudLink) {
+                                    R.string.connected_retrying_strava
+                                } else {
+                                    R.string.connected_retry_strava
+                                },
+                            ),
+                        )
+                    }
+                }
+                Button(
                     onClick = onRefreshLinkedAccounts,
                     enabled = !isRefreshingLinkedAccounts && mutatingLinkedAccountID == null,
                 ) {
@@ -293,6 +381,12 @@ fun AccountScreen(
                 },
             )
             Text("Gradey asks for age confirmation before school data, support chat, or AI leave the device for our servers.")
+            OutlinedButton(onClick = onOpenPrivacyPolicy) {
+                Text(stringResource(R.string.privacy_policy))
+            }
+            OutlinedButton(onClick = onOpenTermsOfUse) {
+                Text(stringResource(R.string.terms_of_use))
+            }
         }
         GradeySectionCard(title = stringResource(R.string.bakalari_attribution_title)) {
             Text(stringResource(R.string.bakalari_attribution_message))
@@ -311,6 +405,18 @@ fun AccountScreen(
                         MetadataRow("School", linked.schoolName ?: "-")
                         MetadataRow("Status", linked.status.displayName())
                         MetadataRow("On this device", if (isActive) "Active" else "Not active")
+                        linked.lastSyncedAt?.let { timestamp ->
+                            MetadataRow(
+                                stringResource(R.string.connected_last_synced),
+                                formatSyncTimestamp(timestamp),
+                            )
+                        }
+                        linked.lastPolledAt?.let { timestamp ->
+                            MetadataRow(
+                                stringResource(R.string.connected_last_checked),
+                                formatSyncTimestamp(timestamp),
+                            )
+                        }
                         linked.actionRequiredReason?.takeIf(String::isNotBlank)?.let { reason ->
                             Text(reason)
                         }
@@ -411,3 +517,9 @@ private fun formatMinute(minuteOfDay: Int): String = String.format(
     minuteOfDay.coerceIn(0, 1439) / 60,
     minuteOfDay.coerceIn(0, 1439) % 60,
 )
+
+private fun formatSyncTimestamp(value: String): String = runCatching {
+    DateTimeFormatter.ofLocalizedDateTime(FormatStyle.SHORT)
+        .withLocale(Locale.getDefault())
+        .format(Instant.parse(value).atZone(ZoneId.systemDefault()))
+}.getOrDefault(value)

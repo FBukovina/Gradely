@@ -77,6 +77,7 @@ import com.bukovinafilip.gradey.domain.GradeyStartupDestination
 import com.bukovinafilip.gradey.domain.SchoolSessionExpiredException
 import com.bukovinafilip.gradey.domain.TimetableDates
 import com.bukovinafilip.gradey.domain.WearPayloadBuilder
+import com.bukovinafilip.gradey.domain.loadCacheFirst
 import com.bukovinafilip.gradey.domain.reconcileOnboardingProgress
 import com.bukovinafilip.gradey.domain.selectGradeyStartupDestination
 import com.bukovinafilip.gradey.domain.selectRestorableSchoolAccount
@@ -283,34 +284,42 @@ private fun GradeyApp(
         }
     }
 
-    suspend fun loadTimetable(weekContaining: String): Throwable? {
-        return try {
-            val loaded = graph.schoolRepository.loadTimetable(weekContaining)
-            timetable = loaded
-            try {
-                updateNextLessonWidgets(context.applicationContext)
-            } catch (error: CancellationException) {
-                throw error
-            } catch (_: Throwable) {
-                // A launcher/widget host failure must not hide a successful timetable refresh.
-            }
-            try {
-                PhoneWearSyncPublisher.publish(
-                    context.applicationContext,
-                    WearPayloadBuilder.signedIn(loaded, dashboard?.user),
-                )
-            } catch (error: CancellationException) {
-                throw error
-            } catch (_: Throwable) {
-                // A missing/unpaired watch must not hide a successful timetable refresh.
-            }
-            null
+    suspend fun applyFreshTimetable(loaded: TimetableWeek) {
+        timetable = loaded
+        try {
+            updateNextLessonWidgets(context.applicationContext)
         } catch (error: CancellationException) {
             throw error
-        } catch (error: Throwable) {
-            error
+        } catch (_: Throwable) {
+            // A launcher/widget host failure must not hide a successful timetable refresh.
+        }
+        try {
+            PhoneWearSyncPublisher.publish(
+                context.applicationContext,
+                WearPayloadBuilder.signedIn(loaded, dashboard?.user),
+            )
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: Throwable) {
+            // A missing/unpaired watch must not hide a successful timetable refresh.
         }
     }
+
+    suspend fun loadTimetable(weekContaining: String): Throwable? = try {
+        applyFreshTimetable(graph.schoolRepository.loadTimetable(weekContaining))
+        null
+    } catch (error: CancellationException) {
+        throw error
+    } catch (error: Throwable) {
+        error
+    }
+
+    suspend fun loadTimetableCacheFirst(weekContaining: String): Throwable? = loadCacheFirst(
+        loadCached = { graph.schoolRepository.loadCachedTimetable(weekContaining) },
+        loadFresh = { graph.schoolRepository.loadTimetable(weekContaining) },
+        onCached = { timetable = it },
+        onFresh = { applyFreshTimetable(it) },
+    )
 
     fun routeToSchoolReconnect() {
         dashboard = null
@@ -514,6 +523,7 @@ private fun GradeyApp(
     }
 
     suspend fun refreshSignedInData(forceRefresh: Boolean = false) {
+        dataError = null
         val failures = mutableListOf<Throwable>()
         try {
             dashboard = graph.schoolRepository.loadDashboard(forceRefresh = forceRefresh)
@@ -1145,6 +1155,7 @@ private fun GradeyApp(
                             scope.launch {
                                 isLoading = true
                                 try {
+                                    dataError = null
                                     dataError = loadTimetable(timetable?.weekStart ?: TimetableDates.todayString())?.userFacingMessage()
                                 } finally {
                                     isLoading = false
@@ -1157,7 +1168,8 @@ private fun GradeyApp(
                             scope.launch {
                                 isLoading = true
                                 try {
-                                    dataError = loadTimetable(weekContaining)?.userFacingMessage()
+                                    dataError = null
+                                    dataError = loadTimetableCacheFirst(weekContaining)?.userFacingMessage()
                                 } finally {
                                     isLoading = false
                                 }
@@ -1174,7 +1186,8 @@ private fun GradeyApp(
                     onRetry = {
                         scope.launch {
                             runWithLoading {
-                                dataError = loadTimetable(TimetableDates.todayString())?.userFacingMessage()
+                                dataError = null
+                                dataError = loadTimetableCacheFirst(TimetableDates.todayString())?.userFacingMessage()
                             }
                         }
                     },
@@ -1283,10 +1296,17 @@ private fun GradeyApp(
                 )
             }
 
+            val selectedTabHasUsableContent = when (selectedTab) {
+                AppTab.TODAY, AppTab.SUBJECTS -> currentDashboard != null
+                AppTab.ABSENCE -> currentAbsence != null
+                AppTab.TIMETABLE -> timetable != null
+                AppTab.STRAVACZ -> stravaMenu != null
+                AppTab.ACCOUNT -> false
+            }
             if (
                 selectedTab != AppTab.ACCOUNT &&
                 dataError != null &&
-                (dashboard != null || absence != null || timetable != null || stravaMenu != null)
+                selectedTabHasUsableContent
             ) {
                 DataRefreshWarning(
                     message = dataError.orEmpty(),
@@ -1299,7 +1319,10 @@ private fun GradeyApp(
             if (selectedTab != AppTab.ACCOUNT) {
                 GradeyBottomNavigation(
                     selectedTab = selectedTab,
-                    onSelect = { selectedTab = it },
+                    onSelect = {
+                        selectedTab = it
+                        dataError = null
+                    },
                     modifier = Modifier.align(Alignment.BottomCenter),
                 )
             }

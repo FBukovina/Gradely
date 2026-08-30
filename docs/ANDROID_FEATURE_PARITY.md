@@ -137,7 +137,7 @@ Error verification (2026-08-30): Bakaláři transport now distinguishes safe HTT
 - [x] Remove all refresh fallbacks to `DemoData` from production state.
 - [ ] Verify offline cold start, offline warm start, reconnect, expired offline session, and corrupt-cache recovery.
 
-Cache verification (2026-08-30): Today and Marks now render from a cached/loaded dashboard even when the optional absence request is unavailable, using any per-subject absence already embedded in the dashboard. A failed background refresh leaves existing content on-screen and displays a compact non-destructive warning; first-load errors retain the full retry surface. Repository tests prove forced dashboard and timetable failures do not delete their cached values, two timetable weeks and timestamps coexist under separate keys, and school logout clears only the active school scope while preserving an unrelated scope.
+Cache verification (2026-08-30): Today and Marks now render from a cached/loaded dashboard even when the optional absence request is unavailable, using any per-subject absence already embedded in the dashboard. A failed background refresh leaves existing content on-screen and displays a compact non-destructive warning; first-load errors retain the full retry surface. Repository tests prove forced dashboard and timetable failures do not delete their cached values, two timetable weeks and timestamps coexist under separate keys, and school logout clears only the active school scope while preserving an unrelated scope. Timetable week navigation now renders the requested scoped cache before refreshing, clears a previously displayed different week when the requested week has no usable cache, replaces cached content only after success, and retains it after refresh failure. The warning overlay is gated by usable content for the selected feature, so an unavailable feature receives its full retry state rather than a misleading background warning caused by another tab's cache. Cache-first loader tests cover cache/fresh ordering, retained content, missing and corrupt cache recovery, and cancellation.
 
 ## Today
 
@@ -188,7 +188,7 @@ Cache verification (2026-08-30): Today and Marks now render from a cached/loaded
 
 ## Timetable
 
-- [ ] Implement cache-first initial/loading/loaded/empty/refresh/background-error states.
+- [x] Implement cache-first initial/loading/loaded/empty/refresh/background-error states.
 - [ ] Match previous/current/next week navigation, today shortcut, localized range title, and refresh semantics.
 - [ ] Show every school day, holiday/weekend/empty-day state, hour, time range, subject, group, teacher, room, theme, and homework indicator.
 - [ ] Show canceled, substitution, room-change, added, and unknown change states without losing original lesson metadata.

@@ -9,6 +9,15 @@ import org.junit.Test
 
 class AbsenceToolsTest {
     @Test
+    fun emptyTimelineHasZeroTotalsAndNoGroups() {
+        val timeline = AbsenceTimeline.make(AbsenceResponse())
+
+        assertThat(timeline.total.total).isEqualTo(0)
+        assertThat(timeline.days).isEmpty()
+        assertThat(timeline.months).isEmpty()
+    }
+
+    @Test
     fun exactThresholdIsOverLimit() {
         val response = AbsenceResponse(
             percentageThreshold = 25.0,

@@ -13,4 +13,24 @@
     <string name="absence_category_soon">brzké odchody</string>
     <string name="absence_category_school">školní akce</string>
     <string name="absence_category_distance_teaching">distanční výuka</string>
+    <string name="absence_open_gradey_tools">otevřít nástroje Gradey</string>
+    <string name="absence_refresh">obnovit absenci</string>
+    <string name="absence_open_account">otevřít účet</string>
+    <string name="absence_student">student</string>
+    <string name="absence_total_hours">hodin</string>
+    <string name="absence_school_limit">školní limit: %1$s %%</string>
+    <string name="absence_school_limit_unavailable">školní limit není k dispozici</string>
+    <string name="absence_segment_subjects">zameškanost</string>
+    <string name="absence_segment_days">po dnech</string>
+    <string name="absence_segment_months">po měsících</string>
+    <string name="absence_subjects_empty">žádná zameškanost v předmětech.</string>
+    <string name="absence_days_empty">žádná absence po dnech.</string>
+    <string name="absence_months_empty">žádná absence po měsících.</string>
+    <string name="absence_total">celkem</string>
+    <string name="absence_months_chart">hodiny po měsících</string>
+    <string name="absence_subject_missed">zameškáno %1$d z %2$d hodin ·</string>
+    <string name="absence_more_until_limit">ještě %1$d do limitu</string>
+    <string name="absence_limit_unavailable">limit není k dispozici</string>
+    <string name="absence_overflow">+%1$d</string>
+    <string name="absence_chart_description">hodiny po měsících: %1$s</string>
 </resources>

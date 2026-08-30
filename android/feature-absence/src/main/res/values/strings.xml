@@ -13,4 +13,24 @@
     <string name="absence_category_soon">Early departures</string>
     <string name="absence_category_school">School event</string>
     <string name="absence_category_distance_teaching">Distance teaching</string>
+    <string name="absence_open_gradey_tools">Open Gradey tools</string>
+    <string name="absence_refresh">Refresh Absence</string>
+    <string name="absence_open_account">Open account</string>
+    <string name="absence_student">Student</string>
+    <string name="absence_total_hours">hours</string>
+    <string name="absence_school_limit">School limit: %1$s %%</string>
+    <string name="absence_school_limit_unavailable">School limit unavailable</string>
+    <string name="absence_segment_subjects">Subjects</string>
+    <string name="absence_segment_days">By days</string>
+    <string name="absence_segment_months">By months</string>
+    <string name="absence_subjects_empty">No subject absence.</string>
+    <string name="absence_days_empty">No daily absence.</string>
+    <string name="absence_months_empty">No monthly absence.</string>
+    <string name="absence_total">Total</string>
+    <string name="absence_months_chart">Hours by month</string>
+    <string name="absence_subject_missed">%1$d of %2$d lessons missed ·</string>
+    <string name="absence_more_until_limit">%1$d more until the limit</string>
+    <string name="absence_limit_unavailable">limit unavailable</string>
+    <string name="absence_overflow">+%1$d</string>
+    <string name="absence_chart_description">Hours by month: %1$s</string>
 </resources>

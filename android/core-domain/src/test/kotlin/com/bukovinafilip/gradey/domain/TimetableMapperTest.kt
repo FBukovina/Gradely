@@ -22,10 +22,20 @@ class TimetableMapperTest {
             days = listOf(
                 TimetableDayDTO(
                     dayOfWeek = 1,
-                    date = "2026-08-24",
+                    date = "2026-08-24T00:00:00+02:00",
                     atoms = listOf(
                         TimetableAtom(hourID = "1", subjectID = " math ", teacherID = "teacher", roomID = "room", groupIDs = listOf("group")),
-                        TimetableAtom(hourID = "2", subjectID = "biology", change = TimetableChange("Canceled", "Teacher absent")),
+                        TimetableAtom(
+                            hourID = "2",
+                            subjectID = "biology",
+                            change = TimetableChange(
+                                changeType = "Canceled",
+                                description = "Teacher absent",
+                                changeSubject = "Biology",
+                                hours = "2nd lesson",
+                                typeName = "Cancellation",
+                            ),
+                        ),
                         TimetableAtom(hourID = "1", subjectID = " math "),
                         TimetableAtom(hourID = "9", subjectID = "missing"),
                     ),
@@ -44,10 +54,14 @@ class TimetableMapperTest {
         val day = week.days.single()
 
         assertThat(day.isToday).isTrue()
+        assertThat(day.date).isEqualTo("2026-08-24")
         assertThat(day.lessons.map { it.hour.id }).containsExactly("2", "1", "1", "9").inOrder()
         assertThat(day.lessons.map { it.id }.distinct()).hasSize(4)
         assertThat(day.lessons.first().changeKind).isEqualTo(LessonChangeKind.CANCELED)
         assertThat(day.lessons.first().changeDescription).isEqualTo("Teacher absent")
+        assertThat(day.lessons.first().change?.changeSubject).isEqualTo("Biology")
+        assertThat(day.lessons.first().change?.hours).isEqualTo("2nd lesson")
+        assertThat(day.lessons.first().change?.typeName).isEqualTo("Cancellation")
         assertThat(day.lessons[1].subjectName).isEqualTo("Mathematics")
         assertThat(day.lessons[1].teacherTitle).isEqualTo("JS")
         assertThat(day.lessons[1].roomTitle).isEqualTo("12")
@@ -67,5 +81,44 @@ class TimetableMapperTest {
         assertThat(day.date).isNull()
         assertThat(day.isToday).isFalse()
         assertThat(day.lessons.single().hour.caption).isEqualTo("7")
+    }
+
+    @Test
+    fun parsesSupportedDatesRejectsMalformedValuesAndClassifiesEveryChangeVariant() {
+        assertThat(TimetableDates.parseApiDate("2026-10-28T00:00:00+01:00"))
+            .isEqualTo(java.time.LocalDate.of(2026, 10, 28))
+        assertThat(TimetableDates.parseApiDate("2026-10-28")).isEqualTo(java.time.LocalDate.of(2026, 10, 28))
+        assertThat(TimetableDates.parseApiDate("not-a-date")).isNull()
+        assertThat(TimetableDates.parseApiDate("")).isNull()
+
+        assertThat(LessonChangeKind.fromApi("removed")).isEqualTo(LessonChangeKind.CANCELED)
+        assertThat(LessonChangeKind.fromApi("Cancelled")).isEqualTo(LessonChangeKind.CANCELED)
+        assertThat(LessonChangeKind.fromApi("RoomChanged")).isEqualTo(LessonChangeKind.ROOM_CHANGED)
+        assertThat(LessonChangeKind.fromApi("Added")).isEqualTo(LessonChangeKind.ADDED)
+        assertThat(LessonChangeKind.fromApi("Substitution")).isEqualTo(LessonChangeKind.SUBSTITUTION)
+        assertThat(LessonChangeKind.fromApi("server-specific-change")).isEqualTo(LessonChangeKind.SUBSTITUTION)
+        assertThat(LessonChangeKind.fromApi(null)).isEqualTo(LessonChangeKind.NONE)
+    }
+
+    @Test
+    fun unusualDayNumberAndMalformedDateRemainSafeAndDoNotBecomeToday() {
+        val day = TimetableMapper.makeWeek(
+            TimetableResponse(
+                days = listOf(
+                    TimetableDayDTO(
+                        dayOfWeek = 9,
+                        date = "malformed",
+                        atoms = listOf(TimetableAtom(hourID = "10", subjectID = "unknown")),
+                    ),
+                ),
+            ),
+            weekStart = "2026-08-24",
+            today = "2026-08-24",
+        ).days.single()
+
+        assertThat(day.dayOfWeek).isEqualTo(9)
+        assertThat(day.date).isNull()
+        assertThat(day.isToday).isFalse()
+        assertThat(day.lessons.single().title).isEqualTo("Lesson")
     }
 }

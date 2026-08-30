@@ -493,6 +493,7 @@ data class ScheduledLesson(
     val hasHomework: Boolean,
     val changeDescription: String? = null,
     val changeKind: LessonChangeKind = LessonChangeKind.NONE,
+    val change: TimetableChange? = null,
 ) {
     val title: String get() = subjectAbbrev ?: subjectName ?: "Lesson"
     val roomTitle: String? get() = roomAbbrev ?: roomName

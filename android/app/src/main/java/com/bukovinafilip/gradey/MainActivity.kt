@@ -44,6 +44,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -74,6 +75,7 @@ import com.bukovinafilip.gradey.feature.login.SchoolLoginScreen
 import com.bukovinafilip.gradey.feature.stravacz.StravaCZScreen
 import com.bukovinafilip.gradey.feature.subjects.SubjectsScreen
 import com.bukovinafilip.gradey.feature.timetable.TimetableScreen
+import com.bukovinafilip.gradey.feature.timetable.R as TimetableR
 import com.bukovinafilip.gradey.feature.today.TodayScreen
 import com.bukovinafilip.gradey.feature.today.TodayStateScreen
 import com.bukovinafilip.gradey.domain.GradeySessionExpiredException
@@ -89,7 +91,6 @@ import com.bukovinafilip.gradey.domain.TimetableDates
 import com.bukovinafilip.gradey.domain.TodayPresentationState
 import com.bukovinafilip.gradey.domain.TodayPresentationStates
 import com.bukovinafilip.gradey.domain.WearPayloadBuilder
-import com.bukovinafilip.gradey.domain.loadCacheFirst
 import com.bukovinafilip.gradey.domain.refreshRetainingContent
 import com.bukovinafilip.gradey.domain.reconcileOnboardingProgress
 import com.bukovinafilip.gradey.domain.selectGradeyStartupDestination
@@ -230,6 +231,8 @@ private fun GradeyApp(
     var absenceSubjectResolutionJob by remember { mutableStateOf<Job?>(null) }
     var absenceSubjectResolutionAttempt by remember { mutableIntStateOf(0) }
     var timetable by remember { mutableStateOf<TimetableWeek?>(null) }
+    var timetableRequestedWeek by rememberSaveable { mutableStateOf(TimetableDates.todayString()) }
+    var timetableError by remember { mutableStateOf<String?>(null) }
     var stravaSession by remember { mutableStateOf<StravaCZStoredSession?>(null) }
     var stravaMenu by remember { mutableStateOf<StravaCZMenu?>(null) }
     var gradeHistorySnapshot by remember { mutableStateOf<GradeHistorySnapshot?>(null) }
@@ -292,6 +295,12 @@ private fun GradeyApp(
         absenceSubjectWarning = null
         absenceSubjectError = null
         absencePartialDays = emptyList()
+    }
+
+    fun resetTimetableState() {
+        timetable = null
+        timetableRequestedWeek = TimetableDates.todayString()
+        timetableError = null
     }
 
     fun startAbsenceSubjectResolution(response: AbsenceResponse) {
@@ -358,7 +367,10 @@ private fun GradeyApp(
         currentSchoolBaseURL = storedSession?.baseURL.orEmpty()
         graph.schoolRepository.loadCachedDashboard()?.let { dashboard = it }
         graph.schoolRepository.loadCachedAbsence()?.let(::startAbsenceSubjectResolution)
-        graph.schoolRepository.loadCachedTimetable(TimetableDates.todayString())?.let { timetable = it }
+        graph.schoolRepository.loadCachedTimetable(TimetableDates.todayString())?.let {
+            timetable = it
+            timetableRequestedWeek = it.weekStart
+        }
         stravaSession = runCatching { graph.stravaCZRepository.bootstrapSession() }.getOrNull()
         graph.stravaCZRepository.loadCachedMenu()?.let { stravaMenu = it }
         linkedAccounts = runCatching { graph.linkedAccountRepository.localAccounts() }.getOrDefault(emptyList())
@@ -402,6 +414,8 @@ private fun GradeyApp(
 
     suspend fun applyFreshTimetable(loaded: TimetableWeek) {
         timetable = loaded
+        timetableRequestedWeek = loaded.weekStart
+        timetableError = null
         try {
             updateNextLessonWidgets(context.applicationContext)
         } catch (error: CancellationException) {
@@ -422,6 +436,9 @@ private fun GradeyApp(
     }
 
     suspend fun loadTimetable(weekContaining: String): Throwable? = try {
+        timetableRequestedWeek = TimetableDates.apiDateString(
+            TimetableDates.monday(TimetableDates.parseApiDate(weekContaining) ?: TimetableDates.today()),
+        )
         applyFreshTimetable(graph.schoolRepository.loadTimetable(weekContaining))
         null
     } catch (error: CancellationException) {
@@ -430,18 +447,28 @@ private fun GradeyApp(
         error
     }
 
-    suspend fun loadTimetableCacheFirst(weekContaining: String): Throwable? = loadCacheFirst(
-        loadCached = { graph.schoolRepository.loadCachedTimetable(weekContaining) },
-        loadFresh = { graph.schoolRepository.loadTimetable(weekContaining) },
-        onCached = { timetable = it },
-        onFresh = { applyFreshTimetable(it) },
-    )
+    suspend fun loadTimetableCacheFirst(weekContaining: String): Throwable? {
+        val requested = TimetableDates.apiDateString(
+            TimetableDates.monday(TimetableDates.parseApiDate(weekContaining) ?: TimetableDates.today()),
+        )
+        timetableRequestedWeek = requested
+        timetableError = null
+        return try {
+            timetable = graph.schoolRepository.loadCachedTimetable(requested)
+            applyFreshTimetable(graph.schoolRepository.loadTimetable(requested))
+            null
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Throwable) {
+            error
+        }
+    }
 
     fun routeToSchoolReconnect() {
         dashboard = null
         absence = null
         resetAbsenceSubjectResolution()
-        timetable = null
+        resetTimetableState()
         stravaSession = null
         stravaMenu = null
         gradeHistorySnapshot = null
@@ -486,7 +513,7 @@ private fun GradeyApp(
         dashboard = null
         absence = null
         resetAbsenceSubjectResolution()
-        timetable = null
+        resetTimetableState()
         stravaSession = null
         stravaMenu = null
         gradeHistorySnapshot = null
@@ -627,7 +654,7 @@ private fun GradeyApp(
             absence = null
             resetAbsenceSubjectResolution()
             absenceRefreshError = null
-            timetable = null
+            resetTimetableState()
             gradeHistorySnapshot = null
             activeLinkedAccountID = updated.id
             currentSchoolBaseURL = associatedSession.baseURL
@@ -664,7 +691,7 @@ private fun GradeyApp(
             absence = null
             resetAbsenceSubjectResolution()
             absenceRefreshError = null
-            timetable = null
+            resetTimetableState()
             stravaSession = null
             stravaMenu = null
             gradeHistorySnapshot = null
@@ -724,6 +751,7 @@ private fun GradeyApp(
         dataError = null
         marksRefreshError = null
         absenceRefreshError = null
+        timetableError = null
         val failures = mutableListOf<Throwable>()
         val dashboardRefresh = refreshRetainingContent(dashboard) {
             graph.schoolRepository.loadDashboard(forceRefresh = forceRefresh)
@@ -767,7 +795,10 @@ private fun GradeyApp(
                 return
             }
             null -> Unit
-            else -> failures += timetableFailure
+            else -> {
+                failures += timetableFailure
+                timetableError = timetableFailure.userFacingMessage()
+            }
         }
         val mealsSessionRefresh = refreshRetainingContent(stravaSession) {
             graph.stravaCZRepository.bootstrapSession()
@@ -1474,13 +1505,14 @@ private fun GradeyApp(
                 AppTab.TIMETABLE -> if (timetable != null) TimetableScreen(
                     week = timetable,
                     isRefreshing = isLoading,
+                    errorMessage = timetableError,
                     onRefresh = {
                         if (!isLoading) {
                             scope.launch {
                                 isLoading = true
                                 try {
-                                    dataError = null
-                                    dataError = loadTimetable(timetable?.weekStart ?: TimetableDates.todayString())?.userFacingMessage()
+                                    timetableError = null
+                                    timetableError = loadTimetable(timetable?.weekStart ?: timetableRequestedWeek)?.userFacingMessage()
                                 } finally {
                                     isLoading = false
                                 }
@@ -1492,8 +1524,8 @@ private fun GradeyApp(
                             scope.launch {
                                 isLoading = true
                                 try {
-                                    dataError = null
-                                    dataError = loadTimetableCacheFirst(weekContaining)?.userFacingMessage()
+                                    timetableError = null
+                                    timetableError = loadTimetableCacheFirst(weekContaining)?.userFacingMessage()
                                 } finally {
                                     isLoading = false
                                 }
@@ -1504,14 +1536,14 @@ private fun GradeyApp(
                     onOpenGradeyTools = { isGradeyAIPresented = true },
                     modifier = Modifier.fillMaxSize(),
                 ) else CoreDataUnavailableScreen(
-                    title = "Timetable",
+                    title = context.getString(TimetableR.string.timetable_title),
                     isLoading = isLoading,
-                    errorMessage = dataError,
+                    errorMessage = timetableError,
                     onRetry = {
                         scope.launch {
                             runWithLoading {
-                                dataError = null
-                                dataError = loadTimetableCacheFirst(TimetableDates.todayString())?.userFacingMessage()
+                                timetableError = null
+                                timetableError = loadTimetableCacheFirst(timetableRequestedWeek)?.userFacingMessage()
                             }
                         }
                     },

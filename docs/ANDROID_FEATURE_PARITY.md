@@ -243,13 +243,15 @@ Absence-fallback matching verification (2026-08-30): The shared Android resolver
 ## Timetable
 
 - [x] Implement cache-first initial/loading/loaded/empty/refresh/background-error states.
-- [ ] Match previous/current/next week navigation, today shortcut, localized range title, and refresh semantics.
-- [ ] Show every school day, holiday/weekend/empty-day state, hour, time range, subject, group, teacher, room, theme, and homework indicator.
-- [ ] Show canceled, substitution, room-change, added, and unknown change states without losing original lesson metadata.
-- [ ] Implement a tappable lesson detail surface with all available metadata.
+- [x] Match previous/current/next week navigation, today shortcut, localized range title, and refresh semantics.
+- [x] Show every school day, holiday/weekend/empty-day state, hour, time range, subject, group, teacher, room, theme, and homework indicator.
+- [x] Show canceled, substitution, room-change, added, and unknown change states without losing original lesson metadata.
+- [x] Implement a tappable lesson detail surface with all available metadata.
 - [x] DTO-to-week mapping and current/upcoming widget selection have JVM unit coverage for the imported baseline.
-- [ ] Verify duplicate atoms, missing referenced entities/hours, unusual day numbers, empty dates, overnight/device timezone edge cases, and change-type variants.
-- [ ] Publish successful timetable refreshes to widget and Wear stores.
+- [x] Verify duplicate atoms, missing referenced entities/hours, unusual day numbers, empty dates, overnight/device timezone edge cases, and change-type variants.
+- [x] Publish successful timetable refreshes to widget and Wear stores.
+
+Timetable verification (2026-08-30): Android now follows the iOS week flow with cache-first previous/current/next navigation, a current-week shortcut, locale-aware Monday–Friday titles, target-week loading, and retained cached content plus a non-destructive warning when refresh fails. The day strip renders every returned Bakaláři day—including holidays, weekends, empty days, and unusual day numbers—and lesson rows expose hour/caption, time, subject, groups, teacher, room, theme, homework, cancellation, substitution, room-change, added, and server-specific change states. Selecting a lesson opens all mapped metadata and preserves the raw change subject/day/hours/time/type fields rather than replacing the original lesson. The current day also carries the iOS before/current/between/after summary, next-lesson timing, and localized change notice in all four language configurations. Mapping tests cover timestamp and plain dates, malformed/empty dates, duplicate atoms, missing entities/hours, numeric hour fallback ordering, unusual days, and every change type; next-lesson tests cover Prague/device timezone and overnight boundaries; Wear/widget tests cover payload selection. Every successful fresh load updates the scoped repository cache and republishes the widget and signed-in Wear payload.
 
 ## Strava.cz meals
 

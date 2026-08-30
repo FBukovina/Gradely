@@ -40,6 +40,12 @@ object TimetableDates {
         date.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
 
     fun apiDateString(date: LocalDate): String = ApiFormatter.format(date)
+
+    fun parseApiDate(value: String?): LocalDate? {
+        val candidate = value?.trim().orEmpty()
+        if (candidate.length < 10) return null
+        return runCatching { LocalDate.parse(candidate.take(10), ApiFormatter) }.getOrNull()
+    }
 }
 
 object TimetableMapper {
@@ -48,6 +54,7 @@ object TimetableMapper {
         weekStart: String,
         today: String = TimetableDates.todayString(),
     ): TimetableWeek {
+        val todayDate = TimetableDates.parseApiDate(today)
         val subjects = index(response.subjects)
         val teachers = index(response.teachers)
         val rooms = index(response.rooms)
@@ -56,7 +63,9 @@ object TimetableMapper {
         val hourOrder = response.hours.mapIndexed { index, hour -> hour.id to index }.toMap()
 
         val days = response.days.map { day ->
-            val dayID = day.date.ifBlank { "dow-${day.dayOfWeek}" }
+            val rawDate = day.date.trim()
+            val parsedDate = TimetableDates.parseApiDate(rawDate)
+            val dayID = rawDate.ifBlank { "dow-${day.dayOfWeek}" }
             val lessons = day.atoms.mapIndexed { offset, atom ->
                 val hour = hoursByID[atom.hourID] ?: TimetableHour(atom.hourID, atom.hourID, "", "")
                 val subject = atom.subjectID?.let(subjects::get)
@@ -78,17 +87,22 @@ object TimetableMapper {
                     hasHomework = atom.homeworkIDs.isNotEmpty(),
                     changeDescription = atom.change?.description?.trimmed(),
                     changeKind = LessonChangeKind.fromApi(atom.change?.changeType),
+                    change = atom.change,
                 )
-            }.sortedBy { hourOrder[it.hour.id] ?: Int.MAX_VALUE }
+            }.sortedWith(
+                compareBy<ScheduledLesson> { hourOrder[it.hour.id] ?: Int.MAX_VALUE }
+                    .thenBy { it.hour.id.toIntOrNull() ?: Int.MAX_VALUE }
+                    .thenBy { it.hour.id },
+            )
 
             ScheduledDay(
                 id = dayID,
-                date = day.date.trimmed(),
+                date = parsedDate?.let(TimetableDates::apiDateString),
                 dayOfWeek = day.dayOfWeek,
                 dayDescription = day.dayDescription.trim(),
                 dayType = day.dayType,
                 lessons = lessons,
-                isToday = day.date == today,
+                isToday = parsedDate != null && parsedDate == todayDate,
             )
         }
 

@@ -3,6 +3,8 @@ package com.bukovinafilip.gradey.feature.timetable
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -49,19 +51,26 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.bukovinafilip.gradey.domain.TimetableDates
+import com.bukovinafilip.gradey.domain.TodayTimetableState
+import com.bukovinafilip.gradey.domain.TodayTimetableSummaries
+import com.bukovinafilip.gradey.domain.TodayTimetableSummary
 import com.bukovinafilip.gradey.model.LessonChangeKind
 import com.bukovinafilip.gradey.model.ScheduledDay
 import com.bukovinafilip.gradey.model.ScheduledLesson
@@ -80,10 +89,6 @@ private val MutedLight = Color(0xFFB9BAC0)
 private val SubjectTile = Color(0xFFDEF1ED)
 private val NoticeRed = Color(0xFFD83E4F)
 private val DividerColor = Color(0xFFC6C6C8)
-private val EnglishLocale = Locale.ENGLISH
-private val WeekMonthFormatter = DateTimeFormatter.ofPattern("MMM", EnglishLocale)
-private val WeekdayFormatter = DateTimeFormatter.ofPattern("EEE", EnglishLocale)
-
 private data class TimetableDaySlot(
     val date: LocalDate,
     val day: ScheduledDay?,
@@ -94,18 +99,26 @@ private data class TimetableDaySlot(
 fun TimetableScreen(
     week: TimetableWeek?,
     isRefreshing: Boolean,
+    errorMessage: String?,
     onRefresh: () -> Unit,
     onChangeWeek: (String) -> Unit,
     onOpenAccount: () -> Unit,
     onOpenGradeyTools: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val locale = LocalConfiguration.current.locales[0]
     val monday = remember(week?.weekStart) { weekMonday(week) }
     val daySlots = remember(week, monday) { timetableDaySlots(week, monday) }
-    val initialDate = daySlots.firstOrNull { it.day?.isToday == true }?.date ?: monday
+    val initialDate = daySlots.firstOrNull { it.day?.isToday == true }?.date
+        ?: daySlots.firstOrNull { it.day?.isSchoolDay() == true }?.date
+        ?: daySlots.firstOrNull()?.date
+        ?: monday
     var selectedDate by rememberSaveable(week?.weekStart) { mutableStateOf(initialDate.toString()) }
     var selectedLesson by remember { mutableStateOf<ScheduledLesson?>(null) }
     val selectedDay = daySlots.firstOrNull { it.date.toString() == selectedDate }?.day
+    val todaySummary = remember(week, selectedDay?.id) {
+        week?.takeIf { selectedDay?.isToday == true }?.let(TodayTimetableSummaries::resolve)
+    }
 
     Box(
         modifier = modifier
@@ -128,18 +141,41 @@ fun TimetableScreen(
             Spacer(Modifier.height(12.dp))
             WeekNavigator(
                 monday = monday,
+                locale = locale,
                 enabled = !isRefreshing,
                 onPrevious = { onChangeWeek(monday.minusWeeks(1).toString()) },
                 onNext = { onChangeWeek(monday.plusWeeks(1).toString()) },
+                onToday = { onChangeWeek(TimetableDates.todayString()) },
             )
             Spacer(Modifier.height(8.dp))
             DayStrip(
                 daySlots = daySlots,
                 selectedDate = selectedDate,
+                locale = locale,
                 onSelect = { selectedDate = it.toString() },
             )
             Spacer(Modifier.height(11.dp))
             HorizontalDivider(thickness = 0.5.dp, color = DividerColor.copy(alpha = 0.62f))
+            if (!errorMessage.isNullOrBlank()) {
+                Surface(
+                    modifier = Modifier
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                        .fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
+                    color = Color(0xFFFFECEE),
+                ) {
+                    Text(
+                        text = errorMessage,
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                        color = NoticeRed,
+                        fontSize = 13.sp,
+                        lineHeight = 17.sp,
+                    )
+                }
+            }
+            todaySummary?.let { summary ->
+                TodaySummaryCard(summary)
+            }
             LessonsList(
                 day = selectedDay,
                 isLoaded = week != null,
@@ -169,12 +205,110 @@ fun TimetableScreen(
 }
 
 @Composable
+private fun TodaySummaryCard(summary: TodayTimetableSummary) {
+    if (summary.state == TodayTimetableState.UNAVAILABLE) return
+    val currentName = summary.currentLesson?.localizedSubjectName()
+    val nextLesson = summary.nextLesson
+    val nextName = nextLesson?.localizedSubjectName()
+    val title = when (summary.state) {
+        TodayTimetableState.CURRENT -> stringResource(
+            R.string.timetable_summary_now,
+            currentName ?: stringResource(R.string.timetable_lesson_unknown),
+        )
+        TodayTimetableState.BEFORE_SCHOOL -> stringResource(R.string.timetable_summary_before)
+        TodayTimetableState.BETWEEN_LESSONS -> stringResource(R.string.timetable_summary_between)
+        TodayTimetableState.AFTER_SCHOOL -> stringResource(R.string.timetable_summary_after)
+        TodayTimetableState.WEEKEND -> stringResource(R.string.timetable_weekend)
+        TodayTimetableState.HOLIDAY -> stringResource(R.string.timetable_holiday)
+        TodayTimetableState.EMPTY -> stringResource(R.string.timetable_summary_empty)
+        TodayTimetableState.UNAVAILABLE -> return
+    }
+    val subtitle = when (summary.state) {
+        TodayTimetableState.CURRENT -> summary.minutesRemainingInCurrent?.let {
+            stringResource(R.string.timetable_summary_remaining, it)
+        }
+        TodayTimetableState.BEFORE_SCHOOL, TodayTimetableState.BETWEEN_LESSONS -> {
+            val minutesUntilNext = summary.minutesUntilNext
+            if (nextName != null && minutesUntilNext != null) {
+                stringResource(R.string.timetable_summary_next_in, nextName, minutesUntilNext)
+            } else {
+                nextName?.let { stringResource(R.string.timetable_summary_next_is, it) }
+            }
+        }
+        TodayTimetableState.AFTER_SCHOOL -> stringResource(
+            if (summary.hasChanges) {
+                R.string.timetable_summary_after_changes
+            } else {
+                R.string.timetable_summary_after_done
+            },
+        )
+        TodayTimetableState.EMPTY -> stringResource(R.string.timetable_summary_empty_message)
+        TodayTimetableState.WEEKEND, TodayTimetableState.HOLIDAY -> summary.dayDescription
+        TodayTimetableState.UNAVAILABLE -> null
+    }
+    Surface(
+        modifier = Modifier
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        color = Color.White.copy(alpha = 0.9f),
+        shadowElevation = 1.dp,
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(3.dp),
+        ) {
+            Text(title, color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            if (!subtitle.isNullOrBlank()) {
+                Text(subtitle, color = MutedText, fontSize = 13.sp, lineHeight = 17.sp)
+            }
+            if (summary.currentLesson != null && nextLesson != null && nextName != null) {
+                HorizontalDivider(
+                    modifier = Modifier.padding(vertical = 5.dp),
+                    thickness = 0.5.dp,
+                    color = DividerColor,
+                )
+                Text(
+                    stringResource(R.string.timetable_summary_next, nextName) +
+                        " · ${nextLesson.formattedTimeRange()}",
+                    color = MutedText,
+                    fontSize = 12.sp,
+                    lineHeight = 15.sp,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+            if (summary.hasChanges) {
+                val count = summary.changedLessons.size
+                val changeSummary = when {
+                    count == 1 -> stringResource(
+                        R.string.timetable_summary_changes_one,
+                        summary.changedLessons.first().localizedSubjectName(),
+                    )
+                    count in 2..4 -> stringResource(R.string.timetable_summary_changes_few, count)
+                    else -> stringResource(R.string.timetable_summary_changes_many, count)
+                }
+                Text(
+                    changeSummary,
+                    color = NoticeRed,
+                    fontSize = 12.sp,
+                    lineHeight = 15.sp,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+        }
+    }
+}
+
+@Composable
 private fun TimetableHeader(
     isRefreshing: Boolean,
     onRefresh: () -> Unit,
     onOpenAccount: () -> Unit,
     onOpenGradeyTools: () -> Unit,
 ) {
+    val openToolsDescription = stringResource(R.string.timetable_open_gradey_tools)
+    val refreshDescription = stringResource(R.string.timetable_refresh)
+    val openAccountDescription = stringResource(R.string.timetable_open_account)
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -196,7 +330,7 @@ private fun TimetableHeader(
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
                             imageVector = Icons.Default.AutoAwesome,
-                            contentDescription = "Open Gradey tools",
+                            contentDescription = openToolsDescription,
                             tint = AccentTeal,
                             modifier = Modifier.size(22.dp),
                         )
@@ -206,7 +340,7 @@ private fun TimetableHeader(
         }
 
         Text(
-            text = "Timetable",
+            text = stringResource(R.string.timetable_title),
             color = Color.Black,
             fontSize = 17.sp,
             lineHeight = 21.sp,
@@ -244,7 +378,7 @@ private fun TimetableHeader(
                         } else {
                             Icon(
                                 imageVector = Icons.Default.Refresh,
-                                contentDescription = "Refresh timetable",
+                                contentDescription = refreshDescription,
                                 tint = AccentTeal,
                                 modifier = Modifier.size(27.dp),
                             )
@@ -260,7 +394,7 @@ private fun TimetableHeader(
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
                             imageVector = Icons.Default.Person,
-                            contentDescription = "Open account",
+                            contentDescription = openAccountDescription,
                             tint = AccentTeal,
                             modifier = Modifier.size(22.dp),
                         )
@@ -274,34 +408,49 @@ private fun TimetableHeader(
 @Composable
 private fun WeekNavigator(
     monday: LocalDate,
+    locale: Locale,
     enabled: Boolean,
     onPrevious: () -> Unit,
     onNext: () -> Unit,
+    onToday: () -> Unit,
 ) {
+    val isCurrentWeek = monday == TimetableDates.monday(TimetableDates.today())
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(40.dp)
+            .height(if (isCurrentWeek) 40.dp else 52.dp)
             .padding(horizontal = 16.dp),
         contentAlignment = Alignment.Center,
     ) {
         WeekArrow(
-            description = "Previous week",
+            description = stringResource(R.string.timetable_previous_week),
             enabled = enabled,
             onClick = onPrevious,
             modifier = Modifier.align(Alignment.CenterStart),
         ) {
             Icon(Icons.Default.ChevronLeft, contentDescription = null, tint = AccentTeal, modifier = Modifier.size(24.dp))
         }
-        Text(
-            text = formatWeekRange(monday),
-            color = Color.Black,
-            fontSize = 18.sp,
-            lineHeight = 22.sp,
-            fontWeight = FontWeight.SemiBold,
-        )
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                text = formatWeekRange(monday, locale),
+                color = Color.Black,
+                fontSize = 18.sp,
+                lineHeight = 22.sp,
+                fontWeight = FontWeight.SemiBold,
+            )
+            if (!isCurrentWeek) {
+                Text(
+                    text = stringResource(R.string.timetable_today),
+                    modifier = Modifier.clickable(enabled = enabled, onClick = onToday),
+                    color = AccentTeal,
+                    fontSize = 12.sp,
+                    lineHeight = 15.sp,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+        }
         WeekArrow(
-            description = "Next week",
+            description = stringResource(R.string.timetable_next_week),
             enabled = enabled,
             onClick = onNext,
             modifier = Modifier.align(Alignment.CenterEnd),
@@ -336,18 +485,24 @@ private fun WeekArrow(
 private fun DayStrip(
     daySlots: List<TimetableDaySlot>,
     selectedDate: String,
+    locale: Locale,
     onSelect: (LocalDate) -> Unit,
 ) {
+    val weekdayFormatter = remember(locale) { DateTimeFormatter.ofPattern("EEE", locale) }
+    val selectedLabel = stringResource(R.string.timetable_selected)
+    val showDayTemplate = stringResource(R.string.timetable_show_day)
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .height(66.dp)
+            .horizontalScroll(rememberScrollState())
             .padding(start = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         daySlots.forEach { slot ->
             val selected = slot.date.toString() == selectedDate
-            val description = "${slot.date.format(WeekdayFormatter)}, ${slot.date.dayOfMonth}"
+            val description = "${slot.date.format(weekdayFormatter)}, ${slot.date.dayOfMonth}"
+            val showDayLabel = String.format(locale, showDayTemplate, description)
             val shape = RoundedCornerShape(17.dp)
             Box(
                 modifier = Modifier
@@ -362,11 +517,11 @@ private fun DayStrip(
                     )
                     .clickable(
                         role = Role.Tab,
-                        onClickLabel = "Show $description",
+                        onClickLabel = showDayLabel,
                         onClick = { onSelect(slot.date) },
                     )
                     .semantics {
-                        contentDescription = "$description${if (selected) ", selected" else ""}"
+                        contentDescription = "$description${if (selected) ", $selectedLabel" else ""}"
                         this.selected = selected
                     },
                 contentAlignment = Alignment.TopCenter,
@@ -377,7 +532,7 @@ private fun DayStrip(
                 ) {
                     Spacer(Modifier.height(9.dp))
                     Text(
-                        text = slot.date.dayOfWeek.name.take(3),
+                        text = slot.date.format(weekdayFormatter),
                         color = Color.Black,
                         fontSize = 12.sp,
                         lineHeight = 16.sp,
@@ -410,6 +565,19 @@ private fun LessonsList(
     modifier: Modifier = Modifier,
 ) {
     val lessons = day?.lessons.orEmpty()
+    val dayType = day?.dayType.orEmpty().trim().lowercase(Locale.ROOT)
+    val emptyTitle = when {
+        !isLoaded -> stringResource(R.string.timetable_loading)
+        dayType in setOf("holiday", "celebration", "directorday", "director day") ->
+            stringResource(R.string.timetable_holiday)
+        dayType == "weekend" -> stringResource(R.string.timetable_weekend)
+        else -> stringResource(R.string.timetable_empty_title)
+    }
+    val emptyMessage = when {
+        !isLoaded -> stringResource(R.string.timetable_unavailable)
+        !day?.dayDescription.isNullOrBlank() -> day?.dayDescription.orEmpty()
+        else -> stringResource(R.string.timetable_empty_message)
+    }
     LazyColumn(
         modifier = modifier.fillMaxWidth(),
         contentPadding = PaddingValues(top = 13.dp, end = 16.dp, bottom = 126.dp),
@@ -426,11 +594,22 @@ private fun LessonsList(
                     color = Color.White,
                     shadowElevation = 2.dp,
                 ) {
-                    Box(contentAlignment = Alignment.Center) {
+                    Column(
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
+                    ) {
                         Text(
-                            text = if (isLoaded) "No lessons" else "Timetable unavailable · Pull to refresh",
+                            text = emptyTitle,
+                            color = Color.Black,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                        Text(
+                            text = emptyMessage,
                             color = MutedText,
-                            fontSize = 15.sp,
+                            fontSize = 13.sp,
+                            lineHeight = 17.sp,
                         )
                     }
                 }
@@ -448,9 +627,19 @@ private fun LessonRow(
     lesson: ScheduledLesson,
     onClick: () -> Unit,
 ) {
-    val hasTopic = !lesson.theme.isNullOrBlank()
-    val hasChange = lesson.changeKind != LessonChangeKind.NONE || !lesson.changeDescription.isNullOrBlank()
-    val rowHeight = if (hasTopic || hasChange) 83.dp else 68.dp
+    val subjectName = lesson.localizedSubjectName()
+    val detailDescription = stringResource(
+        R.string.timetable_open_lesson_detail,
+        subjectName,
+        lesson.formattedTimeRange(),
+    )
+    val metadata = listOfNotNull(
+        lesson.roomAbbrev ?: lesson.roomName,
+        lesson.teacherName ?: lesson.teacherAbbrev,
+        lesson.groups.takeIf(List<String>::isNotEmpty)?.joinToString(", "),
+    )
+    val hasExtras = !lesson.theme.isNullOrBlank() || lesson.hasHomework || lesson.changeKind != LessonChangeKind.NONE
+    val rowHeight = if (hasExtras) 102.dp else 76.dp
     val isCanceled = lesson.changeKind == LessonChangeKind.CANCELED
     Row(
         modifier = Modifier
@@ -463,9 +652,10 @@ private fun LessonRow(
             modifier = Modifier
                 .weight(1f)
                 .fillMaxHeight()
+                .alpha(if (isCanceled) 0.68f else 1f)
                 .semantics {
                     contentDescription = buildString {
-                        append("Open ${lesson.subjectDisplayName()} lesson details, ${lesson.formattedTimeRange()}")
+                        append(detailDescription)
                         lesson.changeDescription?.takeIf { it.isNotBlank() }?.let { append(", $it") }
                     }
                 },
@@ -485,7 +675,7 @@ private fun LessonRow(
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
-                        text = lesson.subjectAbbrev ?: lesson.subjectDisplayName().take(2),
+                        text = lesson.subjectAbbrev ?: subjectName.take(2),
                         color = AccentTeal,
                         fontSize = 17.sp,
                         lineHeight = 21.sp,
@@ -498,64 +688,68 @@ private fun LessonRow(
                     verticalArrangement = Arrangement.Center,
                 ) {
                     Text(
-                        text = lesson.subjectDisplayName(),
+                        text = subjectName,
                         color = Color.Black,
                         fontSize = 18.sp,
                         lineHeight = 22.sp,
                         fontWeight = FontWeight.SemiBold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
+                        textDecoration = if (isCanceled) TextDecoration.LineThrough else TextDecoration.None,
                     )
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(5.dp),
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.MeetingRoom,
-                            contentDescription = null,
-                            tint = MutedText,
-                            modifier = Modifier.size(15.dp),
-                        )
+                    if (metadata.isNotEmpty()) {
                         Text(
-                            text = lesson.roomAbbrev ?: lesson.roomName.orEmpty(),
+                            text = metadata.joinToString(" · "),
                             color = MutedText,
-                            fontSize = 15.sp,
-                            lineHeight = 18.sp,
-                            maxLines = 1,
-                        )
-                        Icon(
-                            imageVector = Icons.Default.Person,
-                            contentDescription = null,
-                            tint = MutedText,
-                            modifier = Modifier.size(16.dp),
-                        )
-                        Text(
-                            text = lesson.teacherName ?: lesson.teacherAbbrev.orEmpty(),
-                            color = MutedText,
-                            fontSize = 15.sp,
-                            lineHeight = 18.sp,
+                            fontSize = 14.sp,
+                            lineHeight = 17.sp,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
                     }
-                    (lesson.changeDescription?.takeIf { it.isNotBlank() }
-                        ?: lesson.theme?.takeIf { it.isNotBlank() })?.let { secondaryText ->
+                    lesson.theme?.takeIf { it.isNotBlank() }?.let { topic ->
                         Text(
-                            text = secondaryText,
-                            color = when (lesson.changeKind) {
-                                LessonChangeKind.CANCELED -> Color(0xFFD95461)
-                                LessonChangeKind.NONE -> MutedText
-                                else -> Color(0xFFD98F10)
-                            },
+                            text = topic,
+                            color = MutedText,
                             fontSize = 13.sp,
                             lineHeight = 17.sp,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
                     }
+                    if (lesson.changeKind != LessonChangeKind.NONE || lesson.hasHomework) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            if (lesson.changeKind != LessonChangeKind.NONE) {
+                                LessonStatusChip(
+                                    text = lesson.localizedChangeLabel(),
+                                    color = lesson.changeKind.color(),
+                                )
+                            }
+                            if (lesson.hasHomework) {
+                                LessonStatusChip(
+                                    text = stringResource(R.string.timetable_detail_homework),
+                                    color = AccentTeal,
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun LessonStatusChip(text: String, color: Color) {
+    Surface(shape = RoundedCornerShape(50), color = color.copy(alpha = 0.12f)) {
+        Text(
+            text = text,
+            modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp),
+            color = color,
+            fontSize = 11.sp,
+            lineHeight = 14.sp,
+            fontWeight = FontWeight.SemiBold,
+        )
     }
 }
 
@@ -594,13 +788,30 @@ private fun LessonTimeRail(
 
 @Composable
 private fun LessonDetailSheet(lesson: ScheduledLesson) {
+    val subjectName = lesson.localizedSubjectName()
+    val teacher = lesson.teacherName ?: lesson.teacherAbbrev
+    val room = lesson.roomName ?: lesson.roomAbbrev
     val hasTopic = !lesson.theme.isNullOrBlank()
-    val hasChange = !lesson.changeDescription.isNullOrBlank()
-    val detailRowCount = 2 + (if (hasTopic) 1 else 0) + (if (hasChange) 1 else 0)
+    val changeDetails = listOfNotNull(
+        lesson.change?.changeSubject?.takeIf(String::isNotBlank)?.let { R.string.timetable_change_subject to it },
+        lesson.change?.day?.takeIf(String::isNotBlank)?.let { R.string.timetable_change_day to it },
+        lesson.change?.hours?.takeIf(String::isNotBlank)?.let { R.string.timetable_change_hours to it },
+        lesson.change?.time?.takeIf(String::isNotBlank)?.let { R.string.timetable_change_time to it },
+        (lesson.change?.typeName ?: lesson.change?.typeAbbrev)
+            ?.takeIf(String::isNotBlank)
+            ?.let { R.string.timetable_change_type to it },
+    )
+    val detailRowCount = listOfNotNull(teacher, room).size +
+        (if (lesson.groups.isNotEmpty()) 1 else 0) +
+        (if (hasTopic) 1 else 0) +
+        (if (lesson.hasHomework) 1 else 0) +
+        (if (!lesson.changeDescription.isNullOrBlank()) 1 else 0) +
+        changeDetails.size
+    val sheetHeight = (250 + detailRowCount * 45).coerceIn(390, 700).dp
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(452.dp)
+            .height(sheetHeight)
             .clip(RoundedCornerShape(48.dp))
             .background(
                 Brush.verticalGradient(
@@ -636,7 +847,7 @@ private fun LessonDetailSheet(lesson: ScheduledLesson) {
             )
             Spacer(Modifier.height(16.dp))
             Text(
-                text = lesson.subjectDisplayName(),
+                text = subjectName,
                 color = Color.Black,
                 fontSize = 20.sp,
                 lineHeight = 26.sp,
@@ -651,7 +862,7 @@ private fun LessonDetailSheet(lesson: ScheduledLesson) {
                     .clip(RoundedCornerShape(20.dp))
                     .background(Brush.horizontalGradient(listOf(HeroStart, HeroEnd)))
                     .semantics {
-                        contentDescription = "${lesson.subjectDisplayName()}, ${lesson.formattedTimeRange()}"
+                        contentDescription = "$subjectName, ${lesson.formattedTimeRange()}"
                     },
                 contentAlignment = Alignment.CenterStart,
             ) {
@@ -665,7 +876,7 @@ private fun LessonDetailSheet(lesson: ScheduledLesson) {
                     )
                     Spacer(Modifier.height(5.dp))
                     Text(
-                        text = lesson.subjectDisplayName(),
+                        text = subjectName,
                         color = Color.White,
                         fontSize = 22.sp,
                         lineHeight = 28.sp,
@@ -687,28 +898,53 @@ private fun LessonDetailSheet(lesson: ScheduledLesson) {
                     modifier = Modifier.padding(start = 20.dp, top = 13.dp, end = 20.dp, bottom = 11.dp),
                     verticalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
-                    DetailRow(
-                        icon = { Icon(Icons.Default.Person, contentDescription = null) },
-                        label = "Teacher",
-                        value = lesson.teacherName ?: lesson.teacherAbbrev ?: "—",
-                    )
-                    DetailRow(
-                        icon = { Icon(Icons.Outlined.MeetingRoom, contentDescription = null) },
-                        label = "Room",
-                        value = lesson.roomName ?: lesson.roomAbbrev ?: "—",
-                    )
+                    teacher?.let {
+                        DetailRow(
+                            icon = { Icon(Icons.Default.Person, contentDescription = null) },
+                            label = stringResource(R.string.timetable_detail_teacher),
+                            value = it,
+                        )
+                    }
+                    room?.let {
+                        DetailRow(
+                            icon = { Icon(Icons.Outlined.MeetingRoom, contentDescription = null) },
+                            label = stringResource(R.string.timetable_detail_room),
+                            value = it,
+                        )
+                    }
+                    if (lesson.groups.isNotEmpty()) {
+                        DetailRow(
+                            icon = { Icon(Icons.Default.Person, contentDescription = null) },
+                            label = stringResource(R.string.timetable_detail_group),
+                            value = lesson.groups.joinToString(", "),
+                        )
+                    }
                     lesson.theme?.takeIf { it.isNotBlank() }?.let { topic ->
                         DetailRow(
                             icon = { Icon(Icons.AutoMirrored.Outlined.MenuBook, contentDescription = null) },
-                            label = "Topic",
+                            label = stringResource(R.string.timetable_detail_topic),
                             value = topic,
+                        )
+                    }
+                    if (lesson.hasHomework) {
+                        DetailRow(
+                            icon = { Icon(Icons.AutoMirrored.Outlined.MenuBook, contentDescription = null) },
+                            label = stringResource(R.string.timetable_detail_homework),
+                            value = stringResource(R.string.timetable_detail_homework_assigned),
                         )
                     }
                     lesson.changeDescription?.takeIf { it.isNotBlank() }?.let { change ->
                         DetailRow(
                             icon = { Icon(Icons.Default.Info, contentDescription = null) },
-                            label = "Change",
+                            label = lesson.localizedChangeLabel(),
                             value = change,
+                        )
+                    }
+                    changeDetails.forEach { (label, value) ->
+                        DetailRow(
+                            icon = { Icon(Icons.Default.Info, contentDescription = null) },
+                            label = stringResource(label),
+                            value = value,
                         )
                     }
                 }
@@ -794,17 +1030,20 @@ private fun TimetableBackgroundGlow() {
 }
 
 private fun timetableDaySlots(week: TimetableWeek?, monday: LocalDate): List<TimetableDaySlot> {
-    val byDate = week?.days.orEmpty().mapNotNull { day ->
-        day.date?.let { date -> runCatching { LocalDate.parse(date) }.getOrNull()?.let { it to day } }
-    }.toMap()
-    val byWeekday = week?.days.orEmpty().associateBy { it.dayOfWeek }
-    return (0L..4L).map { offset ->
-        val date = monday.plusDays(offset)
-        TimetableDaySlot(
-            date = date,
-            day = byDate[date] ?: byWeekday[date.dayOfWeek.value],
-        )
+    val days = week?.days.orEmpty()
+    if (days.isEmpty()) {
+        return (0L..4L).map { offset -> TimetableDaySlot(monday.plusDays(offset), null) }
     }
+    return days.mapIndexed { index, day ->
+        val parsed = TimetableDates.parseApiDate(day.date)
+        val fallbackOffset = when (day.dayOfWeek) {
+            in 1..7 -> day.dayOfWeek - 1L
+            else -> index.toLong().coerceIn(0L, 6L)
+        }
+        TimetableDaySlot(parsed ?: monday.plusDays(fallbackOffset), day)
+    }
+        .distinctBy(TimetableDaySlot::date)
+        .sortedBy(TimetableDaySlot::date)
 }
 
 private fun weekMonday(week: TimetableWeek?): LocalDate {
@@ -812,16 +1051,41 @@ private fun weekMonday(week: TimetableWeek?): LocalDate {
     return TimetableDates.monday(parsed ?: TimetableDates.today())
 }
 
-private fun formatWeekRange(monday: LocalDate): String {
+private fun ScheduledDay.isSchoolDay(): Boolean = when (dayType.trim().lowercase(Locale.ROOT)) {
+    "holiday", "celebration", "directorday", "director day", "weekend" -> false
+    else -> true
+}
+
+private fun formatWeekRange(monday: LocalDate, locale: Locale): String {
     val friday = monday.plusDays(4)
+    val monthFormatter = DateTimeFormatter.ofPattern("MMM", locale)
     return if (monday.month == friday.month) {
-        "${monday.format(WeekMonthFormatter)} ${monday.dayOfMonth}–${friday.dayOfMonth}"
+        "${monday.dayOfMonth}–${friday.dayOfMonth} ${monday.format(monthFormatter)}"
     } else {
-        "${monday.format(WeekMonthFormatter)} ${monday.dayOfMonth}–${friday.format(WeekMonthFormatter)} ${friday.dayOfMonth}"
+        "${monday.dayOfMonth} ${monday.format(monthFormatter)} – ${friday.dayOfMonth} ${friday.format(monthFormatter)}"
     }
 }
 
-private fun ScheduledLesson.subjectDisplayName(): String = subjectName ?: subjectAbbrev ?: "Lesson"
+@Composable
+private fun ScheduledLesson.localizedSubjectName(): String =
+    subjectName ?: subjectAbbrev ?: stringResource(R.string.timetable_lesson_unknown)
+
+@Composable
+private fun ScheduledLesson.localizedChangeLabel(): String = when (changeKind) {
+    LessonChangeKind.NONE -> stringResource(R.string.timetable_detail_change)
+    LessonChangeKind.CANCELED -> stringResource(R.string.timetable_change_canceled)
+    LessonChangeKind.SUBSTITUTION -> stringResource(R.string.timetable_change_substitution)
+    LessonChangeKind.ROOM_CHANGED -> stringResource(R.string.timetable_change_room)
+    LessonChangeKind.ADDED -> stringResource(R.string.timetable_change_added)
+}
+
+private fun LessonChangeKind.color(): Color = when (this) {
+    LessonChangeKind.NONE -> AccentTeal
+    LessonChangeKind.CANCELED -> Color(0xFFD95461)
+    LessonChangeKind.SUBSTITUTION -> Color(0xFFD98F10)
+    LessonChangeKind.ROOM_CHANGED -> Color(0xFF3578C7)
+    LessonChangeKind.ADDED -> Color(0xFF1DA565)
+}
 
 private fun ScheduledLesson.formattedTimeRange(): String =
     listOf(hour.beginTime.clockDisplay(), hour.endTime.clockDisplay())

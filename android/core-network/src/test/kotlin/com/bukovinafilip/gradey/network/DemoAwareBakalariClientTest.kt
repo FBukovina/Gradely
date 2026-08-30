@@ -65,18 +65,37 @@ class DemoAwareBakalariClientTest {
         assertThat(live.loginCount).isEqualTo(1)
         assertThat(demo.loginCount).isEqualTo(0)
     }
+
+    @Test
+    fun `demo token text on another host cannot route fixture refresh`() = runTest {
+        val live = LoginRecordingClient("live")
+        val demo = LoginRecordingClient("demo")
+        val client = DemoAwareBakalariClient(liveClient = live, demoClient = demo)
+
+        val response = client.refreshToken(
+            baseURL = "https://school.example.cz",
+            refreshToken = BakalariDemoAccount.refreshToken,
+        )
+
+        assertThat(response.accessToken).isEqualTo("live")
+        assertThat(live.refreshCount).isEqualTo(1)
+        assertThat(demo.refreshCount).isEqualTo(0)
+    }
 }
 
 private class LoginRecordingClient(private val accessToken: String) : BakalariClient {
     var loginCount = 0
+    var refreshCount = 0
 
     override suspend fun login(baseURL: String, username: String, password: String): LoginResponse {
         loginCount += 1
         return LoginResponse(accessToken, "refresh", "Bearer", 3_600)
     }
 
-    override suspend fun refreshToken(baseURL: String, refreshToken: String): LoginResponse =
-        error("Not used")
+    override suspend fun refreshToken(baseURL: String, refreshToken: String): LoginResponse {
+        refreshCount += 1
+        return LoginResponse(accessToken, "refresh", "Bearer", 3_600)
+    }
 
     override suspend fun fetchMarks(baseURL: String, accessToken: String): MarksResponse =
         error("Not used")

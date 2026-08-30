@@ -37,7 +37,7 @@ object BakalariDemoAccount {
         val normalized = runCatching { SchoolURLNormalizer.normalizedBaseURL(baseURL) }.getOrNull()
             ?: return false
         val host = runCatching { URI(normalized).host?.lowercase() }.getOrNull() ?: return false
-        return host == "demo" || host == schoolURL
+        return host == schoolURL
     }
 
     fun matches(baseURL: String, username: String, password: String): Boolean =

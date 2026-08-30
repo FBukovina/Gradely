@@ -1184,6 +1184,24 @@ private fun GradeyApp(
         }
     }
 
+    suspend fun signOutAllGradeyState() {
+        disconnectStravaCZ()
+        signOutGradeyIdentity()
+        disconnectSchool()
+        clearLinkedAccountsForLocalMode()
+        try {
+            CredentialManager.create(context).clearCredentialState(ClearCredentialStateRequest())
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: Throwable) {
+            // Credential Manager cleanup must not undo completed local sign-out.
+        }
+        graph.guestModeStore.isEnabled = false
+        isGuestMode = false
+        account = null
+        phase = AppPhase.SIGNED_OUT
+    }
+
     suspend fun exportGradeyData() {
         if (isExportingData || isDeletingAccount || account == null) return
         isExportingData = true
@@ -1649,6 +1667,27 @@ private fun GradeyApp(
                     directoryErrorMessage = schoolDirectoryError,
                     onLoadDirectory = { scope.launch { loadSchoolDirectory() } },
                     onRetryDirectory = { scope.launch { loadSchoolDirectory(forceRefresh = true) } },
+                    onOpenHelp = {
+                        val language = if (appLanguage.pickerLanguage == AppLanguage.CZECH) "cs" else "en"
+                        runCatching {
+                            activity.startActivity(
+                                Intent(
+                                    Intent.ACTION_VIEW,
+                                    Uri.parse("https://help.bukovinafilip.com/$language"),
+                                ),
+                            )
+                        }
+                    },
+                    onOpenGitHub = {
+                        runCatching {
+                            activity.startActivity(
+                                Intent(
+                                    Intent.ACTION_VIEW,
+                                    Uri.parse("https://github.com/FBukovina/Gradely"),
+                                ),
+                            )
+                        }
+                    },
                     onLogin = { school, username, password ->
                         launchSchoolLogin {
                             graph.schoolRepository.login(school, username, password)
@@ -2281,6 +2320,56 @@ private fun GradeyApp(
                                 onboardingProgress = restarted
                             }
                         },
+                        gradeyAccountID = account?.id,
+                        revenueCatAppUserID = supportService.diagnosticAppUserID,
+                        revenueCatOriginalAppUserID = supportService.diagnosticOriginalAppUserID,
+                        linkedSchoolAccountID = activeLinkedAccountID,
+                        isGuestMode = isGuestMode,
+                        hasCompletedOnboardingV2 = graph.onboardingProgressStore.isCompleted,
+                        onboardingProgress = graph.onboardingProgressStore.loadProgress()?.let { progress ->
+                            "${progress.journey.name}/${progress.step.name}"
+                        },
+                        onDebugRestartNewUser = {
+                            val restarted = OnboardingProgress.initial(OnboardingJourney.NEW_USER)
+                            graph.onboardingProgressStore.restart(restarted)
+                            isSupportPresented = false
+                            onboardingProgress = restarted
+                        },
+                        onDebugRestartUpgrade = {
+                            val restarted = OnboardingProgress.initial(OnboardingJourney.UPGRADE)
+                            graph.onboardingProgressStore.restart(restarted)
+                            isSupportPresented = false
+                            onboardingProgress = restarted
+                        },
+                        onDebugResetAsNewUser = {
+                            scope.launch {
+                                try {
+                                    signOutAllGradeyState()
+                                    graph.cache?.clearAll()
+                                    val restarted = OnboardingProgress.initial(OnboardingJourney.NEW_USER)
+                                    graph.onboardingProgressStore.restart(restarted)
+                                    isSupportPresented = false
+                                    onboardingProgress = restarted
+                                } catch (error: CancellationException) {
+                                    throw error
+                                } catch (error: Throwable) {
+                                    supportMessage = error.userFacingMessage(context)
+                                }
+                            }
+                        },
+                        onDebugSignOut = {
+                            scope.launch {
+                                try {
+                                    signOutAllGradeyState()
+                                    isSupportPresented = false
+                                    selectedTab = AppTab.TODAY
+                                } catch (error: CancellationException) {
+                                    throw error
+                                } catch (error: Throwable) {
+                                    supportMessage = error.userFacingMessage(context)
+                                }
+                            }
+                        },
                         modifier = standardScreenModifier,
                     )
                 } else {
@@ -2436,21 +2525,7 @@ private fun GradeyApp(
                                     return@launch
                                 }
 
-                                disconnectStravaCZ()
-                                signOutGradeyIdentity()
-                                disconnectSchool()
-                                clearLinkedAccountsForLocalMode()
-                                try {
-                                    CredentialManager.create(context).clearCredentialState(ClearCredentialStateRequest())
-                                } catch (error: CancellationException) {
-                                    throw error
-                                } catch (_: Throwable) {
-                                    // Credential Manager cleanup must not undo completed local sign-out.
-                                }
-                                graph.guestModeStore.isEnabled = false
-                                isGuestMode = false
-                                account = null
-                                phase = AppPhase.SIGNED_OUT
+                                signOutAllGradeyState()
                             } catch (error: CancellationException) {
                                 throw error
                             } catch (error: Throwable) {

@@ -42,6 +42,8 @@ class BakalariLoginTest {
         ).isTrue()
         assertThat(BakalariDemoAccount.matches("demo.gradely.app", "apple-review", "wrong"))
             .isFalse()
+        assertThat(BakalariDemoAccount.matches("https://demo", "apple-review", "GradelyDemo2026!"))
+            .isFalse()
         assertThat(BakalariDemoAccount.matches("demo.gradely.app.evil", "apple-review", "GradelyDemo2026!"))
             .isFalse()
         assertThat(BakalariDemoAccount.matches("school.example.cz", "apple-review", "GradelyDemo2026!"))

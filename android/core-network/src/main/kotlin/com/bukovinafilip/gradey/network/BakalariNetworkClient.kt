@@ -310,27 +310,27 @@ class DemoAwareBakalariClient(
     }
 
     override suspend fun refreshToken(baseURL: String, refreshToken: String): LoginResponse =
-        if (BakalariDemoAccount.isDemoBaseURL(baseURL) || BakalariDemoAccount.isDemoToken(refreshToken)) demoClient.refreshToken(baseURL, refreshToken)
+        if (BakalariDemoAccount.isDemoBaseURL(baseURL)) demoClient.refreshToken(baseURL, refreshToken)
         else liveClient.refreshToken(baseURL, refreshToken)
 
     override suspend fun fetchMarks(baseURL: String, accessToken: String): MarksResponse =
-        if (BakalariDemoAccount.isDemoBaseURL(baseURL) || BakalariDemoAccount.isDemoToken(accessToken)) demoClient.fetchMarks(baseURL, accessToken)
+        if (BakalariDemoAccount.isDemoBaseURL(baseURL)) demoClient.fetchMarks(baseURL, accessToken)
         else liveClient.fetchMarks(baseURL, accessToken)
 
     override suspend fun fetchAbsences(baseURL: String, accessToken: String): AbsenceResponse =
-        if (BakalariDemoAccount.isDemoBaseURL(baseURL) || BakalariDemoAccount.isDemoToken(accessToken)) demoClient.fetchAbsences(baseURL, accessToken)
+        if (BakalariDemoAccount.isDemoBaseURL(baseURL)) demoClient.fetchAbsences(baseURL, accessToken)
         else liveClient.fetchAbsences(baseURL, accessToken)
 
     override suspend fun fetchUser(baseURL: String, accessToken: String): UserResponse =
-        if (BakalariDemoAccount.isDemoBaseURL(baseURL) || BakalariDemoAccount.isDemoToken(accessToken)) demoClient.fetchUser(baseURL, accessToken)
+        if (BakalariDemoAccount.isDemoBaseURL(baseURL)) demoClient.fetchUser(baseURL, accessToken)
         else liveClient.fetchUser(baseURL, accessToken)
 
     override suspend fun fetchTimetable(baseURL: String, accessToken: String, date: String): TimetableResponse =
-        if (BakalariDemoAccount.isDemoBaseURL(baseURL) || BakalariDemoAccount.isDemoToken(accessToken)) demoClient.fetchTimetable(baseURL, accessToken, date)
+        if (BakalariDemoAccount.isDemoBaseURL(baseURL)) demoClient.fetchTimetable(baseURL, accessToken, date)
         else liveClient.fetchTimetable(baseURL, accessToken, date)
 
     override suspend fun predictSubject(baseURL: String, accessToken: String, subject: Subject, markText: String, weight: Int): Subject =
-        if (BakalariDemoAccount.isDemoBaseURL(baseURL) || BakalariDemoAccount.isDemoToken(accessToken)) demoClient.predictSubject(baseURL, accessToken, subject, markText, weight)
+        if (BakalariDemoAccount.isDemoBaseURL(baseURL)) demoClient.predictSubject(baseURL, accessToken, subject, markText, weight)
         else liveClient.predictSubject(baseURL, accessToken, subject, markText, weight)
 }
 

@@ -1,5 +1,7 @@
 package com.bukovinafilip.gradey.feature.account
 
+import android.content.ClipData
+import android.content.ClipboardManager
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -29,6 +31,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -74,12 +77,29 @@ fun SupportScreen(
     onClearCache: () -> Unit,
     onRestartOnboarding: () -> Unit,
     onOpenDeveloperInstagram: () -> Unit = {},
+    gradeyAccountID: String? = null,
+    revenueCatAppUserID: String? = null,
+    revenueCatOriginalAppUserID: String? = null,
+    linkedSchoolAccountID: String? = null,
+    isGuestMode: Boolean? = null,
+    hasCompletedOnboardingV2: Boolean? = null,
+    onboardingProgress: String? = null,
+    onDebugRestartNewUser: (() -> Unit)? = null,
+    onDebugRestartUpgrade: (() -> Unit)? = null,
+    onDebugResetAsNewUser: (() -> Unit)? = null,
+    onDebugSignOut: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
+    val context = LocalContext.current
+    val debugModeStore = remember(context.applicationContext) {
+        GradeyDebugModeStore(context.applicationContext)
+    }
     var selectedInterval by remember { mutableStateOf(SupportBillingInterval.MONTHLY) }
     var showCredits by remember { mutableStateOf(false) }
     var versionTapCount by remember { mutableIntStateOf(0) }
-    var debugUnlocked by remember { mutableStateOf(false) }
+    var debugUnlocked by remember { mutableStateOf(debugModeStore.isEnabled) }
+    var copiedDebugField by remember { mutableStateOf<String?>(null) }
+    var pendingDebugAction by remember { mutableStateOf<DebugAction?>(null) }
 
     BackHandler(onBack = onBack)
     LaunchedEffect(Unit) { onReload() }
@@ -294,8 +314,9 @@ fun SupportScreen(
                     }
                     TextButton(
                         onClick = {
-                            versionTapCount += 1
-                            if (versionTapCount >= DEBUG_UNLOCK_TAPS) debugUnlocked = true
+                            val result = debugModeStore.registerVersionTap(versionTapCount)
+                            versionTapCount = result.tapCount
+                            if (result.unlocked) debugUnlocked = true
                         },
                         modifier = Modifier.fillMaxWidth(),
                     ) {
@@ -312,11 +333,130 @@ fun SupportScreen(
                             stringResource(R.string.support_debug_message),
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
-                        OutlinedButton(onClick = onClearCache, modifier = Modifier.fillMaxWidth()) {
+
+                        Text(
+                            stringResource(R.string.support_debug_diagnostics),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                        DebugCopyableValue(
+                            label = stringResource(R.string.support_debug_gradey_id),
+                            value = gradeyAccountID,
+                            onCopy = { label, value ->
+                                context.getSystemService(ClipboardManager::class.java)
+                                    ?.setPrimaryClip(ClipData.newPlainText(label, value))
+                                copiedDebugField = label
+                            },
+                        )
+                        DebugCopyableValue(
+                            label = stringResource(R.string.support_debug_revenuecat_id),
+                            value = revenueCatAppUserID,
+                            onCopy = { label, value ->
+                                context.getSystemService(ClipboardManager::class.java)
+                                    ?.setPrimaryClip(ClipData.newPlainText(label, value))
+                                copiedDebugField = label
+                            },
+                        )
+                        DebugCopyableValue(
+                            label = stringResource(R.string.support_debug_revenuecat_original_id),
+                            value = revenueCatOriginalAppUserID,
+                            onCopy = { label, value ->
+                                context.getSystemService(ClipboardManager::class.java)
+                                    ?.setPrimaryClip(ClipData.newPlainText(label, value))
+                                copiedDebugField = label
+                            },
+                        )
+                        DebugCopyableValue(
+                            label = stringResource(R.string.support_debug_linked_school_id),
+                            value = linkedSchoolAccountID,
+                            onCopy = { label, value ->
+                                context.getSystemService(ClipboardManager::class.java)
+                                    ?.setPrimaryClip(ClipData.newPlainText(label, value))
+                                copiedDebugField = label
+                            },
+                        )
+                        MetadataRow(
+                            stringResource(R.string.support_debug_guest_mode),
+                            debugBooleanValue(isGuestMode),
+                        )
+                        MetadataRow(
+                            stringResource(R.string.support_debug_onboarding_v2),
+                            debugBooleanValue(hasCompletedOnboardingV2),
+                        )
+                        MetadataRow(
+                            stringResource(R.string.support_debug_onboarding_progress),
+                            onboardingProgress?.trim()?.takeIf(String::isNotEmpty)
+                                ?: stringResource(R.string.support_debug_unavailable),
+                        )
+                        copiedDebugField?.let { copiedField ->
+                            Text(
+                                stringResource(R.string.support_debug_copied, copiedField),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+
+                        Text(
+                            stringResource(R.string.support_debug_actions),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                        if (onDebugRestartNewUser == null && onDebugRestartUpgrade == null) {
+                            OutlinedButton(
+                                onClick = { pendingDebugAction = DebugAction.RESTART_ONBOARDING },
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Text(stringResource(R.string.support_debug_restart_onboarding))
+                            }
+                        } else {
+                            onDebugRestartNewUser?.let {
+                                Button(
+                                    onClick = { pendingDebugAction = DebugAction.RESTART_NEW_USER },
+                                    modifier = Modifier.fillMaxWidth(),
+                                ) {
+                                    Text(stringResource(R.string.support_debug_restart_new_user))
+                                }
+                            }
+                            onDebugRestartUpgrade?.let {
+                                OutlinedButton(
+                                    onClick = { pendingDebugAction = DebugAction.RESTART_UPGRADE },
+                                    modifier = Modifier.fillMaxWidth(),
+                                ) {
+                                    Text(stringResource(R.string.support_debug_restart_upgrade))
+                                }
+                            }
+                        }
+                        onDebugResetAsNewUser?.let {
+                            OutlinedButton(
+                                onClick = { pendingDebugAction = DebugAction.RESET_AS_NEW_USER },
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Text(stringResource(R.string.support_debug_reset_new_user))
+                            }
+                        }
+                        onDebugSignOut?.let {
+                            OutlinedButton(
+                                onClick = { pendingDebugAction = DebugAction.SIGN_OUT },
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Text(stringResource(R.string.support_debug_sign_out))
+                            }
+                        }
+                        OutlinedButton(
+                            onClick = { pendingDebugAction = DebugAction.CLEAR_CACHE },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
                             Text(stringResource(R.string.support_debug_clear_cache))
                         }
-                        OutlinedButton(onClick = onRestartOnboarding, modifier = Modifier.fillMaxWidth()) {
-                            Text(stringResource(R.string.support_debug_restart_onboarding))
+                        TextButton(
+                            onClick = {
+                                debugModeStore.isEnabled = false
+                                debugUnlocked = false
+                                versionTapCount = 0
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text(stringResource(R.string.support_debug_disable))
                         }
                     }
                 }
@@ -350,6 +490,86 @@ fun SupportScreen(
             },
         )
     }
+
+    pendingDebugAction?.let { action ->
+        val title = when (action) {
+            DebugAction.RESTART_ONBOARDING,
+            DebugAction.RESTART_NEW_USER -> stringResource(R.string.support_debug_restart_new_user)
+            DebugAction.RESTART_UPGRADE -> stringResource(R.string.support_debug_restart_upgrade)
+            DebugAction.RESET_AS_NEW_USER -> stringResource(R.string.support_debug_reset_new_user)
+            DebugAction.SIGN_OUT -> stringResource(R.string.support_debug_sign_out)
+            DebugAction.CLEAR_CACHE -> stringResource(R.string.support_debug_clear_cache)
+        }
+        val messageText = when (action) {
+            DebugAction.RESTART_ONBOARDING -> stringResource(R.string.support_debug_restart_onboarding_confirm_message)
+            DebugAction.RESTART_NEW_USER -> stringResource(R.string.support_debug_restart_new_user_confirm_message)
+            DebugAction.RESTART_UPGRADE -> stringResource(R.string.support_debug_restart_upgrade_confirm_message)
+            DebugAction.RESET_AS_NEW_USER -> stringResource(R.string.support_debug_reset_new_user_confirm_message)
+            DebugAction.SIGN_OUT -> stringResource(R.string.support_debug_sign_out_confirm_message)
+            DebugAction.CLEAR_CACHE -> stringResource(R.string.support_debug_clear_cache_confirm_message)
+        }
+        AlertDialog(
+            onDismissRequest = { pendingDebugAction = null },
+            title = { Text(title) },
+            text = { Text(messageText) },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        when (action) {
+                            DebugAction.RESTART_ONBOARDING -> onRestartOnboarding()
+                            DebugAction.RESTART_NEW_USER -> onDebugRestartNewUser?.invoke()
+                            DebugAction.RESTART_UPGRADE -> onDebugRestartUpgrade?.invoke()
+                            DebugAction.RESET_AS_NEW_USER -> onDebugResetAsNewUser?.invoke()
+                            DebugAction.SIGN_OUT -> onDebugSignOut?.invoke()
+                            DebugAction.CLEAR_CACHE -> onClearCache()
+                        }
+                        pendingDebugAction = null
+                    },
+                ) {
+                    Text(stringResource(R.string.support_debug_confirm))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingDebugAction = null }) {
+                    Text(stringResource(R.string.account_cancel))
+                }
+            },
+        )
+    }
+}
+
+@Composable
+private fun DebugCopyableValue(
+    label: String,
+    value: String?,
+    onCopy: (String, String) -> Unit,
+) {
+    val normalizedValue = value?.trim()?.takeIf(String::isNotEmpty)
+    TextButton(
+        onClick = { normalizedValue?.let { onCopy(label, it) } },
+        modifier = Modifier.fillMaxWidth(),
+        enabled = normalizedValue != null,
+        contentPadding = PaddingValues(vertical = GradeySpacing.xs),
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.Start,
+            verticalArrangement = Arrangement.spacedBy(GradeySpacing.xs),
+        ) {
+            Text(label, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                normalizedValue ?: stringResource(R.string.support_debug_unavailable),
+                fontWeight = FontWeight.SemiBold,
+            )
+        }
+    }
+}
+
+@Composable
+private fun debugBooleanValue(value: Boolean?): String = when (value) {
+    true -> stringResource(R.string.support_debug_yes)
+    false -> stringResource(R.string.support_debug_no)
+    null -> stringResource(R.string.support_debug_unavailable)
 }
 
 @Composable
@@ -428,4 +648,11 @@ private fun formatSupportDate(epochMillis: Long): String = DateTimeFormatter
     .withLocale(Locale.getDefault())
     .format(Instant.ofEpochMilli(epochMillis).atZone(ZoneId.systemDefault()))
 
-private const val DEBUG_UNLOCK_TAPS = 7
+private enum class DebugAction {
+    RESTART_ONBOARDING,
+    RESTART_NEW_USER,
+    RESTART_UPGRADE,
+    RESET_AS_NEW_USER,
+    SIGN_OUT,
+    CLEAR_CACHE,
+}

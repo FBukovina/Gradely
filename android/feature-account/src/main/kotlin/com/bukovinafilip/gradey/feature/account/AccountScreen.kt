@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -31,9 +32,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.unit.dp
+import coil3.compose.AsyncImage
+import coil3.compose.LocalPlatformContext
+import coil3.request.ImageRequest
+import coil3.request.crossfade
 import com.bukovinafilip.gradey.model.AgeAttestationKind
 import com.bukovinafilip.gradey.model.AppLanguage
 import com.bukovinafilip.gradey.model.GradeyAccount
@@ -49,6 +57,7 @@ import com.bukovinafilip.gradey.ui.GradeyScreen
 import com.bukovinafilip.gradey.ui.GradeySectionCard
 import com.bukovinafilip.gradey.ui.GradeySpacing
 import com.bukovinafilip.gradey.ui.MetadataRow
+import java.net.URI
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -131,29 +140,11 @@ fun AccountScreen(
         GradeySectionCard(title = stringResource(R.string.account_profile)) {
             Icon(GradeyIcons.User, contentDescription = null)
             account?.let { signedInAccount ->
-                val avatarText = signedInAccount.fullName
-                    ?.trim()
-                    ?.firstOrNull()
-                    ?.uppercase()
-                    ?: signedInAccount.email?.firstOrNull()?.uppercase()
-                    ?: "G"
-                Surface(
-                    modifier = Modifier.size(64.dp),
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.primaryContainer,
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Text(
-                            text = avatarText,
-                            style = MaterialTheme.typography.headlineMedium,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer,
-                        )
-                    }
-                }
+                ProfileAvatar(signedInAccount)
                 MetadataRow(
                     stringResource(R.string.profile_avatar),
                     stringResource(
-                        if (signedInAccount.avatarURL.isNullOrBlank()) {
+                        if (normalizedProfileAvatarUrl(signedInAccount.avatarURL) == null) {
                             R.string.profile_avatar_initials
                         } else {
                             R.string.profile_avatar_connected
@@ -689,6 +680,96 @@ fun AccountScreen(
                 }
             },
         )
+    }
+}
+
+private enum class ProfileAvatarLoadState {
+    INITIALS,
+    LOADING,
+    LOADED,
+    FAILED,
+}
+
+@Composable
+private fun ProfileAvatar(account: GradeyAccount) {
+    val avatarUrl = normalizedProfileAvatarUrl(account.avatarURL)
+    var loadState by remember(avatarUrl) {
+        mutableStateOf(
+            if (avatarUrl == null) ProfileAvatarLoadState.INITIALS else ProfileAvatarLoadState.LOADING,
+        )
+    }
+    val initials = profileAvatarInitials(account.fullName, account.email)
+    val accountLabel = account.fullName?.trim()?.takeIf(String::isNotEmpty)
+        ?: account.email?.trim()?.takeIf(String::isNotEmpty)
+        ?: stringResource(R.string.account_title)
+    val avatarDescription = stringResource(
+        if (loadState == ProfileAvatarLoadState.LOADED) {
+            R.string.profile_avatar_photo_description
+        } else {
+            R.string.profile_avatar_initials_description
+        },
+        accountLabel,
+    )
+
+    Surface(
+        modifier = Modifier
+            .size(64.dp)
+            .clearAndSetSemantics { contentDescription = avatarDescription },
+        shape = CircleShape,
+        color = MaterialTheme.colorScheme.primaryContainer,
+        shadowElevation = 4.dp,
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Text(
+                text = initials,
+                style = MaterialTheme.typography.headlineMedium,
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
+            )
+            if (avatarUrl != null) {
+                AsyncImage(
+                    model = ImageRequest.Builder(LocalPlatformContext.current)
+                        .data(avatarUrl)
+                        .crossfade(true)
+                        .build(),
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop,
+                    onLoading = { loadState = ProfileAvatarLoadState.LOADING },
+                    onSuccess = { loadState = ProfileAvatarLoadState.LOADED },
+                    onError = { loadState = ProfileAvatarLoadState.FAILED },
+                )
+            }
+        }
+    }
+}
+
+internal fun profileAvatarInitials(fullName: String?, email: String?): String {
+    val nameInitials = fullName
+        .orEmpty()
+        .trim()
+        .split(Regex("\\s+"))
+        .asSequence()
+        .filter(String::isNotBlank)
+        .take(2)
+        .mapNotNull { part -> part.firstOrNull()?.toString() }
+        .joinToString("")
+        .uppercase()
+
+    return nameInitials.ifBlank {
+        email
+            ?.trim()
+            ?.firstOrNull()
+            ?.uppercase()
+            ?: "G"
+    }
+}
+
+internal fun normalizedProfileAvatarUrl(value: String?): String? {
+    val candidate = value?.trim()?.takeIf(String::isNotEmpty) ?: return null
+    val uri = runCatching { URI(candidate) }.getOrNull() ?: return null
+    val scheme = uri.scheme?.lowercase()
+    return candidate.takeIf {
+        (scheme == "https" || scheme == "http") && !uri.host.isNullOrBlank()
     }
 }
 

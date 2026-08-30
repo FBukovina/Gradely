@@ -32,8 +32,12 @@ class RevenueCatSupportService {
     private val mutex = Mutex()
     private var packagesByID: Map<String, Package> = emptyMap()
     private var lastEntitlement = SupportEntitlement()
+    private var lastOriginalAppUserID: String? = null
 
     val isConfigured: Boolean get() = Purchases.isConfigured
+    val diagnosticAppUserID: String?
+        get() = if (isConfigured) runCatching { Purchases.sharedInstance.appUserID }.getOrNull() else null
+    val diagnosticOriginalAppUserID: String? get() = lastOriginalAppUserID
 
     suspend fun syncIdentity(accountID: String?): SupportEntitlement = mutex.withLock {
         val purchases = configuredPurchases()
@@ -132,6 +136,7 @@ class RevenueCatSupportService {
     }
 
     private fun entitlement(customerInfo: CustomerInfo): SupportEntitlement {
+        lastOriginalAppUserID = customerInfo.originalAppUserId
         val active = customerInfo.entitlements.active
         val tier = SupportCatalogRules.entitlementTier(active.keys)
         val info = when (tier) {

@@ -23,7 +23,10 @@ import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.Verified
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -36,11 +39,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.bukovinafilip.gradey.domain.DemoData
-import com.bukovinafilip.gradey.domain.SchoolLoginStep
+import androidx.credentials.ClearCredentialStateRequest
+import androidx.credentials.CredentialManager
+import androidx.credentials.CustomCredential
+import androidx.credentials.GetCredentialRequest
 import com.bukovinafilip.gradey.feature.absence.AbsenceScreen
 import com.bukovinafilip.gradey.feature.account.AccountScreen
 import com.bukovinafilip.gradey.feature.auth.GradeyIdLoginScreen
@@ -56,6 +62,11 @@ import com.bukovinafilip.gradey.model.LinkedSchoolAccount
 import com.bukovinafilip.gradey.model.StravaCZMenu
 import com.bukovinafilip.gradey.model.TimetableWeek
 import com.bukovinafilip.gradey.ui.GradeyTheme
+import com.bukovinafilip.gradey.ui.GradeyHero
+import com.bukovinafilip.gradey.ui.GradeyScreen
+import com.bukovinafilip.gradey.ui.GradeySectionCard
+import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 
@@ -95,69 +106,110 @@ private fun GradeyApp(
     graph: com.bukovinafilip.gradey.data.AndroidGradeyGraph,
     initialTab: AppTab,
 ) {
+    val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var phase by remember { mutableStateOf(AppPhase.CHECKING) }
     var selectedTab by remember { mutableStateOf(initialTab) }
     var isLoading by remember { mutableStateOf(false) }
+    var authError by remember { mutableStateOf<String?>(null) }
+    var schoolLoginError by remember { mutableStateOf<String?>(null) }
+    var dataError by remember { mutableStateOf<String?>(null) }
     var account by remember { mutableStateOf<GradeyAccount?>(null) }
     var linkedAccounts by remember { mutableStateOf<List<LinkedSchoolAccount>>(emptyList()) }
-    var dashboard by remember { mutableStateOf(DemoData.fixture.dashboard) }
-    var absence by remember { mutableStateOf(DemoData.absenceResponse) }
+    var dashboard by remember { mutableStateOf<DashboardData?>(null) }
+    var absence by remember { mutableStateOf<AbsenceResponse?>(null) }
     var timetable by remember { mutableStateOf<TimetableWeek?>(null) }
-    var stravaMenu by remember { mutableStateOf<StravaCZMenu?>(DemoData.stravaMenu) }
+    var stravaMenu by remember { mutableStateOf<StravaCZMenu?>(null) }
 
-    suspend fun loadTimetable(weekContaining: String) {
-        timetable = runCatching { graph.schoolRepository.loadTimetable(weekContaining) }
-            .getOrElse { timetable }
+    suspend fun runWithLoading(block: suspend () -> Unit) {
+        if (isLoading) return
+        isLoading = true
+        try {
+            block()
+        } finally {
+            isLoading = false
+        }
     }
 
-    suspend fun refreshSignedInData(forceRefresh: Boolean = false) {
-        dashboard = runCatching { graph.schoolRepository.loadDashboard(forceRefresh = forceRefresh) }.getOrElse { DemoData.fixture.dashboard }
-        absence = runCatching { graph.schoolRepository.loadAbsence(forceRefresh = forceRefresh) }.getOrElse { DemoData.absenceResponse }
-        loadTimetable(LocalDate.now().toString())
-        stravaMenu = runCatching { graph.stravaCZRepository.loadMenu().second }.getOrElse { DemoData.stravaMenu }
+    suspend fun loadCachedSignedInData() {
+        graph.schoolRepository.loadCachedDashboard()?.let { dashboard = it }
+        graph.schoolRepository.loadCachedAbsence()?.let { absence = it }
+        graph.schoolRepository.loadCachedTimetable(LocalDate.now().toString())?.let { timetable = it }
+        graph.stravaCZRepository.loadCachedMenu()?.let { stravaMenu = it }
         linkedAccounts = runCatching { graph.linkedAccountRepository.localAccounts() }.getOrDefault(emptyList())
     }
 
+    suspend fun loadTimetable(weekContaining: String): Throwable? {
+        return runCatching { graph.schoolRepository.loadTimetable(weekContaining) }
+            .onSuccess { timetable = it }
+            .exceptionOrNull()
+    }
+
+    suspend fun refreshSignedInData(forceRefresh: Boolean = false) {
+        val failures = mutableListOf<Throwable>()
+        runCatching { graph.schoolRepository.loadDashboard(forceRefresh = forceRefresh) }
+            .onSuccess { dashboard = it }
+            .onFailure(failures::add)
+        runCatching { graph.schoolRepository.loadAbsence(forceRefresh = forceRefresh) }
+            .onSuccess { absence = it }
+            .onFailure(failures::add)
+        loadTimetable(LocalDate.now().toString())?.let(failures::add)
+        if (runCatching { graph.stravaCZRepository.bootstrapSession() }.getOrNull() != null) {
+            runCatching { graph.stravaCZRepository.loadMenu(forceRefresh = forceRefresh).second }
+                .onSuccess { stravaMenu = it }
+        }
+        linkedAccounts = runCatching { graph.linkedAccountRepository.localAccounts() }.getOrDefault(emptyList())
+        dataError = failures.firstOrNull()?.userFacingMessage()
+    }
+
     LaunchedEffect(Unit) {
-        val authSession = graph.gradeyAuthRepository.bootstrapSession()
+        val authSession = if (graph.isGradeyCloudConfigured) {
+            runCatching { graph.gradeyAuthRepository.bootstrapSession() }.getOrNull()
+        } else {
+            null
+        }
         account = authSession?.account
-        val schoolSession = graph.schoolRepository.bootstrapSession()
+        val schoolSession = runCatching { graph.schoolRepository.bootstrapSession() }.getOrNull()
         phase = when {
-            authSession == null -> AppPhase.SIGNED_OUT
+            graph.isGradeyCloudConfigured && authSession == null -> AppPhase.SIGNED_OUT
             schoolSession == null -> AppPhase.NEEDS_SCHOOL
             else -> AppPhase.SIGNED_IN
         }
-        if (phase == AppPhase.SIGNED_IN) refreshSignedInData()
+        if (phase == AppPhase.SIGNED_IN) {
+            loadCachedSignedInData()
+            isLoading = true
+            try {
+                refreshSignedInData()
+            } finally {
+                isLoading = false
+            }
+        }
     }
 
     when (phase) {
-        AppPhase.CHECKING -> GradeyIdLoginScreen(isLoading = true, onGoogleSignIn = {}, onTestingBypass = {})
+        AppPhase.CHECKING -> GradeyIdLoginScreen(isLoading = true, onGoogleSignIn = {})
         AppPhase.SIGNED_OUT -> GradeyIdLoginScreen(
             isLoading = isLoading,
+            errorMessage = authError,
             onGoogleSignIn = {
                 scope.launch {
                     isLoading = true
-                    account = graph.gradeyAuthRepository.signInWithGoogle(
-                        idToken = "demo-google-id-token",
-                        fullName = "Demo Student",
-                    ).account
-                    isLoading = false
-                    phase = AppPhase.NEEDS_SCHOOL
-                }
-            },
-            onTestingBypass = {
-                scope.launch {
-                    account = graph.gradeyAuthRepository.signInWithGoogle("demo-google-id-token", fullName = "Demo Student").account
-                    val step = graph.schoolRepository.beginLogin(
-                        provider = com.bukovinafilip.gradey.model.SchoolProvider.BAKALARI,
-                        schoolURL = "demo.gradey.app",
-                        username = "apple-review",
-                        password = "GradelyDemo2026!",
-                    )
-                    if (step is SchoolLoginStep.SignedIn) {
-                        refreshSignedInData()
-                        phase = AppPhase.SIGNED_IN
+                    authError = null
+                    try {
+                        val googleCredential = requestGoogleCredential(context, graph.googleWebClientId)
+                        account = graph.gradeyAuthRepository.signInWithGoogle(
+                            idToken = googleCredential.idToken,
+                            fullName = googleCredential.displayName,
+                        ).account
+                        phase = if (graph.schoolRepository.bootstrapSession() == null) {
+                            AppPhase.NEEDS_SCHOOL
+                        } else {
+                            AppPhase.SIGNED_IN
+                        }
+                    } catch (error: Throwable) {
+                        authError = error.userFacingMessage()
+                    } finally {
+                        isLoading = false
                     }
                 }
             },
@@ -165,14 +217,20 @@ private fun GradeyApp(
 
         AppPhase.NEEDS_SCHOOL -> SchoolLoginScreen(
             isLoading = isLoading,
-            onLogin = { provider, school, username, password ->
+            errorMessage = schoolLoginError,
+            onLogin = { school, username, password ->
                 scope.launch {
                     isLoading = true
-                    val step = graph.schoolRepository.beginLogin(provider, school, username, password)
-                    isLoading = false
-                    if (step is SchoolLoginStep.SignedIn) {
-                        refreshSignedInData()
+                    schoolLoginError = null
+                    try {
+                        graph.schoolRepository.login(school, username, password)
                         phase = AppPhase.SIGNED_IN
+                        loadCachedSignedInData()
+                        refreshSignedInData()
+                    } catch (error: Throwable) {
+                        schoolLoginError = error.userFacingMessage()
+                    } finally {
+                        isLoading = false
                     }
                 }
             },
@@ -183,35 +241,47 @@ private fun GradeyApp(
                 .fillMaxSize()
                 .statusBarsPadding()
                 .padding(bottom = 96.dp)
+            val currentDashboard = dashboard
+            val currentAbsence = absence
             when (selectedTab) {
-                AppTab.TODAY -> TodayScreen(
-                    dashboard = dashboard,
-                    absence = absence,
-                    timetable = timetable,
-                    isRefreshing = isLoading,
-                    onRefresh = {
-                        if (!isLoading) {
-                            scope.launch {
-                                isLoading = true
-                                try {
-                                    refreshSignedInData(forceRefresh = true)
-                                } finally {
-                                    isLoading = false
+                AppTab.TODAY -> if (currentDashboard != null && currentAbsence != null) {
+                    TodayScreen(
+                        dashboard = currentDashboard,
+                        absence = currentAbsence,
+                        timetable = timetable,
+                        isRefreshing = isLoading,
+                        onRefresh = {
+                            if (!isLoading) {
+                                scope.launch {
+                                    isLoading = true
+                                    try {
+                                        refreshSignedInData(forceRefresh = true)
+                                    } finally {
+                                        isLoading = false
+                                    }
                                 }
                             }
-                        }
-                    },
-                    onOpenAccount = { selectedTab = AppTab.ACCOUNT },
-                    onOpenGradeyTools = { selectedTab = AppTab.STRAVACZ },
-                    onOpenMarks = { selectedTab = AppTab.SUBJECTS },
-                    onOpenAbsence = { selectedTab = AppTab.ABSENCE },
-                    onOpenTimetable = { selectedTab = AppTab.TIMETABLE },
-                    modifier = Modifier.fillMaxSize(),
-                )
+                        },
+                        onOpenAccount = { selectedTab = AppTab.ACCOUNT },
+                        onOpenGradeyTools = { selectedTab = AppTab.STRAVACZ },
+                        onOpenMarks = { selectedTab = AppTab.SUBJECTS },
+                        onOpenAbsence = { selectedTab = AppTab.ABSENCE },
+                        onOpenTimetable = { selectedTab = AppTab.TIMETABLE },
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                } else {
+                    CoreDataUnavailableScreen(
+                        title = "Today",
+                        isLoading = isLoading,
+                        errorMessage = dataError,
+                        onRetry = { scope.launch { runWithLoading { refreshSignedInData(true) } } },
+                        modifier = standardScreenModifier,
+                    )
+                }
 
-                AppTab.SUBJECTS -> SubjectsScreen(
-                    subjects = dashboard.marksResponse.subjects,
-                    absence = absence,
+                AppTab.SUBJECTS -> if (currentDashboard != null && currentAbsence != null) SubjectsScreen(
+                    subjects = currentDashboard.marksResponse.subjects,
+                    absence = currentAbsence,
                     isRefreshing = isLoading,
                     onRefresh = {
                         if (!isLoading) {
@@ -228,10 +298,16 @@ private fun GradeyApp(
                     onOpenAccount = { selectedTab = AppTab.ACCOUNT },
                     onOpenGradeyTools = { selectedTab = AppTab.STRAVACZ },
                     modifier = Modifier.fillMaxSize(),
+                ) else CoreDataUnavailableScreen(
+                    title = "Marks",
+                    isLoading = isLoading,
+                    errorMessage = dataError,
+                    onRetry = { scope.launch { runWithLoading { refreshSignedInData(true) } } },
+                    modifier = standardScreenModifier,
                 )
-                AppTab.ABSENCE -> AbsenceScreen(
-                    response = absence,
-                    studentName = dashboard.user?.fullName ?: "Student",
+                AppTab.ABSENCE -> if (currentAbsence != null) AbsenceScreen(
+                    response = currentAbsence,
+                    studentName = currentDashboard?.user?.fullName ?: "Student",
                     isRefreshing = isLoading,
                     onRefresh = {
                         if (!isLoading) {
@@ -248,8 +324,14 @@ private fun GradeyApp(
                     onOpenAccount = { selectedTab = AppTab.ACCOUNT },
                     onOpenGradeyTools = { selectedTab = AppTab.STRAVACZ },
                     modifier = Modifier.fillMaxSize(),
+                ) else CoreDataUnavailableScreen(
+                    title = "Absence",
+                    isLoading = isLoading,
+                    errorMessage = dataError,
+                    onRetry = { scope.launch { runWithLoading { refreshSignedInData(true) } } },
+                    modifier = standardScreenModifier,
                 )
-                AppTab.TIMETABLE -> TimetableScreen(
+                AppTab.TIMETABLE -> if (timetable != null) TimetableScreen(
                     week = timetable,
                     isRefreshing = isLoading,
                     onRefresh = {
@@ -257,7 +339,7 @@ private fun GradeyApp(
                             scope.launch {
                                 isLoading = true
                                 try {
-                                    loadTimetable(timetable?.weekStart ?: LocalDate.now().toString())
+                                    dataError = loadTimetable(timetable?.weekStart ?: LocalDate.now().toString())?.userFacingMessage()
                                 } finally {
                                     isLoading = false
                                 }
@@ -269,7 +351,7 @@ private fun GradeyApp(
                             scope.launch {
                                 isLoading = true
                                 try {
-                                    loadTimetable(weekContaining)
+                                    dataError = loadTimetable(weekContaining)?.userFacingMessage()
                                 } finally {
                                     isLoading = false
                                 }
@@ -279,6 +361,18 @@ private fun GradeyApp(
                     onOpenAccount = { selectedTab = AppTab.ACCOUNT },
                     onOpenGradeyTools = { selectedTab = AppTab.STRAVACZ },
                     modifier = Modifier.fillMaxSize(),
+                ) else CoreDataUnavailableScreen(
+                    title = "Timetable",
+                    isLoading = isLoading,
+                    errorMessage = dataError,
+                    onRetry = {
+                        scope.launch {
+                            runWithLoading {
+                                dataError = loadTimetable(LocalDate.now().toString())?.userFacingMessage()
+                            }
+                        }
+                    },
+                    modifier = standardScreenModifier,
                 )
                 AppTab.STRAVACZ -> StravaCZScreen(stravaMenu, standardScreenModifier)
                 AppTab.ACCOUNT -> AccountScreen(
@@ -290,24 +384,79 @@ private fun GradeyApp(
                             graph.gradeyAuthRepository.signOut()
                             graph.schoolRepository.logout()
                             graph.linkedAccountRepository.clearLocalAccounts()
-                            phase = AppPhase.SIGNED_OUT
+                            runCatching {
+                                CredentialManager.create(context).clearCredentialState(ClearCredentialStateRequest())
+                            }
+                            account = null
+                            dashboard = null
+                            absence = null
+                            timetable = null
+                            stravaMenu = null
+                            selectedTab = AppTab.TODAY
+                            phase = if (graph.isGradeyCloudConfigured) AppPhase.SIGNED_OUT else AppPhase.NEEDS_SCHOOL
                         }
                     },
                     modifier = standardScreenModifier,
                 )
             }
 
-            GradeyBottomNavigation(
-                selectedTab = selectedTab,
-                onSelect = { selectedTab = it },
-                modifier = Modifier.align(Alignment.BottomCenter),
-            )
+            if (selectedTab != AppTab.ACCOUNT) {
+                GradeyBottomNavigation(
+                    selectedTab = selectedTab,
+                    onSelect = { selectedTab = it },
+                    modifier = Modifier.align(Alignment.BottomCenter),
+                )
+            }
         }
     }
 }
 
-private val CoreTabs = listOf(AppTab.TODAY, AppTab.SUBJECTS, AppTab.ABSENCE, AppTab.TIMETABLE)
-private val MarksTabs = CoreTabs + AppTab.STRAVACZ
+private suspend fun requestGoogleCredential(
+    context: android.content.Context,
+    serverClientId: String,
+): GoogleIdTokenCredential {
+    if (serverClientId.isBlank()) {
+        throw IllegalStateException("Google sign-in is not configured in this build.")
+    }
+    val option = GetSignInWithGoogleOption.Builder(serverClientId).build()
+    val request = GetCredentialRequest.Builder()
+        .addCredentialOption(option)
+        .build()
+    val credential = CredentialManager.create(context).getCredential(context, request).credential
+    if (credential !is CustomCredential || credential.type != GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
+        throw IllegalStateException("Google sign-in returned an unsupported credential.")
+    }
+    return GoogleIdTokenCredential.createFrom(credential.data)
+}
+
+private fun Throwable.userFacingMessage(): String =
+    message?.trim()?.takeIf { it.isNotEmpty() } ?: "Something went wrong. Please try again."
+
+@Composable
+private fun CoreDataUnavailableScreen(
+    title: String,
+    isLoading: Boolean,
+    errorMessage: String?,
+    onRetry: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    GradeyScreen(modifier = modifier) {
+        GradeyHero(title = title, subtitle = "Your Bakaláři data will appear here after it loads.")
+        GradeySectionCard {
+            if (isLoading) {
+                CircularProgressIndicator()
+                Text("Loading from Bakaláři…")
+            } else {
+                Text(errorMessage ?: "No data is available yet.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Button(onClick = onRetry) {
+                    Text("Try again")
+                }
+            }
+        }
+    }
+}
+
+private val MarksTabs = listOf(AppTab.TODAY, AppTab.SUBJECTS, AppTab.ABSENCE, AppTab.TIMETABLE, AppTab.STRAVACZ)
 
 @Composable
 private fun AppTab.icon() = when (this) {
@@ -325,11 +474,7 @@ private fun GradeyBottomNavigation(
     onSelect: (AppTab) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val visibleTabs = if (
-        selectedTab == AppTab.SUBJECTS ||
-        selectedTab == AppTab.TIMETABLE ||
-        selectedTab == AppTab.STRAVACZ
-    ) MarksTabs else CoreTabs
+    val visibleTabs = MarksTabs
     Box(
         modifier = modifier
             .fillMaxWidth()

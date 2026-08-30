@@ -31,6 +31,13 @@ class SecureJsonStore(
         return runCatching { json.decodeFromString(serializer, encoded) }.getOrNull()
     }
 
+    fun <T> loadOrClearInvalid(key: String, serializer: KSerializer<T>): T? {
+        val encoded = preferences.getString(key, null)
+        return decodeStoredValueOrClear(encoded, serializer, json) {
+            preferences.edit().remove(key).apply()
+        }
+    }
+
     fun <T> save(key: String, value: T?, serializer: KSerializer<T>) {
         preferences.edit().apply {
             if (value == null) remove(key) else putString(key, json.encodeToString(serializer, value))
@@ -42,3 +49,16 @@ class SecureJsonStore(
     }
 }
 
+internal fun <T> decodeStoredValueOrClear(
+    encoded: String?,
+    serializer: KSerializer<T>,
+    json: Json,
+    clear: () -> Unit,
+): T? {
+    if (encoded == null) return null
+    return runCatching { json.decodeFromString(serializer, encoded) }
+        .getOrElse {
+            clear()
+            null
+        }
+}

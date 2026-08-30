@@ -20,7 +20,6 @@ tasks.withType<JavaCompile>().configureEach {
 dependencies {
     implementation(project(":core-model"))
     implementation(project(":core-domain"))
-    implementation(libs.jsoup)
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.okhttp)

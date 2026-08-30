@@ -9,6 +9,7 @@ import com.bukovinafilip.gradey.domain.LinkedAccountRepository
 import com.bukovinafilip.gradey.domain.SchoolRepository
 import com.bukovinafilip.gradey.domain.StravaCZRepository
 import com.bukovinafilip.gradey.network.BakalariNetworkClient
+import com.bukovinafilip.gradey.network.DemoAwareBakalariClient
 import com.bukovinafilip.gradey.network.GradeyJson
 import com.bukovinafilip.gradey.network.SupabaseConfiguration
 import com.bukovinafilip.gradey.network.SupabaseDevicePushTokenClient
@@ -19,7 +20,6 @@ data class AndroidGradeyConfig(
     val supabaseAnonKey: String,
     val googleWebClientId: String,
     val revenueCatAndroidKey: String,
-    val useMockData: Boolean = true,
 )
 
 class AndroidGradeyGraph private constructor(
@@ -30,54 +30,54 @@ class AndroidGradeyGraph private constructor(
     val devicePushTokenClient: DevicePushTokenClient,
     val stravaCZRepository: StravaCZRepository,
     val cache: RoomGradeyCache?,
+    val isGradeyCloudConfigured: Boolean,
+    val googleWebClientId: String,
 ) {
     companion object {
         fun create(context: Context, config: AndroidGradeyConfig): AndroidGradeyGraph {
-            if (config.useMockData) {
-                return AndroidGradeyGraph(
-                    schoolRepository = MockSchoolRepository(),
-                    gradeyAuthRepository = MockGradeyAuthRepository(),
-                    linkedAccountRepository = MockLinkedAccountRepository(),
-                    historyRepository = MockGradeyHistoryRepository(),
-                    devicePushTokenClient = MockDevicePushTokenClient(),
-                    stravaCZRepository = MockStravaCZRepository(),
-                    cache = null,
-                )
-            }
-
             val database = Room.databaseBuilder(context, GradeyDatabase::class.java, "gradey.db")
                 .build()
             val cache = RoomGradeyCache(database.cacheEntries(), GradeyJson)
             val schoolSecureStore = SecureJsonStore(context, "gradey-school-secrets", GradeyJson)
             val authSecureStore = SecureJsonStore(context, "gradey-auth-secrets", GradeyJson)
+            val linkedAccountStore = SecureJsonStore(context, "gradey-linked-accounts", GradeyJson)
             val sessionStore = SchoolSessionStore(schoolSecureStore)
             val supabase = SupabaseConfiguration(config.supabaseUrl, config.supabaseAnonKey)
 
-            val authRepository = SupabaseGradeyAuthRepository(
-                configuration = supabase,
-                sessionStore = {
-                    if (it == null) {
-                        authSecureStore.clear("gradey.auth.session")
-                    } else {
-                        authSecureStore.save("gradey.auth.session", it, com.bukovinafilip.gradey.model.GradeyAuthSession.serializer())
-                    }
-                },
-                sessionLoader = { authSecureStore.load("gradey.auth.session", com.bukovinafilip.gradey.model.GradeyAuthSession.serializer()) },
-            )
+            val authRepository = if (supabase.isConfigured) {
+                SupabaseGradeyAuthRepository(
+                    configuration = supabase,
+                    sessionStore = {
+                        if (it == null) {
+                            authSecureStore.clear("gradey.auth.session")
+                        } else {
+                            authSecureStore.save("gradey.auth.session", it, com.bukovinafilip.gradey.model.GradeyAuthSession.serializer())
+                        }
+                    },
+                    sessionLoader = { authSecureStore.load("gradey.auth.session", com.bukovinafilip.gradey.model.GradeyAuthSession.serializer()) },
+                )
+            } else {
+                LocalOnlyGradeyAuthRepository()
+            }
 
             return AndroidGradeyGraph(
                 schoolRepository = AndroidSchoolRepository(
-                    bakalariClient = BakalariNetworkClient(),
-                    eduPageClient = UnsupportedEduPageClient(),
+                    bakalariClient = DemoAwareBakalariClient(BakalariNetworkClient()),
                     sessionStore = sessionStore,
                     cache = cache,
                 ),
                 gradeyAuthRepository = authRepository,
-                linkedAccountRepository = MockLinkedAccountRepository(),
-                historyRepository = MockGradeyHistoryRepository(),
-                devicePushTokenClient = SupabaseDevicePushTokenClient(supabase),
-                stravaCZRepository = MockStravaCZRepository(),
+                linkedAccountRepository = LocalLinkedAccountRepository(linkedAccountStore),
+                historyRepository = EmptyGradeyHistoryRepository(),
+                devicePushTokenClient = if (supabase.isConfigured) {
+                    SupabaseDevicePushTokenClient(supabase)
+                } else {
+                    UnavailableDevicePushTokenClient()
+                },
+                stravaCZRepository = UnavailableStravaCZRepository(),
                 cache = cache,
+                isGradeyCloudConfigured = supabase.isConfigured,
+                googleWebClientId = config.googleWebClientId,
             )
         }
     }

@@ -45,6 +45,8 @@ class RoomGradeyCache(
     suspend fun saveNextLessonSnapshot(snapshot: NextLessonWidgetSnapshot) =
         save("next-lesson-widget-snapshot", snapshot, NextLessonWidgetSnapshot.serializer())
 
+    suspend fun clearNextLessonSnapshot() = dao.clear("next-lesson-widget-snapshot")
+
     suspend fun clearSchool(scope: String) {
         dao.clearPrefix("dashboard:$scope")
         dao.clearPrefix("marks:$scope")

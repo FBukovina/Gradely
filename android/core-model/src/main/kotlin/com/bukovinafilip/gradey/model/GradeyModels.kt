@@ -4,86 +4,24 @@ package com.bukovinafilip.gradey.model
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import java.nio.charset.StandardCharsets
+import java.security.MessageDigest
+import java.util.Locale
 import kotlin.math.max
 
 @Serializable
 enum class SchoolProvider {
     @SerialName("bakalari")
-    BAKALARI,
-
-    @SerialName("eduPage")
-    EDU_PAGE;
+    BAKALARI;
 
     val displayName: String
-        get() = when (this) {
-            BAKALARI -> "Bakalari"
-            EDU_PAGE -> "EduPage"
-        }
-
-    val capabilities: SchoolProviderCapabilities
-        get() = when (this) {
-            BAKALARI -> SchoolProviderCapabilities(
-                supportsParentProfiles = false,
-                supportsTwoFactorAuthentication = false,
-                supportsRemoteWhatIf = true,
-                exposesAbsenceThreshold = true,
-            )
-
-            EDU_PAGE -> SchoolProviderCapabilities(
-                supportsParentProfiles = true,
-                supportsTwoFactorAuthentication = true,
-                supportsRemoteWhatIf = false,
-                exposesAbsenceThreshold = false,
-            )
-        }
+        get() = "Bakaláři"
 }
-
-@Serializable
-data class SchoolProviderCapabilities(
-    val supportsGrades: Boolean = true,
-    val supportsAverages: Boolean = true,
-    val supportsTimetable: Boolean = true,
-    val supportsAttendance: Boolean = true,
-    val supportsWidgets: Boolean = true,
-    val supportsDirectWatchRefresh: Boolean = true,
-    val supportsParentProfiles: Boolean,
-    val supportsTwoFactorAuthentication: Boolean,
-    val supportsRemoteWhatIf: Boolean,
-    val exposesAbsenceThreshold: Boolean,
-)
 
 @Serializable
 data class BakalariCredentials(
     val username: String,
     val password: String,
-)
-
-@Serializable
-data class EduPageSubjectProfile(
-    val id: String,
-    val name: String,
-    val shortName: String,
-)
-
-@Serializable
-data class SchoolStudentProfile(
-    val id: String,
-    val fullName: String,
-    val classID: String? = null,
-    val className: String? = null,
-)
-
-@Serializable
-data class EduPageSessionData(
-    var sessionID: String,
-    val username: String,
-    val password: String,
-    var gsecHash: String,
-    var userID: String,
-    var schoolName: String? = null,
-    var activeStudent: SchoolStudentProfile? = null,
-    var linkedStudents: List<SchoolStudentProfile> = emptyList(),
-    var subjects: List<EduPageSubjectProfile> = emptyList(),
 )
 
 @Serializable
@@ -94,14 +32,13 @@ data class StoredSession(
     var expiresAtEpochMillis: Long,
     var baseURL: String,
     var provider: SchoolProvider = SchoolProvider.BAKALARI,
-    var eduPage: EduPageSessionData? = null,
     var bakalari: BakalariCredentials? = null,
     var linkedAccountID: String? = null,
     var linkedAccountDisplayName: String? = null,
     var linkedAccountSchoolName: String? = null,
 ) {
     fun isExpired(nowEpochMillis: Long = System.currentTimeMillis()): Boolean =
-        provider == SchoolProvider.BAKALARI && expiresAtEpochMillis <= nowEpochMillis + 60_000
+        expiresAtEpochMillis <= nowEpochMillis + 60_000
 
     val cacheScope: String
         get() {
@@ -111,12 +48,22 @@ data class StoredSession(
                 .removePrefix("https://")
                 .removePrefix("http://")
                 .substringBefore("/")
-                .lowercase()
-                .ifBlank { baseURL.lowercase() }
-            val user = eduPage?.activeStudent?.id ?: eduPage?.userID ?: "default"
-            return "${provider.name.lowercase()}-$host-$user"
+                .lowercase(Locale.ROOT)
+                .ifBlank { baseURL.lowercase(Locale.ROOT) }
+            val username = bakalari?.username?.trim()?.lowercase(Locale.ROOT).orEmpty()
+            val userScope = username
+                .takeIf(String::isNotEmpty)
+                ?.sha256Prefix()
+                ?: "default"
+            return "bakalari-$host-$userScope"
         }
 }
+
+private fun String.sha256Prefix(): String = MessageDigest
+    .getInstance("SHA-256")
+    .digest(toByteArray(StandardCharsets.UTF_8))
+    .take(12)
+    .joinToString(separator = "") { byte -> "%02x".format(byte.toInt() and 0xff) }
 
 @Serializable
 data class LoginResponse(

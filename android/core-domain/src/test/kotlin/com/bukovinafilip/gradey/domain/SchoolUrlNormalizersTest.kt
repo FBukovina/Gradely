@@ -9,11 +9,4 @@ class SchoolUrlNormalizersTest {
         assertThat(SchoolURLNormalizer.normalizedBaseURL("demo.bakalari.cz/login"))
             .isEqualTo("https://demo.bakalari.cz")
     }
-
-    @Test
-    fun edupageNormalizerAcceptsSubdomain() {
-        assertThat(EduPageURLNormalizer.normalizedBaseURL("myschool"))
-            .isEqualTo("https://myschool.edupage.org")
-    }
 }
-

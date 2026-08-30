@@ -10,15 +10,24 @@ import com.bukovinafilip.gradey.model.TimetableResponse
 import com.bukovinafilip.gradey.model.AbsenceResponse
 import com.bukovinafilip.gradey.model.UserResponse
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
+import java.util.concurrent.TimeUnit
+
+class BakalariApiException(
+    val statusCode: Int?,
+    message: String,
+    cause: Throwable? = null,
+) : RuntimeException(message, cause)
 
 class BakalariNetworkClient(
-    private val okHttpClient: OkHttpClient = OkHttpClient(),
+    private val okHttpClient: OkHttpClient = defaultHttpClient(),
 ) : BakalariClient {
     override suspend fun login(baseURL: String, username: String, password: String): LoginResponse =
         postForm(
@@ -73,7 +82,7 @@ class BakalariNetworkClient(
             .post(formBody(fields))
             .header("Accept", "application/json")
             .build()
-        return GradeyJson.decodeFromString(okHttpClient.executeString(request))
+        return execute(request)
     }
 
     private suspend inline fun <reified T> get(
@@ -99,7 +108,7 @@ class BakalariNetworkClient(
             .header("Accept", "application/json")
             .header("Authorization", "Bearer $accessToken")
             .build()
-        return GradeyJson.decodeFromString(okHttpClient.executeString(request))
+        return execute(request)
     }
 
     private suspend inline fun <reified T> postJson(
@@ -114,10 +123,72 @@ class BakalariNetworkClient(
             .header("Accept", "application/json")
             .header("Authorization", "Bearer $accessToken")
             .build()
-        return GradeyJson.decodeFromString(okHttpClient.executeString(request))
+        return execute(request)
+    }
+
+    private suspend inline fun <reified T> execute(request: Request): T {
+        val body = try {
+            okHttpClient.executeString(request)
+        } catch (error: GradeyApiException) {
+            throw BakalariApiException(
+                statusCode = error.statusCode,
+                message = readableHTTPError(error.statusCode, error.responseBody),
+                cause = error,
+            )
+        }
+
+        return try {
+            GradeyJson.decodeFromString(body)
+        } catch (error: SerializationException) {
+            throw BakalariApiException(
+                statusCode = null,
+                message = "The school returned data Gradey could not read.",
+                cause = error,
+            )
+        } catch (error: IllegalArgumentException) {
+            throw BakalariApiException(
+                statusCode = null,
+                message = "The school returned data Gradey could not read.",
+                cause = error,
+            )
+        }
+    }
+
+    private fun readableHTTPError(statusCode: Int, responseBody: String?): String {
+        val jsonMessage = responseBody
+            ?.let { runCatching { GradeyJson.parseToJsonElement(it).jsonObject }.getOrNull() }
+            ?.let { body ->
+                listOf("error_description", "message", "error")
+                    .firstNotNullOfOrNull { key ->
+                        body[key]
+                            ?.let { value -> runCatching { value.jsonPrimitive.content }.getOrNull() }
+                            ?.trim()
+                            ?.takeIf(String::isNotEmpty)
+                    }
+            }
+        if (jsonMessage != null && jsonMessage.length <= 300 && '<' !in jsonMessage && '>' !in jsonMessage) {
+            return jsonMessage
+        }
+        return when (statusCode) {
+            400 -> "Bakaláři rejected the request. Check the entered details and try again."
+            401 -> "Your Bakaláři session is no longer valid. Please reconnect your school account."
+            403 -> "Bakaláři refused access to this information."
+            404 -> "This Bakaláři server does not provide the requested information."
+            in 500..599 -> "The Bakaláři server is temporarily unavailable (HTTP $statusCode)."
+            else -> "The Bakaláři request failed (HTTP $statusCode)."
+        }
     }
 
     private fun String.urlEncoded(): String = URLEncoder.encode(this, StandardCharsets.UTF_8.name())
+
+    private companion object {
+        fun defaultHttpClient(): OkHttpClient = OkHttpClient.Builder()
+            .connectTimeout(15, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .writeTimeout(30, TimeUnit.SECONDS)
+            .callTimeout(45, TimeUnit.SECONDS)
+            .build()
+    }
 }
 
 @Serializable

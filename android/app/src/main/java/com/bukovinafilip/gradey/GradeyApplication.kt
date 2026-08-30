@@ -24,7 +24,6 @@ class GradeyApplication : Application() {
                 supabaseAnonKey = BuildConfig.SUPABASE_ANON_KEY,
                 googleWebClientId = BuildConfig.GOOGLE_WEB_CLIENT_ID,
                 revenueCatAndroidKey = BuildConfig.REVENUECAT_ANDROID_KEY,
-                useMockData = BuildConfig.SUPABASE_URL.isBlank() || BuildConfig.SUPABASE_ANON_KEY.isBlank(),
             ),
         )
     }

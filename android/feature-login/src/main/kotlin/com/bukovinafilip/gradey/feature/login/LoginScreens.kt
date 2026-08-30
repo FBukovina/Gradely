@@ -2,12 +2,10 @@ package com.bukovinafilip.gradey.feature.login
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material3.Button
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -18,7 +16,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import com.bukovinafilip.gradey.model.SchoolProvider
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import com.bukovinafilip.gradey.ui.GradeyHero
 import com.bukovinafilip.gradey.ui.GradeyScreen
 import com.bukovinafilip.gradey.ui.GradeySectionCard
@@ -27,37 +25,27 @@ import com.bukovinafilip.gradey.ui.GradeySpacing
 @Composable
 fun SchoolLoginScreen(
     isLoading: Boolean,
-    onLogin: (SchoolProvider, String, String, String) -> Unit,
+    errorMessage: String? = null,
+    onLogin: (String, String, String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var provider by remember { mutableStateOf(SchoolProvider.BAKALARI) }
-    var school by remember { mutableStateOf("demo.gradey.app") }
-    var username by remember { mutableStateOf("apple-review") }
-    var password by remember { mutableStateOf("GradelyDemo2026!") }
+    var school by remember { mutableStateOf("") }
+    var username by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
 
     GradeyScreen(modifier = modifier) {
         GradeyHero(
-            title = "Link school",
-            subtitle = "Connect Bakalari or EduPage and keep your marks, absences, and timetable cached for offline use.",
+            title = "Connect Bakaláři",
+            subtitle = "Sign in with the same school address, username, and password you use for Bakaláři.",
         )
-        GradeySectionCard(title = "Provider") {
-            Row(horizontalArrangement = Arrangement.spacedBy(GradeySpacing.sm)) {
-                SchoolProvider.entries.forEach { candidate ->
-                    FilterChip(
-                        selected = provider == candidate,
-                        onClick = { provider = candidate },
-                        label = { Text(candidate.displayName) },
-                    )
-                }
-            }
-        }
-        GradeySectionCard(title = "Credentials") {
+        GradeySectionCard(title = "Bakaláři credentials") {
             Column(verticalArrangement = Arrangement.spacedBy(GradeySpacing.md)) {
                 OutlinedTextField(
                     modifier = Modifier.fillMaxWidth(),
                     value = school,
                     onValueChange = { school = it },
-                    label = { Text(if (provider == SchoolProvider.EDU_PAGE) "EduPage school" else "School URL") },
+                    label = { Text("School URL") },
+                    placeholder = { Text("school.example.cz") },
                     singleLine = true,
                 )
                 OutlinedTextField(
@@ -73,18 +61,28 @@ fun SchoolLoginScreen(
                     onValueChange = { password = it },
                     label = { Text("Password") },
                     singleLine = true,
+                    visualTransformation = PasswordVisualTransformation(),
                 )
+                if (!errorMessage.isNullOrBlank()) {
+                    Text(
+                        text = errorMessage,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
                 Button(
                     modifier = Modifier.fillMaxWidth(),
-                    enabled = !isLoading,
-                    onClick = { onLogin(provider, school, username, password) },
+                    enabled = !isLoading && school.isNotBlank() && username.isNotBlank() && password.isNotEmpty(),
+                    onClick = { onLogin(school, username, password) },
                 ) {
                     Icon(Icons.Default.Link, contentDescription = null)
                     Text(if (isLoading) "Connecting" else "Connect school")
                 }
-                Text("For EduPage, two-factor and child selection are modeled as explicit follow-up steps in the repository API.", style = MaterialTheme.typography.bodySmall)
+                Text(
+                    "Your credentials are stored in Android encrypted storage and are used only to connect to your school server.",
+                    style = MaterialTheme.typography.bodySmall,
+                )
             }
         }
     }
 }
-

@@ -21,8 +21,8 @@ import com.bukovinafilip.gradey.ui.GradeySpacing
 @Composable
 fun GradeyIdLoginScreen(
     isLoading: Boolean,
+    errorMessage: String? = null,
     onGoogleSignIn: () -> Unit,
-    onTestingBypass: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     GradeyScreen(modifier = modifier) {
@@ -44,12 +44,12 @@ fun GradeyIdLoginScreen(
                 Icon(Icons.Default.Person, contentDescription = null)
                 Text(if (isLoading) "Signing in" else "Continue with Google")
             }
-            Button(
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !isLoading,
-                onClick = onTestingBypass,
-            ) {
-                Text("Use demo data")
+            if (!errorMessage.isNullOrBlank()) {
+                Text(
+                    text = errorMessage,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+                )
             }
         }
 
@@ -62,4 +62,3 @@ fun GradeyIdLoginScreen(
         }
     }
 }
-

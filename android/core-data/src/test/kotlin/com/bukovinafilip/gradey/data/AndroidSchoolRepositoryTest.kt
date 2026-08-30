@@ -1,8 +1,11 @@
 package com.bukovinafilip.gradey.data
 
 import com.bukovinafilip.gradey.domain.BakalariClient
+import com.bukovinafilip.gradey.domain.SchoolSessionExpiredException
+import com.bukovinafilip.gradey.model.AbsencePerSubject
 import com.bukovinafilip.gradey.model.AbsenceResponse
 import com.bukovinafilip.gradey.model.BakalariCredentials
+import com.bukovinafilip.gradey.model.DashboardData
 import com.bukovinafilip.gradey.model.LoginResponse
 import com.bukovinafilip.gradey.model.MarksResponse
 import com.bukovinafilip.gradey.model.SchoolProvider
@@ -13,6 +16,7 @@ import com.bukovinafilip.gradey.model.UserResponse
 import com.bukovinafilip.gradey.network.BakalariApiException
 import com.bukovinafilip.gradey.network.GradeyJson
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.runTest
@@ -106,13 +110,117 @@ class AndroidSchoolRepositoryTest {
         assertThat(client.loginCalls).isEqualTo(0)
     }
 
+    @Test
+    fun optionalAbsenceAndUserFailuresDoNotFailDashboard() = runTest {
+        val client = FakeBakalariClient().apply {
+            absences = { _, _ -> throw BakalariApiException(404, "not supported") }
+            user = { _, _ -> throw BakalariApiException(404, "not supported") }
+        }
+        val repository = repository(client, InMemorySchoolSessionStorage(validSession()))
+
+        val dashboard = repository.loadDashboard()
+
+        assertThat(dashboard.marksResponse).isEqualTo(MarksResponse())
+        assertThat(dashboard.absencesPerSubject).isEmpty()
+        assertThat(dashboard.user).isNull()
+    }
+
+    @Test
+    fun optionalFailuresPreservePreviouslyCachedDashboardContent() = runTest {
+        val session = validSession()
+        val cache = RoomGradeyCache(InMemoryCacheEntryDao(), GradeyJson)
+        val cachedAbsence = AbsenceResponse(
+            absencesPerSubject = listOf(AbsencePerSubject("Mathematics", 100, 7)),
+        )
+        val cachedUser = UserResponse("Cached Student", "Cached School")
+        cache.saveAbsence(session.cacheScope, cachedAbsence)
+        cache.saveDashboard(
+            session.cacheScope,
+            DashboardData(MarksResponse(), cachedAbsence.absencesPerSubject, cachedUser),
+        )
+        val client = FakeBakalariClient().apply {
+            absences = { _, _ -> throw java.io.IOException("offline") }
+            user = { _, _ -> throw BakalariApiException(404, "not supported") }
+        }
+        val repository = repository(client, InMemorySchoolSessionStorage(session), cache)
+
+        val dashboard = repository.loadDashboard()
+
+        assertThat(dashboard.absencesPerSubject).isEqualTo(cachedAbsence.absencesPerSubject)
+        assertThat(dashboard.user).isEqualTo(cachedUser)
+        assertThat(cache.loadDashboard(session.cacheScope)?.user).isEqualTo(cachedUser)
+    }
+
+    @Test
+    fun optionalEndpointCancellationIsNotSwallowed() = runTest {
+        val client = FakeBakalariClient().apply {
+            absences = { _, _ -> throw CancellationException("cancelled") }
+        }
+        val repository = repository(client, InMemorySchoolSessionStorage(validSession()))
+
+        val failure = runCatching { repository.loadDashboard() }.exceptionOrNull()
+
+        assertThat(failure).isInstanceOf(CancellationException::class.java)
+    }
+
+    @Test
+    fun unrecoverableExpiredSessionIsClearedButScopedCacheIsRetained() = runTest {
+        val session = expiredSession()
+        val sessions = InMemorySchoolSessionStorage(session)
+        val cache = RoomGradeyCache(InMemoryCacheEntryDao(), GradeyJson)
+        val cached = DashboardData(MarksResponse(), user = UserResponse("Cached Student"))
+        cache.saveDashboard(session.cacheScope, cached)
+        val client = FakeBakalariClient().apply {
+            refresh = { _, _ -> throw BakalariApiException(400, "invalid_grant") }
+            loginResult = { _, _, _ -> throw BakalariApiException(400, "invalid credentials") }
+        }
+        val repository = repository(client, sessions, cache)
+
+        val failure = runCatching { repository.loadDashboard() }.exceptionOrNull()
+
+        assertThat(failure).isInstanceOf(SchoolSessionExpiredException::class.java)
+        assertThat(sessions.load()).isNull()
+        assertThat(cache.loadDashboard(session.cacheScope)).isEqualTo(cached)
+    }
+
+    @Test
+    fun rejectedRefreshWithoutStoredCredentialsClearsExpiredSession() = runTest {
+        val client = FakeBakalariClient().apply {
+            refresh = { _, _ -> throw BakalariApiException(401, "invalid refresh token") }
+        }
+        val sessions = InMemorySchoolSessionStorage(expiredSession().copy(bakalari = null))
+        val repository = repository(client, sessions)
+
+        val failure = runCatching { repository.loadDashboard() }.exceptionOrNull()
+
+        assertThat(failure).isInstanceOf(SchoolSessionExpiredException::class.java)
+        assertThat(client.loginCalls).isEqualTo(0)
+        assertThat(sessions.load()).isNull()
+    }
+
+    @Test
+    fun transientCredentialLoginFailureRetainsExpiredSessionForRetry() = runTest {
+        val client = FakeBakalariClient().apply {
+            refresh = { _, _ -> throw BakalariApiException(400, "invalid_grant") }
+            loginResult = { _, _, _ -> throw java.io.IOException("offline") }
+        }
+        val sessions = InMemorySchoolSessionStorage(expiredSession())
+        val repository = repository(client, sessions)
+
+        val failure = runCatching { repository.loadDashboard() }.exceptionOrNull()
+
+        assertThat(failure).isInstanceOf(java.io.IOException::class.java)
+        assertThat(sessions.load()?.accessToken).isEqualTo("old-access")
+    }
+
     private fun repository(
         client: BakalariClient,
         sessions: SchoolSessionStorage,
+        cache: RoomGradeyCache = RoomGradeyCache(InMemoryCacheEntryDao(), GradeyJson),
     ): AndroidSchoolRepository = AndroidSchoolRepository(
         bakalariClient = client,
         sessionStore = sessions,
-        cache = RoomGradeyCache(InMemoryCacheEntryDao(), GradeyJson),
+        cache = cache,
     )
 
     private fun validSession() = session(expiresAt = System.currentTimeMillis() + 3_600_000)
@@ -165,13 +273,18 @@ private class FakeBakalariClient : BakalariClient {
     var marksCalls = 0
     var lastLoginUsername: String? = null
 
+    var loginResult: suspend (String, String, String) -> LoginResponse = { _, _, _ ->
+        LoginResponse("login-access", "login-refresh", "Bearer", 3_600)
+    }
     var refresh: suspend (String, String) -> LoginResponse = { _, _ -> refreshedResponse() }
     var marks: suspend (String, String) -> MarksResponse = { _, _ -> MarksResponse() }
+    var absences: suspend (String, String) -> AbsenceResponse = { _, _ -> AbsenceResponse() }
+    var user: suspend (String, String) -> UserResponse = { _, _ -> UserResponse("Student") }
 
     override suspend fun login(baseURL: String, username: String, password: String): LoginResponse {
         loginCalls += 1
         lastLoginUsername = username
-        return LoginResponse("login-access", "login-refresh", "Bearer", 3_600)
+        return loginResult(baseURL, username, password)
     }
 
     override suspend fun refreshToken(baseURL: String, refreshToken: String): LoginResponse {
@@ -184,8 +297,10 @@ private class FakeBakalariClient : BakalariClient {
         return marks(baseURL, accessToken)
     }
 
-    override suspend fun fetchAbsences(baseURL: String, accessToken: String): AbsenceResponse = AbsenceResponse()
-    override suspend fun fetchUser(baseURL: String, accessToken: String): UserResponse = UserResponse("Student")
+    override suspend fun fetchAbsences(baseURL: String, accessToken: String): AbsenceResponse =
+        absences(baseURL, accessToken)
+    override suspend fun fetchUser(baseURL: String, accessToken: String): UserResponse =
+        user(baseURL, accessToken)
     override suspend fun fetchTimetable(baseURL: String, accessToken: String, date: String): TimetableResponse = TimetableResponse()
     override suspend fun predictSubject(baseURL: String, accessToken: String, subject: Subject, markText: String, weight: Int): Subject = subject
 }

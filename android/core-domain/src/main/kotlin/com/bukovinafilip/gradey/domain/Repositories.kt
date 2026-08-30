@@ -53,6 +53,13 @@ interface SchoolRepository {
     suspend fun predictSubjectAverage(subject: Subject, markText: String, weight: Int): Double?
 }
 
+class SchoolSessionExpiredException(
+    cause: Throwable? = null,
+) : IllegalStateException(
+    "Your Bakaláři session expired. Please reconnect your school account.",
+    cause,
+)
+
 interface GradeyAuthRepository {
     suspend fun bootstrapSession(): GradeyAuthSession?
     suspend fun signInWithGoogle(idToken: String, accessToken: String? = null, fullName: String? = null): GradeyAuthSession

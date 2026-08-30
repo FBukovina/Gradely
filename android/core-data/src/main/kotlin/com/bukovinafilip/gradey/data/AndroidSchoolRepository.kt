@@ -3,6 +3,7 @@ package com.bukovinafilip.gradey.data
 import com.bukovinafilip.gradey.domain.BakalariClient
 import com.bukovinafilip.gradey.domain.GradeMath
 import com.bukovinafilip.gradey.domain.SchoolRepository
+import com.bukovinafilip.gradey.domain.SchoolSessionExpiredException
 import com.bukovinafilip.gradey.domain.SchoolURLNormalizer
 import com.bukovinafilip.gradey.domain.TimetableDates
 import com.bukovinafilip.gradey.domain.TimetableMapper
@@ -16,6 +17,7 @@ import com.bukovinafilip.gradey.model.TimetableWeek
 import com.bukovinafilip.gradey.model.UserResponse
 import com.bukovinafilip.gradey.network.BakalariApiException
 import kotlinx.coroutines.async
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -70,17 +72,21 @@ class AndroidSchoolRepository(
 
     override suspend fun loadDashboard(forceRefresh: Boolean): DashboardData = coroutineScope {
         val session = validSession()
+        val cachedDashboard = cache.loadDashboard(session.cacheScope)
+        val cachedAbsence = cache.loadAbsence(session.cacheScope)
 
         val marks = fetchMarks(session)
         cache.saveMarks(session.cacheScope, marks)
-        val absence = async { runCatching { fetchAbsence(session) }.getOrNull() }
-        val user = async { runCatching { fetchUser(session) }.getOrNull() }
+        val absence = async { optionalAbsence(session) }
+        val user = async { optionalUser(session) }
         val absenceResult = absence.await()
         if (absenceResult != null) cache.saveAbsence(session.cacheScope, absenceResult)
         val data = DashboardData(
             marksResponse = marks,
-            absencesPerSubject = absenceResult?.absencesPerSubject.orEmpty(),
-            user = user.await()?.resolvedFor(session),
+            absencesPerSubject = absenceResult?.absencesPerSubject
+                ?: cachedAbsence?.absencesPerSubject
+                ?: cachedDashboard?.absencesPerSubject.orEmpty(),
+            user = user.await()?.resolvedFor(session) ?: cachedDashboard?.user,
         )
         cache.saveDashboard(session.cacheScope, data)
         data
@@ -118,10 +124,10 @@ class AndroidSchoolRepository(
     }
 
     private suspend fun validSession(): StoredSession {
-        val session = sessionStore.load() ?: error("Not logged in.")
+        val session = sessionStore.load() ?: throw SchoolSessionExpiredException()
         if (!session.isExpired()) return session
         return refreshMutex.withLock {
-            val latest = sessionStore.load() ?: error("Not logged in.")
+            val latest = sessionStore.load() ?: throw SchoolSessionExpiredException()
             if (!latest.isExpired()) latest else refreshBakalari(latest)
         }
     }
@@ -129,10 +135,19 @@ class AndroidSchoolRepository(
     private suspend fun refreshBakalari(session: StoredSession): StoredSession {
         val response = try {
             bakalariClient.refreshToken(session.baseURL, session.refreshToken)
+        } catch (error: CancellationException) {
+            throw error
         } catch (error: Throwable) {
             if (!isRefreshTokenRejected(error)) throw error
-            val credentials = session.bakalari ?: throw error
-            bakalariClient.login(session.baseURL, credentials.username, credentials.password)
+            val credentials = session.bakalari ?: expireSession(error)
+            try {
+                bakalariClient.login(session.baseURL, credentials.username, credentials.password)
+            } catch (loginError: CancellationException) {
+                throw loginError
+            } catch (loginError: Throwable) {
+                if (isRefreshTokenRejected(loginError)) expireSession(loginError)
+                throw loginError
+            }
         }
         val updated = session.copy(
             accessToken = response.accessToken,
@@ -145,13 +160,44 @@ class AndroidSchoolRepository(
     }
 
     private suspend fun <T> withBakalariRetry(session: StoredSession, block: suspend (StoredSession) -> T): T =
-        runCatching { block(session) }.getOrElse {
-            if (!isAccessTokenRejected(it)) throw it
+        try {
+            block(session)
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Throwable) {
+            if (!isAccessTokenRejected(error)) throw error
             val refreshed = refreshMutex.withLock {
-                val latest = sessionStore.load() ?: session
+                val latest = sessionStore.load() ?: throw SchoolSessionExpiredException()
                 if (latest.accessToken != session.accessToken && !latest.isExpired()) latest else refreshBakalari(latest)
             }
             block(refreshed)
+        }
+
+    private fun expireSession(cause: Throwable): Nothing {
+        sessionStore.clear()
+        throw SchoolSessionExpiredException(cause)
+    }
+
+    private suspend fun optionalAbsence(session: StoredSession): AbsenceResponse? =
+        try {
+            fetchAbsence(session)
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: SchoolSessionExpiredException) {
+            throw error
+        } catch (_: Throwable) {
+            null
+        }
+
+    private suspend fun optionalUser(session: StoredSession): UserResponse? =
+        try {
+            fetchUser(session)
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: SchoolSessionExpiredException) {
+            throw error
+        } catch (_: Throwable) {
+            null
         }
 
     private fun isRefreshTokenRejected(error: Throwable): Boolean =

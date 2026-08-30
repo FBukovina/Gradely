@@ -83,7 +83,7 @@ Verification evidence (2026-08-30): Android decoded the live Bakaláři municipa
 - [x] Refresh before expiry and serialize simultaneous refresh requests.
 - [x] Retry a request only for access-token rejection, not for every network/decoding/server error.
 - [x] Fall back from a rejected refresh token to credential login only under the same conditions as iOS.
-- [ ] Clear an unrecoverable expired session and route to reconnect without discarding unrelated local preferences.
+- [x] Clear an unrecoverable expired session and route to reconnect without discarding unrelated local preferences.
 - [x] Scope caches by provider/server/user/linked-account identity so accounts cannot see each other’s data.
 - [ ] Implement local linked-account persistence, cloud account linking, activation, reconnect, unlink, status, and per-account notification setting with real repositories.
 - [ ] Implement safe school account switching and reset all visible feature state after activation.
@@ -95,12 +95,14 @@ Verification evidence (2026-08-30): Android decoded the live Bakaláři municipa
 - [x] Parse readable Bakaláři login error bodies without exposing raw HTML or secrets.
 - [x] Verify percent-encoded login/refresh forms and JSON what-if bodies against iOS fixtures.
 - [x] Add request/connect/read timeouts and cancellation-aware OkHttp coroutine execution.
-- [ ] Treat user and absence endpoints as optional where iOS does, without failing marks/dashboard.
-- [ ] Preserve previous content when an optional endpoint or background refresh fails.
+- [x] Treat user and absence endpoints as optional where iOS does, without failing marks/dashboard.
+- [x] Preserve previous content when an optional endpoint or background refresh fails.
 - [ ] Harden JSON decoding for nullable, missing, malformed, numeric/string, and server-version differences found in real Bakaláři responses.
 - [ ] Verify dates and timetable week boundaries in Europe/Prague, including daylight-saving changes and device timezones.
 - [ ] Add fixture tests for empty data, partial data, malformed data, 401/403, 404 optional endpoints, 5xx, timeout, offline, and refresh rejection.
 - [ ] Confirm no credentials, tokens, or sensitive response bodies are logged.
+
+Verification evidence (2026-08-30): repository tests cover optional user/absence 404s, cached user and per-subject absence retention, cancellation propagation, rejected refresh plus rejected credential login, missing fallback credentials, and transient offline re-login failure. Unrecoverable authentication clears only the stored school session, retains scoped cache entries, and is handled by the app shell as a reconnect transition with visible feature state reset.
 
 ## Cache and offline behavior
 

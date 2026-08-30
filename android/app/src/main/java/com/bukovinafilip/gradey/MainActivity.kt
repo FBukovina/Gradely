@@ -55,6 +55,7 @@ import com.bukovinafilip.gradey.feature.stravacz.StravaCZScreen
 import com.bukovinafilip.gradey.feature.subjects.SubjectsScreen
 import com.bukovinafilip.gradey.feature.timetable.TimetableScreen
 import com.bukovinafilip.gradey.feature.today.TodayScreen
+import com.bukovinafilip.gradey.domain.SchoolSessionExpiredException
 import com.bukovinafilip.gradey.model.AbsenceResponse
 import com.bukovinafilip.gradey.model.DashboardData
 import com.bukovinafilip.gradey.model.GradeyAccount
@@ -182,20 +183,57 @@ private fun GradeyApp(
     }
 
     suspend fun loadTimetable(weekContaining: String): Throwable? {
-        return runCatching { graph.schoolRepository.loadTimetable(weekContaining) }
-            .onSuccess { timetable = it }
-            .exceptionOrNull()
+        return try {
+            timetable = graph.schoolRepository.loadTimetable(weekContaining)
+            null
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Throwable) {
+            error
+        }
+    }
+
+    fun routeToSchoolReconnect() {
+        dashboard = null
+        absence = null
+        timetable = null
+        stravaMenu = null
+        selectedTab = AppTab.TODAY
+        dataError = null
+        schoolLoginError = "Your Bakaláři session expired. Please reconnect your school account."
+        phase = AppPhase.NEEDS_SCHOOL
     }
 
     suspend fun refreshSignedInData(forceRefresh: Boolean = false) {
         val failures = mutableListOf<Throwable>()
-        runCatching { graph.schoolRepository.loadDashboard(forceRefresh = forceRefresh) }
-            .onSuccess { dashboard = it }
-            .onFailure(failures::add)
-        runCatching { graph.schoolRepository.loadAbsence(forceRefresh = forceRefresh) }
-            .onSuccess { absence = it }
-            .onFailure(failures::add)
-        loadTimetable(LocalDate.now().toString())?.let(failures::add)
+        try {
+            dashboard = graph.schoolRepository.loadDashboard(forceRefresh = forceRefresh)
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: SchoolSessionExpiredException) {
+            routeToSchoolReconnect()
+            return
+        } catch (error: Throwable) {
+            failures += error
+        }
+        try {
+            absence = graph.schoolRepository.loadAbsence(forceRefresh = forceRefresh)
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: SchoolSessionExpiredException) {
+            routeToSchoolReconnect()
+            return
+        } catch (error: Throwable) {
+            failures += error
+        }
+        when (val timetableFailure = loadTimetable(LocalDate.now().toString())) {
+            is SchoolSessionExpiredException -> {
+                routeToSchoolReconnect()
+                return
+            }
+            null -> Unit
+            else -> failures += timetableFailure
+        }
         if (runCatching { graph.stravaCZRepository.bootstrapSession() }.getOrNull() != null) {
             runCatching { graph.stravaCZRepository.loadMenu(forceRefresh = forceRefresh).second }
                 .onSuccess { stravaMenu = it }

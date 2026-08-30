@@ -678,7 +678,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 2.0.1;
+				MARKETING_VERSION = 2.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.bukovinafilip.BakalariMarks.GradelyWidgets;
 				PRODUCT_MODULE_NAME = GradelyWidgets;
 				PRODUCT_NAME = GradelyWidgets;
@@ -838,7 +838,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.0.1;
+				MARKETING_VERSION = 2.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.bukovinafilip.BakalariMarks;
 				PRODUCT_MODULE_NAME = Gradely;
 				PRODUCT_NAME = Gradey;
@@ -878,7 +878,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.0.1;
+				MARKETING_VERSION = 2.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.bukovinafilip.BakalariMarks;
 				PRODUCT_MODULE_NAME = Gradely;
 				PRODUCT_NAME = Gradey;
@@ -1002,7 +1002,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
-				MARKETING_VERSION = 2.0.1;
+				MARKETING_VERSION = 2.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.bukovinafilip.BakalariMarks;
 				PRODUCT_MODULE_NAME = Gradely;
 				PRODUCT_NAME = Gradey;
@@ -1041,7 +1041,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
-				MARKETING_VERSION = 2.0.1;
+				MARKETING_VERSION = 2.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.bukovinafilip.BakalariMarks;
 				PRODUCT_MODULE_NAME = Gradely;
 				PRODUCT_NAME = Gradey;
@@ -1075,7 +1075,7 @@
 					"@executable_path/../../../../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
-				MARKETING_VERSION = 2.0.1;
+				MARKETING_VERSION = 2.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.bukovinafilip.BakalariMarks.GradelyMacWidgets;
 				PRODUCT_MODULE_NAME = GradelyMacWidgets;
 				PRODUCT_NAME = GradelyMacWidgets;
@@ -1109,7 +1109,7 @@
 					"@executable_path/../../../../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
-				MARKETING_VERSION = 2.0.1;
+				MARKETING_VERSION = 2.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.bukovinafilip.BakalariMarks.GradelyMacWidgets;
 				PRODUCT_MODULE_NAME = GradelyMacWidgets;
 				PRODUCT_NAME = GradelyMacWidgets;
@@ -1142,7 +1142,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 2.0.1;
+				MARKETING_VERSION = 2.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.bukovinafilip.BakalariMarks.GradelyWidgets;
 				PRODUCT_MODULE_NAME = GradelyWidgets;
 				PRODUCT_NAME = GradelyWidgets;

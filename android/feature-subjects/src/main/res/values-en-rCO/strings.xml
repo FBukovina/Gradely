@@ -3,4 +3,5 @@
     <string name="marks_search_prompt">search subjects</string>
     <string name="marks_search_empty">no subjects</string>
     <string name="marks_search_clear">clear subject search</string>
+    <string name="mark_prediction_invalid">enter a mark like 1, 2+, or 3-.</string>
 </resources>

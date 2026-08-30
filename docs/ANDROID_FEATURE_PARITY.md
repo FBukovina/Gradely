@@ -171,9 +171,11 @@ Subject search verification (2026-08-30): the Marks overview keeps its full unfi
 - [ ] Match iOS mark date parsing and ordering for multiple Bakaláři formats.
 - [ ] Implement average-history chart with cloud/local source indication and empty state.
 - [ ] Implement grade-history loading by active linked account and time range.
-- [ ] Implement mark-input validation and weight controls from 1 through 10.
+- [x] Implement mark-input validation and weight controls from 1 through 10.
 - [ ] Use the Bakaláři what-if endpoint when enabled; use verified local calculation only when the provider/server requires it.
 - [ ] Show better/same/worse predicted result and retain current subject data if prediction fails.
+
+Calculator-input verification (2026-08-30): Android now follows the iOS three-character mark-input limit, treats empty input as neutral, accepts every value supported by the shared grade parser (including plus/minus and decimal/comma forms), and surfaces localized guidance for non-empty invalid input. The decrement/increment controls remain disabled at their visible boundaries and the shared policy clamps every transition to the inclusive 1...10 range. JVM tests cover neutral, invalid, valid plus-mark, length-limit, and both weight boundaries.
 
 ## Absence
 

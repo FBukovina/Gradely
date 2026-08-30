@@ -43,6 +43,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -83,6 +84,7 @@ import androidx.core.view.WindowCompat
 import com.bukovinafilip.gradey.domain.AbsenceRiskSummary
 import com.bukovinafilip.gradey.domain.GradeBand
 import com.bukovinafilip.gradey.domain.GradeMath
+import com.bukovinafilip.gradey.domain.MarkPredictionInput
 import com.bukovinafilip.gradey.domain.SubjectDirectorySearch
 import com.bukovinafilip.gradey.model.AbsenceResponse
 import com.bukovinafilip.gradey.model.Mark
@@ -674,7 +676,12 @@ private fun SubjectDetail(
     }
     var trialMark by rememberSaveable(subject.id) { mutableStateOf("") }
     var trialWeight by rememberSaveable(subject.id) { mutableIntStateOf(1) }
-    val trialValue = remember(trialMark) { GradeMath.parseMarkValue(trialMark) }
+    val trialValue = remember(trialMark) { MarkPredictionInput.markValue(trialMark) }
+    val trialMarkError = if (MarkPredictionInput.isInvalid(trialMark)) {
+        stringResource(R.string.mark_prediction_invalid)
+    } else {
+        null
+    }
     val average = remember(subject, trialValue, trialWeight) {
         trialValue?.let {
             GradeMath.theoreticalAverage(
@@ -719,9 +726,10 @@ private fun SubjectDetail(
                     value = trialMark,
                     weight = trialWeight,
                     enabled = subject.markPredictionEnabled && !subject.pointsOnly,
-                    onValueChange = { trialMark = it.take(8) },
-                    onDecreaseWeight = { trialWeight = (trialWeight - 1).coerceAtLeast(1) },
-                    onIncreaseWeight = { trialWeight = (trialWeight + 1).coerceAtMost(10) },
+                    errorMessage = trialMarkError,
+                    onValueChange = { trialMark = MarkPredictionInput.acceptedMarkText(trialMark, it) },
+                    onDecreaseWeight = { trialWeight = MarkPredictionInput.decreaseWeight(trialWeight) },
+                    onIncreaseWeight = { trialWeight = MarkPredictionInput.increaseWeight(trialWeight) },
                 )
             }
             item { Spacer(Modifier.height(8.dp)) }
@@ -995,6 +1003,7 @@ private fun TryMarkCard(
     value: String,
     weight: Int,
     enabled: Boolean,
+    errorMessage: String?,
     onValueChange: (String) -> Unit,
     onDecreaseWeight: () -> Unit,
     onIncreaseWeight: () -> Unit,
@@ -1002,7 +1011,7 @@ private fun TryMarkCard(
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .height(138.dp),
+            .height(if (errorMessage == null) 138.dp else 158.dp),
         shape = RoundedCornerShape(20.dp),
         color = CardWhite,
         shadowElevation = 1.dp,
@@ -1039,6 +1048,14 @@ private fun TryMarkCard(
                     }
                 },
             )
+            if (errorMessage != null) {
+                Text(
+                    text = errorMessage,
+                    color = MaterialTheme.colorScheme.error,
+                    fontSize = 12.sp,
+                    lineHeight = 16.sp,
+                )
+            }
             Spacer(Modifier.height(14.dp))
             Row(
                 modifier = Modifier

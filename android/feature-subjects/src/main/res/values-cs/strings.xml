@@ -3,4 +3,5 @@
     <string name="marks_search_prompt">Hledat předměty</string>
     <string name="marks_search_empty">Žádné předměty</string>
     <string name="marks_search_clear">Vymazat hledání předmětů</string>
+    <string name="mark_prediction_invalid">Zadejte známku, například 1, 2+ nebo 3-.</string>
 </resources>

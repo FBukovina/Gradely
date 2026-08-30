@@ -11,9 +11,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.AlertDialog
@@ -46,6 +43,7 @@ import com.bukovinafilip.gradey.model.LinkedAccountProvider
 import com.bukovinafilip.gradey.model.NotificationLockScreenDetail
 import com.bukovinafilip.gradey.model.NotificationPreferences
 import com.bukovinafilip.gradey.ui.AppLanguagePicker
+import com.bukovinafilip.gradey.ui.GradeyIcons
 import com.bukovinafilip.gradey.ui.GradeyHero
 import com.bukovinafilip.gradey.ui.GradeyScreen
 import com.bukovinafilip.gradey.ui.GradeySectionCard
@@ -127,7 +125,7 @@ fun AccountScreen(
     GradeyScreen(modifier = modifier.verticalScroll(rememberScrollState())) {
         GradeyHero("Account", account?.fullName ?: "Local-only mode")
         GradeySectionCard(title = "Profile") {
-            Icon(Icons.Default.Person, contentDescription = null)
+            Icon(GradeyIcons.User, contentDescription = null)
             account?.let { signedInAccount ->
                 val avatarText = signedInAccount.fullName
                     ?.trim()
@@ -200,7 +198,7 @@ fun AccountScreen(
             }
         }
         GradeySectionCard(title = "Notifications") {
-            Icon(Icons.Default.Notifications, contentDescription = null)
+            Icon(GradeyIcons.Notification, contentDescription = null)
             if (account == null) {
                 Text(stringResource(R.string.notifications_gradey_id_required))
             } else {

@@ -24,15 +24,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.MenuBook
-import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.ChevronLeft
-import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.outlined.MeetingRoom
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -73,6 +64,7 @@ import com.bukovinafilip.gradey.domain.TodayTimetableSummaries
 import com.bukovinafilip.gradey.domain.TodayTimetableSummary
 import com.bukovinafilip.gradey.model.LessonChangeKind
 import com.bukovinafilip.gradey.model.ScheduledDay
+import com.bukovinafilip.gradey.ui.GradeyIcons
 import com.bukovinafilip.gradey.model.ScheduledLesson
 import com.bukovinafilip.gradey.model.TimetableWeek
 import java.time.LocalDate
@@ -329,7 +321,7 @@ private fun TimetableHeader(
                 Surface(modifier = Modifier.size(30.dp), shape = CircleShape, color = Color(0xFFC7ECE9)) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
-                            imageVector = Icons.Default.AutoAwesome,
+                            imageVector = GradeyIcons.Sparkles,
                             contentDescription = openToolsDescription,
                             tint = AccentTeal,
                             modifier = Modifier.size(22.dp),
@@ -377,7 +369,7 @@ private fun TimetableHeader(
                             )
                         } else {
                             Icon(
-                                imageVector = Icons.Default.Refresh,
+                                imageVector = GradeyIcons.Refresh,
                                 contentDescription = refreshDescription,
                                 tint = AccentTeal,
                                 modifier = Modifier.size(27.dp),
@@ -393,7 +385,7 @@ private fun TimetableHeader(
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
-                            imageVector = Icons.Default.Person,
+                            imageVector = GradeyIcons.User,
                             contentDescription = openAccountDescription,
                             tint = AccentTeal,
                             modifier = Modifier.size(22.dp),
@@ -428,7 +420,7 @@ private fun WeekNavigator(
             onClick = onPrevious,
             modifier = Modifier.align(Alignment.CenterStart),
         ) {
-            Icon(Icons.Default.ChevronLeft, contentDescription = null, tint = AccentTeal, modifier = Modifier.size(24.dp))
+            Icon(GradeyIcons.ArrowLeft, contentDescription = null, tint = AccentTeal, modifier = Modifier.size(24.dp))
         }
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
@@ -455,7 +447,7 @@ private fun WeekNavigator(
             onClick = onNext,
             modifier = Modifier.align(Alignment.CenterEnd),
         ) {
-            Icon(Icons.Default.ChevronRight, contentDescription = null, tint = AccentTeal, modifier = Modifier.size(24.dp))
+            Icon(GradeyIcons.ArrowRight, contentDescription = null, tint = AccentTeal, modifier = Modifier.size(24.dp))
         }
     }
 }
@@ -900,49 +892,49 @@ private fun LessonDetailSheet(lesson: ScheduledLesson) {
                 ) {
                     teacher?.let {
                         DetailRow(
-                            icon = { Icon(Icons.Default.Person, contentDescription = null) },
+                            icon = { Icon(GradeyIcons.User, contentDescription = null) },
                             label = stringResource(R.string.timetable_detail_teacher),
                             value = it,
                         )
                     }
                     room?.let {
                         DetailRow(
-                            icon = { Icon(Icons.Outlined.MeetingRoom, contentDescription = null) },
+                            icon = { Icon(GradeyIcons.MeetingRoom, contentDescription = null) },
                             label = stringResource(R.string.timetable_detail_room),
                             value = it,
                         )
                     }
                     if (lesson.groups.isNotEmpty()) {
                         DetailRow(
-                            icon = { Icon(Icons.Default.Person, contentDescription = null) },
+                            icon = { Icon(GradeyIcons.User, contentDescription = null) },
                             label = stringResource(R.string.timetable_detail_group),
                             value = lesson.groups.joinToString(", "),
                         )
                     }
                     lesson.theme?.takeIf { it.isNotBlank() }?.let { topic ->
                         DetailRow(
-                            icon = { Icon(Icons.AutoMirrored.Outlined.MenuBook, contentDescription = null) },
+                            icon = { Icon(GradeyIcons.Book, contentDescription = null) },
                             label = stringResource(R.string.timetable_detail_topic),
                             value = topic,
                         )
                     }
                     if (lesson.hasHomework) {
                         DetailRow(
-                            icon = { Icon(Icons.AutoMirrored.Outlined.MenuBook, contentDescription = null) },
+                            icon = { Icon(GradeyIcons.Book, contentDescription = null) },
                             label = stringResource(R.string.timetable_detail_homework),
                             value = stringResource(R.string.timetable_detail_homework_assigned),
                         )
                     }
                     lesson.changeDescription?.takeIf { it.isNotBlank() }?.let { change ->
                         DetailRow(
-                            icon = { Icon(Icons.Default.Info, contentDescription = null) },
+                            icon = { Icon(GradeyIcons.Information, contentDescription = null) },
                             label = lesson.localizedChangeLabel(),
                             value = change,
                         )
                     }
                     changeDetails.forEach { (label, value) ->
                         DetailRow(
-                            icon = { Icon(Icons.Default.Info, contentDescription = null) },
+                            icon = { Icon(GradeyIcons.Information, contentDescription = null) },
                             label = stringResource(label),
                             value = value,
                         )

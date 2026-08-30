@@ -9,11 +9,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -41,6 +36,7 @@ import com.bukovinafilip.gradey.model.GradeySupportTier
 import com.bukovinafilip.gradey.model.SupportBillingInterval
 import com.bukovinafilip.gradey.model.SupportCatalog
 import com.bukovinafilip.gradey.model.SupportPlanOption
+import com.bukovinafilip.gradey.ui.GradeyIcons
 import com.bukovinafilip.gradey.ui.GradeyHero
 import com.bukovinafilip.gradey.ui.GradeySectionCard
 import com.bukovinafilip.gradey.ui.GradeySpacing
@@ -102,7 +98,7 @@ fun SupportScreen(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(onClick = onBack) {
                         Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
+                            GradeyIcons.ArrowLeft,
                             contentDescription = stringResource(R.string.support_back),
                         )
                     }
@@ -330,7 +326,7 @@ fun SupportScreen(
     if (showCredits) {
         AlertDialog(
             onDismissRequest = { showCredits = false },
-            icon = { Icon(Icons.Default.Info, contentDescription = null) },
+            icon = { Icon(GradeyIcons.Information, contentDescription = null) },
             title = { Text(stringResource(R.string.support_credits)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(GradeySpacing.md)) {
@@ -356,7 +352,7 @@ fun SupportScreen(
 private fun ActiveSupportCard(catalog: SupportCatalog, onManageSubscription: () -> Unit) {
     val entitlement = catalog.entitlement
     GradeySectionCard(title = stringResource(R.string.support_active_title)) {
-        Icon(Icons.Default.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+        Icon(GradeyIcons.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
         Text(
             stringResource(entitlement.tier.titleResource()),
             style = MaterialTheme.typography.headlineSmall,
@@ -394,7 +390,7 @@ private fun SupportPlanButton(
         modifier = Modifier.fillMaxWidth(),
         enabled = isSignedIn && !isBusy && !isCurrent && !isDowngrade,
     ) {
-        Icon(Icons.Default.Favorite, contentDescription = null)
+        Icon(GradeyIcons.Favourite, contentDescription = null)
         Column(
             modifier = Modifier
                 .weight(1f)

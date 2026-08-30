@@ -17,15 +17,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Restaurant
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -65,6 +56,7 @@ import com.bukovinafilip.gradey.model.StravaCZMenuDay
 import com.bukovinafilip.gradey.model.StravaCZOrderType
 import com.bukovinafilip.gradey.model.StravaCZStoredSession
 import com.bukovinafilip.gradey.ui.GradeyColors
+import com.bukovinafilip.gradey.ui.GradeyIcons
 import com.bukovinafilip.gradey.ui.GradeyHero
 import com.bukovinafilip.gradey.ui.GradeyRadius
 import com.bukovinafilip.gradey.ui.GradeySectionCard
@@ -222,7 +214,7 @@ private fun MealsToolbar(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         IconButton(onClick = onOpenGradeyTools) {
-            Icon(Icons.Default.AutoAwesome, contentDescription = stringResource(R.string.stravacz_open_ai), tint = GradeyColors.Primary)
+            Icon(GradeyIcons.Sparkles, contentDescription = stringResource(R.string.stravacz_open_ai), tint = GradeyColors.Primary)
         }
         Text(
             stringResource(R.string.stravacz_title),
@@ -236,18 +228,18 @@ private fun MealsToolbar(
                 if (busy) {
                     CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp)
                 } else {
-                    Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.stravacz_refresh), tint = GradeyColors.Primary)
+                    Icon(GradeyIcons.Refresh, contentDescription = stringResource(R.string.stravacz_refresh), tint = GradeyColors.Primary)
                 }
             }
         } else {
             Spacer(Modifier.size(48.dp))
         }
         IconButton(onClick = onOpenAccount) {
-            Icon(Icons.Default.Person, contentDescription = stringResource(R.string.stravacz_open_account), tint = GradeyColors.Primary)
+            Icon(GradeyIcons.User, contentDescription = stringResource(R.string.stravacz_open_account), tint = GradeyColors.Primary)
         }
         if (connected) {
             IconButton(onClick = onDisconnect, enabled = !busy) {
-                Icon(Icons.Default.Close, contentDescription = stringResource(R.string.stravacz_disconnect), tint = MaterialTheme.colorScheme.error)
+                Icon(GradeyIcons.Cancel, contentDescription = stringResource(R.string.stravacz_disconnect), tint = MaterialTheme.colorScheme.error)
             }
         }
     }
@@ -308,7 +300,7 @@ private fun ConnectContent(
                     trailingIcon = {
                         IconButton(onClick = { passwordVisible = !passwordVisible }) {
                             Icon(
-                                if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                if (passwordVisible) GradeyIcons.ViewOff else GradeyIcons.View,
                                 contentDescription = stringResource(
                                     if (passwordVisible) R.string.stravacz_hide_password else R.string.stravacz_show_password,
                                 ),
@@ -432,7 +424,7 @@ private fun MealsHero(session: StravaCZStoredSession, orderedCount: Int) {
             )
         }
         Icon(
-            Icons.Default.Restaurant,
+            GradeyIcons.Restaurant,
             contentDescription = null,
             modifier = Modifier.align(Alignment.TopEnd).size(32.dp),
             tint = GradeyColors.OnAccent.copy(alpha = 0.45f),
@@ -524,14 +516,14 @@ private fun MealRow(meal: StravaCZMeal, isSubmitting: Boolean, onToggle: (Strava
                 if (isSubmitting) {
                     CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
                 } else {
-                    Icon(if (meal.ordered) Icons.Default.Close else Icons.Default.Check, contentDescription = null)
+                    Icon(if (meal.ordered) GradeyIcons.Cancel else GradeyIcons.Tick, contentDescription = null)
                     Spacer(Modifier.width(5.dp))
                     Text(stringResource(if (meal.ordered) R.string.stravacz_cancel_order else R.string.stravacz_order))
                 }
             }
             meal.ordered -> MealLabel(
                 text = stringResource(R.string.stravacz_meal_ordered),
-                leadingIcon = { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp)) },
+                leadingIcon = { Icon(GradeyIcons.Tick, contentDescription = null, modifier = Modifier.size(16.dp)) },
             )
             else -> Text(
                 stringResource(R.string.stravacz_meal_read_only),

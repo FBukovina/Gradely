@@ -30,20 +30,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.TrendingDown
-import androidx.compose.material.icons.automirrored.filled.TrendingUp
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.CalendarMonth
-import androidx.compose.material.icons.filled.ChevronLeft
-import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Remove
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -73,6 +59,7 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
+import com.bukovinafilip.gradey.ui.GradeyIcons
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -364,7 +351,7 @@ private fun MarksRefreshErrorCard(
                     if (isRefreshing) {
                         CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
                     } else {
-                        Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Icon(GradeyIcons.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
                     }
                     Text(
                         text = stringResource(R.string.marks_refresh_retry),
@@ -391,12 +378,12 @@ private fun SubjectSearchField(
         singleLine = true,
         placeholder = { Text(prompt) },
         leadingIcon = {
-            Icon(Icons.Default.Search, contentDescription = null)
+            Icon(GradeyIcons.Search, contentDescription = null)
         },
         trailingIcon = if (query.isNotEmpty()) {
             {
                 IconButton(onClick = { onQueryChange("") }) {
-                    Icon(Icons.Default.Close, contentDescription = stringResource(R.string.marks_search_clear))
+                    Icon(GradeyIcons.Cancel, contentDescription = stringResource(R.string.marks_search_clear))
                 }
             }
         } else {
@@ -441,7 +428,7 @@ private fun MarksHeader(
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
-                            imageVector = Icons.Default.AutoAwesome,
+                            imageVector = GradeyIcons.Sparkles,
                             contentDescription = "Open Gradey tools",
                             tint = AccentTeal,
                             modifier = Modifier.size(22.dp),
@@ -489,7 +476,7 @@ private fun MarksHeader(
                             )
                         } else {
                             Icon(
-                                imageVector = Icons.Default.Refresh,
+                                imageVector = GradeyIcons.Refresh,
                                 contentDescription = "Refresh Marks",
                                 tint = AccentTeal,
                                 modifier = Modifier.size(27.dp),
@@ -505,7 +492,7 @@ private fun MarksHeader(
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
-                            imageVector = Icons.Default.Person,
+                            imageVector = GradeyIcons.User,
                             contentDescription = "Open account",
                             tint = AccentTeal,
                             modifier = Modifier.size(22.dp),
@@ -768,9 +755,9 @@ private fun SubjectRow(
                     Spacer(Modifier.width(6.dp))
                     Icon(
                         imageVector = if (delta < 0) {
-                            Icons.AutoMirrored.Filled.TrendingDown
+                            GradeyIcons.TrendingDown
                         } else {
-                            Icons.AutoMirrored.Filled.TrendingUp
+                            GradeyIcons.TrendingUp
                         },
                         contentDescription = null,
                         tint = if (delta < 0) AccentTeal else DangerRed,
@@ -812,7 +799,7 @@ private fun SubjectRow(
         }
         Spacer(Modifier.width(4.dp))
         Icon(
-            imageVector = Icons.Default.ChevronRight,
+            imageVector = GradeyIcons.ArrowRight,
             contentDescription = "Open ${subject.displayName}",
             tint = Color(0xFFC7C7CC),
             modifier = Modifier.size(22.dp),
@@ -1110,7 +1097,7 @@ private fun SubjectDetailHeader(
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Icon(
-                    imageVector = Icons.Default.ChevronLeft,
+                    imageVector = GradeyIcons.ArrowLeft,
                     contentDescription = "Back",
                     tint = Color(0xFF061C1B),
                     modifier = Modifier.size(28.dp),
@@ -1173,11 +1160,11 @@ private fun SubjectAverageHero(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 DetailChip(
-                    icon = { Icon(Icons.Default.Verified, contentDescription = null, modifier = Modifier.size(14.dp)) },
+                    icon = { Icon(GradeyIcons.CheckmarkBadge, contentDescription = null, modifier = Modifier.size(14.dp)) },
                     text = pluralStringResource(R.plurals.subject_mark_count, markCount, markCount),
                 )
                 DetailChip(
-                    icon = { Icon(Icons.Default.CalendarMonth, contentDescription = null, modifier = Modifier.size(14.dp)) },
+                    icon = { Icon(GradeyIcons.Calendar, contentDescription = null, modifier = Modifier.size(14.dp)) },
                     text = absencePercentage?.let {
                         stringResource(R.string.subject_absence, formatOneDecimal(it))
                     } ?: stringResource(R.string.subject_absence_unavailable),
@@ -1526,7 +1513,7 @@ private fun TryMarkCard(
                     contentDescription = stringResource(R.string.subject_prediction_decrease_weight),
                     tint = Color(0xFFD1D1D6),
                 ) {
-                    Icon(Icons.Default.Remove, contentDescription = null, modifier = Modifier.size(22.dp))
+                    Icon(GradeyIcons.Minus, contentDescription = null, modifier = Modifier.size(22.dp))
                 }
                 Text(
                     text = stringResource(R.string.subject_prediction_weight, weight),
@@ -1541,7 +1528,7 @@ private fun TryMarkCard(
                     contentDescription = stringResource(R.string.subject_prediction_increase_weight),
                     tint = AccentTeal,
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(27.dp))
+                    Icon(GradeyIcons.Add, contentDescription = null, modifier = Modifier.size(27.dp))
                 }
             }
             predictedAverage?.let { predicted ->

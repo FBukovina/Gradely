@@ -24,13 +24,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.CalendarMonth
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Error
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -73,6 +66,7 @@ import com.bukovinafilip.gradey.domain.AbsenceLessonCandidate
 import com.bukovinafilip.gradey.domain.AbsenceMonthSummary
 import com.bukovinafilip.gradey.domain.AbsenceManualSelectionPolicy
 import com.bukovinafilip.gradey.domain.AbsencePartialDayCandidate
+import com.bukovinafilip.gradey.ui.GradeyIcons
 import com.bukovinafilip.gradey.domain.AbsencePrediction
 import com.bukovinafilip.gradey.domain.AbsencePredictionResult
 import com.bukovinafilip.gradey.domain.AbsencePredictionSubjectRow
@@ -171,7 +165,7 @@ fun AbsenceStateScreen(
                         )
                     } else {
                         Icon(
-                            imageVector = Icons.Default.Error,
+                            imageVector = GradeyIcons.ErrorCircle,
                             contentDescription = null,
                             tint = RiskOrange,
                             modifier = Modifier.size(34.dp),
@@ -411,7 +405,7 @@ private fun AbsenceHeader(
                 Surface(modifier = Modifier.size(30.dp), shape = CircleShape, color = Color(0xFFC7ECE9)) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
-                            imageVector = Icons.Default.AutoAwesome,
+                            imageVector = GradeyIcons.Sparkles,
                             contentDescription = stringResource(R.string.absence_open_gradey_tools),
                             tint = AccentTeal,
                             modifier = Modifier.size(22.dp),
@@ -459,7 +453,7 @@ private fun AbsenceHeader(
                             )
                         } else {
                             Icon(
-                                imageVector = Icons.Default.Refresh,
+                                imageVector = GradeyIcons.Refresh,
                                 contentDescription = stringResource(R.string.absence_refresh),
                                 tint = AccentTeal,
                                 modifier = Modifier.size(27.dp),
@@ -475,7 +469,7 @@ private fun AbsenceHeader(
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
-                            imageVector = Icons.Default.Person,
+                            imageVector = GradeyIcons.User,
                             contentDescription = stringResource(R.string.absence_open_account),
                             tint = AccentTeal,
                             modifier = Modifier.size(22.dp),
@@ -568,13 +562,13 @@ private fun AbsenceIconTile() {
     ) {
         Box(contentAlignment = Alignment.Center) {
             Icon(
-                imageVector = Icons.Default.CalendarMonth,
+                imageVector = GradeyIcons.Calendar,
                 contentDescription = null,
                 tint = AccentTeal,
                 modifier = Modifier.size(25.dp),
             )
             Icon(
-                imageVector = Icons.Default.Error,
+                imageVector = GradeyIcons.ErrorCircle,
                 contentDescription = null,
                 tint = AccentTeal,
                 modifier = Modifier
@@ -675,7 +669,7 @@ private fun SubjectsCard(
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Icon(Icons.Default.Error, contentDescription = null, tint = LateOrange)
+                    Icon(GradeyIcons.ErrorCircle, contentDescription = null, tint = LateOrange)
                     Text(warning, color = Color.Black, fontSize = 14.sp, lineHeight = 19.sp)
                 }
             }
@@ -1118,7 +1112,7 @@ private fun AbsencePredictionSheet(
                                         }
                                     }
                                     Icon(
-                                        Icons.Default.Check,
+                                        GradeyIcons.Tick,
                                         contentDescription = if (isSelected) {
                                             stringResource(R.string.absence_predictor_selected)
                                         } else {
@@ -1785,7 +1779,7 @@ private fun LegendPill(kind: AttendanceKind, label: String) {
 private fun AttendanceIcon(kind: AttendanceKind) {
     when (kind) {
         AttendanceKind.Unresolved -> Text("?", color = kind.foreground, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-        AttendanceKind.Excused -> Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(14.dp))
+        AttendanceKind.Excused -> Icon(GradeyIcons.Tick, contentDescription = null, modifier = Modifier.size(14.dp))
         AttendanceKind.Missed -> Text("N", color = kind.foreground, fontSize = 13.sp, fontWeight = FontWeight.Bold)
         AttendanceKind.Late -> Text("P", color = kind.foreground, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
         AttendanceKind.Early -> Text("O", color = kind.foreground, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)

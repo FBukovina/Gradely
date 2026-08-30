@@ -9,9 +9,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
@@ -36,6 +33,7 @@ import com.bukovinafilip.gradey.model.AppLanguage
 import com.bukovinafilip.gradey.model.OnboardingJourney
 import com.bukovinafilip.gradey.ui.AppLanguagePicker
 import com.bukovinafilip.gradey.ui.GradeyColors
+import com.bukovinafilip.gradey.ui.GradeyIcons
 import com.bukovinafilip.gradey.ui.GradeyHero
 import com.bukovinafilip.gradey.ui.GradeyScreen
 import com.bukovinafilip.gradey.ui.GradeySectionCard
@@ -381,7 +379,7 @@ fun GradeyIdLoginScreen(
                     enabled = !isLoading,
                     onClick = onGoogleSignIn,
                 ) {
-                    Icon(Icons.Default.Person, contentDescription = null)
+                    Icon(GradeyIcons.User, contentDescription = null)
                     Text(if (isLoading) "Signing in" else "Continue with Google")
                 }
             }
@@ -410,7 +408,7 @@ fun GradeyIdLoginScreen(
 
         GradeySectionCard {
             Column(verticalArrangement = Arrangement.spacedBy(GradeySpacing.sm)) {
-                Icon(Icons.Default.Lock, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                Icon(GradeyIcons.SecurityLock, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                 Text("Private by default", fontWeight = FontWeight.SemiBold)
                 Text("Gradey uses encrypted local storage and only registers push tokens after notification permission is granted.")
             }

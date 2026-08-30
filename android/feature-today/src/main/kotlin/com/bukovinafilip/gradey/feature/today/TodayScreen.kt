@@ -27,22 +27,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.filled.CalendarMonth
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.ChevronLeft
-import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.PlayCircle
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Restaurant
-import androidx.compose.material.icons.filled.Schedule
-import androidx.compose.material.icons.filled.Verified
-import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
@@ -73,6 +57,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
+import com.bukovinafilip.gradey.ui.GradeyIcons
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -190,7 +175,7 @@ fun TodayStateScreen(
                         )
                     } else {
                         Icon(
-                            imageVector = Icons.Default.CalendarMonth,
+                            imageVector = GradeyIcons.Calendar,
                             contentDescription = null,
                             tint = MutedText,
                             modifier = Modifier.size(34.dp),
@@ -402,7 +387,7 @@ private fun LinkedSchoolAccountPicker(
         ) {
             IconTile(background = SoftMint) {
                 Icon(
-                    imageVector = Icons.Default.Person,
+                    imageVector = GradeyIcons.User,
                     contentDescription = null,
                     tint = AccentTeal,
                     modifier = Modifier.size(22.dp),
@@ -438,7 +423,7 @@ private fun LinkedSchoolAccountPicker(
                 } else {
                     IconButton(onClick = { isExpanded = true }) {
                         Icon(
-                            imageVector = Icons.Default.ArrowDropDown,
+                            imageVector = GradeyIcons.ArrowDown,
                             contentDescription = stringResource(R.string.today_choose_school_account),
                             tint = AccentTeal,
                         )
@@ -495,7 +480,7 @@ private fun SchoolConnectionNotice(
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
-                    imageVector = Icons.Default.Warning,
+                    imageVector = GradeyIcons.Alert,
                     contentDescription = null,
                     tint = WarningOrange,
                     modifier = Modifier.size(22.dp),
@@ -674,7 +659,7 @@ private fun TodaySchoolReconnectSheet(
                         onClick = { isPasswordVisible = !isPasswordVisible },
                     ) {
                         Icon(
-                            imageVector = if (isPasswordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                            imageVector = if (isPasswordVisible) GradeyIcons.ViewOff else GradeyIcons.View,
                             contentDescription = stringResource(
                                 if (isPasswordVisible) R.string.today_hide_password else R.string.today_show_password,
                             ),
@@ -752,7 +737,7 @@ private fun LunchCard(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 IconTile(background = if (state is TodayMealState.Ordered) SoftMint else SoftGray) {
                     Icon(
-                        imageVector = Icons.Default.Restaurant,
+                        imageVector = GradeyIcons.Restaurant,
                         contentDescription = null,
                         tint = if (state is TodayMealState.Ordered) AccentTeal else MutedText,
                         modifier = Modifier.size(22.dp),
@@ -834,7 +819,7 @@ private fun TodayHeader(
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
-                            imageVector = Icons.Default.AutoAwesome,
+                            imageVector = GradeyIcons.Sparkles,
                             contentDescription = stringResource(R.string.today_open_gradey_ai),
                             tint = AccentTeal,
                             modifier = Modifier.size(22.dp),
@@ -882,7 +867,7 @@ private fun TodayHeader(
                             )
                         } else {
                             Icon(
-                                imageVector = Icons.Default.Refresh,
+                                imageVector = GradeyIcons.Refresh,
                                 contentDescription = stringResource(R.string.today_refresh),
                                 tint = AccentTeal,
                                 modifier = Modifier.size(27.dp),
@@ -898,7 +883,7 @@ private fun TodayHeader(
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
-                            imageVector = Icons.Default.Person,
+                            imageVector = GradeyIcons.User,
                             contentDescription = stringResource(R.string.today_open_account),
                             tint = AccentTeal,
                             modifier = Modifier.size(23.dp),
@@ -1008,7 +993,7 @@ private fun MarksShortcut(onClick: () -> Unit) {
         ) {
             IconTile(background = SoftMint) {
                 Icon(
-                    imageVector = Icons.Default.Verified,
+                    imageVector = GradeyIcons.CheckmarkBadge,
                     contentDescription = null,
                     tint = AccentTeal,
                     modifier = Modifier.size(25.dp),
@@ -1033,7 +1018,7 @@ private fun MarksShortcut(onClick: () -> Unit) {
                 )
             }
             Icon(
-                imageVector = Icons.Default.ChevronRight,
+                imageVector = GradeyIcons.ArrowRight,
                 contentDescription = null,
                 tint = Color(0xFF858589),
                 modifier = Modifier.size(27.dp),
@@ -1053,7 +1038,7 @@ private fun EmptyDashboardCard() {
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Icon(
-                imageVector = Icons.Default.Verified,
+                imageVector = GradeyIcons.CheckmarkBadge,
                 contentDescription = null,
                 tint = MutedText,
                 modifier = Modifier.size(30.dp),
@@ -1127,19 +1112,19 @@ private fun NowAndNextCard(
         TodayTimetableState.UNAVAILABLE -> stringResource(R.string.today_timetable_unavailable_subtitle)
     }
     val icon: ImageVector = when (summary.state) {
-        TodayTimetableState.CURRENT -> Icons.Default.PlayCircle
+        TodayTimetableState.CURRENT -> GradeyIcons.PlayCircle
         TodayTimetableState.BEFORE_SCHOOL,
         TodayTimetableState.BETWEEN_LESSONS,
-        -> Icons.Default.Schedule
+        -> GradeyIcons.TimeSchedule
 
         TodayTimetableState.AFTER_SCHOOL,
         TodayTimetableState.EMPTY,
-        -> Icons.Default.CheckCircle
+        -> GradeyIcons.CheckCircle
 
         TodayTimetableState.WEEKEND,
         TodayTimetableState.HOLIDAY,
         TodayTimetableState.UNAVAILABLE,
-        -> Icons.Default.CalendarMonth
+        -> GradeyIcons.Calendar
     }
     val iconTint = if (summary.state == TodayTimetableState.CURRENT) AccentTeal else MutedText
     val iconBackground = if (summary.state == TodayTimetableState.CURRENT) SoftMint else SoftGray
@@ -1209,7 +1194,7 @@ private fun TimetableChangeRow(lesson: ScheduledLesson) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
-            imageVector = Icons.Default.Warning,
+            imageVector = GradeyIcons.Alert,
             contentDescription = null,
             tint = WarningOrange,
             modifier = Modifier.size(20.dp),
@@ -1280,7 +1265,7 @@ private fun AbsenceRiskCard(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     IconTile(background = SoftGray) {
-                        Icon(Icons.Default.CalendarMonth, contentDescription = null, tint = MutedText)
+                        Icon(GradeyIcons.Calendar, contentDescription = null, tint = MutedText)
                     }
                     Spacer(Modifier.width(13.dp))
                     Text(
@@ -1411,7 +1396,7 @@ private fun AbsencePredictorCard(onPlanAbsence: () -> Unit) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 IconTile(background = SoftGray, size = 38.dp) {
                     Icon(
-                        imageVector = Icons.Default.CalendarMonth,
+                        imageVector = GradeyIcons.Calendar,
                         contentDescription = null,
                         tint = MutedText,
                         modifier = Modifier.size(22.dp),
@@ -1482,7 +1467,7 @@ private fun NewMarksAndTrendsCard(
                 ) {
                     IconTile(background = SoftMint) {
                         Icon(
-                            imageVector = Icons.Default.Verified,
+                            imageVector = GradeyIcons.CheckmarkBadge,
                             contentDescription = null,
                             tint = AccentTeal,
                             modifier = Modifier.size(22.dp),
@@ -1601,7 +1586,7 @@ private fun GradeTrendsHeader(onBack: () -> Unit) {
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Icon(
-                    imageVector = Icons.Default.ChevronLeft,
+                    imageVector = GradeyIcons.ArrowLeft,
                     contentDescription = stringResource(R.string.today_back),
                     tint = AccentTeal,
                     modifier = Modifier.size(28.dp),
@@ -1697,7 +1682,7 @@ private fun GradeTrendsEmptyCard() {
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Icon(
-                imageVector = Icons.Default.AutoAwesome,
+                imageVector = GradeyIcons.Sparkles,
                 contentDescription = null,
                 tint = MutedText,
                 modifier = Modifier.size(28.dp),
@@ -1732,7 +1717,7 @@ private fun CloudHistoryEmptyRow() {
     ) {
         IconTile(background = SoftGray) {
             Icon(
-                imageVector = Icons.Default.AutoAwesome,
+                imageVector = GradeyIcons.Sparkles,
                 contentDescription = null,
                 tint = MutedText,
                 modifier = Modifier.size(21.dp),

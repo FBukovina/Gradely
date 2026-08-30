@@ -14,11 +14,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Link
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
@@ -50,6 +45,7 @@ import com.bukovinafilip.gradey.domain.BakalariDemoAccount
 import com.bukovinafilip.gradey.domain.SchoolDirectorySearch
 import com.bukovinafilip.gradey.domain.SchoolLoginValidator
 import com.bukovinafilip.gradey.model.SchoolDirectorySchool
+import com.bukovinafilip.gradey.ui.GradeyIcons
 import com.bukovinafilip.gradey.ui.GradeyHero
 import com.bukovinafilip.gradey.ui.GradeyScreen
 import com.bukovinafilip.gradey.ui.GradeySectionCard
@@ -121,7 +117,7 @@ fun SchoolLoginScreen(
                     },
                     label = { Text("Find your school") },
                     placeholder = { Text("School name or town") },
-                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                    leadingIcon = { Icon(GradeyIcons.Search, contentDescription = null) },
                     trailingIcon = {
                         if (isDirectoryLoading) {
                             CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
@@ -225,7 +221,7 @@ fun SchoolLoginScreen(
                     },
                     label = { Text("School URL") },
                     placeholder = { Text("school.example.cz") },
-                    leadingIcon = { Icon(Icons.Default.Link, contentDescription = null) },
+                    leadingIcon = { Icon(GradeyIcons.Link, contentDescription = null) },
                     singleLine = true,
                     enabled = !isLoading,
                     isError = hasAttemptedLogin && validation.schoolURLMessage != null,
@@ -288,7 +284,7 @@ fun SchoolLoginScreen(
                             onClick = { isPasswordVisible = !isPasswordVisible },
                         ) {
                             Icon(
-                                imageVector = if (isPasswordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                imageVector = if (isPasswordVisible) GradeyIcons.ViewOff else GradeyIcons.View,
                                 contentDescription = if (isPasswordVisible) "Hide password" else "Show password",
                             )
                         }

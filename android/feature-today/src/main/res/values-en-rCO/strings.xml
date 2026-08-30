@@ -1,5 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="today_title">today</string>
+    <string name="today_loading">loading today…</string>
+    <string name="today_loading_subtitle">your Bakaláři data will appear here after it loads.</string>
+    <string name="today_load_failed">couldn’t load today</string>
+    <string name="today_no_data">no data yet</string>
+    <string name="today_no_data_subtitle">no usable Bakaláři data is available yet.</string>
+    <string name="today_retry">try again</string>
+    <string name="today_empty_title">no marks yet</string>
+    <string name="today_empty_subtitle">new marks and subjects will appear after your school publishes them.</string>
     <string name="today_new_marks_and_trends">new marks and trends</string>
     <string name="today_mark_in_subject">%1$s in %2$s</string>
     <string name="today_new_from_school">new from school</string>

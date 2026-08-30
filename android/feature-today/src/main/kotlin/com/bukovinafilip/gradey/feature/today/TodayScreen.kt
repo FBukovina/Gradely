@@ -36,6 +36,7 @@ import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -74,6 +75,7 @@ import com.bukovinafilip.gradey.domain.TodayMealState
 import com.bukovinafilip.gradey.domain.TodayMeals
 import com.bukovinafilip.gradey.domain.TodayNewMark
 import com.bukovinafilip.gradey.domain.TodayNewMarks
+import com.bukovinafilip.gradey.domain.TodayPresentationState
 import com.bukovinafilip.gradey.domain.TodayTimetableState
 import com.bukovinafilip.gradey.domain.TodayTimetableSummaries
 import com.bukovinafilip.gradey.domain.TodayTimetableSummary
@@ -105,6 +107,91 @@ private val SoftGray = Color(0xFFF0F0F2)
 private val WarningOrange = Color(0xFFFF8D28)
 private val DangerRed = Color(0xFFE5545D)
 private val PragueZone = ZoneId.of("Europe/Prague")
+
+@Composable
+fun TodayStateScreen(
+    state: TodayPresentationState,
+    errorMessage: String?,
+    onRetry: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(BackgroundTop, BackgroundMiddle, BackgroundBottom),
+                ),
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            modifier = Modifier
+                .widthIn(max = 520.dp)
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            Text(
+                text = stringResource(R.string.today_title),
+                color = AccentDark,
+                fontSize = 30.sp,
+                lineHeight = 36.sp,
+                fontWeight = FontWeight.Bold,
+            )
+            DashboardSurface(modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 28.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    if (state == TodayPresentationState.INITIAL_LOADING) {
+                        CircularProgressIndicator(color = AccentTeal)
+                        Text(
+                            text = stringResource(R.string.today_loading),
+                            color = Color.Black,
+                            fontSize = 18.sp,
+                            lineHeight = 23.sp,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                        Text(
+                            text = stringResource(R.string.today_loading_subtitle),
+                            color = MutedText,
+                            textAlign = TextAlign.Center,
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Default.CalendarMonth,
+                            contentDescription = null,
+                            tint = MutedText,
+                            modifier = Modifier.size(34.dp),
+                        )
+                        Text(
+                            text = if (errorMessage == null) {
+                                stringResource(R.string.today_no_data)
+                            } else {
+                                stringResource(R.string.today_load_failed)
+                            },
+                            color = Color.Black,
+                            fontSize = 18.sp,
+                            lineHeight = 23.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            textAlign = TextAlign.Center,
+                        )
+                        Text(
+                            text = errorMessage ?: stringResource(R.string.today_no_data_subtitle),
+                            color = MutedText,
+                            textAlign = TextAlign.Center,
+                        )
+                        Button(onClick = onRetry) {
+                            Text(stringResource(R.string.today_retry))
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
 
 @Composable
 fun TodayScreen(
@@ -194,6 +281,9 @@ fun TodayScreen(
                     subjectCount = subjects.size,
                     markCount = totalMarks,
                 )
+            }
+            if (subjects.isEmpty()) {
+                item { EmptyDashboardCard() }
             }
             item { MarksShortcut(onClick = onOpenMarks) }
             item { NowAndNextCard(summary = timetableSummary, onClick = onOpenTimetable) }
@@ -520,6 +610,40 @@ private fun MarksShortcut(onClick: () -> Unit) {
                 contentDescription = null,
                 tint = Color(0xFF858589),
                 modifier = Modifier.size(27.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun EmptyDashboardCard() {
+    DashboardSurface {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 22.dp, vertical = 24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Icon(
+                imageVector = Icons.Default.Verified,
+                contentDescription = null,
+                tint = MutedText,
+                modifier = Modifier.size(30.dp),
+            )
+            Text(
+                text = stringResource(R.string.today_empty_title),
+                color = Color.Black,
+                fontSize = 17.sp,
+                lineHeight = 22.sp,
+                fontWeight = FontWeight.Bold,
+            )
+            Text(
+                text = stringResource(R.string.today_empty_subtitle),
+                color = MutedText,
+                fontSize = 13.sp,
+                lineHeight = 18.sp,
+                textAlign = TextAlign.Center,
             )
         }
     }

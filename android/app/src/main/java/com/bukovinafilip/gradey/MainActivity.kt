@@ -73,11 +73,14 @@ import com.bukovinafilip.gradey.feature.stravacz.StravaCZScreen
 import com.bukovinafilip.gradey.feature.subjects.SubjectsScreen
 import com.bukovinafilip.gradey.feature.timetable.TimetableScreen
 import com.bukovinafilip.gradey.feature.today.TodayScreen
+import com.bukovinafilip.gradey.feature.today.TodayStateScreen
 import com.bukovinafilip.gradey.domain.GradeySessionExpiredException
 import com.bukovinafilip.gradey.domain.GradeHistoryTrends
 import com.bukovinafilip.gradey.domain.GradeyStartupDestination
 import com.bukovinafilip.gradey.domain.SchoolSessionExpiredException
 import com.bukovinafilip.gradey.domain.TimetableDates
+import com.bukovinafilip.gradey.domain.TodayPresentationState
+import com.bukovinafilip.gradey.domain.TodayPresentationStates
 import com.bukovinafilip.gradey.domain.WearPayloadBuilder
 import com.bukovinafilip.gradey.domain.loadCacheFirst
 import com.bukovinafilip.gradey.domain.refreshRetainingContent
@@ -1140,51 +1143,67 @@ private fun GradeyApp(
             val effectiveAbsence = currentAbsence ?: currentDashboard?.let {
                 AbsenceResponse(absencesPerSubject = it.absencesPerSubject)
             }
+            val todayPresentationState = TodayPresentationStates.resolve(
+                hasDashboard = currentDashboard != null,
+                hasSubjects = currentDashboard?.marksResponse?.subjects?.isNotEmpty() == true,
+                isLoading = isLoading,
+                hasError = dataError != null,
+            )
             when (selectedTab) {
-                AppTab.TODAY -> if (currentDashboard != null && effectiveAbsence != null) {
-                    TodayScreen(
-                        dashboard = currentDashboard,
-                        absence = effectiveAbsence,
-                        timetable = timetable,
-                        stravaMenu = stravaMenu,
-                        isMealsConnected = stravaSession != null,
-                        cloudNewMarkEvents = gradeHistorySnapshot
-                            ?.takeIf { it.linkedAccountID == activeLinkedAccountID }
-                            ?.recentNewMarkEvents
-                            .orEmpty(),
-                        gradeTrends = gradeHistorySnapshot
-                            ?.takeIf { it.linkedAccountID == activeLinkedAccountID }
-                            ?.trends
-                            .orEmpty(),
-                        isRefreshing = isLoading,
-                        onRefresh = {
-                            if (!isLoading) {
-                                scope.launch {
-                                    isLoading = true
-                                    try {
-                                        refreshSignedInData(forceRefresh = true)
-                                    } finally {
-                                        isLoading = false
-                                    }
-                                }
-                            }
-                        },
-                        onOpenAccount = { selectedTab = AppTab.ACCOUNT },
-                        onOpenGradeyTools = { isGradeyAIPresented = true },
-                        onOpenMarks = { selectedTab = AppTab.SUBJECTS },
-                        onOpenAbsence = { selectedTab = AppTab.ABSENCE },
-                        onOpenTimetable = { selectedTab = AppTab.TIMETABLE },
-                        onOpenMeals = { selectedTab = AppTab.STRAVACZ },
-                        modifier = Modifier.fillMaxSize(),
-                    )
-                } else {
-                    CoreDataUnavailableScreen(
-                        title = "Today",
-                        isLoading = isLoading,
+                AppTab.TODAY -> when (todayPresentationState) {
+                    TodayPresentationState.INITIAL_LOADING,
+                    TodayPresentationState.FIRST_LOAD_ERROR,
+                    -> TodayStateScreen(
+                        state = todayPresentationState,
                         errorMessage = dataError,
                         onRetry = { scope.launch { runWithLoading { refreshSignedInData(true) } } },
                         modifier = standardScreenModifier,
                     )
+
+                    else -> if (currentDashboard != null && effectiveAbsence != null) {
+                        TodayScreen(
+                            dashboard = currentDashboard,
+                            absence = effectiveAbsence,
+                            timetable = timetable,
+                            stravaMenu = stravaMenu,
+                            isMealsConnected = stravaSession != null,
+                            cloudNewMarkEvents = gradeHistorySnapshot
+                                ?.takeIf { it.linkedAccountID == activeLinkedAccountID }
+                                ?.recentNewMarkEvents
+                                .orEmpty(),
+                            gradeTrends = gradeHistorySnapshot
+                                ?.takeIf { it.linkedAccountID == activeLinkedAccountID }
+                                ?.trends
+                                .orEmpty(),
+                            isRefreshing = todayPresentationState == TodayPresentationState.REFRESHING,
+                            onRefresh = {
+                                if (!isLoading) {
+                                    scope.launch {
+                                        isLoading = true
+                                        try {
+                                            refreshSignedInData(forceRefresh = true)
+                                        } finally {
+                                            isLoading = false
+                                        }
+                                    }
+                                }
+                            },
+                            onOpenAccount = { selectedTab = AppTab.ACCOUNT },
+                            onOpenGradeyTools = { isGradeyAIPresented = true },
+                            onOpenMarks = { selectedTab = AppTab.SUBJECTS },
+                            onOpenAbsence = { selectedTab = AppTab.ABSENCE },
+                            onOpenTimetable = { selectedTab = AppTab.TIMETABLE },
+                            onOpenMeals = { selectedTab = AppTab.STRAVACZ },
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                    } else {
+                        TodayStateScreen(
+                            state = TodayPresentationState.FIRST_LOAD_ERROR,
+                            errorMessage = dataError,
+                            onRetry = { scope.launch { runWithLoading { refreshSignedInData(true) } } },
+                            modifier = standardScreenModifier,
+                        )
+                    }
                 }
 
                 AppTab.SUBJECTS -> if (currentDashboard != null && effectiveAbsence != null) SubjectsScreen(

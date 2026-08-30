@@ -1,5 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="today_title">Dnes</string>
+    <string name="today_loading">Načítám dnešek…</string>
+    <string name="today_loading_subtitle">Po načtení se tu objeví tvoje data z Bakalářů.</string>
+    <string name="today_load_failed">Dnešek se nepodařilo načíst</string>
+    <string name="today_no_data">Zatím žádná data</string>
+    <string name="today_no_data_subtitle">Z Bakalářů zatím nejsou dostupná žádná použitelná data.</string>
+    <string name="today_retry">Zkusit znovu</string>
+    <string name="today_empty_title">Zatím žádné známky</string>
+    <string name="today_empty_subtitle">Nové známky a předměty se objeví, až je škola zveřejní.</string>
     <string name="today_new_marks_and_trends">Nové známky a trendy</string>
     <string name="today_mark_in_subject">%1$s z předmětu %2$s</string>
     <string name="today_new_from_school">Nové ze školy</string>

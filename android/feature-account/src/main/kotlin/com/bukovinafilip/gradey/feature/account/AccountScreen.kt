@@ -30,6 +30,7 @@ import com.bukovinafilip.gradey.model.AppLanguage
 import com.bukovinafilip.gradey.model.GradeyAccount
 import com.bukovinafilip.gradey.model.LinkedSchoolAccount
 import com.bukovinafilip.gradey.model.LinkedAccountStatus
+import com.bukovinafilip.gradey.model.LinkedAccountProvider
 import com.bukovinafilip.gradey.ui.AppLanguagePicker
 import com.bukovinafilip.gradey.ui.GradeyHero
 import com.bukovinafilip.gradey.ui.GradeyScreen
@@ -51,6 +52,7 @@ fun AccountScreen(
     linkedAccountErrorMessage: String? = null,
     isRefreshingLinkedAccounts: Boolean = false,
     mutatingLinkedAccountID: String? = null,
+    showMealsTab: Boolean = true,
     onUpdateFullName: (String) -> Unit = {},
     onConnectGradeyId: () -> Unit = {},
     onRefreshLinkedAccounts: () -> Unit = {},
@@ -59,6 +61,7 @@ fun AccountScreen(
     onToggleLinkedNotifications: (LinkedSchoolAccount, Boolean) -> Unit = { _, _ -> },
     onUnlinkLinkedAccount: (LinkedSchoolAccount) -> Unit = {},
     onAppLanguageChange: (AppLanguage) -> Unit = {},
+    onShowMealsTabChange: (Boolean) -> Unit = {},
     onSignOut: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -130,8 +133,12 @@ fun AccountScreen(
                 onSelectionChange = onAppLanguageChange,
             )
         }
+        GradeySectionCard(title = stringResource(R.string.meals_tab_setting_title)) {
+            Text(stringResource(R.string.meals_tab_setting_message))
+            Switch(checked = showMealsTab, onCheckedChange = onShowMealsTabChange)
+        }
         if (account != null) {
-            GradeySectionCard(title = "Connected schools") {
+            GradeySectionCard(title = "Connected services") {
                 Text(
                     "Your linked Bakaláři accounts are encrypted by Gradey and available on your signed-in devices.",
                 )
@@ -214,8 +221,10 @@ fun AccountScreen(
                                 onCheckedChange = { onToggleLinkedNotifications(linked, it) },
                                 enabled = !isMutating && mutatingLinkedAccountID == null,
                             )
+                        } else if (linked.provider == LinkedAccountProvider.STRAVA_CZ) {
+                            Text(stringResource(R.string.meals_manage_from_tab))
                         } else {
-                            Text("Manage this provider from Gradey on iPhone for now.")
+                            Text("This provider is not available in Gradey for Android yet.")
                         }
                         OutlinedButton(
                             onClick = { pendingUnlink = linked },
@@ -234,7 +243,13 @@ fun AccountScreen(
             onDismissRequest = { pendingUnlink = null },
             title = { Text("Unlink ${linked.displayName}?") },
             text = {
-                Text("This removes the school from your Gradey ID. It does not delete the Bakaláři account at your school.")
+                Text(
+                    if (linked.provider == LinkedAccountProvider.STRAVA_CZ) {
+                        stringResource(R.string.meals_unlink_message)
+                    } else {
+                        "This removes the school from your Gradey ID. It does not delete the Bakaláři account at your school."
+                    },
+                )
             },
             confirmButton = {
                 Button(

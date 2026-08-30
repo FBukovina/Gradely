@@ -187,8 +187,8 @@ object DemoData {
                 title = "Monday",
                 date = "2026-07-06",
                 meals = listOf(
-                    StravaCZMeal(id = 1, title = "Meal 1", description = "Chicken with rice", ordered = true),
-                    StravaCZMeal(id = 2, title = "Meal 2", description = "Vegetable pasta", ordered = false),
+                    StravaCZMeal(id = 1, dateKey = "2026-07-06", name = "Chicken with rice", ordered = true),
+                    StravaCZMeal(id = 2, dateKey = "2026-07-06", name = "Vegetable pasta", ordered = false),
                 ),
             ),
         ),

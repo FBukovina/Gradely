@@ -47,6 +47,7 @@ class RoomGradeyCache(
 
     suspend fun loadStravaMenu(scope: String): StravaCZMenu? = load(key("strava-menu", scope), StravaCZMenu.serializer())
     suspend fun saveStravaMenu(scope: String, menu: StravaCZMenu) = save(key("strava-menu", scope), menu, StravaCZMenu.serializer())
+    suspend fun clearStravaMenu(scope: String) = dao.clear(key("strava-menu", scope))
 
     suspend fun loadSchoolDirectory(): CachedSchoolDirectory? =
         load("school-directory-v2", CachedSchoolDirectory.serializer())

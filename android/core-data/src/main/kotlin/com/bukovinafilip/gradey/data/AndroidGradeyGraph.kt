@@ -19,6 +19,7 @@ import com.bukovinafilip.gradey.network.SupabaseDevicePushTokenClient
 import com.bukovinafilip.gradey.network.SupabaseGradeyAuthRepository
 import com.bukovinafilip.gradey.network.SupabaseGradeyHistoryRepository
 import com.bukovinafilip.gradey.network.SupabaseLinkedAccountRepository
+import com.bukovinafilip.gradey.network.StravaCZNetworkClient
 import kotlinx.serialization.builtins.ListSerializer
 
 data class AndroidGradeyConfig(
@@ -46,6 +47,7 @@ class AndroidGradeyGraph private constructor(
     val guestModeStore: GradeyGuestModeStore,
     val onboardingProgressStore: OnboardingProgressStore,
     val appLanguageStore: AppLanguageStore,
+    val mealsTabPreferenceStore: MealsTabPreferenceStore,
     val isGradeyCloudConfigured: Boolean,
     val googleWebClientId: String,
 ) {
@@ -57,6 +59,7 @@ class AndroidGradeyGraph private constructor(
             val schoolSecureStore = SecureJsonStore(context, "gradey-school-secrets", GradeyJson)
             val authSecureStore = SecureJsonStore(context, "gradey-auth-secrets", GradeyJson)
             val linkedAccountStore = SecureJsonStore(context, "gradey-linked-accounts", GradeyJson)
+            val stravaCZSecureStore = SecureJsonStore(context, "gradey-stravacz-secrets", GradeyJson)
             val sessionStore = SchoolSessionStore(schoolSecureStore)
             val supabase = SupabaseConfiguration(config.supabaseUrl, config.supabaseAnonKey)
 
@@ -144,12 +147,17 @@ class AndroidGradeyGraph private constructor(
                     UnavailableDevicePushTokenClient()
                 },
                 gradeyAIRepository = FirebaseGradeyAIRepository(context, authRepository),
-                stravaCZRepository = UnavailableStravaCZRepository(),
+                stravaCZRepository = AndroidStravaCZRepository(
+                    client = StravaCZNetworkClient(),
+                    sessionStore = StravaCZSessionStore(stravaCZSecureStore),
+                    cache = cache,
+                ),
                 cache = cache,
                 ageAttestationStore = AgeAttestationStore(context),
                 guestModeStore = GradeyGuestModeStore(context),
                 onboardingProgressStore = OnboardingProgressStore(context, GradeyJson),
                 appLanguageStore = AppLanguageStore(context),
+                mealsTabPreferenceStore = MealsTabPreferenceStore(context),
                 isGradeyCloudConfigured = supabase.isConfigured,
                 googleWebClientId = config.googleWebClientId,
             )

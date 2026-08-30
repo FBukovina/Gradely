@@ -2,4 +2,8 @@
 <resources>
     <string name="bakalari_attribution_title">podpora Bakaláři</string>
     <string name="bakalari_attribution_message">neoficiální integrace se připojuje ke školním systémům Bakaláři. Gradey není produktem Bakaláři a není s Bakaláři software nijak spojený ani jím schválený.</string>
+    <string name="meals_tab_setting_title">zobrazit kartu jídla</string>
+    <string name="meals_tab_setting_message">zobrazit jídla ze Strava.cz v hlavní navigaci.</string>
+    <string name="meals_manage_from_tab">toto připojení můžete spravovat na kartě jídla.</string>
+    <string name="meals_unlink_message">tímto odpojíte Strava.cz na tomto zařízení a odeberete jídelnu z Gradey ID.</string>
 </resources>

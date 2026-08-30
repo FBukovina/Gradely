@@ -64,8 +64,8 @@ class TodayMealsTest {
 
     private fun meal(id: Int, ordered: Boolean) = StravaCZMeal(
         id = id,
-        title = "Meal $id",
-        description = "Lunch $id",
+        dateKey = "2026-08-30",
+        name = "Lunch $id",
         ordered = ordered,
     )
 }

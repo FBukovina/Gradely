@@ -94,6 +94,7 @@ interface LinkedAccountRepository {
     suspend fun localAccounts(): List<LinkedSchoolAccount>
     suspend fun refreshAccounts(): GradeyAccountSettingsSnapshot
     suspend fun linkSchoolAccount(session: StoredSession, user: com.bukovinafilip.gradey.model.UserResponse?): LinkedSchoolAccount
+    suspend fun linkStravaCZAccount(session: StravaCZStoredSession): LinkedSchoolAccount
     suspend fun activateSchoolAccount(accountID: String): LinkedSchoolAccountActivation
     suspend fun reconnectSchoolAccount(
         accountID: String,
@@ -129,3 +130,39 @@ interface StravaCZRepository {
     suspend fun setMeal(meal: StravaCZMeal, ordered: Boolean): Pair<StravaCZStoredSession, StravaCZMenu>
     suspend fun logout()
 }
+
+interface StravaCZClient {
+    suspend fun login(canteenNumber: String, username: String, password: String): StravaCZStoredSession
+    suspend fun fetchMenu(session: StravaCZStoredSession): StravaCZMenu
+    suspend fun changeMealOrder(session: StravaCZStoredSession, mealID: Int, ordered: Boolean): Double?
+    suspend fun saveOrders(session: StravaCZStoredSession): Double?
+    suspend fun cancelOrderChanges(session: StravaCZStoredSession): Double?
+    suspend fun logout(session: StravaCZStoredSession)
+}
+
+enum class StravaCZErrorKind {
+    INVALID_RESPONSE,
+    HTTP,
+    AUTHENTICATION,
+    INSUFFICIENT_BALANCE,
+    DECODING,
+    TRANSPORT,
+}
+
+class StravaCZException(
+    val kind: StravaCZErrorKind,
+    message: String,
+    val statusCode: Int? = null,
+    cause: Throwable? = null,
+) : IllegalStateException(message, cause)
+
+enum class StravaCZAppError(val messageText: String) {
+    NOT_LOGGED_IN("Connect your Strava.cz account first."),
+    MISSING_FIELDS("Enter the canteen number, username, and password."),
+    MEAL_NOT_FOUND("That meal is no longer in the current menu."),
+    MEAL_NOT_MODIFIABLE("This meal can no longer be changed."),
+}
+
+class StravaCZAppException(
+    val error: StravaCZAppError,
+) : IllegalStateException(error.messageText)

@@ -8,6 +8,7 @@ import com.bukovinafilip.gradey.model.LinkedSchoolAccountActivation
 import com.bukovinafilip.gradey.model.LinkedSchoolTokenPayload
 import com.bukovinafilip.gradey.model.SchoolProvider
 import com.bukovinafilip.gradey.model.StoredSession
+import com.bukovinafilip.gradey.model.StravaCZStoredSession
 import com.bukovinafilip.gradey.model.UserResponse
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.sync.Mutex
@@ -60,6 +61,22 @@ class SupabaseLinkedAccountRepository(
                 schoolName = user?.displaySchoolName ?: session.linkedAccountSchoolName,
                 providerUserID = user?.userUID,
                 tokenPayload = LinkedSchoolTokenPayload.from(session),
+            ),
+        )
+        upsert(account)
+        return account
+    }
+
+    override suspend fun linkStravaCZAccount(session: StravaCZStoredSession): LinkedSchoolAccount {
+        val account: LinkedSchoolAccount = post(
+            function = "link-stravacz-account",
+            body = LinkStravaCZAccountRequest(
+                displayName = session.displayName,
+                canteenNumber = session.canteenNumber,
+                canteenName = session.canteenName,
+                username = session.username,
+                serviceURL = session.serviceURL,
+                sessionID = session.sessionID,
             ),
         )
         upsert(account)
@@ -196,6 +213,21 @@ private data class LinkSchoolAccountRequest(
     val providerUserID: String?,
     @SerialName("token_payload")
     val tokenPayload: LinkedSchoolTokenPayload,
+)
+
+@Serializable
+private data class LinkStravaCZAccountRequest(
+    @SerialName("display_name")
+    val displayName: String,
+    @SerialName("canteen_number")
+    val canteenNumber: String,
+    @SerialName("canteen_name")
+    val canteenName: String?,
+    val username: String,
+    @SerialName("service_url")
+    val serviceURL: String,
+    @SerialName("session_id")
+    val sessionID: String,
 )
 
 @Serializable

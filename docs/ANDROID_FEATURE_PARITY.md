@@ -255,14 +255,16 @@ Timetable verification (2026-08-30): Android now follows the iOS week flow with 
 
 ## Strava.cz meals
 
-- [ ] Replace the mock repository with the real Strava.cz client, secure session store, scoped menu cache, and linked-account integration.
-- [ ] Implement canteen number/username/password connection with validation and readable errors.
-- [ ] Restore the meal session and cached menu at startup.
-- [ ] Match balance, canteen identity, ordered count, day/meal grouping, price, allergens, meal type, order type, and read-only state.
-- [ ] Implement order, cancel, single-main-meal replacement confirmation, insufficient-balance, not-modifiable, and submitting states.
-- [ ] Implement disconnect and account-hub link/unlink behavior.
-- [ ] Persist and honor the “Show Meals tab” setting; if hidden while selected, return to Today.
-- [ ] Keep menu content visible on refresh failure.
+- [x] Replace the mock repository with the real Strava.cz client, secure session store, scoped menu cache, and linked-account integration.
+- [x] Implement canteen number/username/password connection with validation and readable errors.
+- [x] Restore the meal session and cached menu at startup.
+- [x] Match balance, canteen identity, ordered count, day/meal grouping, price, allergens, meal type, order type, and read-only state.
+- [x] Implement order, cancel, single-main-meal replacement confirmation, insufficient-balance, not-modifiable, and submitting states.
+- [x] Implement disconnect and account-hub link/unlink behavior.
+- [x] Persist and honor the “Show Meals tab” setting; if hidden while selected, return to Today.
+- [x] Keep menu content visible on refresh failure.
+
+Strava.cz verification (2026-08-30): Android now uses the same public Strava.cz login, menu, order-change, save, rollback, and logout endpoints and payload fields as iOS, with bounded transport/authentication/insufficient-balance errors and no response-body logging. The login response is validated before its HTTPS `strava.cz` service URL is saved in Keystore-backed encrypted preferences; menus are parsed from dynamic `table*` payloads, normalized across supported dates and flexible scalar values, and cached under a SHA-256 account scope. Startup restores the session and scoped cache before refreshing, while failed background refreshes retain the visible menu and rejected authentication clears only the meal session/cache. The localized screen covers connection validation, balance and canteen identity, ordered count, grouped days, price, allergens, meal/order types, read-only state, per-meal progress, cancellation, and single-main replacement confirmation. Connecting refreshes the Gradey Cloud Strava link with the current device session; disconnect and account-hub unlink clear local data and attempt the matching cloud unlink. The persistent Show Meals tab setting defaults on, immediately returns a hidden selected tab to Today, and also suppresses the Today meal shortcut. Mapper, MockWebServer, repository, linked-account contract, preference, and Today-state JVM tests cover these behaviors, and app compilation verifies the production wiring.
 
 ## Gradey AI
 

@@ -4,7 +4,6 @@ import com.bukovinafilip.gradey.domain.DevicePushTokenClient
 import com.bukovinafilip.gradey.domain.GradeyAuthRepository
 import com.bukovinafilip.gradey.domain.GradeyHistoryRepository
 import com.bukovinafilip.gradey.domain.LinkedAccountRepository
-import com.bukovinafilip.gradey.domain.StravaCZRepository
 import com.bukovinafilip.gradey.model.GradeyAuthSession
 import com.bukovinafilip.gradey.model.GradeyAccount
 import com.bukovinafilip.gradey.model.GradeyAccountSettingsSnapshot
@@ -14,8 +13,6 @@ import com.bukovinafilip.gradey.model.LinkedAccountProvider
 import com.bukovinafilip.gradey.model.LinkedSchoolAccountActivation
 import com.bukovinafilip.gradey.model.NotificationPreferences
 import com.bukovinafilip.gradey.model.StoredSession
-import com.bukovinafilip.gradey.model.StravaCZMeal
-import com.bukovinafilip.gradey.model.StravaCZMenu
 import com.bukovinafilip.gradey.model.StravaCZStoredSession
 import kotlinx.serialization.builtins.ListSerializer
 import java.util.UUID
@@ -65,6 +62,22 @@ class LocalLinkedAccountRepository(
             providerUserID = user?.userUID,
             displayName = user?.fullName ?: session.linkedAccountDisplayName ?: session.provider.displayName,
             schoolName = user?.displaySchoolName ?: session.linkedAccountSchoolName,
+        )
+        saveUpsert(account)
+        return account
+    }
+
+    override suspend fun linkStravaCZAccount(session: StravaCZStoredSession): LinkedSchoolAccount {
+        val existing = localAccounts().firstOrNull {
+            it.provider == LinkedAccountProvider.STRAVA_CZ && it.providerUserID == session.username
+        }
+        val account = LinkedSchoolAccount(
+            id = existing?.id ?: UUID.randomUUID().toString(),
+            provider = LinkedAccountProvider.STRAVA_CZ,
+            providerUserID = session.username,
+            displayName = session.displayName,
+            canteenName = session.canteenName,
+            notificationsEnabled = false,
         )
         saveUpsert(account)
         return account
@@ -136,26 +149,4 @@ class UnavailableDevicePushTokenClient : DevicePushTokenClient {
         preferences: NotificationPreferences,
         gradeySession: GradeyAuthSession,
     ) = throw FeatureUnavailableException("Notification preferences require Gradey ID configuration.")
-}
-
-class UnavailableStravaCZRepository : StravaCZRepository {
-    override suspend fun bootstrapSession(): StravaCZStoredSession? = null
-    override suspend fun loadCachedMenu(): StravaCZMenu? = null
-
-    override suspend fun login(
-        canteenNumber: String,
-        username: String,
-        password: String,
-    ): StravaCZStoredSession = throw FeatureUnavailableException("Strava.cz connection is not available yet.")
-
-    override suspend fun loadMenu(forceRefresh: Boolean): Pair<StravaCZStoredSession, StravaCZMenu> =
-        throw FeatureUnavailableException("Strava.cz connection is not available yet.")
-
-    override suspend fun setMeal(
-        meal: StravaCZMeal,
-        ordered: Boolean,
-    ): Pair<StravaCZStoredSession, StravaCZMenu> =
-        throw FeatureUnavailableException("Strava.cz connection is not available yet.")
-
-    override suspend fun logout() = Unit
 }

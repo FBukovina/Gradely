@@ -8,6 +8,7 @@ import com.bukovinafilip.gradey.model.LinkedAccountStatus
 import com.bukovinafilip.gradey.model.LinkedAccountProvider
 import com.bukovinafilip.gradey.model.LinkedSchoolAccount
 import com.bukovinafilip.gradey.model.StoredSession
+import com.bukovinafilip.gradey.model.StravaCZStoredSession
 import com.bukovinafilip.gradey.model.UserResponse
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.test.runTest
@@ -120,6 +121,41 @@ class SupabaseLinkedAccountRepositoryTest {
         assertThat(payload.objectValue("bakalari").stringValue("password")).isEqualTo("secret")
         assertThat(result.id).isEqualTo("linked")
         assertThat(storedAccounts.single().id).isEqualTo("linked")
+    }
+
+    @Test
+    fun `Strava link sends the iOS compatible canteen payload and caches success`() = runTest {
+        server.enqueue(
+            jsonResponse(
+                accountResponse("canteen")
+                    .replace("\"bakalari\"", "\"stravaCZ\"")
+                    .replace("\"schoolName\":\"School\"", "\"schoolName\":null")
+                    .replace("\"canteenName\":null", "\"canteenName\":\"School Canteen\""),
+            ),
+        )
+
+        val result = repository().linkStravaCZAccount(
+            StravaCZStoredSession(
+                sessionID = "strava-session",
+                serviceURL = "https://s5.strava.cz/FOOD",
+                canteenNumber = "1234",
+                username = "student",
+                fullName = "Student Name",
+                canteenName = "School Canteen",
+            ),
+        )
+        val request = server.takeRequest()
+        val body = GradeyJson.parseToJsonElement(request.body.readUtf8()).jsonObject
+
+        assertThat(request.path).isEqualTo("/functions/v1/link-stravacz-account")
+        assertThat(body.stringValue("display_name")).isEqualTo("Student Name")
+        assertThat(body.stringValue("canteen_number")).isEqualTo("1234")
+        assertThat(body.stringValue("canteen_name")).isEqualTo("School Canteen")
+        assertThat(body.stringValue("username")).isEqualTo("student")
+        assertThat(body.stringValue("service_url")).isEqualTo("https://s5.strava.cz/FOOD")
+        assertThat(body.stringValue("session_id")).isEqualTo("strava-session")
+        assertThat(result.provider).isEqualTo(LinkedAccountProvider.STRAVA_CZ)
+        assertThat(storedAccounts.single().id).isEqualTo("canteen")
     }
 
     @Test

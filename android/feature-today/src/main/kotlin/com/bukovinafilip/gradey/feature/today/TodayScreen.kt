@@ -764,12 +764,10 @@ private fun LunchCard(
                     val subtitle: String
                     when (state) {
                         is TodayMealState.Ordered -> {
-                            val description = state.meal.description
-                                ?.trim()
-                                ?.takeIf(String::isNotEmpty)
-                            title = description ?: state.meal.title
-                            subtitle = state.meal.title
-                                .takeIf { description != null && !it.equals(description, ignoreCase = true) }
+                            title = state.meal.name
+                            subtitle = state.meal.typeDescription
+                                .trim()
+                                .takeIf(String::isNotEmpty)
                                 ?: stringResource(R.string.today_meal_ordered)
                         }
 

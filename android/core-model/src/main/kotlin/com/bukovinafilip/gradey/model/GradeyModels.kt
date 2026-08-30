@@ -791,33 +791,87 @@ data class GradeyAIConsent(
 @Serializable
 data class StravaCZStoredSession(
     val sessionID: String,
+    val serviceURL: String,
     val canteenNumber: String,
     val username: String,
-    val balance: String? = null,
+    val fullName: String = "",
+    val email: String? = null,
+    val balance: Double = 0.0,
+    val currency: String = "Kč",
+    val canteenName: String? = null,
     val savedAtEpochMillis: Long = System.currentTimeMillis(),
-)
+) {
+    val displayName: String get() = fullName.trim().ifEmpty { username }
+}
 
 @Serializable
 data class StravaCZMenu(
     val days: List<StravaCZMenuDay> = emptyList(),
-)
+) {
+    val allMeals: List<StravaCZMeal> get() = days.flatMap(StravaCZMenuDay::meals)
+    val orderedMeals: List<StravaCZMeal> get() = allMeals.filter(StravaCZMeal::ordered)
+}
 
 @Serializable
 data class StravaCZMenuDay(
     val id: String,
     val title: String,
     val date: String,
+    val ordered: Boolean = false,
     val meals: List<StravaCZMeal> = emptyList(),
-)
+) {
+    val orderedMainMeal: StravaCZMeal?
+        get() = meals.firstOrNull { it.type == StravaCZMealType.MAIN && it.ordered }
+}
+
+@Serializable
+enum class StravaCZMealType {
+    @SerialName("soup")
+    SOUP,
+
+    @SerialName("main")
+    MAIN,
+
+    @SerialName("unknown")
+    UNKNOWN,
+}
+
+@Serializable
+enum class StravaCZOrderType {
+    @SerialName("normal")
+    NORMAL,
+
+    @SerialName("restricted")
+    RESTRICTED,
+
+    @SerialName("optional")
+    OPTIONAL,
+}
+
+@Serializable
+data class StravaCZAllergen(
+    val code: String,
+    val name: String = "",
+) {
+    val displayText: String get() = name.trim().let { if (it.isEmpty()) code else "$code $it" }
+}
 
 @Serializable
 data class StravaCZMeal(
     val id: Int,
-    val title: String,
-    val description: String? = null,
+    val dateKey: String,
+    val type: StravaCZMealType = StravaCZMealType.UNKNOWN,
+    val orderType: StravaCZOrderType = StravaCZOrderType.NORMAL,
+    val typeDescription: String = "",
+    val name: String,
+    val forbiddenAllergens: String? = null,
+    val allergens: List<StravaCZAllergen> = emptyList(),
     val ordered: Boolean = false,
-    val canModify: Boolean = true,
-)
+    val price: Double = 0.0,
+) {
+    val canModify: Boolean get() = type == StravaCZMealType.MAIN && orderType != StravaCZOrderType.RESTRICTED
+    val allergenText: String get() = allergens.joinToString(", ", transform = StravaCZAllergen::displayText)
+}
 
 @Serializable
 enum class NextLessonWidgetChangeKind {

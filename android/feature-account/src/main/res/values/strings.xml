@@ -2,4 +2,8 @@
 <resources>
     <string name="bakalari_attribution_title">Bakaláři support</string>
     <string name="bakalari_attribution_message">This unofficial integration talks to Bakaláři school systems. Gradey is not a Bakaláři product and is not affiliated with or endorsed by Bakaláři software.</string>
+    <string name="meals_tab_setting_title">Show Meals tab</string>
+    <string name="meals_tab_setting_message">Show Strava.cz meals in the main navigation.</string>
+    <string name="meals_manage_from_tab">Manage this connection from the Meals tab.</string>
+    <string name="meals_unlink_message">This disconnects Strava.cz on this device and removes the canteen from your Gradey ID.</string>
 </resources>

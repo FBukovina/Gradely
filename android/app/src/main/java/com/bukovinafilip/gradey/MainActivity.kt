@@ -102,6 +102,7 @@ import com.bukovinafilip.gradey.model.AgeAttestationKind
 import com.bukovinafilip.gradey.model.AppLanguage
 import com.bukovinafilip.gradey.model.DashboardData
 import com.bukovinafilip.gradey.model.GradeyAccount
+import com.bukovinafilip.gradey.model.LinkedAccountProvider
 import com.bukovinafilip.gradey.model.LinkedSchoolAccount
 import com.bukovinafilip.gradey.model.NewMarkEvent
 import com.bukovinafilip.gradey.model.OnboardingJourney
@@ -109,6 +110,7 @@ import com.bukovinafilip.gradey.model.OnboardingProgress
 import com.bukovinafilip.gradey.model.OnboardingStep
 import com.bukovinafilip.gradey.model.SchoolDirectorySchool
 import com.bukovinafilip.gradey.model.StravaCZMenu
+import com.bukovinafilip.gradey.model.StravaCZMeal
 import com.bukovinafilip.gradey.model.StravaCZStoredSession
 import com.bukovinafilip.gradey.model.TimetableWeek
 import com.bukovinafilip.gradey.ui.GradeyTheme
@@ -235,6 +237,11 @@ private fun GradeyApp(
     var timetableError by remember { mutableStateOf<String?>(null) }
     var stravaSession by remember { mutableStateOf<StravaCZStoredSession?>(null) }
     var stravaMenu by remember { mutableStateOf<StravaCZMenu?>(null) }
+    var stravaError by remember { mutableStateOf<String?>(null) }
+    var isStravaLoading by remember { mutableStateOf(false) }
+    var isStravaRefreshing by remember { mutableStateOf(false) }
+    var submittingStravaMealID by remember { mutableStateOf<Int?>(null) }
+    var showMealsTab by remember { mutableStateOf(graph.mealsTabPreferenceStore.isVisible) }
     var gradeHistorySnapshot by remember { mutableStateOf<GradeHistorySnapshot?>(null) }
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
@@ -376,6 +383,107 @@ private fun GradeyApp(
         linkedAccounts = runCatching { graph.linkedAccountRepository.localAccounts() }.getOrDefault(emptyList())
     }
 
+    suspend fun linkCurrentStravaAccountIfNeeded(session: StravaCZStoredSession) {
+        if (account == null || isGuestMode || !graph.isGradeyCloudConfigured) return
+        try {
+            // Re-link even when a cached record exists so the cloud receives the current
+            // Strava session from this device, matching the iOS reconnect contract.
+            graph.linkedAccountRepository.linkStravaCZAccount(session)
+            linkedAccounts = graph.linkedAccountRepository.localAccounts()
+            linkedAccountError = null
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Throwable) {
+            // The local meals connection remains usable if optional cloud linking fails.
+            linkedAccountError = error.userFacingMessage()
+        }
+    }
+
+    suspend fun connectStravaCZ(canteenNumber: String, username: String, password: String) {
+        if (isStravaLoading) return
+        isStravaLoading = true
+        stravaError = null
+        try {
+            val session = graph.stravaCZRepository.login(canteenNumber, username, password)
+            stravaSession = session
+            stravaMenu = null
+            linkCurrentStravaAccountIfNeeded(session)
+            val (updatedSession, updatedMenu) = graph.stravaCZRepository.loadMenu(forceRefresh = true)
+            stravaSession = updatedSession
+            stravaMenu = updatedMenu
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Throwable) {
+            stravaError = error.userFacingMessage()
+        } finally {
+            isStravaLoading = false
+        }
+    }
+
+    suspend fun refreshStravaCZ(forceRefresh: Boolean = true) {
+        if (stravaSession == null || isStravaRefreshing) return
+        isStravaRefreshing = true
+        stravaError = null
+        try {
+            val (updatedSession, updatedMenu) = graph.stravaCZRepository.loadMenu(forceRefresh)
+            stravaSession = updatedSession
+            stravaMenu = updatedMenu
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Throwable) {
+            stravaError = error.userFacingMessage()
+            if (graph.stravaCZRepository.bootstrapSession() == null) {
+                stravaSession = null
+                stravaMenu = null
+            }
+        } finally {
+            isStravaRefreshing = false
+        }
+    }
+
+    suspend fun setStravaCZMeal(meal: StravaCZMeal, ordered: Boolean) {
+        if (submittingStravaMealID != null) return
+        submittingStravaMealID = meal.id
+        stravaError = null
+        try {
+            val (updatedSession, updatedMenu) = graph.stravaCZRepository.setMeal(meal, ordered)
+            stravaSession = updatedSession
+            stravaMenu = updatedMenu
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Throwable) {
+            stravaError = error.userFacingMessage()
+            graph.stravaCZRepository.loadCachedMenu()?.let { stravaMenu = it }
+            if (graph.stravaCZRepository.bootstrapSession() == null) {
+                stravaSession = null
+                stravaMenu = null
+            }
+        } finally {
+            submittingStravaMealID = null
+        }
+    }
+
+    suspend fun disconnectStravaCZ() {
+        val mealAccounts = linkedAccounts.filter { it.provider == LinkedAccountProvider.STRAVA_CZ }
+        mealAccounts.forEach { linked ->
+            try {
+                graph.linkedAccountRepository.unlinkAccount(linked.id)
+            } catch (error: CancellationException) {
+                throw error
+            } catch (_: Throwable) {
+                // Local disconnect remains authoritative if optional cloud unlink fails.
+            }
+        }
+        graph.stravaCZRepository.logout()
+        stravaSession = null
+        stravaMenu = null
+        stravaError = null
+        submittingStravaMealID = null
+        linkedAccounts = runCatching { graph.linkedAccountRepository.localAccounts() }.getOrDefault(
+            linkedAccounts.filterNot { it.provider == LinkedAccountProvider.STRAVA_CZ },
+        )
+    }
+
     suspend fun loadSchoolDirectory(forceRefresh: Boolean = false) {
         if (isSchoolDirectoryLoading || (hasLoadedSchoolDirectory && !forceRefresh)) return
         hasLoadedSchoolDirectory = true
@@ -469,8 +577,6 @@ private fun GradeyApp(
         absence = null
         resetAbsenceSubjectResolution()
         resetTimetableState()
-        stravaSession = null
-        stravaMenu = null
         gradeHistorySnapshot = null
         activeLinkedAccountID = null
         currentSchoolBaseURL = ""
@@ -486,13 +592,6 @@ private fun GradeyApp(
 
     suspend fun disconnectSchool() {
         graph.schoolRepository.logout()
-        try {
-            graph.stravaCZRepository.logout()
-        } catch (error: CancellationException) {
-            throw error
-        } catch (_: Throwable) {
-            // Bakaláři disconnect remains complete if the optional meals provider is unavailable.
-        }
         try {
             PhoneWearSyncPublisher.publish(
                 context.applicationContext,
@@ -514,8 +613,6 @@ private fun GradeyApp(
         absence = null
         resetAbsenceSubjectResolution()
         resetTimetableState()
-        stravaSession = null
-        stravaMenu = null
         gradeHistorySnapshot = null
         activeLinkedAccountID = null
         currentSchoolBaseURL = ""
@@ -692,8 +789,6 @@ private fun GradeyApp(
             resetAbsenceSubjectResolution()
             absenceRefreshError = null
             resetTimetableState()
-            stravaSession = null
-            stravaMenu = null
             gradeHistorySnapshot = null
             activeLinkedAccountID = activation.account.id
             selectedTab = AppTab.TODAY
@@ -732,7 +827,13 @@ private fun GradeyApp(
         linkedAccountError = null
         try {
             graph.linkedAccountRepository.unlinkAccount(linked.id)
-            if (activeLinkedAccountID == linked.id) {
+            if (linked.provider == LinkedAccountProvider.STRAVA_CZ) {
+                graph.stravaCZRepository.logout()
+                stravaSession = null
+                stravaMenu = null
+                stravaError = null
+                submittingStravaMealID = null
+            } else if (activeLinkedAccountID == linked.id) {
                 graph.schoolRepository.disassociateCurrentSession(linked.id)
                 gradeHistorySnapshot = null
                 activeLinkedAccountID = null
@@ -752,6 +853,7 @@ private fun GradeyApp(
         marksRefreshError = null
         absenceRefreshError = null
         timetableError = null
+        stravaError = null
         val failures = mutableListOf<Throwable>()
         val dashboardRefresh = refreshRetainingContent(dashboard) {
             graph.schoolRepository.loadDashboard(forceRefresh = forceRefresh)
@@ -804,7 +906,10 @@ private fun GradeyApp(
             graph.stravaCZRepository.bootstrapSession()
         }
         stravaSession = mealsSessionRefresh.value
-        if (mealsSessionRefresh.failure == null && stravaSession != null) {
+        val mealsSessionFailure = mealsSessionRefresh.failure
+        if (mealsSessionFailure != null) {
+            stravaError = mealsSessionFailure.userFacingMessage()
+        } else if (stravaSession != null) {
             val mealsRefresh = refreshRetainingContent(MealsSnapshot(stravaSession, stravaMenu)) {
                 val (updatedSession, updatedMenu) = graph.stravaCZRepository.loadMenu(
                     forceRefresh = forceRefresh,
@@ -813,6 +918,15 @@ private fun GradeyApp(
             }
             stravaSession = mealsRefresh.value.session
             stravaMenu = mealsRefresh.value.menu
+            mealsRefresh.failure?.let { error ->
+                stravaError = error.userFacingMessage()
+                if (graph.stravaCZRepository.bootstrapSession() == null) {
+                    stravaSession = null
+                    stravaMenu = null
+                }
+            }
+        } else {
+            stravaMenu = null
         }
         refreshLinkedAccountSnapshot()
         refreshGradeHistory()
@@ -1359,8 +1473,8 @@ private fun GradeyApp(
                             dashboard = currentDashboard,
                             absence = effectiveAbsence,
                             timetable = timetable,
-                            stravaMenu = stravaMenu,
-                            isMealsConnected = stravaSession != null,
+                            stravaMenu = stravaMenu.takeIf { showMealsTab },
+                            isMealsConnected = showMealsTab && stravaSession != null,
                             activeLinkedAccountDisplayName = linkedAccounts
                                 .firstOrNull { it.id == activeLinkedAccountID }
                                 ?.displayName,
@@ -1394,7 +1508,9 @@ private fun GradeyApp(
                             onOpenMarks = { selectedTab = AppTab.SUBJECTS },
                             onOpenAbsence = { selectedTab = AppTab.ABSENCE },
                             onOpenTimetable = { selectedTab = AppTab.TIMETABLE },
-                            onOpenMeals = { selectedTab = AppTab.STRAVACZ },
+                            onOpenMeals = {
+                                if (showMealsTab) selectedTab = AppTab.STRAVACZ
+                            },
                             onActivateLinkedAccount = { linked ->
                                 scope.launch {
                                     if (activateLinkedAccount(linked)) refreshSignedInData()
@@ -1549,7 +1665,25 @@ private fun GradeyApp(
                     },
                     modifier = standardScreenModifier,
                 )
-                AppTab.STRAVACZ -> StravaCZScreen(stravaMenu, standardScreenModifier)
+                AppTab.STRAVACZ -> StravaCZScreen(
+                    session = stravaSession,
+                    menu = stravaMenu,
+                    isLoading = isStravaLoading,
+                    isRefreshing = isStravaRefreshing,
+                    submittingMealID = submittingStravaMealID,
+                    errorMessage = stravaError,
+                    onConnect = { canteenNumber, username, password ->
+                        scope.launch { connectStravaCZ(canteenNumber, username, password) }
+                    },
+                    onRefresh = { scope.launch { refreshStravaCZ() } },
+                    onSetMeal = { meal, ordered ->
+                        scope.launch { setStravaCZMeal(meal, ordered) }
+                    },
+                    onDisconnect = { scope.launch { disconnectStravaCZ() } },
+                    onOpenAccount = { selectedTab = AppTab.ACCOUNT },
+                    onOpenGradeyTools = { isGradeyAIPresented = true },
+                    modifier = standardScreenModifier,
+                )
                 AppTab.ACCOUNT -> AccountScreen(
                     account = account,
                     linkedAccounts = linkedAccounts,
@@ -1563,6 +1697,7 @@ private fun GradeyApp(
                     linkedAccountErrorMessage = linkedAccountError,
                     isRefreshingLinkedAccounts = isRefreshingLinkedAccounts,
                     mutatingLinkedAccountID = mutatingLinkedAccountID,
+                    showMealsTab = showMealsTab,
                     onUpdateFullName = { fullName ->
                         scope.launch {
                             isUpdatingProfile = true
@@ -1618,6 +1753,11 @@ private fun GradeyApp(
                         scope.launch { unlinkLinkedAccount(linked) }
                     },
                     onAppLanguageChange = onAppLanguageChange,
+                    onShowMealsTabChange = { visible ->
+                        graph.mealsTabPreferenceStore.isVisible = visible
+                        showMealsTab = visible
+                        if (!visible && selectedTab == AppTab.STRAVACZ) selectedTab = AppTab.TODAY
+                    },
                     onSignOut = {
                         scope.launch {
                             try {
@@ -1627,6 +1767,7 @@ private fun GradeyApp(
                                     return@launch
                                 }
 
+                                disconnectStravaCZ()
                                 graph.gradeyAuthRepository.signOut()
                                 disconnectSchool()
                                 clearLinkedAccountsForLocalMode()
@@ -1659,10 +1800,10 @@ private fun GradeyApp(
                 AppTab.STRAVACZ -> stravaMenu != null
                 AppTab.ACCOUNT -> false
             }
-            val selectedTabRefreshError = if (selectedTab == AppTab.ABSENCE) {
-                absenceRefreshError
-            } else {
-                dataError
+            val selectedTabRefreshError = when (selectedTab) {
+                AppTab.ABSENCE -> absenceRefreshError
+                AppTab.STRAVACZ -> null
+                else -> dataError
             }
             if (
                 selectedTab != AppTab.ACCOUNT &&
@@ -1680,6 +1821,7 @@ private fun GradeyApp(
             if (selectedTab != AppTab.ACCOUNT) {
                 GradeyBottomNavigation(
                     selectedTab = selectedTab,
+                    showMealsTab = showMealsTab,
                     onSelect = {
                         selectedTab = it
                         dataError = null
@@ -1799,10 +1941,11 @@ private fun AppTab.icon() = when (this) {
 @Composable
 private fun GradeyBottomNavigation(
     selectedTab: AppTab,
+    showMealsTab: Boolean,
     onSelect: (AppTab) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val visibleTabs = MarksTabs
+    val visibleTabs = MarksTabs.filter { showMealsTab || it != AppTab.STRAVACZ }
     Box(
         modifier = modifier
             .fillMaxWidth()

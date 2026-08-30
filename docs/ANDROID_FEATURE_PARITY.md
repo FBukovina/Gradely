@@ -79,12 +79,14 @@ Guest verification (2026-08-30): the sign-in gate offers an explicit local-only 
 - [x] Verify the visible initial lookup-error and retry interaction end to end with the directory unavailable.
 - [x] Retain a clearly explained manual school URL path.
 - [x] Bakaláři base URL normalization and validation logic has JVM coverage for scheme, host, path, and insecure/invalid inputs.
-- [ ] Match iOS credential validation, password visibility, loading, cancellation, retry, readable server error, and demo-account behavior.
+- [x] Match iOS credential validation, password visibility, loading, cancellation, retry, readable server error, and demo-account behavior.
 - [x] Never prefill production login fields with demo credentials.
-- [ ] Keep the intentional App Review demo account isolated to the documented demo host and exact credentials.
+- [x] Keep the intentional App Review demo account isolated to the documented demo host and exact credentials.
 - [ ] Verify login against representative real Bakaláři server versions.
 
 Verification evidence (2026-08-30): Android decoded the live Bakaláři municipality/town responses, completed healthy coverage under the iOS deadline, cached 2,777 unique schools, restored that cache without a loading flash after a cold restart, found `Adršpach` from the unaccented query `adrspach`, filled the selected URL, retained the manual URL path, showed the offline lookup error, and completed a live retry after connectivity returned.
+
+Credential verification (2026-08-30): the login form now validates the school URL through the shared HTTPS normalizer and gives field-specific username/password guidance without trimming or changing the password. It provides appropriate URL/text/password keyboards, a working password visibility control, progress state, an explicit cancel action wired to coroutine and OkHttp cancellation, editable retry after safe server errors, and stale-error clearing when input changes. The App Review demo remains opt-in rather than prefilled; its exact `demo.gradely.app` / `apple-review` / `GradelyDemo2026!` tuple uses the fixture client, a wrong tuple on that host is rejected locally without any live request, and the same credentials on another host still use the real Bakaláři client. JVM tests cover field validation, insecure/invalid URLs, exact host matching (including a lookalike-host rejection), correct/wrong demo routing, and live-host isolation; existing MockWebServer tests cover encoded credentials, cancellation, structured errors, HTML sanitization, timeout, offline, and authentication failures.
 
 ## Bakaláři session and account lifecycle
 

@@ -40,6 +40,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -101,6 +102,7 @@ import com.bukovinafilip.gradey.wear.PhoneWearSyncPublisher
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -178,6 +180,8 @@ private fun GradeyApp(
     var linkedAccountError by remember { mutableStateOf<String?>(null) }
     var isRefreshingLinkedAccounts by remember { mutableStateOf(false) }
     var mutatingLinkedAccountID by remember { mutableStateOf<String?>(null) }
+    var schoolLoginJob by remember { mutableStateOf<Job?>(null) }
+    var schoolLoginAttempt by remember { mutableIntStateOf(0) }
     var directorySchools by remember { mutableStateOf<List<SchoolDirectorySchool>>(emptyList()) }
     var isSchoolDirectoryLoading by remember { mutableStateOf(false) }
     var hasLoadedSchoolDirectory by remember { mutableStateOf(false) }
@@ -202,6 +206,36 @@ private fun GradeyApp(
         } finally {
             isLoading = false
         }
+    }
+
+    fun launchSchoolLogin(block: suspend () -> Unit) {
+        schoolLoginAttempt += 1
+        val attempt = schoolLoginAttempt
+        schoolLoginJob?.cancel()
+        schoolLoginJob = scope.launch {
+            isLoading = true
+            schoolLoginError = null
+            try {
+                block()
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Throwable) {
+                schoolLoginError = error.userFacingMessage()
+            } finally {
+                if (attempt == schoolLoginAttempt) {
+                    isLoading = false
+                    schoolLoginJob = null
+                }
+            }
+        }
+    }
+
+    fun cancelSchoolLogin() {
+        schoolLoginAttempt += 1
+        schoolLoginJob?.cancel()
+        schoolLoginJob = null
+        schoolLoginError = null
+        isLoading = false
     }
 
     suspend fun loadCachedSignedInData() {
@@ -812,26 +846,18 @@ private fun GradeyApp(
                     onLoadDirectory = { scope.launch { loadSchoolDirectory() } },
                     onRetryDirectory = { scope.launch { loadSchoolDirectory(forceRefresh = true) } },
                     onLogin = { school, username, password ->
-                        scope.launch {
-                            isLoading = true
-                            schoolLoginError = null
-                            try {
-                                graph.schoolRepository.login(school, username, password)
-                                dashboard = runCatching {
-                                    graph.schoolRepository.loadDashboard(forceRefresh = false)
-                                }.getOrNull()
-                                linkCurrentSchoolIfNeeded()
-                                phase = AppPhase.SIGNED_IN
-                                advanceOnboardingAfterSchoolConnection()
-                            } catch (error: CancellationException) {
-                                throw error
-                            } catch (error: Throwable) {
-                                schoolLoginError = error.userFacingMessage()
-                            } finally {
-                                isLoading = false
-                            }
+                        launchSchoolLogin {
+                            graph.schoolRepository.login(school, username, password)
+                            dashboard = runCatching {
+                                graph.schoolRepository.loadDashboard(forceRefresh = false)
+                            }.getOrNull()
+                            linkCurrentSchoolIfNeeded()
+                            phase = AppPhase.SIGNED_IN
+                            advanceOnboardingAfterSchoolConnection()
                         }
                     },
+                    onCancelLogin = ::cancelSchoolLogin,
+                    onInputChanged = { schoolLoginError = null },
                     onBack = ::goBackInOnboarding,
                     modifier = Modifier.fillMaxSize().statusBarsPadding(),
                 )
@@ -981,33 +1007,25 @@ private fun GradeyApp(
             onLoadDirectory = { scope.launch { loadSchoolDirectory() } },
             onRetryDirectory = { scope.launch { loadSchoolDirectory(forceRefresh = true) } },
             onLogin = { school, username, password ->
-                scope.launch {
-                    isLoading = true
-                    schoolLoginError = null
-                    try {
-                        graph.schoolRepository.login(school, username, password)
-                        dashboard = runCatching {
-                            graph.schoolRepository.loadDashboard(forceRefresh = false)
-                        }.getOrNull()
-                        val reconnectTarget = reconnectLinkedAccount
-                        if (reconnectTarget != null && !reconnectCurrentSchool(reconnectTarget)) {
-                            schoolLoginError = linkedAccountError
-                                ?: "Gradey could not reconnect this school account. Please try again."
-                            return@launch
-                        }
+                launchSchoolLogin {
+                    graph.schoolRepository.login(school, username, password)
+                    dashboard = runCatching {
+                        graph.schoolRepository.loadDashboard(forceRefresh = false)
+                    }.getOrNull()
+                    val reconnectTarget = reconnectLinkedAccount
+                    if (reconnectTarget != null && !reconnectCurrentSchool(reconnectTarget)) {
+                        schoolLoginError = linkedAccountError
+                            ?: "Gradey could not reconnect this school account. Please try again."
+                    } else {
                         if (reconnectTarget == null) linkCurrentSchoolIfNeeded()
                         phase = AppPhase.SIGNED_IN
                         loadCachedSignedInData()
                         refreshSignedInData()
-                    } catch (error: CancellationException) {
-                        throw error
-                    } catch (error: Throwable) {
-                        schoolLoginError = error.userFacingMessage()
-                    } finally {
-                        isLoading = false
                     }
                 }
             },
+            onCancelLogin = ::cancelSchoolLogin,
+            onInputChanged = { schoolLoginError = null },
             onBack = if (reconnectLinkedAccount == null) {
                 null
             } else {

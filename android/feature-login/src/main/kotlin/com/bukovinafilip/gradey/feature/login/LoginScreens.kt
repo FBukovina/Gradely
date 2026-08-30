@@ -3,6 +3,8 @@ package com.bukovinafilip.gradey.feature.login
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -23,6 +25,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -35,11 +38,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import com.bukovinafilip.gradey.domain.BakalariDemoAccount
 import com.bukovinafilip.gradey.domain.SchoolDirectorySearch
+import com.bukovinafilip.gradey.domain.SchoolLoginValidator
 import com.bukovinafilip.gradey.model.SchoolDirectorySchool
 import com.bukovinafilip.gradey.ui.GradeyHero
 import com.bukovinafilip.gradey.ui.GradeyScreen
@@ -59,6 +68,8 @@ fun SchoolLoginScreen(
     onLoadDirectory: () -> Unit = {},
     onRetryDirectory: () -> Unit = {},
     onLogin: (String, String, String) -> Unit,
+    onCancelLogin: (() -> Unit)? = null,
+    onInputChanged: () -> Unit = {},
     onBack: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
@@ -68,7 +79,11 @@ fun SchoolLoginScreen(
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var isPasswordVisible by remember { mutableStateOf(false) }
+    var hasAttemptedLogin by remember { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
+    val validation = remember(school, username, password) {
+        SchoolLoginValidator.validate(school, username, password)
+    }
     val searchResults = remember(schoolSearch, directorySchools, isSchoolSearchActive) {
         if (isSchoolSearchActive) {
             SchoolDirectorySearch.results(schoolSearch, directorySchools)
@@ -78,6 +93,13 @@ fun SchoolLoginScreen(
     }
 
     LaunchedEffect(Unit) { onLoadDirectory() }
+
+    fun submitLogin() {
+        hasAttemptedLogin = true
+        if (!validation.isValid || isLoading) return
+        focusManager.clearFocus()
+        onLogin(school, username, password)
+    }
 
     GradeyScreen(modifier = modifier.verticalScroll(rememberScrollState())) {
         if (onBack != null) {
@@ -95,6 +117,7 @@ fun SchoolLoginScreen(
                     onValueChange = {
                         schoolSearch = it
                         isSchoolSearchActive = true
+                        onInputChanged()
                     },
                     label = { Text("Find your school") },
                     placeholder = { Text("School name or town") },
@@ -138,6 +161,8 @@ fun SchoolLoginScreen(
                                             schoolSearch = result.trimmedName
                                             school = result.trimmedSchoolURL
                                             isSchoolSearchActive = false
+                                            hasAttemptedLogin = false
+                                            onInputChanged()
                                             focusManager.clearFocus()
                                         }
                                         .padding(horizontal = GradeySpacing.md, vertical = GradeySpacing.sm),
@@ -173,6 +198,22 @@ fun SchoolLoginScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.labelMedium,
                 )
+                OutlinedButton(
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !isLoading,
+                    onClick = {
+                        school = BakalariDemoAccount.schoolURL
+                        schoolSearch = ""
+                        username = BakalariDemoAccount.username
+                        password = BakalariDemoAccount.password
+                        isSchoolSearchActive = false
+                        hasAttemptedLogin = false
+                        onInputChanged()
+                        focusManager.clearFocus()
+                    },
+                ) {
+                    Text("Use demo account")
+                }
                 OutlinedTextField(
                     modifier = Modifier.fillMaxWidth(),
                     value = school,
@@ -180,25 +221,60 @@ fun SchoolLoginScreen(
                         school = it
                         isSchoolSearchActive = false
                         schoolSearch = ""
+                        onInputChanged()
                     },
                     label = { Text("School URL") },
                     placeholder = { Text("school.example.cz") },
                     leadingIcon = { Icon(Icons.Default.Link, contentDescription = null) },
                     singleLine = true,
                     enabled = !isLoading,
+                    isError = hasAttemptedLogin && validation.schoolURLMessage != null,
+                    supportingText = if (hasAttemptedLogin && validation.schoolURLMessage != null) {
+                        { Text(validation.schoolURLMessage.orEmpty()) }
+                    } else {
+                        null
+                    },
+                    keyboardOptions = KeyboardOptions(
+                        capitalization = KeyboardCapitalization.None,
+                        keyboardType = KeyboardType.Uri,
+                        imeAction = ImeAction.Next,
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onNext = { focusManager.moveFocus(FocusDirection.Down) },
+                    ),
                 )
                 OutlinedTextField(
                     modifier = Modifier.fillMaxWidth(),
                     value = username,
-                    onValueChange = { username = it },
+                    onValueChange = {
+                        username = it
+                        onInputChanged()
+                    },
                     label = { Text("Username") },
                     singleLine = true,
                     enabled = !isLoading,
+                    isError = hasAttemptedLogin && validation.usernameMessage != null,
+                    supportingText = if (hasAttemptedLogin && validation.usernameMessage != null) {
+                        { Text(validation.usernameMessage.orEmpty()) }
+                    } else {
+                        null
+                    },
+                    keyboardOptions = KeyboardOptions(
+                        capitalization = KeyboardCapitalization.None,
+                        keyboardType = KeyboardType.Text,
+                        imeAction = ImeAction.Next,
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onNext = { focusManager.moveFocus(FocusDirection.Down) },
+                    ),
                 )
                 OutlinedTextField(
                     modifier = Modifier.fillMaxWidth(),
                     value = password,
-                    onValueChange = { password = it },
+                    onValueChange = {
+                        password = it
+                        onInputChanged()
+                    },
                     label = { Text("Password") },
                     singleLine = true,
                     visualTransformation = if (isPasswordVisible) {
@@ -207,7 +283,10 @@ fun SchoolLoginScreen(
                         PasswordVisualTransformation()
                     },
                     trailingIcon = {
-                        IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
+                        IconButton(
+                            enabled = !isLoading,
+                            onClick = { isPasswordVisible = !isPasswordVisible },
+                        ) {
                             Icon(
                                 imageVector = if (isPasswordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
                                 contentDescription = if (isPasswordVisible) "Hide password" else "Show password",
@@ -215,6 +294,18 @@ fun SchoolLoginScreen(
                         }
                     },
                     enabled = !isLoading,
+                    isError = hasAttemptedLogin && validation.passwordMessage != null,
+                    supportingText = if (hasAttemptedLogin && validation.passwordMessage != null) {
+                        { Text(validation.passwordMessage.orEmpty()) }
+                    } else {
+                        null
+                    },
+                    keyboardOptions = KeyboardOptions(
+                        capitalization = KeyboardCapitalization.None,
+                        keyboardType = KeyboardType.Password,
+                        imeAction = ImeAction.Done,
+                    ),
+                    keyboardActions = KeyboardActions(onDone = { submitLogin() }),
                 )
                 if (!errorMessage.isNullOrBlank()) {
                     Text(
@@ -225,10 +316,30 @@ fun SchoolLoginScreen(
                 }
                 Button(
                     modifier = Modifier.fillMaxWidth(),
-                    enabled = !isLoading && school.isNotBlank() && username.isNotBlank() && password.isNotEmpty(),
-                    onClick = { onLogin(school, username, password) },
+                    enabled = !isLoading,
+                    onClick = ::submitLogin,
                 ) {
-                    Text(if (isLoading) "Connecting" else "Connect school")
+                    if (isLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp),
+                            strokeWidth = 2.dp,
+                        )
+                    }
+                    Text(
+                        when {
+                            isLoading -> "Connecting…"
+                            errorMessage != null -> "Try again"
+                            else -> "Connect school"
+                        },
+                    )
+                }
+                if (isLoading && onCancelLogin != null) {
+                    OutlinedButton(
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = onCancelLogin,
+                    ) {
+                        Text("Cancel")
+                    }
                 }
                 Text(
                     "Your credentials are stored in Android encrypted storage and are used only to connect to your school server.",

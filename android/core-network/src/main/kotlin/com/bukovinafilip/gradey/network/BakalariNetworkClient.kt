@@ -1,7 +1,9 @@
 package com.bukovinafilip.gradey.network
 
 import com.bukovinafilip.gradey.domain.BakalariClient
+import com.bukovinafilip.gradey.domain.BakalariDemoAccount
 import com.bukovinafilip.gradey.domain.GradeMath
+import com.bukovinafilip.gradey.domain.InvalidDemoAccountCredentialsException
 import com.bukovinafilip.gradey.model.LoginResponse
 import com.bukovinafilip.gradey.model.Mark
 import com.bukovinafilip.gradey.model.MarksResponse
@@ -297,59 +299,51 @@ class DemoAwareBakalariClient(
     private val liveClient: BakalariClient = BakalariNetworkClient(),
     private val demoClient: BakalariClient = DemoBakalariClient(),
 ) : BakalariClient {
-    override suspend fun login(baseURL: String, username: String, password: String): LoginResponse =
-        if (DemoAccount.matches(baseURL, username, password)) demoClient.login(baseURL, username, password)
-        else liveClient.login(baseURL, username, password)
+    override suspend fun login(baseURL: String, username: String, password: String): LoginResponse {
+        if (!BakalariDemoAccount.isDemoBaseURL(baseURL)) {
+            return liveClient.login(baseURL, username, password)
+        }
+        if (!BakalariDemoAccount.matches(baseURL, username, password)) {
+            throw InvalidDemoAccountCredentialsException()
+        }
+        return demoClient.login(baseURL, username, password)
+    }
 
     override suspend fun refreshToken(baseURL: String, refreshToken: String): LoginResponse =
-        if (DemoAccount.isDemoBaseURL(baseURL) || DemoAccount.isDemoToken(refreshToken)) demoClient.refreshToken(baseURL, refreshToken)
+        if (BakalariDemoAccount.isDemoBaseURL(baseURL) || BakalariDemoAccount.isDemoToken(refreshToken)) demoClient.refreshToken(baseURL, refreshToken)
         else liveClient.refreshToken(baseURL, refreshToken)
 
     override suspend fun fetchMarks(baseURL: String, accessToken: String): MarksResponse =
-        if (DemoAccount.isDemoBaseURL(baseURL) || DemoAccount.isDemoToken(accessToken)) demoClient.fetchMarks(baseURL, accessToken)
+        if (BakalariDemoAccount.isDemoBaseURL(baseURL) || BakalariDemoAccount.isDemoToken(accessToken)) demoClient.fetchMarks(baseURL, accessToken)
         else liveClient.fetchMarks(baseURL, accessToken)
 
     override suspend fun fetchAbsences(baseURL: String, accessToken: String): AbsenceResponse =
-        if (DemoAccount.isDemoBaseURL(baseURL) || DemoAccount.isDemoToken(accessToken)) demoClient.fetchAbsences(baseURL, accessToken)
+        if (BakalariDemoAccount.isDemoBaseURL(baseURL) || BakalariDemoAccount.isDemoToken(accessToken)) demoClient.fetchAbsences(baseURL, accessToken)
         else liveClient.fetchAbsences(baseURL, accessToken)
 
     override suspend fun fetchUser(baseURL: String, accessToken: String): UserResponse =
-        if (DemoAccount.isDemoBaseURL(baseURL) || DemoAccount.isDemoToken(accessToken)) demoClient.fetchUser(baseURL, accessToken)
+        if (BakalariDemoAccount.isDemoBaseURL(baseURL) || BakalariDemoAccount.isDemoToken(accessToken)) demoClient.fetchUser(baseURL, accessToken)
         else liveClient.fetchUser(baseURL, accessToken)
 
     override suspend fun fetchTimetable(baseURL: String, accessToken: String, date: String): TimetableResponse =
-        if (DemoAccount.isDemoBaseURL(baseURL) || DemoAccount.isDemoToken(accessToken)) demoClient.fetchTimetable(baseURL, accessToken, date)
+        if (BakalariDemoAccount.isDemoBaseURL(baseURL) || BakalariDemoAccount.isDemoToken(accessToken)) demoClient.fetchTimetable(baseURL, accessToken, date)
         else liveClient.fetchTimetable(baseURL, accessToken, date)
 
     override suspend fun predictSubject(baseURL: String, accessToken: String, subject: Subject, markText: String, weight: Int): Subject =
-        if (DemoAccount.isDemoBaseURL(baseURL) || DemoAccount.isDemoToken(accessToken)) demoClient.predictSubject(baseURL, accessToken, subject, markText, weight)
+        if (BakalariDemoAccount.isDemoBaseURL(baseURL) || BakalariDemoAccount.isDemoToken(accessToken)) demoClient.predictSubject(baseURL, accessToken, subject, markText, weight)
         else liveClient.predictSubject(baseURL, accessToken, subject, markText, weight)
 }
 
-object DemoAccount {
+// Demo-account constants live in core-domain so UI validation and network routing share one source.
+/* Legacy location documented for reviewers:
     const val schoolURL = "demo.gradey.app"
-    const val username = "apple-review"
-    const val password = "GradelyDemo2026!"
-    const val accessToken = "demo-access"
-    const val refreshToken = "demo-refresh"
-
-    fun isDemoBaseURL(baseURL: String): Boolean {
-        val host = baseURL.removePrefix("https://").removePrefix("http://").substringBefore("/").lowercase()
-        return host == "demo" || host == schoolURL
-    }
-
-    fun matches(baseURL: String, username: String, password: String): Boolean =
-        isDemoBaseURL(baseURL) && username.trim().equals(this.username, ignoreCase = true) && password == this.password
-
-    fun isDemoToken(token: String): Boolean = token == accessToken || token == refreshToken
-}
-
-class DemoBakalariClient : BakalariClient {
+*/
+internal class DemoBakalariClient : BakalariClient {
     override suspend fun login(baseURL: String, username: String, password: String): LoginResponse =
-        LoginResponse(DemoAccount.accessToken, DemoAccount.refreshToken, "Bearer", 86_400, userID = "demo-user")
+        LoginResponse(BakalariDemoAccount.accessToken, BakalariDemoAccount.refreshToken, "Bearer", 86_400, userID = "demo-user")
 
     override suspend fun refreshToken(baseURL: String, refreshToken: String): LoginResponse =
-        login(baseURL, DemoAccount.username, DemoAccount.password)
+        login(baseURL, BakalariDemoAccount.username, BakalariDemoAccount.password)
 
     override suspend fun fetchMarks(baseURL: String, accessToken: String): MarksResponse = com.bukovinafilip.gradey.domain.DemoData.marksResponse
     override suspend fun fetchAbsences(baseURL: String, accessToken: String): AbsenceResponse = com.bukovinafilip.gradey.domain.DemoData.absenceResponse

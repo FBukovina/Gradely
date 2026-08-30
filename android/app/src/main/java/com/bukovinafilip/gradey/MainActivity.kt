@@ -1,11 +1,16 @@
 package com.bukovinafilip.gradey
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -49,10 +54,16 @@ import androidx.credentials.ClearCredentialStateRequest
 import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
+import androidx.core.content.ContextCompat
 import com.bukovinafilip.gradey.feature.absence.AbsenceScreen
 import com.bukovinafilip.gradey.feature.account.AccountScreen
 import com.bukovinafilip.gradey.feature.auth.AgeAttestationScreen
+import com.bukovinafilip.gradey.feature.auth.GradeyCheckingScreen
 import com.bukovinafilip.gradey.feature.auth.GradeyIdLoginScreen
+import com.bukovinafilip.gradey.feature.auth.OnboardingNotificationsScreen
+import com.bukovinafilip.gradey.feature.auth.OnboardingReadyScreen
+import com.bukovinafilip.gradey.feature.auth.OnboardingUpgradeSupportScreen
+import com.bukovinafilip.gradey.feature.auth.OnboardingWelcomeScreen
 import com.bukovinafilip.gradey.feature.login.SchoolLoginScreen
 import com.bukovinafilip.gradey.feature.stravacz.StravaCZScreen
 import com.bukovinafilip.gradey.feature.subjects.SubjectsScreen
@@ -63,12 +74,16 @@ import com.bukovinafilip.gradey.domain.GradeyStartupDestination
 import com.bukovinafilip.gradey.domain.SchoolSessionExpiredException
 import com.bukovinafilip.gradey.domain.TimetableDates
 import com.bukovinafilip.gradey.domain.WearPayloadBuilder
+import com.bukovinafilip.gradey.domain.reconcileOnboardingProgress
 import com.bukovinafilip.gradey.domain.selectGradeyStartupDestination
 import com.bukovinafilip.gradey.model.AbsenceResponse
 import com.bukovinafilip.gradey.model.AgeAttestationKind
 import com.bukovinafilip.gradey.model.DashboardData
 import com.bukovinafilip.gradey.model.GradeyAccount
 import com.bukovinafilip.gradey.model.LinkedSchoolAccount
+import com.bukovinafilip.gradey.model.OnboardingJourney
+import com.bukovinafilip.gradey.model.OnboardingProgress
+import com.bukovinafilip.gradey.model.OnboardingStep
 import com.bukovinafilip.gradey.model.SchoolDirectorySchool
 import com.bukovinafilip.gradey.model.StravaCZMenu
 import com.bukovinafilip.gradey.model.TimetableWeek
@@ -132,6 +147,7 @@ private fun GradeyApp(
     var isUpdatingProfile by remember { mutableStateOf(false) }
     var ageAttestationKind by remember { mutableStateOf(graph.ageAttestationStore.kind) }
     var isGuestMode by remember { mutableStateOf(graph.guestModeStore.isEnabled) }
+    var onboardingProgress by remember { mutableStateOf<OnboardingProgress?>(null) }
     var account by remember { mutableStateOf<GradeyAccount?>(null) }
     var linkedAccounts by remember { mutableStateOf<List<LinkedSchoolAccount>>(emptyList()) }
     var directorySchools by remember { mutableStateOf<List<SchoolDirectorySchool>>(emptyList()) }
@@ -141,6 +157,14 @@ private fun GradeyApp(
     var absence by remember { mutableStateOf<AbsenceResponse?>(null) }
     var timetable by remember { mutableStateOf<TimetableWeek?>(null) }
     var stravaMenu by remember { mutableStateOf<StravaCZMenu?>(null) }
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) {
+        val current = onboardingProgress ?: return@rememberLauncherForActivityResult
+        val ready = current.copy(step = OnboardingStep.READY)
+        graph.onboardingProgressStore.saveProgress(ready)
+        onboardingProgress = ready
+    }
 
     suspend fun runWithLoading(block: suspend () -> Unit) {
         if (isLoading) return
@@ -331,6 +355,60 @@ private fun GradeyApp(
         refreshSignedInData()
     }
 
+    fun persistOnboarding(progress: OnboardingProgress) {
+        graph.onboardingProgressStore.saveProgress(progress)
+        onboardingProgress = progress
+    }
+
+    suspend fun advanceOnboardingAfterAccountChoice() {
+        val current = onboardingProgress ?: return
+        val hasSchool = graph.schoolRepository.bootstrapSession() != null
+        persistOnboarding(
+            reconcileOnboardingProgress(
+                progress = current.copy(step = OnboardingStep.ACCOUNT),
+                isGuestMode = isGuestMode,
+                hasGradeySession = account != null,
+                hasSchoolSession = hasSchool,
+            ),
+        )
+    }
+
+    suspend fun advanceOnboardingAfterSchoolConnection() {
+        val current = onboardingProgress ?: return
+        persistOnboarding(
+            reconcileOnboardingProgress(
+                progress = current.copy(step = OnboardingStep.SCHOOL),
+                isGuestMode = isGuestMode,
+                hasGradeySession = account != null,
+                hasSchoolSession = true,
+            ),
+        )
+    }
+
+    fun goBackInOnboarding() {
+        val current = onboardingProgress ?: return
+        val previous = when (current.step) {
+            OnboardingStep.WELCOME -> return
+            OnboardingStep.ACCOUNT -> OnboardingStep.WELCOME
+            OnboardingStep.SCHOOL -> OnboardingStep.ACCOUNT
+            OnboardingStep.NOTIFICATIONS -> OnboardingStep.SCHOOL
+            OnboardingStep.READY -> if (isGuestMode) OnboardingStep.SCHOOL else OnboardingStep.NOTIFICATIONS
+            OnboardingStep.SUPPORT -> OnboardingStep.ACCOUNT
+        }
+        persistOnboarding(current.copy(step = previous))
+    }
+
+    suspend fun finishOnboarding() {
+        graph.onboardingProgressStore.complete()
+        onboardingProgress = null
+        openStoredSchoolOrLogin()
+    }
+
+    fun notificationsAreEnabled(): Boolean =
+        Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) ==
+            PackageManager.PERMISSION_GRANTED
+
     LaunchedEffect(ageAttestationKind) {
         if (ageAttestationKind == null) return@LaunchedEffect
         if (isGuestMode) {
@@ -399,7 +477,22 @@ private fun GradeyApp(
             GradeyStartupDestination.NEEDS_SCHOOL -> AppPhase.NEEDS_SCHOOL
             GradeyStartupDestination.SIGNED_IN -> AppPhase.SIGNED_IN
         }
-        if (phase == AppPhase.SIGNED_IN) {
+        val resolvedOnboarding = graph.onboardingProgressStore.resolve(
+            hasSchoolSession = schoolSession != null,
+        )?.let { progress ->
+            reconcileOnboardingProgress(
+                progress = progress,
+                isGuestMode = isGuestMode,
+                hasGradeySession = authSession != null,
+                hasSchoolSession = schoolSession != null,
+            )
+        }
+        if (resolvedOnboarding != null) {
+            graph.onboardingProgressStore.saveProgress(resolvedOnboarding)
+        }
+        onboardingProgress = resolvedOnboarding
+
+        if (resolvedOnboarding == null && phase == AppPhase.SIGNED_IN) {
             loadCachedSignedInData()
             isLoading = true
             try {
@@ -428,8 +521,160 @@ private fun GradeyApp(
             },
             modifier = Modifier.fillMaxSize(),
         )
+    } else if (onboardingProgress != null) {
+        val progress = onboardingProgress ?: return
+        when (progress.step) {
+                OnboardingStep.WELCOME -> OnboardingWelcomeScreen(
+                    journey = progress.journey,
+                    onContinue = {
+                        persistOnboarding(progress.copy(step = OnboardingStep.ACCOUNT))
+                        if (account != null || isGuestMode) {
+                            scope.launch { advanceOnboardingAfterAccountChoice() }
+                        }
+                    },
+                    modifier = Modifier.fillMaxSize(),
+                )
+
+                OnboardingStep.ACCOUNT -> GradeyIdLoginScreen(
+                    isLoading = isLoading,
+                    errorMessage = authError,
+                    isGoogleSignInAvailable = graph.isGradeyCloudConfigured,
+                    onGoogleSignIn = {
+                        scope.launch {
+                            isLoading = true
+                            authError = null
+                            try {
+                                val googleCredential = requestGoogleCredential(context, graph.googleWebClientId)
+                                account = graph.gradeyAuthRepository.signInWithGoogle(
+                                    idToken = googleCredential.idToken,
+                                    fullName = googleCredential.displayName,
+                                ).account
+                                graph.guestModeStore.isEnabled = false
+                                isGuestMode = false
+                                advanceOnboardingAfterAccountChoice()
+                            } catch (error: CancellationException) {
+                                throw error
+                            } catch (error: Throwable) {
+                                authError = error.userFacingMessage()
+                            } finally {
+                                isLoading = false
+                            }
+                        }
+                    },
+                    onContinueWithoutAccount = {
+                        scope.launch {
+                            isLoading = true
+                            authError = null
+                            graph.guestModeStore.isEnabled = true
+                            isGuestMode = true
+                            account = null
+                            try {
+                                graph.gradeyAuthRepository.signOut()
+                                clearLinkedAccountsForLocalMode()
+                                advanceOnboardingAfterAccountChoice()
+                            } catch (error: CancellationException) {
+                                throw error
+                            } catch (error: Throwable) {
+                                authError = error.userFacingMessage()
+                            } finally {
+                                isLoading = false
+                            }
+                        }
+                    },
+                    onBack = ::goBackInOnboarding,
+                    modifier = Modifier.fillMaxSize().statusBarsPadding(),
+                )
+
+                OnboardingStep.SCHOOL -> SchoolLoginScreen(
+                    isLoading = isLoading,
+                    errorMessage = schoolLoginError,
+                    directorySchools = directorySchools,
+                    isDirectoryLoading = isSchoolDirectoryLoading,
+                    directoryErrorMessage = schoolDirectoryError,
+                    onLoadDirectory = { scope.launch { loadSchoolDirectory() } },
+                    onRetryDirectory = { scope.launch { loadSchoolDirectory(forceRefresh = true) } },
+                    onLogin = { school, username, password ->
+                        scope.launch {
+                            isLoading = true
+                            schoolLoginError = null
+                            try {
+                                graph.schoolRepository.login(school, username, password)
+                                phase = AppPhase.SIGNED_IN
+                                advanceOnboardingAfterSchoolConnection()
+                            } catch (error: CancellationException) {
+                                throw error
+                            } catch (error: Throwable) {
+                                schoolLoginError = error.userFacingMessage()
+                            } finally {
+                                isLoading = false
+                            }
+                        }
+                    },
+                    onBack = ::goBackInOnboarding,
+                    modifier = Modifier.fillMaxSize().statusBarsPadding(),
+                )
+
+                OnboardingStep.NOTIFICATIONS -> OnboardingNotificationsScreen(
+                    onEnable = {
+                        if (
+                            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                            !notificationsAreEnabled()
+                        ) {
+                            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                        } else {
+                            persistOnboarding(progress.copy(step = OnboardingStep.READY))
+                        }
+                    },
+                    onNotNow = {
+                        persistOnboarding(progress.copy(step = OnboardingStep.READY))
+                    },
+                    onBack = ::goBackInOnboarding,
+                    modifier = Modifier.fillMaxSize(),
+                )
+
+                OnboardingStep.READY -> OnboardingReadyScreen(
+                    isGuestMode = isGuestMode,
+                    notificationsEnabled = notificationsAreEnabled(),
+                    onFinish = {
+                        scope.launch {
+                            isLoading = true
+                            try {
+                                finishOnboarding()
+                            } catch (error: CancellationException) {
+                                throw error
+                            } catch (error: Throwable) {
+                                dataError = error.userFacingMessage()
+                            } finally {
+                                isLoading = false
+                            }
+                        }
+                    },
+                    onBack = ::goBackInOnboarding,
+                    modifier = Modifier.fillMaxSize(),
+                )
+
+                OnboardingStep.SUPPORT -> OnboardingUpgradeSupportScreen(
+                    isGuestMode = isGuestMode,
+                    onFinish = {
+                        scope.launch {
+                            isLoading = true
+                            try {
+                                finishOnboarding()
+                            } catch (error: CancellationException) {
+                                throw error
+                            } catch (error: Throwable) {
+                                dataError = error.userFacingMessage()
+                            } finally {
+                                isLoading = false
+                            }
+                        }
+                    },
+                    onBack = ::goBackInOnboarding,
+                    modifier = Modifier.fillMaxSize(),
+                )
+        }
     } else when (phase) {
-        AppPhase.CHECKING -> GradeyIdLoginScreen(isLoading = true, onGoogleSignIn = {})
+        AppPhase.CHECKING -> GradeyCheckingScreen()
         AppPhase.SIGNED_OUT -> GradeyIdLoginScreen(
             isLoading = isLoading,
             errorMessage = authError,

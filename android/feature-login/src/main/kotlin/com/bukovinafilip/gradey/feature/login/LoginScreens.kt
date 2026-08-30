@@ -56,6 +56,7 @@ fun SchoolLoginScreen(
     onLoadDirectory: () -> Unit = {},
     onRetryDirectory: () -> Unit = {},
     onLogin: (String, String, String) -> Unit,
+    onBack: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     var school by remember { mutableStateOf("") }
@@ -76,6 +77,9 @@ fun SchoolLoginScreen(
     LaunchedEffect(Unit) { onLoadDirectory() }
 
     GradeyScreen(modifier = modifier.verticalScroll(rememberScrollState())) {
+        if (onBack != null) {
+            TextButton(onClick = onBack, enabled = !isLoading) { Text("Back") }
+        }
         GradeyHero(
             title = "Connect Bakaláři",
             subtitle = "Sign in with the same school address, username, and password you use for Bakaláři.",

@@ -1,7 +1,12 @@
 package com.bukovinafilip.gradey.feature.auth
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material.icons.Icons
@@ -9,6 +14,7 @@ import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -20,12 +26,162 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
 import com.bukovinafilip.gradey.model.AgeAttestationKind
+import com.bukovinafilip.gradey.model.OnboardingJourney
+import com.bukovinafilip.gradey.ui.GradeyColors
 import com.bukovinafilip.gradey.ui.GradeyHero
 import com.bukovinafilip.gradey.ui.GradeyScreen
 import com.bukovinafilip.gradey.ui.GradeySectionCard
 import com.bukovinafilip.gradey.ui.GradeySpacing
+
+@Composable
+fun GradeyCheckingScreen(modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(
+                Brush.radialGradient(
+                    listOf(
+                        GradeyColors.Primary.copy(alpha = 0.28f),
+                        MaterialTheme.colorScheme.background,
+                    ),
+                ),
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(GradeySpacing.xl),
+        ) {
+            Text(
+                "Gradey",
+                color = MaterialTheme.colorScheme.onBackground,
+                fontSize = 48.sp,
+                fontWeight = FontWeight.Bold,
+            )
+            CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+            Text(
+                "Restoring your account…",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        }
+    }
+}
+
+@Composable
+fun OnboardingWelcomeScreen(
+    journey: OnboardingJourney,
+    onContinue: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    GradeyScreen(modifier = modifier.statusBarsPadding().verticalScroll(rememberScrollState())) {
+        GradeyHero(
+            title = if (journey == OnboardingJourney.UPGRADE) "Welcome to the new Gradey" else "Welcome to Gradey",
+            subtitle = if (journey == OnboardingJourney.UPGRADE) {
+                "Your Bakaláři connection is safe. Choose how you want to use the new Gradey ID features."
+            } else {
+                "A calmer way to understand marks, absence, and what's next at school."
+            },
+        )
+        GradeySectionCard(title = "What Gradey puts first") {
+            Text("Today at a glance — lessons, marks, absence risks, and meals in one place.")
+            Text("Useful insight — weighted averages, what-if calculations, and clear subject trends.")
+            Text("Private by default — school credentials remain encrypted and cloud features are optional.")
+        }
+        GradeySectionCard(title = "Language") {
+            Text("Gradey currently follows your Android system language. English, Czech, and the optional Chronically Online style are being completed next.")
+        }
+        Button(
+            modifier = Modifier.fillMaxWidth(),
+            onClick = onContinue,
+        ) {
+            Text(if (journey == OnboardingJourney.UPGRADE) "Review account options" else "Get started")
+        }
+    }
+}
+
+@Composable
+fun OnboardingNotificationsScreen(
+    onEnable: () -> Unit,
+    onNotNow: () -> Unit,
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    GradeyScreen(modifier = modifier.statusBarsPadding().verticalScroll(rememberScrollState())) {
+        TextButton(onClick = onBack) { Text("Back") }
+        GradeyHero(
+            title = "Stay up to date",
+            subtitle = "Android will ask before Gradey can notify you about new marks. You can change this later in system settings.",
+        )
+        GradeySectionCard(title = "Notifications stay under your control") {
+            Text("Gradey registers this device only after permission is granted. School credentials are never included in notifications.")
+        }
+        Button(modifier = Modifier.fillMaxWidth(), onClick = onEnable) {
+            Text("Enable notifications")
+        }
+        OutlinedButton(modifier = Modifier.fillMaxWidth(), onClick = onNotNow) {
+            Text("Not now")
+        }
+    }
+}
+
+@Composable
+fun OnboardingReadyScreen(
+    isGuestMode: Boolean,
+    notificationsEnabled: Boolean,
+    onFinish: () -> Unit,
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    GradeyScreen(modifier = modifier.statusBarsPadding().verticalScroll(rememberScrollState())) {
+        TextButton(onClick = onBack) { Text("Back") }
+        GradeyHero(
+            title = "You're ready",
+            subtitle = "Your Bakaláři connection is saved and Gradey can now build your school overview.",
+        )
+        GradeySectionCard(title = "Setup summary") {
+            Text("Bakaláři · Connected")
+            Text(if (isGuestMode) "Account · Local only" else "Account · Gradey ID")
+            Text(if (notificationsEnabled) "Notifications · Enabled" else "Notifications · Off")
+        }
+        Button(modifier = Modifier.fillMaxWidth(), onClick = onFinish) {
+            Text("Open Gradey")
+        }
+    }
+}
+
+@Composable
+fun OnboardingUpgradeSupportScreen(
+    isGuestMode: Boolean,
+    onFinish: () -> Unit,
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    GradeyScreen(modifier = modifier.statusBarsPadding().verticalScroll(rememberScrollState())) {
+        TextButton(onClick = onBack) { Text("Back") }
+        GradeyHero(
+            title = "Your connection is ready",
+            subtitle = "The existing Bakaláři session was kept during this upgrade.",
+        )
+        GradeySectionCard(title = "Account mode") {
+            Text(
+                if (isGuestMode) {
+                    "Local-only mode keeps Bakaláři on this device. You can connect Gradey ID later."
+                } else {
+                    "Gradey ID is connected. Cloud linking will retry safely without replacing your local school session."
+                },
+            )
+        }
+        Button(modifier = Modifier.fillMaxWidth(), onClick = onFinish) {
+            Text("Continue to Gradey")
+        }
+    }
+}
 
 @Composable
 fun AgeAttestationScreen(
@@ -37,7 +193,7 @@ fun AgeAttestationScreen(
     var parentConfirmed by remember { mutableStateOf(false) }
     val pending = pendingParentalKind
 
-    GradeyScreen(modifier = modifier.statusBarsPadding()) {
+    GradeyScreen(modifier = modifier.statusBarsPadding().verticalScroll(rememberScrollState())) {
         if (pending == null) {
             GradeyHero(
                 title = "Confirm your age",
@@ -134,11 +290,16 @@ private fun AgeChoiceButton(
 fun GradeyIdLoginScreen(
     isLoading: Boolean,
     errorMessage: String? = null,
+    isGoogleSignInAvailable: Boolean = true,
     onGoogleSignIn: () -> Unit,
     onContinueWithoutAccount: (() -> Unit)? = null,
+    onBack: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
-    GradeyScreen(modifier = modifier) {
+    GradeyScreen(modifier = modifier.verticalScroll(rememberScrollState())) {
+        if (onBack != null) {
+            TextButton(onClick = onBack, enabled = !isLoading) { Text("Back") }
+        }
         GradeyHero(
             title = "Gradey ID",
             subtitle = "Sync linked school accounts, grade history, and new-mark notifications across your Android devices.",
@@ -146,16 +307,22 @@ fun GradeyIdLoginScreen(
 
         GradeySectionCard(title = "Sign in") {
             Text(
-                "Use your Google account to create or open a Gradey ID. School credentials stay encrypted on device or in provider-secret storage when you link an account.",
+                if (isGoogleSignInAvailable) {
+                    "Use your Google account to create or open a Gradey ID. School credentials stay encrypted on device or in provider-secret storage when you link an account."
+                } else {
+                    "Gradey ID isn't configured in this build. You can continue with encrypted local Bakaláři storage."
+                },
                 style = MaterialTheme.typography.bodyMedium,
             )
-            Button(
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !isLoading,
-                onClick = onGoogleSignIn,
-            ) {
-                Icon(Icons.Default.Person, contentDescription = null)
-                Text(if (isLoading) "Signing in" else "Continue with Google")
+            if (isGoogleSignInAvailable) {
+                Button(
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !isLoading,
+                    onClick = onGoogleSignIn,
+                ) {
+                    Icon(Icons.Default.Person, contentDescription = null)
+                    Text(if (isLoading) "Signing in" else "Continue with Google")
+                }
             }
             if (onContinueWithoutAccount != null) {
                 OutlinedButton(

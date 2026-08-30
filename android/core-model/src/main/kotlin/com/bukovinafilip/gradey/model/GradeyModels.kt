@@ -6,11 +6,13 @@ import kotlinx.serialization.KSerializer
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.descriptors.PrimitiveKind
 import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonDecoder
 import kotlinx.serialization.json.JsonEncoder
 import kotlinx.serialization.json.JsonNull
@@ -549,9 +551,51 @@ data class GradeHistoryEvent(
 )
 
 @Serializable
+data class NewMarkEvent(
+    val id: String,
+    @SerialName("linked_account_id")
+    val linkedAccountID: String,
+    val provider: LinkedAccountProvider,
+    @SerialName("subject_id")
+    val subjectID: String,
+    @SerialName("subject_abbrev")
+    val subjectAbbrev: String? = null,
+    @SerialName("subject_name")
+    val subjectName: String? = null,
+    @SerialName("mark_text")
+    val markText: String,
+    @SerialName("created_at")
+    val createdAt: String,
+    @SerialName("delivered_at")
+    val deliveredAt: String? = null,
+)
+
+@Serializable
 data class GradeHistoryResponse(
     val events: List<GradeHistoryEvent> = emptyList(),
+    @Serializable(with = LenientNewMarkEventListSerializer::class)
+    val recentNewMarkEvents: List<NewMarkEvent> = emptyList(),
 )
+
+object LenientNewMarkEventListSerializer : KSerializer<List<NewMarkEvent>> {
+    private val delegate = ListSerializer(NewMarkEvent.serializer())
+
+    override val descriptor: SerialDescriptor = delegate.descriptor
+
+    override fun deserialize(decoder: Decoder): List<NewMarkEvent> {
+        if (decoder !is JsonDecoder) return decoder.decodeSerializableValue(delegate)
+        val elements = decoder.decodeJsonElement() as? JsonArray ?: return emptyList()
+        return elements.mapNotNull { element ->
+            runCatching {
+                decoder.json.decodeFromJsonElement(NewMarkEvent.serializer(), element)
+            }.getOrNull()
+        }
+    }
+
+    override fun serialize(encoder: Encoder, value: List<NewMarkEvent>) {
+        encoder.encodeSerializableValue(delegate, value)
+    }
+}
 
 @Serializable
 enum class LinkedAccountStatus {

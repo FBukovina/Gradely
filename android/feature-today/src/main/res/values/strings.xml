@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="today_new_marks_and_trends">New marks and trends</string>
+    <string name="today_mark_in_subject">%1$s in %2$s</string>
+    <string name="today_new_from_school">New from school</string>
+    <string name="today_open_marks">Open</string>
+</resources>

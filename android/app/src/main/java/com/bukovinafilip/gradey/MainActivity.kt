@@ -90,6 +90,7 @@ import com.bukovinafilip.gradey.model.AppLanguage
 import com.bukovinafilip.gradey.model.DashboardData
 import com.bukovinafilip.gradey.model.GradeyAccount
 import com.bukovinafilip.gradey.model.LinkedSchoolAccount
+import com.bukovinafilip.gradey.model.NewMarkEvent
 import com.bukovinafilip.gradey.model.OnboardingJourney
 import com.bukovinafilip.gradey.model.OnboardingProgress
 import com.bukovinafilip.gradey.model.OnboardingStep
@@ -157,6 +158,7 @@ private enum class AppTab(val label: String) {
 private data class GradeHistorySnapshot(
     val linkedAccountID: String?,
     val trends: List<SubjectGradeTrend>,
+    val recentNewMarkEvents: List<NewMarkEvent>,
 )
 
 @Composable
@@ -431,6 +433,7 @@ private fun GradeyApp(
             gradeHistorySnapshot = GradeHistorySnapshot(
                 linkedAccountID = linkedAccountID,
                 trends = GradeHistoryTrends.make(response.events),
+                recentNewMarkEvents = response.recentNewMarkEvents,
             )
         } catch (error: CancellationException) {
             throw error
@@ -1105,6 +1108,10 @@ private fun GradeyApp(
                         dashboard = currentDashboard,
                         absence = effectiveAbsence,
                         timetable = timetable,
+                        cloudNewMarkEvents = gradeHistorySnapshot
+                            ?.takeIf { it.linkedAccountID == activeLinkedAccountID }
+                            ?.recentNewMarkEvents
+                            .orEmpty(),
                         isRefreshing = isLoading,
                         onRefresh = {
                             if (!isLoading) {

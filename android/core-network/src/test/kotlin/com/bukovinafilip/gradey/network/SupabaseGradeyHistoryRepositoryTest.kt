@@ -45,6 +45,9 @@ class SupabaseGradeyHistoryRepositoryTest {
         assertThat(response.events.map { it.id }).containsExactly("first", "latest").inOrder()
         assertThat(response.events.last().eventType).isEqualTo(GradeHistoryEventType.CHANGED)
         assertThat(response.events.last().averageValue).isEqualTo(1.8)
+        assertThat(response.recentNewMarkEvents).hasSize(1)
+        assertThat(response.recentNewMarkEvents.single().id).isEqualTo("new-mark")
+        assertThat(response.recentNewMarkEvents.single().subjectAbbrev).isEqualTo("M")
     }
 
     @Test
@@ -55,6 +58,7 @@ class SupabaseGradeyHistoryRepositoryTest {
         val body = GradeyJson.parseToJsonElement(server.takeRequest().body.readUtf8()).jsonObject
 
         assertThat(response.events).isEmpty()
+        assertThat(response.recentNewMarkEvents).isEmpty()
         assertThat(body.containsKey("linked_account_id")).isFalse()
         assertThat(body.getValue("days").jsonPrimitive.content).isEqualTo("90")
     }
@@ -115,7 +119,20 @@ class SupabaseGradeyHistoryRepositoryTest {
               "captured_at":"2026-08-30T10:00:00Z"
             }
           ],
-          "recentNewMarkEvents":[{"unknown":"ignored"}]
+          "recentNewMarkEvents":[
+            {
+              "id":"new-mark",
+              "linked_account_id":"school",
+              "provider":"bakalari",
+              "subject_id":"math",
+              "subject_abbrev":"M",
+              "subject_name":"Mathematics",
+              "mark_text":"1",
+              "fingerprint":{"future":"shape"},
+              "created_at":"2026-08-30T10:05:00Z",
+              "delivered_at":null
+            }
+          ]
         }
         """.trimIndent()
 }

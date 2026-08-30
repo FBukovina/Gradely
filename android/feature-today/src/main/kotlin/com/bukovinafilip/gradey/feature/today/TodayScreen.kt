@@ -28,16 +28,19 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -46,14 +49,19 @@ import androidx.compose.ui.unit.sp
 import com.bukovinafilip.gradey.domain.AbsenceRiskLevel
 import com.bukovinafilip.gradey.domain.AbsenceRiskSummary
 import com.bukovinafilip.gradey.domain.GradeMath
+import com.bukovinafilip.gradey.domain.TodayNewMark
+import com.bukovinafilip.gradey.domain.TodayNewMarks
 import com.bukovinafilip.gradey.model.AbsenceResponse
 import com.bukovinafilip.gradey.model.DashboardData
+import com.bukovinafilip.gradey.model.NewMarkEvent
 import com.bukovinafilip.gradey.model.ScheduledLesson
 import com.bukovinafilip.gradey.model.TimetableWeek
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
+import java.util.Locale
 import kotlin.math.roundToInt
 
 private val BackgroundTop = Color(0xFFDDF4F2)
@@ -77,6 +85,7 @@ fun TodayScreen(
     dashboard: DashboardData,
     absence: AbsenceResponse,
     timetable: TimetableWeek?,
+    cloudNewMarkEvents: List<NewMarkEvent> = emptyList(),
     isRefreshing: Boolean,
     onRefresh: () -> Unit,
     onOpenAccount: () -> Unit,
@@ -91,6 +100,9 @@ fun TodayScreen(
     val totalMarks = subjects.sumOf { it.marks.size }
     val absenceRows = AbsenceRiskSummary.make(absence, absence.absencesPerSubject).subjects.take(2)
     val featuredLesson = featuredLesson(timetable)
+    val newMarks = remember(subjects, cloudNewMarkEvents) {
+        TodayNewMarks.resolve(subjects, cloudNewMarkEvents, PragueZone).take(3)
+    }
 
     Box(
         modifier = modifier
@@ -128,6 +140,9 @@ fun TodayScreen(
             item { NowAndNextCard(featuredLesson = featuredLesson, onClick = onOpenTimetable) }
             item { AbsenceRiskCard(rows = absenceRows, onOpenAbsence = onOpenAbsence) }
             item { AbsencePredictorCard(onPlanAbsence = onOpenAbsence) }
+            if (newMarks.isNotEmpty()) {
+                item { NewMarksCard(newMarks = newMarks, onOpenMarks = onOpenMarks) }
+            }
         }
     }
 }
@@ -587,6 +602,82 @@ private fun AbsencePredictorCard(onPlanAbsence: () -> Unit) {
 }
 
 @Composable
+private fun NewMarksCard(
+    newMarks: List<TodayNewMark>,
+    onOpenMarks: () -> Unit,
+) {
+    DashboardSurface {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 15.dp, bottom = 10.dp),
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                SectionHeading(
+                    stringResource(R.string.today_new_marks_and_trends).uppercase(Locale.getDefault()),
+                )
+                ActionPill(text = stringResource(R.string.today_open_marks), onClick = onOpenMarks)
+            }
+            Spacer(Modifier.height(6.dp))
+            newMarks.forEachIndexed { index, mark ->
+                if (index > 0) {
+                    HorizontalDivider(
+                        modifier = Modifier.padding(start = 67.dp, end = 16.dp),
+                        color = SoftGray,
+                    )
+                }
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    IconTile(background = SoftMint) {
+                        Icon(
+                            imageVector = Icons.Default.Verified,
+                            contentDescription = null,
+                            tint = AccentTeal,
+                            modifier = Modifier.size(22.dp),
+                        )
+                    }
+                    Spacer(Modifier.width(13.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = stringResource(
+                                R.string.today_mark_in_subject,
+                                mark.markText,
+                                mark.subjectName,
+                            ),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            color = Color.Black,
+                            fontSize = 16.sp,
+                            lineHeight = 20.sp,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                        Text(
+                            text = mark.detectedAt?.let(::formatDetectedAt)
+                                ?: stringResource(R.string.today_new_from_school),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            color = MutedText,
+                            fontSize = 13.sp,
+                            lineHeight = 17.sp,
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun DashboardSurface(
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
@@ -686,6 +777,13 @@ private fun featuredLesson(timetable: TimetableWeek?): FeaturedLesson? {
 
 private fun String.asLocalTime(): LocalTime? =
     runCatching { LocalTime.parse(trim(), HourFormatter) }.getOrNull()
+
+private fun formatDetectedAt(instant: java.time.Instant): String =
+    DateTimeFormatter
+        .ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT)
+        .withLocale(Locale.getDefault())
+        .withZone(PragueZone)
+        .format(instant)
 
 private fun ScheduledLesson.displayTitle(): String =
     subjectName?.takeIf { it.isNotBlank() } ?: title

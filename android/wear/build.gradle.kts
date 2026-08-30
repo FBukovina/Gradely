@@ -33,14 +33,19 @@ kotlin {
 
 dependencies {
     implementation(project(":core-model"))
-    implementation(project(":core-domain"))
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.compose.foundation)
+    implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.wear.compose.foundation)
     implementation(libs.androidx.wear.compose.material)
     implementation(libs.androidx.wear.compose.navigation)
+    implementation(libs.androidx.wear.watchface.complications.data.source.ktx)
     implementation(libs.google.play.services.wearable)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.coroutines.play.services)
     implementation(libs.kotlinx.serialization.json)
+
+    testImplementation(libs.junit)
+    testImplementation(libs.truth)
 }

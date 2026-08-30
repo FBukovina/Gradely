@@ -23,7 +23,12 @@ class WearDataLayerListenerService : WearableListenerService() {
     }
 }
 
-suspend fun refreshWearPayload(context: Context, store: WearPayloadStore): Boolean {
+internal enum class WearRefreshResult {
+    UPDATED,
+    NO_PHONE_PAYLOAD,
+}
+
+internal suspend fun refreshWearPayload(context: Context, store: WearPayloadStore): WearRefreshResult {
     val items = Wearable.getDataClient(context.applicationContext).dataItems.await()
     return try {
         var updated = false
@@ -33,7 +38,7 @@ suspend fun refreshWearPayload(context: Context, store: WearPayloadStore): Boole
                 updated = store.updateFrom(item) || updated
             }
         }
-        updated
+        if (updated) WearRefreshResult.UPDATED else WearRefreshResult.NO_PHONE_PAYLOAD
     } finally {
         items.release()
     }

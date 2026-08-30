@@ -1,0 +1,40 @@
+<resources>
+    <string name="app_name">Gradey</string>
+    <string name="wear_signed_out_title">Otevři Gradey v telefonu</string>
+    <string name="wear_signed_out_detail">Přihlas se a hodinky dostanou rozvrh z Bakalářů.</string>
+    <string name="wear_no_timetable_title">Rozvrh zatím není</string>
+    <string name="wear_no_timetable_detail">Otevři Gradey v telefonu a synchronizuj.</string>
+    <string name="wear_stale_title">Rozvrh je zastaralý</string>
+    <string name="wear_stale_detail">Obnov Gradey v telefonu a pak synchronizuj znovu.</string>
+    <string name="wear_done_title">Hotovo na dnešek</string>
+    <string name="wear_done_detail">Dnes už žádné hodiny nejsou.</string>
+    <string name="wear_no_more_lessons">V dnešním rozvrhu už nic nezbývá</string>
+    <string name="wear_status_now">Teď</string>
+    <string name="wear_status_up_next">Další</string>
+    <string name="wear_status_in">Za %1$s</string>
+    <string name="wear_status_canceled">Zrušeno</string>
+    <string name="wear_break">Přestávka</string>
+    <string name="wear_start">Začátek</string>
+    <string name="wear_end">Konec</string>
+    <plurals name="wear_remaining_count">
+        <item quantity="one">Dnes zbývá %d hodina</item>
+        <item quantity="few">Dnes zbývají %d hodiny</item>
+        <item quantity="many">Dnes zbývá %d hodiny</item>
+        <item quantity="other">Dnes zbývá %d hodin</item>
+    </plurals>
+    <string name="wear_sync">Synchronizovat</string>
+    <string name="wear_syncing">Synchronizuji…</string>
+    <string name="wear_syncing_phone">Kontroluji data z telefonu…</string>
+    <string name="wear_sync_updated">Data z telefonu jsou aktuální</string>
+    <string name="wear_sync_no_payload">Data z telefonu nebyla nalezena</string>
+    <string name="wear_sync_failed">Synchronizace selhala; zobrazuji poslední uložený rozvrh</string>
+    <string name="wear_support_plus">Podporovatel Plus</string>
+    <string name="wear_support_standard">Podporovatel Standard</string>
+    <string name="wear_complication_name">Hodiny</string>
+    <string name="wear_complication_description">Zobrazuje aktuální nebo další hodinu.</string>
+    <string name="wear_complication_now">Teď</string>
+    <string name="wear_complication_next">Další</string>
+    <string name="wear_complication_no_lessons">Žádné hodiny</string>
+    <string name="wear_complication_free_time">Užij si volno</string>
+    <string name="wear_complication_preview_long">%1$s: Matematika · 09:00–09:45 · 12</string>
+</resources>

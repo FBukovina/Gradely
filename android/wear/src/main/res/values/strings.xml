@@ -1,4 +1,39 @@
 <resources>
     <string name="app_name">Gradey</string>
+    <string name="wear_signed_out_title">Open Gradey on your phone</string>
+    <string name="wear_signed_out_detail">Sign in and your watch will receive the Bakaláři timetable.</string>
+    <string name="wear_no_timetable_title">No timetable yet</string>
+    <string name="wear_no_timetable_detail">Open Gradey on your phone to sync.</string>
+    <string name="wear_stale_title">Timetable is stale</string>
+    <string name="wear_stale_detail">Refresh Gradey on your phone, then sync again.</string>
+    <string name="wear_done_title">Done for today</string>
+    <string name="wear_done_detail">No more lessons left.</string>
+    <string name="wear_no_more_lessons">Nothing else on today’s timetable</string>
+    <string name="wear_status_now">Now</string>
+    <string name="wear_status_up_next">Up next</string>
+    <string name="wear_status_in">In %1$s</string>
+    <string name="wear_status_canceled">Canceled</string>
+    <string name="wear_break">Break</string>
+    <string name="wear_start">Start</string>
+    <string name="wear_end">End</string>
+    <plurals name="wear_remaining_count">
+        <item quantity="one">%d lesson remaining today</item>
+        <item quantity="other">%d lessons remaining today</item>
+    </plurals>
+    <string name="wear_sync">Sync</string>
+    <string name="wear_syncing">Syncing…</string>
+    <string name="wear_syncing_phone">Checking phone data…</string>
+    <string name="wear_sync_updated">Phone data is up to date</string>
+    <string name="wear_sync_no_payload">No phone payload found</string>
+    <string name="wear_sync_failed">Couldn’t sync; showing the last saved timetable</string>
+    <string name="wear_support_plus">Plus supporter</string>
+    <string name="wear_support_standard">Standard supporter</string>
+    <string name="wear_complication_name">Lessons</string>
+    <string name="wear_complication_description">Shows your current or next lesson.</string>
+    <string name="wear_complication_now">Now</string>
+    <string name="wear_complication_next">Next</string>
+    <string name="wear_complication_no_lessons">No lessons</string>
+    <string name="wear_complication_free_time">Enjoy your free time</string>
+    <string name="wear_complication_preview_abbreviation" translatable="false">MAT</string>
+    <string name="wear_complication_preview_long">%1$s: Mathematics · 09:00–09:45 · 12</string>
 </resources>
-

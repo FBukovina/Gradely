@@ -28,6 +28,7 @@ room = "2.7.0"
 securityCrypto = "1.1.0-alpha06"
 truth = "1.4.4"
 wearCompose = "1.4.1"
+wearWatchface = "1.3.0"
 wearable = "20.0.1"
 work = "2.10.0"
 androidxTestExtJunit = "1.2.1"
@@ -63,6 +64,7 @@ androidx-security-crypto = { group = "androidx.security", name = "security-crypt
 androidx-wear-compose-foundation = { group = "androidx.wear.compose", name = "compose-foundation", version.ref = "wearCompose" }
 androidx-wear-compose-material = { group = "androidx.wear.compose", name = "compose-material", version.ref = "wearCompose" }
 androidx-wear-compose-navigation = { group = "androidx.wear.compose", name = "compose-navigation", version.ref = "wearCompose" }
+androidx-wear-watchface-complications-data-source-ktx = { group = "androidx.wear.watchface", name = "watchface-complications-data-source-ktx", version.ref = "wearWatchface" }
 androidx-work-runtime-ktx = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "work" }
 androidx-test-ext-junit = { group = "androidx.test.ext", name = "junit", version.ref = "androidxTestExtJunit" }
 androidx-test-runner = { group = "androidx.test", name = "runner", version.ref = "androidxTestRunner" }

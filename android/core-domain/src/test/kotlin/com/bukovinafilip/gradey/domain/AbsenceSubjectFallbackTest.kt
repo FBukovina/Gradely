@@ -204,4 +204,76 @@ class AbsenceSubjectFallbackTest {
         assertThat(lessons.single().hourCaption).isEqualTo("1")
         assertThat(lessons.single().timeRange).isEqualTo("08:00-08:45")
     }
+
+    @Test
+    fun resolverHandlesDiacriticsUnknownSubjectsChangesHolidaysAndMalformedDates() {
+        val timetable = TimetableResponse(
+            hours = listOf(
+                TimetableHour("1", "1", "08:00", "08:45"),
+                TimetableHour("2", "2", "08:55", ""),
+                TimetableHour("3", "3", "", ""),
+                TimetableHour("4", "4", "", ""),
+            ),
+            subjects = listOf(
+                TimetableEntity("tt-czech", "ČJ", "Cesky jazyk"),
+                TimetableEntity("bio", "BIO", "Biology"),
+            ),
+            days = listOf(
+                TimetableDayDTO(
+                    date = "2026-06-15",
+                    atoms = listOf(
+                        TimetableAtom(hourID = "1", subjectID = "Cj"),
+                        TimetableAtom(hourID = "2", subjectID = "unknown-code"),
+                        TimetableAtom(hourID = "3", subjectID = ""),
+                        TimetableAtom(hourID = "4", subjectID = null),
+                        TimetableAtom(
+                            hourID = "4",
+                            subjectID = "original",
+                            change = com.bukovinafilip.gradey.model.TimetableChange(
+                                changeType = "Substitution",
+                                changeSubject = "BIO",
+                            ),
+                        ),
+                    ),
+                ),
+                TimetableDayDTO(date = "2026-06-16", dayType = "Holiday", atoms = emptyList()),
+                TimetableDayDTO(
+                    date = "not-a-date",
+                    atoms = listOf(TimetableAtom(hourID = "1", subjectID = "tt-czech")),
+                ),
+            ),
+        )
+        val marks = listOf(
+            Subject(subjectInfo = SubjectInfo("mark-czech", "CJ", "Český jazyk")),
+            Subject(subjectInfo = SubjectInfo("bio", "BIO", "Biology")),
+        )
+
+        val lessons = AbsenceSubjectFallback.lessonCandidates(LocalDate.of(2026, 6, 15), timetable, marks)
+
+        assertThat(lessons.map { it.subjectName })
+            .containsExactly("Český jazyk", "unknown-code", "Subject", "Biology")
+            .inOrder()
+        assertThat(lessons[1].timeRange).isEmpty()
+        assertThat(AbsenceSubjectFallback.lessonCandidates(LocalDate.of(2026, 6, 16), timetable, marks)).isEmpty()
+        assertThat(AbsenceSubjectFallback.lessonCandidates(LocalDate.of(2026, 6, 17), timetable, marks)).isEmpty()
+    }
+
+    @Test
+    fun resolverSortsMissingHourMetadataNumerically() {
+        val timetable = TimetableResponse(
+            days = listOf(
+                TimetableDayDTO(
+                    date = "2026-06-15",
+                    atoms = listOf(
+                        TimetableAtom(hourID = "10", subjectID = "late"),
+                        TimetableAtom(hourID = "2", subjectID = "early"),
+                    ),
+                ),
+            ),
+        )
+
+        val lessons = AbsenceSubjectFallback.lessonCandidates(LocalDate.of(2026, 6, 15), timetable, emptyList())
+
+        assertThat(lessons.map { it.hourID }).containsExactly("2", "10").inOrder()
+    }
 }

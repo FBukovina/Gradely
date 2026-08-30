@@ -238,8 +238,10 @@ object AbsenceSubjectFallback {
         val seen = mutableSetOf<String>()
         return atoms.mapNotNull { atom ->
             if (LessonChangeKind.fromApi(atom.change?.changeType) == LessonChangeKind.CANCELED) return@mapNotNull null
-            val rawReference = atom.subjectID?.trim().orEmpty()
-            if (rawReference.isEmpty()) return@mapNotNull null
+            val changedReference = atom.change?.changeSubject?.trim().orEmpty()
+            val rawReference = changedReference.takeIf(String::isNotEmpty)
+                ?: atom.subjectID?.trim()
+                ?: return@mapNotNull null
             val entity = subjectsByID[rawReference] ?: timetable.subjects.firstOrNull { candidate ->
                 listOf(candidate.id, candidate.abbrev, candidate.name)
                     .filterNotNull()
@@ -249,9 +251,9 @@ object AbsenceSubjectFallback {
             if (!seen.add("${atom.hourID}#${subject.key}")) return@mapNotNull null
             val hour = hoursByID[atom.hourID]
             val caption = hour?.caption?.trim().orEmpty().ifEmpty { atom.hourID }
-            val timeRange = listOf(hour?.beginTime, hour?.endTime)
-                .mapNotNull { it?.trim()?.takeIf(String::isNotEmpty) }
-                .joinToString("-")
+            val beginTime = hour?.beginTime?.trim().orEmpty()
+            val endTime = hour?.endTime?.trim().orEmpty()
+            val timeRange = if (beginTime.isNotEmpty() && endTime.isNotEmpty()) "$beginTime-$endTime" else ""
             CountableLesson(
                 id = "lesson-$dateKey-${atom.hourID}-${storageSafe(subject.key)}",
                 dateKey = dateKey,
@@ -263,6 +265,7 @@ object AbsenceSubjectFallback {
             )
         }.sortedWith(
             compareBy<CountableLesson> { hourOrder[it.hourID] ?: Int.MAX_VALUE }
+                .thenBy { it.hourID.toIntOrNull() ?: Int.MAX_VALUE }
                 .thenBy(CountableLesson::hourID)
                 .thenBy(CountableLesson::displayName),
         )
@@ -311,8 +314,12 @@ object AbsenceSubjectFallback {
 
         fun resolve(rawID: String, entity: TimetableEntity?): ResolvedSubject {
             val normalizedRawID = normalize(rawID)
-            val key = if (normalizedRawID.isNotEmpty()) "raw-$normalizedRawID" else {
-                "text-${normalize(entity?.name ?: entity?.abbrev.orEmpty()).ifEmpty { "unknown" }}"
+            val entityText = listOfNotNull(entity?.name, entity?.abbrev)
+                .firstNotNullOfOrNull { normalize(it).takeIf(String::isNotEmpty) }
+            val key = when {
+                normalizedRawID.isNotEmpty() -> "raw-$normalizedRawID"
+                entityText != null -> "text-$entityText"
+                else -> "raw-blank"
             }
             return resolvedByKey.getOrPut(key) {
                 val mark = marksByID[rawID.trim()]

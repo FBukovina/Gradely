@@ -404,6 +404,18 @@ data class TimetableChange(
     val changeType: String? = null,
     @SerialName("Description")
     val description: String? = null,
+    @SerialName("ChangeSubject")
+    val changeSubject: String? = null,
+    @SerialName("Day")
+    val day: String? = null,
+    @SerialName("Hours")
+    val hours: String? = null,
+    @SerialName("Time")
+    val time: String? = null,
+    @SerialName("TypeAbbrev")
+    val typeAbbrev: String? = null,
+    @SerialName("TypeName")
+    val typeName: String? = null,
 )
 
 @Serializable

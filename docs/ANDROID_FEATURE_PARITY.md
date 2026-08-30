@@ -270,7 +270,7 @@ Strava.cz verification (2026-08-30): Android now uses the same public Strava.cz 
 
 ## Gradey AI
 
-- [ ] Port status/availability, identity tier, consent, context sections, conversations, messages, and stream-event models.
+- [x] Port status/availability, identity tier, consent, context sections, conversations, messages, and stream-event models.
 - [ ] Build context from current Bakaláři marks, absence, timetable, trends, and active school scope with partial/stale/unavailable states.
 - [ ] Implement consent explanations, grant, revoke, and local/cloud state reset.
 - [ ] Implement conversation list/detail/new chat/delete/delete-all flows.
@@ -280,6 +280,8 @@ Strava.cz verification (2026-08-30): Android now uses the same public Strava.cz 
 - [ ] Hide or clearly disable AI for local-only guest mode as iOS does.
 - [ ] Integrate AI entry points on Today, Subjects, Absence, Timetable, and Meals.
 - [ ] Verify authentication, no-context, over-limit, oversized prompt, transport interruption, malformed stream, and app-background behavior.
+
+Model parity evidence (2026-08-31): Android now carries the complete iOS Gradey AI domain vocabulary: service status and identity tier, consent, school-scoped conversation summaries/details, user and assistant messages with streaming/completed/cancelled/failed states, marks/subjects/trends/timetable context with stale/partial/unavailable semantics, lesson-change kinds, and start/delta/done/error stream events including token usage and an optional persisted message. Wire-facing model fields retain the backend snake-case names, epoch timestamps remain platform-native, and JVM tests lock the context and event semantics.
 
 ## Settings and account hub
 

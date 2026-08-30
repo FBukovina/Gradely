@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="gradey_ai_title">Gradey AI</string>
+    <string name="gradey_ai_close">Zavřít Gradey AI</string>
+    <string name="gradey_ai_loading">Načítám Gradey AI…</string>
+    <string name="gradey_ai_retry">Zkusit znovu</string>
+    <string name="gradey_ai_load_failed_title">Gradey AI se nepodařilo načíst</string>
+    <string name="gradey_ai_load_failed_message">Zkontroluj připojení a zkus to znovu.</string>
+    <string name="gradey_ai_sign_in_title">Přihlas se pro použití Gradey AI</string>
+    <string name="gradey_ai_sign_in_message">Gradey AI potřebuje Gradey ID, aby cloudové konverzace zůstaly oddělené od školních dat uložených jen v zařízení.</string>
+    <string name="gradey_ai_open_account">Otevřít účet</string>
+    <string name="gradey_ai_not_configured_title">Gradey AI není nakonfigurované</string>
+    <string name="gradey_ai_not_configured_message">V této sestavě chybí místní konfigurace Firebase. Tvoje školní data zůstávají v zařízení.</string>
+    <string name="gradey_ai_consent_title">Používat Gradey AI?</string>
+    <string name="gradey_ai_consent_subtitle">Gradey AI je systém umělé inteligence. Než začneš, koukni, jak nakládá s tvými údaji.</string>
+    <string name="gradey_ai_consent_system_title">Mluvíš s AI</string>
+    <string name="gradey_ai_consent_system_message">Gradey AI je systém umělé inteligence, ne člověk. Odpovědi se generují automaticky (EU AI Act, čl. 50).</string>
+    <string name="gradey_ai_consent_school_title">Omezený školní kontext</string>
+    <string name="gradey_ai_consent_school_message">Gradey sdílí jen omezený přehled známek a rozvrhu potřebný k odpovědi. Tvoje školní heslo nikdy nesdílí.</string>
+    <string name="gradey_ai_consent_azure_title">Zpracování službou Azure AI</string>
+    <string name="gradey_ai_consent_azure_message">Tvoje dotazy, nedávná historie chatu a omezený školní kontext se bezpečně odesílají přes Firebase Functions do Microsoft Azure AI. Tvoje přihlašovací údaje ke škole ani původní odpovědi školního systému se nikdy neodesílají.</string>
+    <string name="gradey_ai_consent_control_title">Data máš pod kontrolou</string>
+    <string name="gradey_ai_consent_control_message">Chaty hostů se smažou po 30 dnech neaktivity. Chaty můžeš kdykoli smazat nebo odvolat souhlas.</string>
+    <string name="gradey_ai_consent_action">Souhlasit a pokračovat</string>
+    <string name="gradey_ai_disclaimer">Mluvíš se systémem AI, ne s člověkem. Odpovědi jsou automaticky vygenerované a můžou obsahovat chyby. Důležité informace si ověř.</string>
+    <string name="gradey_ai_paused_title">Odpovědi AI jsou dočasně pozastavené</string>
+    <string name="gradey_ai_paused_message">Stále si můžeš prohlížet chaty a spravovat nastavení Gradey AI. Odesílání nových zpráv bude brzy znovu dostupné.</string>
+    <string name="gradey_ai_ready_title">Gradey AI je připojené</string>
+    <string name="gradey_ai_ready_message">Aktuální dostupnost a stav souhlasu pocházejí přímo ze služby Gradey AI.</string>
+    <string name="gradey_ai_daily_limit">Denní limit</string>
+    <string name="gradey_ai_remaining">Zbývá %1$d z %2$d odpovědí</string>
+    <string name="gradey_ai_chat_next">Historie konverzací a streamování chatu v této sestavě pro Android zatím nejsou dostupné.</string>
+    <string name="gradey_ai_identity_anonymous">Soukromá identita hosta pro AI</string>
+    <string name="gradey_ai_identity_linked">Propojeno s tvým Gradey ID</string>
+</resources>

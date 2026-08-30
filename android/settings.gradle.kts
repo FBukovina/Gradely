@@ -35,6 +35,7 @@ include(
     ":feature-timetable",
     ":feature-stravacz",
     ":feature-account",
+    ":feature-gradey-ai",
     ":glance-widgets",
     ":wear",
 )

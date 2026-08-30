@@ -67,6 +67,7 @@ import com.bukovinafilip.gradey.feature.auth.OnboardingNotificationsScreen
 import com.bukovinafilip.gradey.feature.auth.OnboardingReadyScreen
 import com.bukovinafilip.gradey.feature.auth.OnboardingUpgradeSupportScreen
 import com.bukovinafilip.gradey.feature.auth.OnboardingWelcomeScreen
+import com.bukovinafilip.gradey.feature.gradeyai.GradeyAIScreen
 import com.bukovinafilip.gradey.feature.login.SchoolLoginScreen
 import com.bukovinafilip.gradey.feature.stravacz.StravaCZScreen
 import com.bukovinafilip.gradey.feature.subjects.SubjectsScreen
@@ -179,6 +180,7 @@ private fun GradeyApp(
     val scope = rememberCoroutineScope()
     var phase by remember { mutableStateOf(AppPhase.CHECKING) }
     var selectedTab by remember { mutableStateOf(initialTab) }
+    var isGradeyAIPresented by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
     var authError by remember { mutableStateOf<String?>(null) }
     var schoolLoginError by remember { mutableStateOf<String?>(null) }
@@ -351,6 +353,7 @@ private fun GradeyApp(
         activeLinkedAccountID = null
         reconnectLinkedAccount = null
         selectedTab = AppTab.TODAY
+        isGradeyAIPresented = false
         dataError = null
         marksRefreshError = null
         schoolLoginError = "Your Bakaláři session expired. Please reconnect your school account."
@@ -392,6 +395,7 @@ private fun GradeyApp(
         activeLinkedAccountID = null
         reconnectLinkedAccount = null
         selectedTab = AppTab.TODAY
+        isGradeyAIPresented = false
         dataError = null
         marksRefreshError = null
         schoolLoginError = null
@@ -528,6 +532,7 @@ private fun GradeyApp(
             gradeHistorySnapshot = null
             activeLinkedAccountID = activation.account.id
             selectedTab = AppTab.TODAY
+            isGradeyAIPresented = false
             loadCachedSignedInData()
             return true
         } catch (error: CancellationException) {
@@ -1165,7 +1170,7 @@ private fun GradeyApp(
                             }
                         },
                         onOpenAccount = { selectedTab = AppTab.ACCOUNT },
-                        onOpenGradeyTools = { selectedTab = AppTab.STRAVACZ },
+                        onOpenGradeyTools = { isGradeyAIPresented = true },
                         onOpenMarks = { selectedTab = AppTab.SUBJECTS },
                         onOpenAbsence = { selectedTab = AppTab.ABSENCE },
                         onOpenTimetable = { selectedTab = AppTab.TIMETABLE },
@@ -1207,7 +1212,7 @@ private fun GradeyApp(
                         }
                     },
                     onOpenAccount = { selectedTab = AppTab.ACCOUNT },
-                    onOpenGradeyTools = { selectedTab = AppTab.STRAVACZ },
+                    onOpenGradeyTools = { isGradeyAIPresented = true },
                     modifier = Modifier.fillMaxSize(),
                 ) else CoreDataUnavailableScreen(
                     title = "Marks",
@@ -1233,7 +1238,7 @@ private fun GradeyApp(
                         }
                     },
                     onOpenAccount = { selectedTab = AppTab.ACCOUNT },
-                    onOpenGradeyTools = { selectedTab = AppTab.STRAVACZ },
+                    onOpenGradeyTools = { isGradeyAIPresented = true },
                     modifier = Modifier.fillMaxSize(),
                 ) else CoreDataUnavailableScreen(
                     title = "Absence",
@@ -1272,7 +1277,7 @@ private fun GradeyApp(
                         }
                     },
                     onOpenAccount = { selectedTab = AppTab.ACCOUNT },
-                    onOpenGradeyTools = { selectedTab = AppTab.STRAVACZ },
+                    onOpenGradeyTools = { isGradeyAIPresented = true },
                     modifier = Modifier.fillMaxSize(),
                 ) else CoreDataUnavailableScreen(
                     title = "Timetable",
@@ -1419,6 +1424,19 @@ private fun GradeyApp(
                         dataError = null
                     },
                     modifier = Modifier.align(Alignment.BottomCenter),
+                )
+            }
+
+            if (isGradeyAIPresented) {
+                GradeyAIScreen(
+                    repository = graph.gradeyAIRepository,
+                    isGuestMode = isGuestMode,
+                    onOpenAccount = {
+                        isGradeyAIPresented = false
+                        selectedTab = AppTab.ACCOUNT
+                    },
+                    onClose = { isGradeyAIPresented = false },
+                    modifier = Modifier.fillMaxSize(),
                 )
             }
         }

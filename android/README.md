@@ -29,8 +29,9 @@ gradey.googleWebClientId=YOUR_GOOGLE_WEB_CLIENT_ID
 gradey.revenueCatAndroidKey=YOUR_REVENUECAT_ANDROID_KEY
 ```
 
-5. Add `app/google-services.json` locally for Firebase Messaging.
-6. Build with:
+5. Add `app/google-services.json` locally for Firebase Messaging and Gradey AI. The file is intentionally ignored and must be copied to each development Mac; never commit it. Builds without it remain valid, and Gradey AI shows an explicit not-configured state.
+6. For a debug build that calls Gradey AI, register the App Check debug token printed in Logcat with the same Firebase project. Release builds use Play Integrity instead.
+7. Build with:
 
 ```sh
 ./gradlew :app:assembleDebug :wear:assembleDebug test

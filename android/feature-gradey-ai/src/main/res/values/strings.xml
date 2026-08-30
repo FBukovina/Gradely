@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="gradey_ai_title">Gradey AI</string>
+    <string name="gradey_ai_close">Close Gradey AI</string>
+    <string name="gradey_ai_loading">Loading Gradey AI…</string>
+    <string name="gradey_ai_retry">Retry</string>
+    <string name="gradey_ai_load_failed_title">Couldn’t load Gradey AI</string>
+    <string name="gradey_ai_load_failed_message">Check your connection and try again.</string>
+    <string name="gradey_ai_sign_in_title">Sign in to use Gradey AI</string>
+    <string name="gradey_ai_sign_in_message">Gradey AI needs a Gradey ID so its cloud conversations stay separate from local-only school data.</string>
+    <string name="gradey_ai_open_account">Open Account</string>
+    <string name="gradey_ai_not_configured_title">Gradey AI isn’t configured</string>
+    <string name="gradey_ai_not_configured_message">This build is missing its local Firebase configuration. Your school data stays on this device.</string>
+    <string name="gradey_ai_consent_title">Use Gradey AI?</string>
+    <string name="gradey_ai_consent_subtitle">Gradey AI is an artificial intelligence system. Before you start, review how it handles your information.</string>
+    <string name="gradey_ai_consent_system_title">You are talking to AI</string>
+    <string name="gradey_ai_consent_system_message">Gradey AI is an artificial intelligence system, not a person. Replies are generated automatically (EU AI Act, Art. 50).</string>
+    <string name="gradey_ai_consent_school_title">Limited school context</string>
+    <string name="gradey_ai_consent_school_message">Gradey shares only a limited snapshot of your marks and timetable needed to answer. It never shares your school password.</string>
+    <string name="gradey_ai_consent_azure_title">Processed by Azure AI</string>
+    <string name="gradey_ai_consent_azure_message">Your prompts, recent chat history, and limited school context are sent securely through Firebase Functions to Microsoft Azure AI. Your school credentials and raw school-provider payloads are never sent.</string>
+    <string name="gradey_ai_consent_control_title">You stay in control</string>
+    <string name="gradey_ai_consent_control_message">Guest chats are deleted after 30 days of inactivity. You can delete chats or revoke consent at any time.</string>
+    <string name="gradey_ai_consent_action">Agree and continue</string>
+    <string name="gradey_ai_disclaimer">You are interacting with an AI system, not a person. Replies are generated automatically and can be wrong. Verify important information.</string>
+    <string name="gradey_ai_paused_title">AI replies are temporarily paused</string>
+    <string name="gradey_ai_paused_message">You can still view chats and manage Gradey AI settings. Sending new messages will be available again soon.</string>
+    <string name="gradey_ai_ready_title">Gradey AI is connected</string>
+    <string name="gradey_ai_ready_message">Your live availability and consent status came from the Gradey AI service.</string>
+    <string name="gradey_ai_daily_limit">Daily limit</string>
+    <string name="gradey_ai_remaining">%1$d of %2$d replies remaining</string>
+    <string name="gradey_ai_chat_next">Conversation history and chat streaming are not available in this Android build yet.</string>
+    <string name="gradey_ai_identity_anonymous">Private guest AI identity</string>
+    <string name="gradey_ai_identity_linked">Linked to your Gradey ID</string>
+</resources>

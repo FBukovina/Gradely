@@ -57,6 +57,7 @@ dependencies {
     implementation(project(":feature-timetable"))
     implementation(project(":feature-stravacz"))
     implementation(project(":feature-account"))
+    implementation(project(":feature-gradey-ai"))
     implementation(project(":glance-widgets"))
 
     implementation(platform(libs.androidx.compose.bom))
@@ -76,6 +77,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.firebase.messaging.ktx)
+    implementation(libs.firebase.appcheck.playintegrity)
     implementation(libs.google.identity.googleid)
     implementation(libs.google.play.services.wearable)
     implementation(libs.kotlinx.coroutines.android)
@@ -85,6 +87,7 @@ dependencies {
     implementation(libs.purchases.ui)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
+    debugImplementation(libs.firebase.appcheck.debug)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     testImplementation(libs.junit)

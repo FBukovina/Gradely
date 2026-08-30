@@ -6,6 +6,8 @@ import com.bukovinafilip.gradey.model.DashboardData
 import com.bukovinafilip.gradey.model.GradeyAccount
 import com.bukovinafilip.gradey.model.GradeyAuthSession
 import com.bukovinafilip.gradey.model.GradeyAccountSettingsSnapshot
+import com.bukovinafilip.gradey.model.GradeyAIConsent
+import com.bukovinafilip.gradey.model.GradeyAIStatus
 import com.bukovinafilip.gradey.model.LinkedSchoolAccount
 import com.bukovinafilip.gradey.model.LinkedSchoolAccountActivation
 import com.bukovinafilip.gradey.model.GradeHistoryResponse
@@ -103,6 +105,13 @@ interface GradeyHistoryRepository {
 interface DevicePushTokenClient {
     suspend fun registerDeviceToken(token: String, platform: String, environment: String, gradeySession: GradeyAuthSession)
     suspend fun updateNotificationPreferences(preferences: NotificationPreferences, gradeySession: GradeyAuthSession)
+}
+
+interface GradeyAIRepository {
+    val isConfigured: Boolean
+
+    suspend fun loadStatus(): GradeyAIStatus
+    suspend fun acceptConsent(): GradeyAIConsent
 }
 
 interface StravaCZRepository {

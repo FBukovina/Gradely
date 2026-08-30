@@ -747,6 +747,35 @@ data class NotificationPreferences(
 }
 
 @Serializable
+data class GradeyAIStatus(
+    val enabled: Boolean,
+    val consentRequired: Boolean,
+    val termsVersion: String,
+    val dailyLimit: Int,
+    val dailyUsed: Int,
+    val remaining: Int,
+    val resetAtEpochMillis: Long? = null,
+    val tier: GradeyAIIdentityTier = GradeyAIIdentityTier.ANONYMOUS,
+) {
+    val canSend: Boolean get() = enabled && !consentRequired && remaining > 0
+}
+
+@Serializable
+enum class GradeyAIIdentityTier {
+    @SerialName("anonymous")
+    ANONYMOUS,
+
+    @SerialName("linked")
+    LINKED,
+}
+
+@Serializable
+data class GradeyAIConsent(
+    val consented: Boolean,
+    val termsVersion: String? = null,
+)
+
+@Serializable
 data class StravaCZStoredSession(
     val sessionID: String,
     val canteenNumber: String,

@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import com.bukovinafilip.gradey.domain.DevicePushTokenClient
 import com.bukovinafilip.gradey.domain.GradeyAuthRepository
+import com.bukovinafilip.gradey.domain.GradeyAIRepository
 import com.bukovinafilip.gradey.domain.GradeyHistoryRepository
 import com.bukovinafilip.gradey.domain.LinkedAccountRepository
 import com.bukovinafilip.gradey.domain.SchoolRepository
@@ -38,6 +39,7 @@ class AndroidGradeyGraph private constructor(
     val linkedAccountRepository: LinkedAccountRepository,
     val historyRepository: GradeyHistoryRepository,
     val devicePushTokenClient: DevicePushTokenClient,
+    val gradeyAIRepository: GradeyAIRepository,
     val stravaCZRepository: StravaCZRepository,
     val cache: RoomGradeyCache?,
     val ageAttestationStore: AgeAttestationStore,
@@ -141,6 +143,7 @@ class AndroidGradeyGraph private constructor(
                 } else {
                     UnavailableDevicePushTokenClient()
                 },
+                gradeyAIRepository = FirebaseGradeyAIRepository(context, authRepository),
                 stravaCZRepository = UnavailableStravaCZRepository(),
                 cache = cache,
                 ageAttestationStore = AgeAttestationStore(context),

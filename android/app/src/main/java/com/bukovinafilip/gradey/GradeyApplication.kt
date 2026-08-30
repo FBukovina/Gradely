@@ -16,6 +16,8 @@ class GradeyApplication : Application(), GradeyCacheOwner {
     override fun onCreate() {
         super.onCreate()
 
+        configureGradeyFirebase(this)
+
         if (BuildConfig.REVENUECAT_ANDROID_KEY.isNotBlank()) {
             Purchases.configure(PurchasesConfiguration.Builder(this, BuildConfig.REVENUECAT_ANDROID_KEY).build())
         }

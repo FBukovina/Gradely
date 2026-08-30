@@ -28,7 +28,7 @@ Last source audit: 2026-08-30 on `codex/android-monorepo`.
 - [x] Android app, Wear app, shared modules, and root Supabase backend build from the monorepo layout at commit `82c563c`.
 - [x] The imported baseline passed `:app:assembleDebug`, `:wear:assembleDebug`, and JVM tests before the local Android Studio Gradle upgrades.
 - [x] Re-run the complete build and test suite with the current local AGP 9.3.2 / Gradle 9.5 / KSP 2.3.6 upgrades.
-- [ ] Add Android CI that builds, tests, and checks resources/navigation from the monorepo path.
+- [x] Add Android CI that builds, tests, and checks resources/navigation from the monorepo path.
 - [ ] Keep the branch and pull request reviewable with no unrelated iOS changes.
 
 ## Supported provider scope

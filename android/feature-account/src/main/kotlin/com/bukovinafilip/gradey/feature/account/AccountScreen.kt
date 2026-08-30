@@ -1,15 +1,21 @@
 package com.bukovinafilip.gradey.feature.account
 
 import android.app.TimePickerDialog
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
@@ -26,9 +32,11 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
@@ -37,7 +45,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.vector.ImageVector
 import coil3.compose.AsyncImage
 import coil3.compose.LocalPlatformContext
 import coil3.request.ImageRequest
@@ -121,6 +131,9 @@ fun AccountScreen(
     val isNameValid = normalizedFullName.length in 1..80
     val hasNameChanged = normalizedFullName != account?.fullName?.trim().orEmpty()
     val notificationControlsEnabled = account != null && !isUpdatingNotificationPreferences
+    var selectedDestination by rememberSaveable {
+        mutableStateOf<AccountSettingsDestination?>(null)
+    }
 
     fun showTimePicker(minuteOfDay: Int, onChange: (Int) -> Unit) {
         TimePickerDialog(
@@ -132,12 +145,59 @@ fun AccountScreen(
         ).show()
     }
 
-    GradeyScreen(modifier = modifier.verticalScroll(rememberScrollState())) {
-        GradeyHero(
-            stringResource(R.string.account_title),
-            account?.fullName ?: stringResource(R.string.account_local_only_mode),
-        )
-        GradeySectionCard(title = stringResource(R.string.account_profile)) {
+    BoxWithConstraints(modifier = modifier) {
+        val paneMode = accountSettingsPaneMode(maxWidth.value)
+        val effectiveDestination = resolvedAccountSettingsDestination(paneMode, selectedDestination)
+        BackHandler(
+            enabled = paneMode == AccountSettingsPaneMode.COMPACT && selectedDestination != null,
+        ) {
+            selectedDestination = null
+        }
+        Row(modifier = Modifier.fillMaxSize()) {
+            if (paneMode == AccountSettingsPaneMode.EXPANDED || effectiveDestination == null) {
+                AccountSettingsOverview(
+                    account = account,
+                    linkedAccounts = linkedAccounts,
+                    notificationPreferences = notificationPreferences,
+                    isStravaConnectedOnDevice = isStravaConnectedOnDevice,
+                    selectedDestination = effectiveDestination,
+                    onSelect = { selectedDestination = it },
+                    modifier = if (paneMode == AccountSettingsPaneMode.EXPANDED) {
+                        Modifier.weight(0.42f).fillMaxHeight()
+                    } else {
+                        Modifier.fillMaxSize()
+                    },
+                )
+            }
+            if (paneMode == AccountSettingsPaneMode.EXPANDED) {
+                Box(
+                    Modifier
+                        .fillMaxHeight()
+                        .width(1.dp)
+                        .background(MaterialTheme.colorScheme.outlineVariant),
+                )
+            }
+            if (effectiveDestination != null) {
+                key(effectiveDestination) {
+                    GradeyScreen(
+                        modifier = (if (paneMode == AccountSettingsPaneMode.EXPANDED) {
+                            Modifier.weight(0.58f).fillMaxHeight()
+                        } else {
+                            Modifier.fillMaxSize()
+                        }).verticalScroll(rememberScrollState()),
+                    ) {
+                        if (paneMode == AccountSettingsPaneMode.COMPACT) {
+                            TextButton(onClick = { selectedDestination = null }) {
+                                Icon(GradeyIcons.ArrowLeft, contentDescription = null)
+                                Text(stringResource(R.string.settings_back))
+                            }
+                        }
+                        GradeyHero(
+                            stringResource(effectiveDestination.titleResource),
+                            stringResource(effectiveDestination.subtitleResource),
+                        )
+                        if (effectiveDestination == AccountSettingsDestination.ACCOUNT) {
+                            GradeySectionCard(title = stringResource(R.string.account_profile)) {
             Icon(GradeyIcons.User, contentDescription = null)
             account?.let { signedInAccount ->
                 ProfileAvatar(signedInAccount)
@@ -209,8 +269,10 @@ fun AccountScreen(
                     ),
                 )
             }
-        }
-        GradeySectionCard(title = stringResource(R.string.account_notifications)) {
+                            }
+                        }
+                        if (effectiveDestination == AccountSettingsDestination.NOTIFICATIONS) {
+                            GradeySectionCard(title = stringResource(R.string.account_notifications)) {
             Icon(GradeyIcons.Notification, contentDescription = null)
             if (account == null) {
                 Text(stringResource(R.string.notifications_gradey_id_required))
@@ -318,18 +380,24 @@ fun AccountScreen(
                     Text(notificationPreferencesErrorMessage)
                 }
             }
-        }
-        GradeySectionCard(title = androidx.compose.ui.res.stringResource(com.bukovinafilip.gradey.ui.R.string.language_title)) {
+                            }
+                        }
+                        if (effectiveDestination == AccountSettingsDestination.APP_PREFERENCES) {
+                            GradeySectionCard(title = androidx.compose.ui.res.stringResource(com.bukovinafilip.gradey.ui.R.string.language_title)) {
             AppLanguagePicker(
                 selection = appLanguage,
                 onSelectionChange = onAppLanguageChange,
             )
         }
-        GradeySectionCard(title = stringResource(R.string.meals_tab_setting_title)) {
+                            GradeySectionCard(title = stringResource(R.string.meals_tab_setting_title)) {
             Text(stringResource(R.string.meals_tab_setting_message))
             Switch(checked = showMealsTab, onCheckedChange = onShowMealsTabChange)
-        }
-        if (account != null) {
+                            }
+                        }
+                        if (
+                            effectiveDestination == AccountSettingsDestination.CONNECTED_SERVICES &&
+                            account != null
+                        ) {
             GradeySectionCard(title = stringResource(R.string.account_connected_services)) {
                 Text(
                     stringResource(R.string.account_connected_services_body),
@@ -396,14 +464,17 @@ fun AccountScreen(
                     Text(stringResource(R.string.account_no_linked_school))
                 }
             }
-        }
-        GradeySectionCard(title = stringResource(R.string.support_title)) {
+                        }
+                        if (effectiveDestination == AccountSettingsDestination.SUPPORT_ABOUT) {
+                            GradeySectionCard(title = stringResource(R.string.support_title)) {
             Text(stringResource(R.string.support_message))
             Button(onClick = onOpenSupport) {
                 Text(stringResource(R.string.support_open))
             }
-        }
-        GradeySectionCard(title = stringResource(R.string.account_privacy_data)) {
+                            }
+                        }
+                        if (effectiveDestination == AccountSettingsDestination.PRIVACY_DATA) {
+                            GradeySectionCard(title = stringResource(R.string.account_privacy_data)) {
             MetadataRow(
                 stringResource(R.string.account_age),
                 when (ageAttestationKind) {
@@ -453,8 +524,10 @@ fun AccountScreen(
                     )
                 }
             }
-        }
-        GradeySectionCard(title = stringResource(R.string.bakalari_attribution_title)) {
+                            }
+                        }
+                        if (effectiveDestination == AccountSettingsDestination.CONNECTED_SERVICES) {
+                            GradeySectionCard(title = stringResource(R.string.bakalari_attribution_title)) {
             Text(stringResource(R.string.bakalari_attribution_message))
         }
         if (account != null) {
@@ -550,6 +623,11 @@ fun AccountScreen(
                             enabled = !isMutating && mutatingLinkedAccountID == null,
                         ) {
                             Text(stringResource(R.string.account_unlink))
+                        }
+                    }
+                }
+            }
+                            }
                         }
                     }
                 }
@@ -680,6 +758,118 @@ fun AccountScreen(
         )
     }
 }
+
+@Composable
+private fun AccountSettingsOverview(
+    account: GradeyAccount?,
+    linkedAccounts: List<LinkedSchoolAccount>,
+    notificationPreferences: NotificationPreferences,
+    isStravaConnectedOnDevice: Boolean,
+    selectedDestination: AccountSettingsDestination?,
+    onSelect: (AccountSettingsDestination) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    GradeyScreen(modifier = modifier.verticalScroll(rememberScrollState())) {
+        GradeyHero(
+            stringResource(R.string.settings_overview_title),
+            stringResource(R.string.settings_overview_subtitle),
+        )
+        AccountSettingsDestination.entries.forEach { destination ->
+            val hasAttention = destination == AccountSettingsDestination.CONNECTED_SERVICES &&
+                linkedAccounts.any {
+                    it.status == LinkedAccountStatus.ACTION_REQUIRED ||
+                        it.status == LinkedAccountStatus.FAILED
+                }
+            val subtitle = when (destination) {
+                AccountSettingsDestination.ACCOUNT -> account?.email
+                    ?: stringResource(R.string.account_local_only_mode)
+                AccountSettingsDestination.NOTIFICATIONS -> {
+                    val status = stringResource(
+                        if (account != null && notificationPreferences.newMarksEnabled) {
+                            R.string.notifications_enabled
+                        } else {
+                            R.string.notifications_disabled
+                        },
+                    )
+                    "${stringResource(destination.subtitleResource)} · $status"
+                }
+                AccountSettingsDestination.CONNECTED_SERVICES -> {
+                    val mealsStatus = stringResource(
+                        if (isStravaConnectedOnDevice) {
+                            R.string.connected_status_connected
+                        } else {
+                            R.string.connected_status_not_connected
+                        },
+                    )
+                    "${stringResource(destination.subtitleResource)} · $mealsStatus"
+                }
+                else -> stringResource(destination.subtitleResource)
+            }
+            Surface(
+                onClick = { onSelect(destination) },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(18.dp),
+                color = if (selectedDestination == destination) {
+                    MaterialTheme.colorScheme.primaryContainer
+                } else {
+                    MaterialTheme.colorScheme.surfaceContainer
+                },
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 18.dp, vertical = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        imageVector = destination.icon,
+                        contentDescription = null,
+                        tint = if (hasAttention) {
+                            MaterialTheme.colorScheme.error
+                        } else {
+                            MaterialTheme.colorScheme.primary
+                        },
+                        modifier = Modifier.size(26.dp),
+                    )
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(3.dp),
+                    ) {
+                        Text(
+                            text = stringResource(destination.titleResource),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                        Text(
+                            text = subtitle,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Icon(
+                        imageVector = if (hasAttention) GradeyIcons.ErrorCircle else GradeyIcons.ArrowRight,
+                        contentDescription = null,
+                        tint = if (hasAttention) {
+                            MaterialTheme.colorScheme.error
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
+                        modifier = Modifier.size(22.dp),
+                    )
+                }
+            }
+        }
+    }
+}
+
+private val AccountSettingsDestination.icon: ImageVector
+    get() = when (this) {
+        AccountSettingsDestination.ACCOUNT -> GradeyIcons.User
+        AccountSettingsDestination.CONNECTED_SERVICES -> GradeyIcons.Link
+        AccountSettingsDestination.NOTIFICATIONS -> GradeyIcons.Notification
+        AccountSettingsDestination.PRIVACY_DATA -> GradeyIcons.SecurityLock
+        AccountSettingsDestination.APP_PREFERENCES -> GradeyIcons.MoreVertical
+        AccountSettingsDestination.SUPPORT_ABOUT -> GradeyIcons.Information
+    }
 
 private enum class ProfileAvatarLoadState {
     INITIALS,

@@ -1,5 +1,6 @@
 package com.bukovinafilip.gradey.feature.gradeyai
 
+import android.text.format.DateUtils
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -39,6 +40,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -48,7 +50,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import android.text.format.DateUtils
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.bukovinafilip.gradey.domain.GradeyAIContextBuilding
 import com.bukovinafilip.gradey.domain.GradeyAIEntryPolicy
 import com.bukovinafilip.gradey.domain.GradeyAIEntryState
@@ -83,17 +87,36 @@ fun GradeyAIScreen(
     modifier: Modifier = Modifier,
 ) {
     val coroutineScope = rememberCoroutineScope()
+    val lifecycleOwner = LocalLifecycleOwner.current
     val controller = remember(repository, contextBuilder) {
         GradeyAIController(repository, contextBuilder, coroutineScope)
     }
     val entryState = GradeyAIEntryPolicy.resolve(isGuestMode, repository.isConfigured)
+    val currentEntryState by rememberUpdatedState(entryState)
     var pendingDeletion by remember { mutableStateOf<GradeyAIConversation?>(null) }
     var dangerousAction by remember { mutableStateOf<DangerousAction?>(null) }
 
     BackHandler {
         if (controller.currentConversation != null) controller.closeConversation() else onClose()
     }
-    DisposableEffect(controller) { onDispose(controller::cancelOperations) }
+    DisposableEffect(controller, lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_STOP -> controller.onAppBackgrounded()
+                Lifecycle.Event.ON_START -> {
+                    if (controller.onAppForegrounded() && currentEntryState == GradeyAIEntryState.SERVICE) {
+                        coroutineScope.launch { controller.bootstrap() }
+                    }
+                }
+                else -> Unit
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            controller.onAppBackgrounded()
+        }
+    }
     LaunchedEffect(controller, supportTier) { controller.applySupportTier(supportTier) }
     LaunchedEffect(controller, entryState) {
         if (entryState == GradeyAIEntryState.SERVICE) controller.bootstrap()

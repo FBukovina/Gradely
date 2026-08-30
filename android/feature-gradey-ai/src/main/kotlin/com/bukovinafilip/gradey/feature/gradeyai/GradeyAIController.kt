@@ -76,11 +76,15 @@ internal class GradeyAIController(
         private set
     var isPerformingDestructiveOperation by mutableStateOf(false)
         private set
+    var isAppForegrounded by mutableStateOf(true)
+        private set
 
     private var sendJob: Job? = null
     private var activeSendToken: String? = null
     private var openJob: Job? = null
     private var activeOpenToken: String? = null
+    private var activeContextRefreshToken: String? = null
+    private var foregroundGeneration = 0
     private var activeSchoolScope: String? = null
     private var lastFailedRequest: FailedRequest? = null
     private var draftConversationID: String? = null
@@ -95,12 +99,32 @@ internal class GradeyAIController(
     val canSend: Boolean
         get() {
             val text = draft.trim()
-            return !isSending && !isOpeningConversation && !isPerformingDestructiveOperation &&
+            return isAppForegrounded && !isSending && !isOpeningConversation &&
+                !isPerformingDestructiveOperation &&
                 text.isNotEmpty() && text.length <= MaximumPromptLength &&
                 contextSnapshot != null && status?.canSend == true
         }
     val canStartNewChat: Boolean
-        get() = status?.canSend == true && !isSending && !isPerformingDestructiveOperation
+        get() = isAppForegrounded && status?.canSend == true && !isSending &&
+            !isPerformingDestructiveOperation
+
+    fun onAppBackgrounded() {
+        if (!isAppForegrounded) return
+        isAppForegrounded = false
+        foregroundGeneration += 1
+        activeContextRefreshToken = null
+        isRefreshingContext = false
+        cancelOpen()
+        stop(reconcileStatus = false)
+        if (!isPerformingDestructiveOperation) isLoading = false
+    }
+
+    /** Returns true only for the first foreground transition after a background event. */
+    fun onAppForegrounded(): Boolean {
+        if (isAppForegrounded) return false
+        isAppForegrounded = true
+        return true
+    }
 
     fun applySupportTier(value: GradeySupportTier) {
         // The server limit remains authoritative while the support catalog is unresolved.
@@ -110,6 +134,8 @@ internal class GradeyAIController(
     }
 
     suspend fun bootstrap() {
+        if (!isAppForegrounded || isPerformingDestructiveOperation) return
+        val generation = foregroundGeneration
         cancelOpen()
         stop()
         failure = null
@@ -127,9 +153,14 @@ internal class GradeyAIController(
 
         try {
             val schoolScope = builder.currentSchoolScope()
+            if (!isCurrentForegroundOperation(generation)) return
             if (activeSchoolScope != null && activeSchoolScope != schoolScope) clearSchoolState()
             activeSchoolScope = schoolScope
-            if (contextSnapshot == null) contextSnapshot = builder.cachedContext()
+            if (contextSnapshot == null) {
+                val cachedContext = builder.cachedContext()
+                if (!isCurrentForegroundOperation(generation)) return
+                contextSnapshot = cachedContext
+            }
             isLoading = status == null
 
             coroutineScope {
@@ -139,18 +170,23 @@ internal class GradeyAIController(
                     runCatchingSuspend { repository.listConversations(schoolScope) }
                 }
 
-                statusAttempt.await().fold(
+                val loadedStatus = statusAttempt.await()
+                val loadedContext = contextAttempt.await()
+                val loadedConversations = conversationAttempt.await()
+                if (!isCurrentForegroundOperation(generation)) return@coroutineScope
+
+                loadedStatus.fold(
                     onSuccess = { loaded ->
                         ingestStatus(loaded)
                         if (loaded.consentRequired) {
                             conversations = emptyList()
                             if (!isDraftChat) closeConversation()
                         } else {
-                            conversationAttempt.await().fold(
-                                onSuccess = { loadedConversations ->
-                                    conversations = loadedConversations.sortedByDescending(::conversationDate)
+                            loadedConversations.fold(
+                                onSuccess = { values ->
+                                    conversations = values.sortedByDescending(::conversationDate)
                                     currentConversation = currentConversation?.let { selected ->
-                                        loadedConversations.firstOrNull { it.id == selected.id } ?: selected
+                                        values.firstOrNull { it.id == selected.id } ?: selected
                                     }
                                 },
                                 onFailure = { error ->
@@ -163,7 +199,7 @@ internal class GradeyAIController(
                     },
                     onFailure = { error -> if (status == null) failure = failure(error) },
                 )
-                contextAttempt.await().fold(
+                loadedContext.fold(
                     onSuccess = ::ingestContext,
                     onFailure = { contextFailure = failure(it) },
                 )
@@ -171,47 +207,58 @@ internal class GradeyAIController(
         } catch (error: CancellationException) {
             throw error
         } catch (error: Throwable) {
-            val mapped = failure(error)
-            failure = mapped
-            contextFailure = mapped
+            if (isCurrentForegroundOperation(generation)) {
+                val mapped = failure(error)
+                failure = mapped
+                contextFailure = mapped
+            }
         } finally {
-            isLoading = false
+            if (isCurrentForegroundOperation(generation)) isLoading = false
         }
     }
 
     suspend fun refreshStatus() {
-        runCatchingSuspend { repository.loadStatus() }
-            .onSuccess(::ingestStatus)
-            .onFailure { failure = failure(it) }
+        if (!isAppForegrounded || isPerformingDestructiveOperation) return
+        val generation = foregroundGeneration
+        val result = runCatchingSuspend { repository.loadStatus() }
+        if (!isCurrentForegroundOperation(generation)) return
+        result.onSuccess(::ingestStatus).onFailure { failure = failure(it) }
     }
 
     suspend fun acceptConsent() {
-        if (isPerformingDestructiveOperation) return
+        if (!isAppForegrounded || isPerformingDestructiveOperation) return
+        val generation = foregroundGeneration
         failure = null
         isLoading = true
         try {
             repository.acceptConsent()
-            ingestStatus(repository.loadStatus())
+            if (!isCurrentForegroundOperation(generation)) return
+            val loadedStatus = repository.loadStatus()
+            if (!isCurrentForegroundOperation(generation)) return
+            ingestStatus(loadedStatus)
             if (status?.consentRequired == false) {
                     val schoolScope = contextBuilder?.currentSchoolScope()
                         ?: throw GradeyAIException(
                             GradeyAIErrorKind.NO_CONTEXT,
                             "",
                         )
-                conversations = repository.listConversations(schoolScope)
+                if (!isCurrentForegroundOperation(generation)) return
+                val loadedConversations = repository.listConversations(schoolScope)
+                if (!isCurrentForegroundOperation(generation)) return
+                conversations = loadedConversations
                     .sortedByDescending(::conversationDate)
             }
         } catch (error: CancellationException) {
             throw error
         } catch (error: Throwable) {
-            failure = failure(error)
+            if (isCurrentForegroundOperation(generation)) failure = failure(error)
         } finally {
-            isLoading = false
+            if (isCurrentForegroundOperation(generation)) isLoading = false
         }
     }
 
     suspend fun revokeConsent() {
-        if (isPerformingDestructiveOperation) return
+        if (!isAppForegrounded || isPerformingDestructiveOperation) return
         isPerformingDestructiveOperation = true
         cancelOperations()
         failure = null
@@ -240,7 +287,7 @@ internal class GradeyAIController(
     }
 
     fun beginDraftChat(localizedTitle: String) {
-        if (isPerformingDestructiveOperation) return
+        if (!isAppForegrounded || isPerformingDestructiveOperation) return
         cancelOpen()
         stop()
         failure = null
@@ -265,7 +312,7 @@ internal class GradeyAIController(
     }
 
     suspend fun open(conversation: GradeyAIConversation) {
-        if (isPerformingDestructiveOperation) return
+        if (!isAppForegrounded || isPerformingDestructiveOperation) return
         stop()
         cancelOpen()
         failure = null
@@ -321,7 +368,9 @@ internal class GradeyAIController(
     }
 
     suspend fun send(proposedText: String = draft) {
-        if (isSending || isOpeningConversation || isPerformingDestructiveOperation) return
+        if (!isAppForegrounded || isSending || isOpeningConversation ||
+            isPerformingDestructiveOperation
+        ) return
         val text = proposedText.trim()
         when {
             text.isEmpty() || text.length > MaximumPromptLength -> {
@@ -346,7 +395,9 @@ internal class GradeyAIController(
     }
 
     suspend fun retry() {
-        if (isSending || isOpeningConversation || isPerformingDestructiveOperation) return
+        if (!isAppForegrounded || isSending || isOpeningConversation ||
+            isPerformingDestructiveOperation
+        ) return
         val failed = lastFailedRequest ?: return
         val conversation = currentConversation?.takeIf { it.id == failed.conversationID } ?: run {
             lastFailedRequest = null
@@ -371,12 +422,15 @@ internal class GradeyAIController(
         return message.role == GradeyAIMessageRole.ASSISTANT &&
             message.status == GradeyAIMessageStatus.FAILED &&
             currentConversation?.id == failed.conversationID &&
+            isAppForegrounded &&
             !isPerformingDestructiveOperation &&
             status?.canSend == true &&
             message.createdAtEpochMillis >= failed.startedAtEpochMillis
     }
 
-    fun stop() {
+    fun stop() = stop(reconcileStatus = true)
+
+    private fun stop(reconcileStatus: Boolean) {
         if (sendJob == null && !isSending) return
         val wasStreaming = isStreaming
         activeSendToken = null
@@ -395,10 +449,12 @@ internal class GradeyAIController(
             }
         }
         lastFailedRequest = null
-        if (wasStreaming) {
+        if (wasStreaming && reconcileStatus && isAppForegrounded) {
+            val generation = foregroundGeneration
             scope.launch {
                 delay(750)
-                runCatchingSuspend { repository.loadStatus() }.onSuccess(::ingestStatus)
+                val result = runCatchingSuspend { repository.loadStatus() }
+                if (isCurrentForegroundOperation(generation)) result.onSuccess(::ingestStatus)
             }
         }
     }
@@ -409,7 +465,7 @@ internal class GradeyAIController(
     }
 
     suspend fun delete(conversation: GradeyAIConversation) {
-        if (isPerformingDestructiveOperation) return
+        if (!isAppForegrounded || isPerformingDestructiveOperation) return
         isPerformingDestructiveOperation = true
         if (currentConversation?.id == conversation.id) {
             cancelOpen()
@@ -436,7 +492,7 @@ internal class GradeyAIController(
     }
 
     suspend fun deleteAll() {
-        if (isPerformingDestructiveOperation) return
+        if (!isAppForegrounded || isPerformingDestructiveOperation) return
         isPerformingDestructiveOperation = true
         cancelOperations()
         failure = null
@@ -460,22 +516,33 @@ internal class GradeyAIController(
     }
 
     suspend fun refreshContext() {
-        if (isRefreshingContext) return
+        if (!isAppForegrounded || isRefreshingContext || isPerformingDestructiveOperation) return
         val builder = contextBuilder
         if (builder == null) {
             contextFailure = GradeyAIFailure(GradeyAIErrorKind.NO_CONTEXT)
             return
         }
+        val generation = foregroundGeneration
+        val token = idProvider()
+        activeContextRefreshToken = token
         isRefreshingContext = true
         contextFailure = null
         try {
-            ingestContext(builder.refreshContext())
+            val refreshed = builder.refreshContext()
+            if (activeContextRefreshToken == token && isCurrentForegroundOperation(generation)) {
+                ingestContext(refreshed)
+            }
         } catch (error: CancellationException) {
             throw error
         } catch (error: Throwable) {
-            contextFailure = failure(error)
+            if (activeContextRefreshToken == token && isCurrentForegroundOperation(generation)) {
+                contextFailure = failure(error)
+            }
         } finally {
-            isRefreshingContext = false
+            if (activeContextRefreshToken == token) {
+                activeContextRefreshToken = null
+                isRefreshingContext = false
+            }
         }
     }
 
@@ -801,6 +868,9 @@ internal class GradeyAIController(
             retryable = true,
         )
     }
+
+    private fun isCurrentForegroundOperation(generation: Int): Boolean =
+        isAppForegrounded && foregroundGeneration == generation
 
     private suspend fun <T> runCatchingSuspend(block: suspend () -> T): Result<T> = try {
         Result.success(block())

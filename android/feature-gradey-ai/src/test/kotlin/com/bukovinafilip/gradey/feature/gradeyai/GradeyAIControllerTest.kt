@@ -171,6 +171,45 @@ class GradeyAIControllerTest {
     }
 
     @Test
+    fun `background cancels a stream and late events cannot repopulate foreground state`() = runTest {
+        var lateStreamContinuation: Continuation<Unit>? = null
+        val repository = FakeRepository().apply {
+            streams += flow {
+                emit(GradeyAIStreamEvent.Start("assistant", 3))
+                emit(GradeyAIStreamEvent.Delta("Visible"))
+                suspendCoroutine { lateStreamContinuation = it }
+                emit(GradeyAIStreamEvent.Delta(" stale"))
+                emit(GradeyAIStreamEvent.Done("stop", 2, null, null, null))
+            }
+        }
+        val controller = controller(repository = repository, scope = this)
+        controller.bootstrap()
+        val send = launch { controller.send("Help") }
+        runCurrent()
+
+        assertThat(controller.isStreaming).isTrue()
+        controller.onAppBackgrounded()
+
+        assertThat(controller.isAppForegrounded).isFalse()
+        assertThat(controller.isStreaming).isFalse()
+        assertThat(controller.isSending).isFalse()
+        assertThat(controller.messages.last().content).isEqualTo("Visible")
+        assertThat(controller.messages.last().status).isEqualTo(GradeyAIMessageStatus.CANCELLED)
+        assertThat(controller.canStartNewChat).isFalse()
+        controller.send("Must stay blocked")
+        assertThat(repository.streamRequests).hasSize(1)
+        assertThat(controller.onAppForegrounded()).isTrue()
+        assertThat(controller.onAppForegrounded()).isFalse()
+
+        lateStreamContinuation?.resume(Unit)
+        advanceUntilIdle()
+
+        assertThat(controller.messages.last().content).isEqualTo("Visible")
+        assertThat(controller.messages.last().status).isEqualTo(GradeyAIMessageStatus.CANCELLED)
+        send.join()
+    }
+
+    @Test
     fun `draft title remains localized and CRUD operations stay school scoped`() = runTest {
         val existing = conversation("existing", "Existing")
         val repository = FakeRepository(conversations = mutableListOf(existing))
@@ -321,6 +360,36 @@ class GradeyAIControllerTest {
     }
 
     @Test
+    fun `background invalidates an opening conversation before its late detail arrives`() = runTest {
+        val existing = conversation("existing", "Existing")
+        val staleMessage = message(
+            id = "stale",
+            role = GradeyAIMessageRole.ASSISTANT,
+            content = "Stale detail",
+            status = GradeyAIMessageStatus.COMPLETE,
+        )
+        val repository = FakeRepository(conversations = mutableListOf(existing)).apply {
+            holdLoad("existing")
+            loadedMessagesByID["existing"] = listOf(staleMessage)
+        }
+        val controller = controller(repository = repository, scope = this)
+        controller.bootstrap()
+        val opening = launch { controller.open(existing) }
+        runCurrent()
+
+        assertThat(controller.isOpeningConversation).isTrue()
+        controller.onAppBackgrounded()
+        assertThat(controller.onAppForegrounded()).isTrue()
+        repository.releaseLoad("existing")
+        advanceUntilIdle()
+
+        assertThat(controller.isOpeningConversation).isFalse()
+        assertThat(controller.currentConversation?.id).isEqualTo("existing")
+        assertThat(controller.messages).isEmpty()
+        opening.join()
+    }
+
+    @Test
     fun `caller subtree cancellation does not cancel controller owned open`() = runTest {
         val existing = conversation("existing", "Existing")
         val repository = FakeRepository(conversations = mutableListOf(existing)).apply {
@@ -416,6 +485,29 @@ class GradeyAIControllerTest {
     }
 
     @Test
+    fun `background invalidates an in flight context refresh`() = runTest {
+        val initial = context()
+        val contextBuilder = FakeContextBuilder(initial)
+        val controller = controller(contextBuilder = contextBuilder, scope = this)
+        controller.bootstrap()
+        contextBuilder.snapshot = initial.copy(generatedAtEpochMillis = 1_800_000_000_000)
+        contextBuilder.holdRefresh = true
+        val refresh = launch { controller.refreshContext() }
+        runCurrent()
+
+        assertThat(controller.isRefreshingContext).isTrue()
+        controller.onAppBackgrounded()
+        assertThat(controller.isRefreshingContext).isFalse()
+        assertThat(controller.onAppForegrounded()).isTrue()
+        contextBuilder.releaseRefresh()
+        advanceUntilIdle()
+
+        assertThat(controller.contextSnapshot?.generatedAtEpochMillis)
+            .isEqualTo(initial.generatedAtEpochMillis)
+        refresh.join()
+    }
+
+    @Test
     fun `consent revocation blocks new AI work and leaves cleared state`() = runTest {
         val existing = conversation("existing", "Existing")
         val repository = FakeRepository(conversations = mutableListOf(existing)).apply {
@@ -434,6 +526,10 @@ class GradeyAIControllerTest {
         assertThat(repository.createdTitles).isEmpty()
         assertThat(repository.streamRequests).isEmpty()
         assertThat(repository.loadedIDs).isEmpty()
+
+        controller.onAppBackgrounded()
+        assertThat(controller.isPerformingDestructiveOperation).isTrue()
+        assertThat(controller.onAppForegrounded()).isTrue()
 
         repository.releaseRevoke()
         advanceUntilIdle()
@@ -467,11 +563,20 @@ class GradeyAIControllerTest {
         var snapshot: GradeyAIContextSnapshot = context(),
     ) : GradeyAIContextBuilding {
         var refreshFailure: Throwable? = null
+        var holdRefresh = false
+        private var refreshContinuation: Continuation<Unit>? = null
+
+        fun releaseRefresh() {
+            holdRefresh = false
+            refreshContinuation?.resume(Unit)
+            refreshContinuation = null
+        }
 
         override suspend fun currentSchoolScope(): String = snapshot.schoolScope
         override suspend fun cachedContext(): GradeyAIContextSnapshot? = null
         override suspend fun refreshContext(): GradeyAIContextSnapshot {
             refreshFailure?.let { throw it }
+            if (holdRefresh) suspendCoroutine { refreshContinuation = it }
             return snapshot
         }
     }
@@ -488,6 +593,7 @@ class GradeyAIControllerTest {
         val deleteAllScopes = mutableListOf<String>()
         val streamRequests = mutableListOf<StreamRequest>()
         val streams = ArrayDeque<Flow<GradeyAIStreamEvent>>()
+        val loadedMessagesByID = mutableMapOf<String, List<GradeyAIMessage>>()
         var holdCreate = false
         private var createContinuation: Continuation<Unit>? = null
         var holdRevoke = false
@@ -539,7 +645,7 @@ class GradeyAIControllerTest {
             loadedIDs += id
             if (id in heldLoadIDs) suspendCoroutine { loadContinuations[id] = it }
             val value = conversations.first { it.id == id }
-            return GradeyAIConversationDetail(value, emptyList())
+            return GradeyAIConversationDetail(value, loadedMessagesByID[id].orEmpty())
         }
         override suspend fun deleteConversation(id: String) {
             deletedIDs += id

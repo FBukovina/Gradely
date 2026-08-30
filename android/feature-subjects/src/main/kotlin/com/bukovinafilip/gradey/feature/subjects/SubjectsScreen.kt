@@ -98,6 +98,7 @@ import com.bukovinafilip.gradey.domain.GradeMath
 import com.bukovinafilip.gradey.domain.MarkCardMetadataPolicy
 import com.bukovinafilip.gradey.domain.MarkDateParser
 import com.bukovinafilip.gradey.domain.MarkPredictionInput
+import com.bukovinafilip.gradey.domain.MarkPredictionComparison
 import com.bukovinafilip.gradey.domain.MarkWeightBadgeKind
 import com.bukovinafilip.gradey.domain.SubjectDirectorySearch
 import com.bukovinafilip.gradey.domain.SubjectDetailNotes
@@ -107,6 +108,7 @@ import com.bukovinafilip.gradey.domain.SubjectAttentionScore
 import com.bukovinafilip.gradey.model.AbsenceResponse
 import com.bukovinafilip.gradey.model.Mark
 import com.bukovinafilip.gradey.model.Subject
+import kotlinx.coroutines.CancellationException
 import java.text.Collator
 import java.text.Normalizer
 import java.time.LocalDate
@@ -144,6 +146,7 @@ fun SubjectsScreen(
     subjects: List<Subject>,
     absence: AbsenceResponse,
     gradeTrends: List<SubjectGradeTrend> = emptyList(),
+    onPredictSubjectAverage: suspend (Subject, String, Int) -> Double? = { _, _, _ -> null },
     isRefreshing: Boolean,
     onRefresh: () -> Unit,
     onOpenAccount: () -> Unit,
@@ -184,6 +187,7 @@ fun SubjectsScreen(
             subject = selectedSubject,
             absence = absence,
             trend = selectedTrend,
+            onPredictSubjectAverage = onPredictSubjectAverage,
             onBack = { selectedSubjectID = null },
             modifier = modifier,
         )
@@ -728,6 +732,7 @@ private fun SubjectDetail(
     subject: Subject,
     absence: AbsenceResponse,
     trend: SubjectGradeTrend?,
+    onPredictSubjectAverage: suspend (Subject, String, Int) -> Double?,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -741,13 +746,16 @@ private fun SubjectDetail(
     }
     var trialMark by rememberSaveable(subject.id) { mutableStateOf("") }
     var trialWeight by rememberSaveable(subject.id) { mutableIntStateOf(1) }
+    var exactPredictedAverage by remember(subject.id) { mutableStateOf<Double?>(null) }
+    var isPredictingExactAverage by remember(subject.id) { mutableStateOf(false) }
     val trialValue = remember(trialMark) { MarkPredictionInput.markValue(trialMark) }
     val trialMarkError = if (MarkPredictionInput.isInvalid(trialMark)) {
         stringResource(R.string.mark_prediction_invalid)
     } else {
         null
     }
-    val average = remember(subject, trialValue, trialWeight) {
+    val currentAverage = remember(subject) { GradeMath.subjectAverage(subject) }
+    val localPredictedAverage = remember(subject, trialValue, trialWeight) {
         trialValue?.let {
             GradeMath.theoreticalAverage(
                 existingMarks = subject.marks,
@@ -755,10 +763,29 @@ private fun SubjectDetail(
                 markValue = it,
                 weight = trialWeight,
             )
-        } ?: GradeMath.subjectAverage(subject)
+        }
     }
+    val predictedAverage = exactPredictedAverage ?: localPredictedAverage
+    val calculatorEnabled = !subject.pointsOnly
+    val remotePredictionEnabled = calculatorEnabled && subject.markPredictionEnabled
     val notes = remember(subject) { SubjectDetailNotesPolicy.resolve(subject) }
     val historyChart = remember(subject, trend) { AverageHistoryPolicy.resolve(subject, trend, PragueZone) }
+
+    LaunchedEffect(subject.id, trialMark, trialWeight, remotePredictionEnabled) {
+        exactPredictedAverage = null
+        isPredictingExactAverage = false
+        if (trialValue == null || !remotePredictionEnabled) return@LaunchedEffect
+        isPredictingExactAverage = true
+        try {
+            exactPredictedAverage = onPredictSubjectAverage(subject, trialMark, trialWeight)
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: Throwable) {
+            // Keep the already-computed local result and current subject content.
+        } finally {
+            isPredictingExactAverage = false
+        }
+    }
 
     StatusBarAppearance(useDarkIcons = !isScrolled)
 
@@ -775,8 +802,8 @@ private fun SubjectDetail(
         ) {
             item {
                 SubjectAverageHero(
-                    average = average,
-                    predicted = trialValue != null,
+                    average = currentAverage,
+                    predicted = false,
                     markCount = subject.marks.size,
                     absencePercentage = absenceRow?.absencePercentage,
                 )
@@ -792,14 +819,18 @@ private fun SubjectDetail(
             item { Spacer(Modifier.height(18.dp)) }
             item { AverageChartCard(historyChart) }
             item { Spacer(Modifier.height(10.dp)) }
-            item { SectionHeading("TRY A MARK") }
+            item { SectionHeading(stringResource(R.string.subject_prediction_section)) }
             item { Spacer(Modifier.height(24.dp)) }
             item {
                 TryMarkCard(
                     value = trialMark,
                     weight = trialWeight,
-                    enabled = subject.markPredictionEnabled && !subject.pointsOnly,
+                    enabled = calculatorEnabled,
                     errorMessage = trialMarkError,
+                    currentAverage = currentAverage,
+                    predictedAverage = predictedAverage,
+                    isPredictingExactAverage = isPredictingExactAverage,
+                    isExactAverage = exactPredictedAverage != null,
                     onValueChange = { trialMark = MarkPredictionInput.acceptedMarkText(trialMark, it) },
                     onDecreaseWeight = { trialWeight = MarkPredictionInput.decreaseWeight(trialWeight) },
                     onIncreaseWeight = { trialWeight = MarkPredictionInput.increaseWeight(trialWeight) },
@@ -1206,6 +1237,10 @@ private fun TryMarkCard(
     weight: Int,
     enabled: Boolean,
     errorMessage: String?,
+    currentAverage: Double?,
+    predictedAverage: Double?,
+    isPredictingExactAverage: Boolean,
+    isExactAverage: Boolean,
     onValueChange: (String) -> Unit,
     onDecreaseWeight: () -> Unit,
     onIncreaseWeight: () -> Unit,
@@ -1213,12 +1248,12 @@ private fun TryMarkCard(
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .height(if (errorMessage == null) 138.dp else 158.dp),
+            .heightIn(min = if (errorMessage == null) 138.dp else 158.dp),
         shape = RoundedCornerShape(20.dp),
         color = CardWhite,
         shadowElevation = 1.dp,
     ) {
-        Column(modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp)) {
+        Column(modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 16.dp)) {
             BasicTextField(
                 value = value,
                 onValueChange = onValueChange,
@@ -1240,7 +1275,9 @@ private fun TryMarkCard(
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.CenterStart) {
                         if (value.isEmpty()) {
                             Text(
-                                text = if (enabled) "Mark, e.g. 2+" else "Prediction unavailable",
+                                text = stringResource(
+                                    if (enabled) R.string.subject_prediction_placeholder else R.string.subject_prediction_unavailable,
+                                ),
                                 color = Color(0xFFC4C4C8),
                                 fontSize = 18.sp,
                                 lineHeight = 22.sp,
@@ -1271,13 +1308,13 @@ private fun TryMarkCard(
                 StepperButton(
                     enabled = enabled && weight > 1,
                     onClick = onDecreaseWeight,
-                    contentDescription = "Decrease weight",
+                    contentDescription = stringResource(R.string.subject_prediction_decrease_weight),
                     tint = Color(0xFFD1D1D6),
                 ) {
                     Icon(Icons.Default.Remove, contentDescription = null, modifier = Modifier.size(22.dp))
                 }
                 Text(
-                    text = "Weight $weight",
+                    text = stringResource(R.string.subject_prediction_weight, weight),
                     color = Color.Black,
                     fontSize = 17.sp,
                     lineHeight = 21.sp,
@@ -1286,12 +1323,87 @@ private fun TryMarkCard(
                 StepperButton(
                     enabled = enabled && weight < 10,
                     onClick = onIncreaseWeight,
-                    contentDescription = "Increase weight",
+                    contentDescription = stringResource(R.string.subject_prediction_increase_weight),
                     tint = AccentTeal,
                 ) {
                     Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(27.dp))
                 }
             }
+            predictedAverage?.let { predicted ->
+                Spacer(Modifier.height(12.dp))
+                PredictionResultPanel(
+                    currentAverage = currentAverage,
+                    predictedAverage = predicted,
+                    isPredictingExactAverage = isPredictingExactAverage,
+                    isExactAverage = isExactAverage,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun PredictionResultPanel(
+    currentAverage: Double?,
+    predictedAverage: Double,
+    isPredictingExactAverage: Boolean,
+    isExactAverage: Boolean,
+) {
+    val comparison = MarkPredictionInput.comparison(currentAverage, predictedAverage)
+    val difference = currentAverage?.let { predictedAverage - it }
+    val tint = when (comparison) {
+        MarkPredictionComparison.BETTER -> AccentTeal
+        MarkPredictionComparison.WORSE -> DangerRed
+        MarkPredictionComparison.SAME, MarkPredictionComparison.UNKNOWN -> MutedText
+    }
+    val comparisonText = when (comparison) {
+        MarkPredictionComparison.BETTER -> stringResource(
+            R.string.subject_prediction_better,
+            formatAverage(kotlin.math.abs(difference ?: 0.0)),
+        )
+        MarkPredictionComparison.WORSE -> stringResource(
+            R.string.subject_prediction_worse,
+            formatAverage(difference ?: 0.0),
+        )
+        MarkPredictionComparison.SAME -> stringResource(R.string.subject_prediction_same)
+        MarkPredictionComparison.UNKNOWN -> null
+    }
+    val source = stringResource(
+        when {
+            isPredictingExactAverage -> R.string.subject_prediction_checking
+            isExactAverage -> R.string.subject_prediction_exact
+            else -> R.string.subject_prediction_local
+        },
+    )
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(tint.copy(alpha = 0.11f), RoundedCornerShape(13.dp))
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(
+            text = stringResource(R.string.subject_prediction_new_average, formatAverage(predictedAverage)),
+            color = Color.Black,
+            fontSize = 18.sp,
+            lineHeight = 22.sp,
+            fontWeight = FontWeight.Bold,
+        )
+        comparisonText?.let {
+            Spacer(Modifier.height(3.dp))
+            Text(it, color = tint, fontSize = 14.sp, lineHeight = 18.sp, fontWeight = FontWeight.SemiBold)
+        }
+        Spacer(Modifier.height(6.dp))
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            if (isPredictingExactAverage) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(12.dp),
+                    strokeWidth = 1.5.dp,
+                    color = MutedText,
+                )
+            }
+            Text(source, color = MutedText, fontSize = 12.sp, lineHeight = 15.sp)
         }
     }
 }

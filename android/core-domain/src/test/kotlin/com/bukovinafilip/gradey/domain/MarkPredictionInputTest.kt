@@ -27,4 +27,13 @@ class MarkPredictionInputTest {
         assertThat(MarkPredictionInput.increaseWeight(10)).isEqualTo(10)
         assertThat(MarkPredictionInput.weightRange).containsExactlyElementsIn(1..10).inOrder()
     }
+
+    @Test
+    fun `prediction comparison follows the iOS one-hundredth threshold`() {
+        assertThat(MarkPredictionInput.comparison(2.0, 1.98)).isEqualTo(MarkPredictionComparison.BETTER)
+        assertThat(MarkPredictionInput.comparison(2.0, 2.02)).isEqualTo(MarkPredictionComparison.WORSE)
+        assertThat(MarkPredictionInput.comparison(2.0, 2.01)).isEqualTo(MarkPredictionComparison.SAME)
+        assertThat(MarkPredictionInput.comparison(2.0, 1.99)).isEqualTo(MarkPredictionComparison.SAME)
+        assertThat(MarkPredictionInput.comparison(null, 2.0)).isEqualTo(MarkPredictionComparison.UNKNOWN)
+    }
 }

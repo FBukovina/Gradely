@@ -1136,6 +1136,9 @@ private fun GradeyApp(
                         ?.takeIf { it.linkedAccountID == activeLinkedAccountID }
                         ?.trends
                         .orEmpty(),
+                    onPredictSubjectAverage = { subject, markText, weight ->
+                        graph.schoolRepository.predictSubjectAverage(subject, markText, weight)
+                    },
                     isRefreshing = isLoading,
                     onRefresh = {
                         if (!isLoading) {

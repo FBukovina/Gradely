@@ -15,6 +15,7 @@ import com.bukovinafilip.gradey.model.NextLessonWidgetSnapshot
 import com.bukovinafilip.gradey.model.SchoolProvider
 import com.bukovinafilip.gradey.model.StoredSession
 import com.bukovinafilip.gradey.model.Subject
+import com.bukovinafilip.gradey.model.SubjectInfo
 import com.bukovinafilip.gradey.model.TimetableAtom
 import com.bukovinafilip.gradey.model.TimetableDayDTO
 import com.bukovinafilip.gradey.model.TimetableEntity
@@ -252,6 +253,49 @@ class AndroidSchoolRepositoryTest {
         assertThat(dashboard.marksResponse).isEqualTo(MarksResponse())
         assertThat(dashboard.absencesPerSubject).isEmpty()
         assertThat(dashboard.user).isNull()
+    }
+
+    @Test
+    fun `what-if prediction uses the authenticated endpoint and parses its returned average`() = runTest {
+        val subject = Subject(
+            subjectInfo = SubjectInfo(id = "math", name = "Mathematics"),
+            averageText = "2.10",
+            markPredictionEnabled = true,
+        )
+        val client = FakeBakalariClient().apply {
+            prediction = { _, token, predictedSubject, markText, weight ->
+                assertThat(token).isEqualTo("old-access")
+                assertThat(predictedSubject).isEqualTo(subject)
+                assertThat(markText).isEqualTo("1-")
+                assertThat(weight).isEqualTo(4)
+                predictedSubject.copy(averageText = "1,85")
+            }
+        }
+
+        val average = repository(client, InMemorySchoolSessionStorage(validSession()))
+            .predictSubjectAverage(subject, "1-", 4)
+
+        assertThat(average).isEqualTo(1.85)
+        assertThat(client.predictionCalls).isEqualTo(1)
+    }
+
+    @Test
+    fun `what-if prediction refreshes a rejected access token and retries once`() = runTest {
+        val subject = Subject(subjectInfo = SubjectInfo(id = "math", name = "Mathematics"))
+        val client = FakeBakalariClient().apply {
+            prediction = { _, token, predictedSubject, _, _ ->
+                if (token == "old-access") throw BakalariApiException(401, "expired")
+                predictedSubject.copy(averageText = "2.00")
+            }
+        }
+        val sessions = InMemorySchoolSessionStorage(validSession())
+
+        val average = repository(client, sessions).predictSubjectAverage(subject, "2", 1)
+
+        assertThat(average).isEqualTo(2.0)
+        assertThat(client.predictionCalls).isEqualTo(2)
+        assertThat(client.refreshCalls).isEqualTo(1)
+        assertThat(sessions.load()?.accessToken).isEqualTo("new-access")
     }
 
     @Test
@@ -493,6 +537,7 @@ private class FakeBakalariClient : BakalariClient {
     var refreshCalls = 0
     var loginCalls = 0
     var marksCalls = 0
+    var predictionCalls = 0
     var lastLoginUsername: String? = null
     var lastLoginPassword: String? = null
 
@@ -504,6 +549,7 @@ private class FakeBakalariClient : BakalariClient {
     var absences: suspend (String, String) -> AbsenceResponse = { _, _ -> AbsenceResponse() }
     var user: suspend (String, String) -> UserResponse = { _, _ -> UserResponse("Student") }
     var timetable: suspend (String, String, String) -> TimetableResponse = { _, _, _ -> TimetableResponse() }
+    var prediction: suspend (String, String, Subject, String, Int) -> Subject = { _, _, subject, _, _ -> subject }
 
     override suspend fun login(baseURL: String, username: String, password: String): LoginResponse {
         loginCalls += 1
@@ -528,7 +574,16 @@ private class FakeBakalariClient : BakalariClient {
         user(baseURL, accessToken)
     override suspend fun fetchTimetable(baseURL: String, accessToken: String, date: String): TimetableResponse =
         timetable(baseURL, accessToken, date)
-    override suspend fun predictSubject(baseURL: String, accessToken: String, subject: Subject, markText: String, weight: Int): Subject = subject
+    override suspend fun predictSubject(
+        baseURL: String,
+        accessToken: String,
+        subject: Subject,
+        markText: String,
+        weight: Int,
+    ): Subject {
+        predictionCalls += 1
+        return prediction(baseURL, accessToken, subject, markText, weight)
+    }
 }
 
 private fun refreshedResponse() = LoginResponse("new-access", "new-refresh", "Bearer", 3_600)

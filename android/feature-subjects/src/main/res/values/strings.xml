@@ -45,4 +45,17 @@
     <string name="subject_history_empty_body">Dated grades will build this chart. Gradey ID can also sync longer-term history.</string>
     <string name="subject_trend_better">Average improved by %1$s</string>
     <string name="subject_trend_worse">Average worsened by %1$s</string>
+    <string name="subject_prediction_section">TRY A MARK</string>
+    <string name="subject_prediction_placeholder">Mark, e.g. 2+</string>
+    <string name="subject_prediction_unavailable">Prediction unavailable</string>
+    <string name="subject_prediction_weight">Weight %1$d</string>
+    <string name="subject_prediction_decrease_weight">Decrease weight</string>
+    <string name="subject_prediction_increase_weight">Increase weight</string>
+    <string name="subject_prediction_new_average">New average %1$s</string>
+    <string name="subject_prediction_better">%1$s better</string>
+    <string name="subject_prediction_worse">%1$s worse</string>
+    <string name="subject_prediction_same">Same average</string>
+    <string name="subject_prediction_checking">Checking with Bakaláři…</string>
+    <string name="subject_prediction_exact">Calculated by Bakaláři</string>
+    <string name="subject_prediction_local">Estimated locally</string>
 </resources>

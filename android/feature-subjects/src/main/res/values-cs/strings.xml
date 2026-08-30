@@ -55,4 +55,17 @@
     <string name="subject_history_empty_body">Graf se vytvoří ze známek s datem. Gradey ID může synchronizovat i dlouhodobější historii.</string>
     <string name="subject_trend_better">Průměr se zlepšil o %1$s</string>
     <string name="subject_trend_worse">Průměr se zhoršil o %1$s</string>
+    <string name="subject_prediction_section">VYZKOUŠET ZNÁMKU</string>
+    <string name="subject_prediction_placeholder">Známka, např. 2+</string>
+    <string name="subject_prediction_unavailable">Předpověď není dostupná</string>
+    <string name="subject_prediction_weight">Váha %1$d</string>
+    <string name="subject_prediction_decrease_weight">Snížit váhu</string>
+    <string name="subject_prediction_increase_weight">Zvýšit váhu</string>
+    <string name="subject_prediction_new_average">Nový průměr %1$s</string>
+    <string name="subject_prediction_better">Zlepšení o %1$s</string>
+    <string name="subject_prediction_worse">Zhoršení o %1$s</string>
+    <string name="subject_prediction_same">Stejný průměr</string>
+    <string name="subject_prediction_checking">Ověřování přes Bakaláře…</string>
+    <string name="subject_prediction_exact">Vypočítáno Bakaláři</string>
+    <string name="subject_prediction_local">Místní odhad</string>
 </resources>

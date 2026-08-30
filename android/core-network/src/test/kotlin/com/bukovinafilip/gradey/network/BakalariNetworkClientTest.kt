@@ -92,6 +92,47 @@ class BakalariNetworkClientTest {
     }
 
     @Test
+    fun absenceUsesAuthenticatedStudentEndpointAndDecodesOfficialSubjects() = runTest {
+        server.enqueue(
+            jsonResponse(
+                """
+                {
+                  "PercentageThreshold": 25.5,
+                  "Absences": [],
+                  "AbsencesPerSubject": [
+                    {
+                      "SubjectName": "Mathematics",
+                      "LessonsCount": 80,
+                      "Base": 12,
+                      "Late": 2,
+                      "Soon": 1,
+                      "School": 3,
+                      "DistanceTeaching": 4
+                    }
+                  ]
+                }
+                """.trimIndent(),
+            ),
+        )
+
+        val response = client.fetchAbsences(baseURL(), "absence-token")
+        val request = server.takeRequest()
+        val subject = response.absencesPerSubject.single()
+
+        assertThat(request.method).isEqualTo("GET")
+        assertThat(request.path).isEqualTo("/api/3/absence/student")
+        assertThat(request.getHeader("Authorization")).isEqualTo("Bearer absence-token")
+        assertThat(response.percentageThreshold).isEqualTo(25.5)
+        assertThat(subject.subjectName).isEqualTo("Mathematics")
+        assertThat(subject.lessonsCount).isEqualTo(80)
+        assertThat(subject.base).isEqualTo(12)
+        assertThat(subject.late).isEqualTo(2)
+        assertThat(subject.soon).isEqualTo(1)
+        assertThat(subject.school).isEqualTo(3)
+        assertThat(subject.distanceTeaching).isEqualTo(4)
+    }
+
+    @Test
     fun structuredLoginErrorUsesReadableServerDescription() = runTest {
         server.enqueue(
             MockResponse()

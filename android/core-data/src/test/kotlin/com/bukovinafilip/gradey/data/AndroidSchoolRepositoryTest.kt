@@ -275,6 +275,41 @@ class AndroidSchoolRepositoryTest {
     }
 
     @Test
+    fun loadAbsenceReturnsAndCachesOfficialPerSubjectValues() = runTest {
+        val session = validSession()
+        val official = AbsenceResponse(
+            percentageThreshold = 25.0,
+            absencesPerSubject = listOf(
+                AbsencePerSubject(
+                    subjectName = "Mathematics",
+                    lessonsCount = 80,
+                    base = 12,
+                    late = 2,
+                    soon = 1,
+                    school = 3,
+                    distanceTeaching = 4,
+                ),
+            ),
+        )
+        val client = FakeBakalariClient().apply {
+            absences = { _, token ->
+                assertThat(token).isEqualTo("old-access")
+                official
+            }
+        }
+        val cache = RoomGradeyCache(InMemoryCacheEntryDao(), GradeyJson)
+        val repository = repository(client, InMemorySchoolSessionStorage(session), cache)
+
+        val response = repository.loadAbsence(forceRefresh = true)
+
+        assertThat(response).isEqualTo(official)
+        assertThat(response.absencesPerSubject).isEqualTo(official.absencesPerSubject)
+        assertThat(repository.loadCachedAbsence()).isEqualTo(official)
+        assertThat(cache.loadAbsence(session.cacheScope)).isEqualTo(official)
+        assertThat(client.absenceCalls).isEqualTo(1)
+    }
+
+    @Test
     fun `what-if prediction uses the authenticated endpoint and parses its returned average`() = runTest {
         val subject = Subject(
             subjectInfo = SubjectInfo(id = "math", name = "Mathematics"),
@@ -556,6 +591,7 @@ private class FakeBakalariClient : BakalariClient {
     var refreshCalls = 0
     var loginCalls = 0
     var marksCalls = 0
+    var absenceCalls = 0
     var predictionCalls = 0
     var lastLoginUsername: String? = null
     var lastLoginPassword: String? = null
@@ -587,8 +623,10 @@ private class FakeBakalariClient : BakalariClient {
         return marks(baseURL, accessToken)
     }
 
-    override suspend fun fetchAbsences(baseURL: String, accessToken: String): AbsenceResponse =
-        absences(baseURL, accessToken)
+    override suspend fun fetchAbsences(baseURL: String, accessToken: String): AbsenceResponse {
+        absenceCalls += 1
+        return absences(baseURL, accessToken)
+    }
     override suspend fun fetchUser(baseURL: String, accessToken: String): UserResponse =
         user(baseURL, accessToken)
     override suspend fun fetchTimetable(baseURL: String, accessToken: String, date: String): TimetableResponse =

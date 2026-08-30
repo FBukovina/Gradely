@@ -3,5 +3,17 @@
     <string name="today_new_marks_and_trends">New marks and trends</string>
     <string name="today_mark_in_subject">%1$s in %2$s</string>
     <string name="today_new_from_school">New from school</string>
-    <string name="today_open_marks">Open</string>
+    <string name="today_view_all">View all</string>
+    <string name="today_grade_movement">Grade movement</string>
+    <string name="today_range_30">30 days</string>
+    <string name="today_range_90">90 days</string>
+    <string name="today_school_year">School year</string>
+    <string name="today_no_grade_history">No grade history</string>
+    <string name="today_cloud_trends_subtitle">Cloud trends start after Gradey records grade snapshots.</string>
+    <string name="today_average_movement">Average movement</string>
+    <string name="today_back">Back to Today</string>
+    <plurals name="today_trend_new_marks">
+        <item quantity="one">%1$d new mark</item>
+        <item quantity="other">%1$d new marks</item>
+    </plurals>
 </resources>

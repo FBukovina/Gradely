@@ -146,13 +146,15 @@ Cache verification (2026-08-30): Today and Marks now render from a cached/loaded
 - [ ] Implement linked school account picker, activation progress, action-required banner, reconnect sheet, and automatic recovery rules.
 - [ ] Implement current/next lesson summary with before-school, between-lessons, in-lesson, after-school, weekend, holiday, and timetable-change states.
 - [x] Implement new-mark feed using cloud history with Bakaláři `IsNew` fallback.
-- [ ] Implement grade trend summary and full 30/90-day/school-year trend navigation.
+- [x] Implement grade trend summary and full 30/90-day/school-year trend navigation.
 - [ ] Implement top absence risks, no-threshold messaging, and navigation to Absence.
 - [ ] Implement today’s ordered meal, not-connected/no-meal states, and optional navigation to Meals.
 - [ ] Preserve independent partial content when timetable, absence, meals, history, or linked-account refresh fails.
 - [ ] Wire the real Gradey AI entry rather than routing the sparkle button to Meals.
 
 Today new-mark verification (2026-08-30): the account-scoped Gradey Cloud response now decodes `recentNewMarkEvents` without allowing a malformed optional event to discard valid grade-history data. Today prefers those cloud events in backend order and shows up to the same three rows as iOS; when cloud has no events, it derives the feed from Bakaláři marks whose `IsNew` flag is set, sorts dated marks newest-first, preserves undated entries afterward, and matches iOS subject and points-mark display fallbacks. The card uses the existing four Android language configurations and links to the full Marks experience. JVM tests cover cloud precedence, local filtering/order, malformed dates, abbreviation/name fallback, and points formatting; network tests cover the live response shape and tolerant optional-event decoding.
+
+Today trend verification (2026-08-30): the combined New marks and trends card now matches iOS by showing up to four non-zero cloud movements in magnitude order, with subject label, sparkline, new-mark count or movement fallback, and signed improving/worsening delta; an honest cloud-history empty row remains when snapshots are not available. View all opens a dedicated, localized movement screen with saveable 30-day, 90-day (default), and full loaded school-year ranges. Range filtering rebuilds each subject from only events on or after the inclusive rolling cutoff, Android back and the visible back control return to the same Today scroll position, and the selected range survives navigation/configuration state. JVM coverage verifies exact 30/90-day boundaries, stale-subject removal through the existing regrouping policy, and the unfiltered school-year path.
 
 ## Subjects and marks
 

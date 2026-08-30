@@ -1112,6 +1112,10 @@ private fun GradeyApp(
                             ?.takeIf { it.linkedAccountID == activeLinkedAccountID }
                             ?.recentNewMarkEvents
                             .orEmpty(),
+                        gradeTrends = gradeHistorySnapshot
+                            ?.takeIf { it.linkedAccountID == activeLinkedAccountID }
+                            ?.trends
+                            .orEmpty(),
                         isRefreshing = isLoading,
                         onRefresh = {
                             if (!isLoading) {

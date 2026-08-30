@@ -63,6 +63,29 @@ class GradeHistoryTest {
     }
 
     @Test
+    fun `named trend ranges use inclusive rolling cutoffs and preserve the school year`() {
+        val trends = GradeHistoryTrends.make(
+            listOf(
+                event(id = "older", subjectID = "math", capturedAt = "2026-05-31T09:59:59Z"),
+                event(id = "ninety-boundary", subjectID = "math", capturedAt = "2026-06-01T10:00:00Z"),
+                event(id = "thirty-boundary", subjectID = "math", capturedAt = "2026-07-31T10:00:00Z"),
+                event(id = "recent", subjectID = "eng", capturedAt = "2026-08-20T10:00:00Z"),
+            ),
+        )
+        val now = Instant.parse("2026-08-30T10:00:00Z")
+
+        val thirty = GradeHistoryTrends.inRange(trends, GradeTrendRange.THIRTY_DAYS, now)
+        val ninety = GradeHistoryTrends.inRange(trends, GradeTrendRange.NINETY_DAYS, now)
+        val schoolYear = GradeHistoryTrends.inRange(trends, GradeTrendRange.SCHOOL_YEAR, now)
+
+        assertThat(thirty.flatMap { it.events }.map { it.id })
+            .containsExactly("thirty-boundary", "recent")
+        assertThat(ninety.flatMap { it.events }.map { it.id })
+            .containsExactly("ninety-boundary", "thirty-boundary", "recent")
+        assertThat(schoolYear).isSameInstanceAs(trends)
+    }
+
+    @Test
     fun `two cloud averages take priority and expose the cloud delta`() {
         val trend = GradeHistoryTrends.make(
             listOf(

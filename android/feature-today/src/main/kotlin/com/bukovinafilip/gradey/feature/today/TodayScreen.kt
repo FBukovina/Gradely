@@ -1,7 +1,9 @@
 package com.bukovinafilip.gradey.feature.today
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,11 +20,13 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Refresh
@@ -33,13 +37,21 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -48,7 +60,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.bukovinafilip.gradey.domain.AbsenceRiskLevel
 import com.bukovinafilip.gradey.domain.AbsenceRiskSummary
+import com.bukovinafilip.gradey.domain.GradeHistoryTrends
 import com.bukovinafilip.gradey.domain.GradeMath
+import com.bukovinafilip.gradey.domain.GradeTrendRange
+import com.bukovinafilip.gradey.domain.SubjectGradeTrend
 import com.bukovinafilip.gradey.domain.TodayNewMark
 import com.bukovinafilip.gradey.domain.TodayNewMarks
 import com.bukovinafilip.gradey.model.AbsenceResponse
@@ -86,6 +101,7 @@ fun TodayScreen(
     absence: AbsenceResponse,
     timetable: TimetableWeek?,
     cloudNewMarkEvents: List<NewMarkEvent> = emptyList(),
+    gradeTrends: List<SubjectGradeTrend> = emptyList(),
     isRefreshing: Boolean,
     onRefresh: () -> Unit,
     onOpenAccount: () -> Unit,
@@ -95,6 +111,9 @@ fun TodayScreen(
     onOpenTimetable: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    var showsTrendDetails by rememberSaveable { mutableStateOf(false) }
+    var selectedTrendRangeName by rememberSaveable { mutableStateOf(GradeTrendRange.NINETY_DAYS.name) }
+    val todayListState = rememberLazyListState()
     val subjects = dashboard.marksResponse.subjects
     val overall = GradeMath.formattedAverage(GradeMath.overallAverage(subjects)).replace('.', ',')
     val totalMarks = subjects.sumOf { it.marks.size }
@@ -102,6 +121,21 @@ fun TodayScreen(
     val featuredLesson = featuredLesson(timetable)
     val newMarks = remember(subjects, cloudNewMarkEvents) {
         TodayNewMarks.resolve(subjects, cloudNewMarkEvents, PragueZone).take(3)
+    }
+    val topTrends = remember(gradeTrends) {
+        gradeTrends.filter { (it.averageDelta ?: 0.0) != 0.0 }.take(4)
+    }
+
+    BackHandler(enabled = showsTrendDetails) { showsTrendDetails = false }
+    if (showsTrendDetails) {
+        GradeTrendsScreen(
+            trends = gradeTrends,
+            selectedRangeName = selectedTrendRangeName,
+            onRangeSelected = { selectedTrendRangeName = it.name },
+            onBack = { showsTrendDetails = false },
+            modifier = modifier,
+        )
+        return
     }
 
     Box(
@@ -117,6 +151,7 @@ fun TodayScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .statusBarsPadding(),
+            state = todayListState,
             contentPadding = PaddingValues(start = 16.dp, top = 30.dp, end = 16.dp, bottom = 126.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
@@ -140,8 +175,13 @@ fun TodayScreen(
             item { NowAndNextCard(featuredLesson = featuredLesson, onClick = onOpenTimetable) }
             item { AbsenceRiskCard(rows = absenceRows, onOpenAbsence = onOpenAbsence) }
             item { AbsencePredictorCard(onPlanAbsence = onOpenAbsence) }
-            if (newMarks.isNotEmpty()) {
-                item { NewMarksCard(newMarks = newMarks, onOpenMarks = onOpenMarks) }
+            item {
+                NewMarksAndTrendsCard(
+                    newMarks = newMarks,
+                    trends = topTrends,
+                    onOpenMarks = onOpenMarks,
+                    onOpenTrends = { showsTrendDetails = true },
+                )
             }
         }
     }
@@ -602,9 +642,11 @@ private fun AbsencePredictorCard(onPlanAbsence: () -> Unit) {
 }
 
 @Composable
-private fun NewMarksCard(
+private fun NewMarksAndTrendsCard(
     newMarks: List<TodayNewMark>,
+    trends: List<SubjectGradeTrend>,
     onOpenMarks: () -> Unit,
+    onOpenTrends: () -> Unit,
 ) {
     DashboardSurface {
         Column(
@@ -622,7 +664,7 @@ private fun NewMarksCard(
                 SectionHeading(
                     stringResource(R.string.today_new_marks_and_trends).uppercase(Locale.getDefault()),
                 )
-                ActionPill(text = stringResource(R.string.today_open_marks), onClick = onOpenMarks)
+                ActionPill(text = stringResource(R.string.today_view_all), onClick = onOpenTrends)
             }
             Spacer(Modifier.height(6.dp))
             newMarks.forEachIndexed { index, mark ->
@@ -635,6 +677,7 @@ private fun NewMarksCard(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .clickable(onClick = onOpenMarks)
                         .padding(horizontal = 16.dp, vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
@@ -673,7 +716,327 @@ private fun NewMarksCard(
                     }
                 }
             }
+            if (newMarks.isNotEmpty() && trends.isNotEmpty()) {
+                HorizontalDivider(
+                    modifier = Modifier.padding(start = 67.dp, end = 16.dp),
+                    color = SoftGray,
+                )
+            }
+            if (trends.isEmpty()) {
+                CloudHistoryEmptyRow()
+            } else {
+                trends.forEachIndexed { index, trend ->
+                    if (index > 0) {
+                        HorizontalDivider(
+                            modifier = Modifier.padding(start = 67.dp, end = 16.dp),
+                            color = SoftGray,
+                        )
+                    }
+                    GradeTrendRow(trend)
+                }
+            }
         }
+    }
+}
+
+@Composable
+private fun GradeTrendsScreen(
+    trends: List<SubjectGradeTrend>,
+    selectedRangeName: String,
+    onRangeSelected: (GradeTrendRange) -> Unit,
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val selectedRange = runCatching { GradeTrendRange.valueOf(selectedRangeName) }
+        .getOrDefault(GradeTrendRange.NINETY_DAYS)
+    val filteredTrends = remember(trends, selectedRange) {
+        GradeHistoryTrends.inRange(trends, selectedRange)
+    }
+
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(Brush.verticalGradient(listOf(BackgroundTop, BackgroundMiddle, BackgroundBottom))),
+    ) {
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .statusBarsPadding(),
+            contentPadding = PaddingValues(start = 16.dp, top = 18.dp, end = 16.dp, bottom = 126.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            item { GradeTrendsHeader(onBack) }
+            item {
+                GradeTrendRangePicker(
+                    selected = selectedRange,
+                    onSelected = onRangeSelected,
+                )
+            }
+            item {
+                if (filteredTrends.isEmpty()) {
+                    GradeTrendsEmptyCard()
+                } else {
+                    GradeTrendsList(filteredTrends)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun GradeTrendsHeader(onBack: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(48.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Surface(
+            modifier = Modifier
+                .align(Alignment.CenterStart)
+                .size(42.dp),
+            onClick = onBack,
+            shape = CircleShape,
+            color = Color.White.copy(alpha = 0.82f),
+            shadowElevation = 1.dp,
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    imageVector = Icons.Default.ChevronLeft,
+                    contentDescription = stringResource(R.string.today_back),
+                    tint = AccentTeal,
+                    modifier = Modifier.size(28.dp),
+                )
+            }
+        }
+        Text(
+            text = stringResource(R.string.today_grade_movement),
+            color = Color.Black,
+            fontSize = 18.sp,
+            lineHeight = 22.sp,
+            fontWeight = FontWeight.SemiBold,
+        )
+    }
+}
+
+@Composable
+private fun GradeTrendRangePicker(
+    selected: GradeTrendRange,
+    onSelected: (GradeTrendRange) -> Unit,
+) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(38.dp),
+        shape = RoundedCornerShape(20.dp),
+        color = Color(0xFFD7E4E4).copy(alpha = 0.92f),
+    ) {
+        Row(modifier = Modifier.padding(2.dp)) {
+            GradeTrendRange.entries.forEach { range ->
+                Surface(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(34.dp),
+                    onClick = { onSelected(range) },
+                    shape = RoundedCornerShape(18.dp),
+                    color = if (range == selected) Color.White else Color.Transparent,
+                    shadowElevation = if (range == selected) 1.dp else 0.dp,
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text(
+                            text = trendRangeLabel(range),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            color = Color.Black,
+                            fontSize = 13.sp,
+                            lineHeight = 16.sp,
+                            fontWeight = if (range == selected) FontWeight.Bold else FontWeight.Normal,
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun trendRangeLabel(range: GradeTrendRange): String = stringResource(
+    when (range) {
+        GradeTrendRange.THIRTY_DAYS -> R.string.today_range_30
+        GradeTrendRange.NINETY_DAYS -> R.string.today_range_90
+        GradeTrendRange.SCHOOL_YEAR -> R.string.today_school_year
+    },
+)
+
+@Composable
+private fun GradeTrendsList(trends: List<SubjectGradeTrend>) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
+        color = CardWhite,
+        shadowElevation = 2.dp,
+    ) {
+        Column {
+            trends.forEachIndexed { index, trend ->
+                GradeTrendRow(trend)
+                if (index != trends.lastIndex) {
+                    HorizontalDivider(
+                        modifier = Modifier.padding(start = 106.dp, end = 16.dp),
+                        color = SoftGray,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun GradeTrendsEmptyCard() {
+    DashboardSurface {
+        Column(
+            modifier = Modifier.padding(horizontal = 18.dp, vertical = 24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Icon(
+                imageVector = Icons.Default.AutoAwesome,
+                contentDescription = null,
+                tint = MutedText,
+                modifier = Modifier.size(28.dp),
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = stringResource(R.string.today_no_grade_history),
+                color = Color.Black,
+                fontSize = 16.sp,
+                lineHeight = 20.sp,
+                fontWeight = FontWeight.Bold,
+            )
+            Spacer(Modifier.height(3.dp))
+            Text(
+                text = stringResource(R.string.today_cloud_trends_subtitle),
+                color = MutedText,
+                fontSize = 13.sp,
+                lineHeight = 17.sp,
+                textAlign = TextAlign.Center,
+            )
+        }
+    }
+}
+
+@Composable
+private fun CloudHistoryEmptyRow() {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        IconTile(background = SoftGray) {
+            Icon(
+                imageVector = Icons.Default.AutoAwesome,
+                contentDescription = null,
+                tint = MutedText,
+                modifier = Modifier.size(21.dp),
+            )
+        }
+        Spacer(Modifier.width(13.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = stringResource(R.string.today_no_grade_history),
+                color = Color.Black,
+                fontSize = 15.sp,
+                lineHeight = 19.sp,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                text = stringResource(R.string.today_cloud_trends_subtitle),
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                color = MutedText,
+                fontSize = 12.sp,
+                lineHeight = 16.sp,
+            )
+        }
+    }
+}
+
+@Composable
+private fun GradeTrendRow(trend: SubjectGradeTrend) {
+    val newMarkCount = (trend.latestMarkCount - trend.firstMarkCount).coerceAtLeast(0)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(62.dp)
+            .padding(horizontal = 14.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Surface(
+            modifier = Modifier
+                .width(76.dp)
+                .height(34.dp),
+            shape = RoundedCornerShape(10.dp),
+            color = SoftMint,
+        ) {
+            GradeTrendSparkline(trend.events.mapNotNull { it.averageValue })
+        }
+        Spacer(Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = trend.displayName,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                color = Color.Black,
+                fontSize = 15.sp,
+                lineHeight = 18.sp,
+                fontWeight = FontWeight.Bold,
+            )
+            Text(
+                text = if (newMarkCount > 0) {
+                    pluralStringResource(R.plurals.today_trend_new_marks, newMarkCount, newMarkCount)
+                } else {
+                    stringResource(R.string.today_average_movement)
+                },
+                color = MutedText,
+                fontSize = 12.sp,
+                lineHeight = 15.sp,
+            )
+        }
+        trend.averageDelta?.let { delta ->
+            Text(
+                text = String.format(Locale.getDefault(), "%+.2f", delta),
+                color = if (delta <= 0) AccentTeal else DangerRed,
+                fontSize = 15.sp,
+                lineHeight = 18.sp,
+                fontWeight = FontWeight.Bold,
+            )
+        }
+    }
+}
+
+@Composable
+private fun GradeTrendSparkline(values: List<Double>) {
+    Canvas(modifier = Modifier.fillMaxSize().padding(horizontal = 6.dp, vertical = 7.dp)) {
+        if (values.isEmpty()) return@Canvas
+        val minimum = values.minOrNull() ?: return@Canvas
+        val maximum = values.maxOrNull() ?: return@Canvas
+        val range = (maximum - minimum).takeIf { it > 0.001 } ?: 1.0
+        val offsets = values.mapIndexed { index, value ->
+            val x = if (values.size == 1) size.width / 2f else size.width * index / values.lastIndex.toFloat()
+            val y = size.height - size.height * ((value - minimum) / range).toFloat()
+            Offset(x, y)
+        }
+        if (offsets.size > 1) {
+            val path = Path().apply {
+                moveTo(offsets.first().x, offsets.first().y)
+                offsets.drop(1).forEach { lineTo(it.x, it.y) }
+            }
+            drawPath(
+                path = path,
+                color = AccentTeal,
+                style = Stroke(width = 2.2.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round),
+            )
+        }
+        offsets.forEach { drawCircle(AccentTeal, radius = 2.dp.toPx(), center = it) }
     }
 }
 

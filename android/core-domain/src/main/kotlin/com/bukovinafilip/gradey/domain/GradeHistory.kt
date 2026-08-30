@@ -6,6 +6,7 @@ import com.bukovinafilip.gradey.model.Subject
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
+import java.time.temporal.ChronoUnit
 import kotlin.math.abs
 import kotlin.math.max
 
@@ -24,6 +25,12 @@ data class SubjectGradeTrend(
         get() = subjectAbbrev?.trim()?.takeIf(String::isNotEmpty)
             ?: subjectName?.trim()?.takeIf(String::isNotEmpty)
             ?: subjectID
+}
+
+enum class GradeTrendRange(val days: Long?) {
+    THIRTY_DAYS(30),
+    NINETY_DAYS(90),
+    SCHOOL_YEAR(null),
 }
 
 object GradeHistoryTrends {
@@ -64,6 +71,14 @@ object GradeHistoryTrends {
             event.capturedInstant()?.let { it >= cutoff } == true
         },
     )
+
+    fun inRange(
+        trends: List<SubjectGradeTrend>,
+        range: GradeTrendRange,
+        now: Instant = Instant.now(),
+    ): List<SubjectGradeTrend> = range.days?.let { days ->
+        since(trends, now.minus(days, ChronoUnit.DAYS))
+    } ?: trends
 
     fun matching(subject: Subject, trends: List<SubjectGradeTrend>): SubjectGradeTrend? {
         trends.firstOrNull { it.subjectID == subject.id }?.let { return it }

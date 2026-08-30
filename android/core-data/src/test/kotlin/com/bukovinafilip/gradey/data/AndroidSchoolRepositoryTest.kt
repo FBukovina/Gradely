@@ -1,7 +1,10 @@
 package com.bukovinafilip.gradey.data
 
 import com.bukovinafilip.gradey.domain.BakalariClient
+import com.bukovinafilip.gradey.domain.AbsenceSubjectResolutionFailure
+import com.bukovinafilip.gradey.domain.AbsenceSubjectResolutionSource
 import com.bukovinafilip.gradey.domain.SchoolSessionExpiredException
+import com.bukovinafilip.gradey.model.Absence
 import com.bukovinafilip.gradey.model.AbsencePerSubject
 import com.bukovinafilip.gradey.model.AbsenceResponse
 import com.bukovinafilip.gradey.model.BakalariCredentials
@@ -29,6 +32,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.runTest
+import java.time.LocalDate
 import org.junit.Test
 
 class AndroidSchoolRepositoryTest {
@@ -310,6 +314,109 @@ class AndroidSchoolRepositoryTest {
     }
 
     @Test
+    fun officialSubjectResolutionDoesNotLoadMarksOrTimetables() = runTest {
+        val official = listOf(AbsencePerSubject("Mathematics", lessonsCount = 80, base = 12))
+        val client = FakeBakalariClient()
+        val repository = repository(client, InMemorySchoolSessionStorage(null))
+
+        val resolution = repository.resolveAbsenceSubjects(
+            AbsenceResponse(
+                absences = listOf(Absence("2026-02-03", ok = 1)),
+                absencesPerSubject = official,
+            ),
+        )
+
+        assertThat(resolution.subjects).isEqualTo(official)
+        assertThat(resolution.source).isEqualTo(AbsenceSubjectResolutionSource.OFFICIAL)
+        assertThat(client.marksCalls).isEqualTo(0)
+        assertThat(client.timetableCalls).isEqualTo(0)
+    }
+
+    @Test
+    fun fallbackReusesCachedWeeksAndReportsPartialProgress() = runTest {
+        val session = validSession()
+        val cache = RoomGradeyCache(InMemoryCacheEntryDao(), GradeyJson)
+        val cachedWeek = TimetableResponse(
+            subjects = listOf(TimetableEntity(id = "math", name = "Math alias")),
+            days = listOf(
+                TimetableDayDTO(
+                    date = "2026-02-03",
+                    atoms = listOf(TimetableAtom(hourID = "1", subjectID = "math")),
+                ),
+                TimetableDayDTO(
+                    date = "2026-02-04",
+                    atoms = listOf(TimetableAtom(hourID = "1", subjectID = "math")),
+                ),
+            ),
+        )
+        cache.saveMarks(
+            session.cacheScope,
+            MarksResponse(subjects = listOf(Subject(subjectInfo = SubjectInfo("math", "MAT", "Mathematics")))),
+        )
+        cache.saveRawTimetable(session.cacheScope, "2026-02-02", cachedWeek)
+        val client = FakeBakalariClient().apply {
+            timetable = { _, _, _ -> throw java.io.IOException("missing week") }
+        }
+        val progress = mutableListOf<com.bukovinafilip.gradey.domain.AbsenceSubjectResolutionProgress>()
+        val repository = repository(
+            client = client,
+            sessions = InMemorySchoolSessionStorage(session),
+            cache = cache,
+            dateProvider = { LocalDate.of(2026, 2, 8) },
+        )
+
+        val resolution = repository.resolveAbsenceSubjects(
+            AbsenceResponse(absences = listOf(Absence("2026-02-03", ok = 1))),
+            onProgress = progress::add,
+        )
+
+        assertThat(resolution.source).isEqualTo(AbsenceSubjectResolutionSource.PARTIAL_SYNTHESIZED)
+        assertThat(resolution.isPartial).isTrue()
+        assertThat(resolution.loadedWeeks).isEqualTo(1)
+        assertThat(resolution.totalWeeks).isEqualTo(2)
+        assertThat(resolution.subjects).containsExactly(
+            AbsencePerSubject("Mathematics", lessonsCount = 2, base = 1),
+        )
+        assertThat(progress.first()).isEqualTo(
+            com.bukovinafilip.gradey.domain.AbsenceSubjectResolutionProgress(1, 1, 2),
+        )
+        assertThat(progress.last()).isEqualTo(
+            com.bukovinafilip.gradey.domain.AbsenceSubjectResolutionProgress(1, 2, 2),
+        )
+        assertThat(client.timetableDates).containsExactly("2026-01-26")
+        assertThat(client.marksCalls).isEqualTo(0)
+    }
+
+    @Test
+    fun fallbackTimesOutMissingWeekWithoutHangingOrCachingIt() = runTest {
+        val session = validSession()
+        val cache = RoomGradeyCache(InMemoryCacheEntryDao(), GradeyJson)
+        cache.saveMarks(session.cacheScope, MarksResponse())
+        val client = FakeBakalariClient().apply {
+            timetable = { _, _, _ ->
+                delay(100)
+                TimetableResponse()
+            }
+        }
+        val repository = repository(
+            client = client,
+            sessions = InMemorySchoolSessionStorage(session),
+            cache = cache,
+            dateProvider = { LocalDate.of(2026, 2, 1) },
+            timetableFallbackTimeoutMillis = 1,
+        )
+
+        val resolution = repository.resolveAbsenceSubjects(
+            AbsenceResponse(absences = listOf(Absence("2026-02-01", ok = 1))),
+        )
+
+        assertThat(resolution.source).isEqualTo(AbsenceSubjectResolutionSource.UNAVAILABLE)
+        assertThat(resolution.failure).isEqualTo(AbsenceSubjectResolutionFailure.NO_USABLE_TIMETABLE)
+        assertThat(client.timetableCalls).isEqualTo(1)
+        assertThat(cache.loadRawTimetable(session.cacheScope, "2026-01-26")).isNull()
+    }
+
+    @Test
     fun `what-if prediction uses the authenticated endpoint and parses its returned average`() = runTest {
         val subject = Subject(
             subjectInfo = SubjectInfo(id = "math", name = "Mathematics"),
@@ -537,10 +644,14 @@ class AndroidSchoolRepositoryTest {
         client: BakalariClient,
         sessions: SchoolSessionStorage,
         cache: RoomGradeyCache = RoomGradeyCache(InMemoryCacheEntryDao(), GradeyJson),
+        dateProvider: () -> LocalDate = { com.bukovinafilip.gradey.domain.TimetableDates.today() },
+        timetableFallbackTimeoutMillis: Long = 12_000L,
     ): AndroidSchoolRepository = AndroidSchoolRepository(
         bakalariClient = client,
         sessionStore = sessions,
         cache = cache,
+        dateProvider = dateProvider,
+        timetableFallbackTimeoutMillis = timetableFallbackTimeoutMillis,
     )
 
     private fun validSession() = session(expiresAt = System.currentTimeMillis() + 3_600_000)
@@ -592,6 +703,8 @@ private class FakeBakalariClient : BakalariClient {
     var loginCalls = 0
     var marksCalls = 0
     var absenceCalls = 0
+    var timetableCalls = 0
+    val timetableDates = mutableListOf<String>()
     var predictionCalls = 0
     var lastLoginUsername: String? = null
     var lastLoginPassword: String? = null
@@ -629,8 +742,11 @@ private class FakeBakalariClient : BakalariClient {
     }
     override suspend fun fetchUser(baseURL: String, accessToken: String): UserResponse =
         user(baseURL, accessToken)
-    override suspend fun fetchTimetable(baseURL: String, accessToken: String, date: String): TimetableResponse =
-        timetable(baseURL, accessToken, date)
+    override suspend fun fetchTimetable(baseURL: String, accessToken: String, date: String): TimetableResponse {
+        timetableCalls += 1
+        timetableDates += date
+        return timetable(baseURL, accessToken, date)
+    }
     override suspend fun predictSubject(
         baseURL: String,
         accessToken: String,

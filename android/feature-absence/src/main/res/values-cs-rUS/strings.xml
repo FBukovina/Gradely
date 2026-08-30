@@ -24,6 +24,11 @@
     <string name="absence_segment_days">po dnech</string>
     <string name="absence_segment_months">po měsících</string>
     <string name="absence_subjects_empty">žádná zameškanost v předmětech.</string>
+    <string name="absence_subjects_calculating">počítám zameškanost z rozvrhu…</string>
+    <string name="absence_subjects_progress">zkontrolováno %1$d z %2$d týdnů</string>
+    <string name="absence_subjects_partial_warning">některé týdny rozvrhu se nepodařilo načíst. výsledek je částečný odhad.</string>
+    <string name="absence_subjects_error_title">zameškanost v předmětech se nepodařilo dopočítat</string>
+    <string name="absence_subjects_error_no_timetable">rozvrh se nepodařilo načíst, takže zameškanost v předmětech nejde dopočítat.</string>
     <string name="absence_days_empty">žádná absence po dnech.</string>
     <string name="absence_months_empty">žádná absence po měsících.</string>
     <string name="absence_total">celkem</string>

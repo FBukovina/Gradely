@@ -24,6 +24,11 @@
     <string name="absence_segment_days">By days</string>
     <string name="absence_segment_months">By months</string>
     <string name="absence_subjects_empty">No subject absence.</string>
+    <string name="absence_subjects_calculating">Calculating subject absence from timetable…</string>
+    <string name="absence_subjects_progress">Checked %1$d of %2$d weeks</string>
+    <string name="absence_subjects_partial_warning">Some timetable weeks could not be loaded. This is a partial estimate.</string>
+    <string name="absence_subjects_error_title">Could not calculate subject absence</string>
+    <string name="absence_subjects_error_no_timetable">Timetable could not be loaded, so subject absence cannot be calculated.</string>
     <string name="absence_days_empty">No daily absence.</string>
     <string name="absence_months_empty">No monthly absence.</string>
     <string name="absence_total">Total</string>

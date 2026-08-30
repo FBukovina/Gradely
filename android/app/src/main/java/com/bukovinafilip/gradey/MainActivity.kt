@@ -60,6 +60,7 @@ import androidx.credentials.GetCredentialRequest
 import androidx.core.content.ContextCompat
 import com.bukovinafilip.gradey.feature.absence.AbsenceScreen
 import com.bukovinafilip.gradey.feature.absence.AbsenceStateScreen
+import com.bukovinafilip.gradey.feature.absence.R as AbsenceR
 import com.bukovinafilip.gradey.feature.account.AccountScreen
 import com.bukovinafilip.gradey.feature.auth.AgeAttestationScreen
 import com.bukovinafilip.gradey.feature.auth.GradeyCheckingScreen
@@ -80,6 +81,8 @@ import com.bukovinafilip.gradey.domain.GradeHistoryTrends
 import com.bukovinafilip.gradey.domain.GradeyStartupDestination
 import com.bukovinafilip.gradey.domain.AbsencePresentationState
 import com.bukovinafilip.gradey.domain.AbsencePresentationStates
+import com.bukovinafilip.gradey.domain.AbsenceSubjectResolutionFailure
+import com.bukovinafilip.gradey.domain.AbsenceSubjectResolutionProgress
 import com.bukovinafilip.gradey.domain.SchoolSessionExpiredException
 import com.bukovinafilip.gradey.domain.TimetableDates
 import com.bukovinafilip.gradey.domain.TodayPresentationState
@@ -217,6 +220,13 @@ private fun GradeyApp(
     var hasLoadedSchoolDirectory by remember { mutableStateOf(false) }
     var dashboard by remember { mutableStateOf<DashboardData?>(null) }
     var absence by remember { mutableStateOf<AbsenceResponse?>(null) }
+    var absenceSourceResponse by remember { mutableStateOf<AbsenceResponse?>(null) }
+    var isResolvingAbsenceSubjects by remember { mutableStateOf(false) }
+    var absenceSubjectProgress by remember { mutableStateOf<AbsenceSubjectResolutionProgress?>(null) }
+    var absenceSubjectWarning by remember { mutableStateOf<String?>(null) }
+    var absenceSubjectError by remember { mutableStateOf<String?>(null) }
+    var absenceSubjectResolutionJob by remember { mutableStateOf<Job?>(null) }
+    var absenceSubjectResolutionAttempt by remember { mutableIntStateOf(0) }
     var timetable by remember { mutableStateOf<TimetableWeek?>(null) }
     var stravaSession by remember { mutableStateOf<StravaCZStoredSession?>(null) }
     var stravaMenu by remember { mutableStateOf<StravaCZMenu?>(null) }
@@ -270,12 +280,69 @@ private fun GradeyApp(
         isLoading = false
     }
 
+    fun resetAbsenceSubjectResolution() {
+        absenceSubjectResolutionAttempt += 1
+        absenceSubjectResolutionJob?.cancel()
+        absenceSubjectResolutionJob = null
+        absenceSourceResponse = null
+        isResolvingAbsenceSubjects = false
+        absenceSubjectProgress = null
+        absenceSubjectWarning = null
+        absenceSubjectError = null
+    }
+
+    fun startAbsenceSubjectResolution(response: AbsenceResponse) {
+        absenceSubjectResolutionAttempt += 1
+        val attempt = absenceSubjectResolutionAttempt
+        absenceSubjectResolutionJob?.cancel()
+        absenceSourceResponse = response
+        absence = response
+        absenceSubjectProgress = null
+        absenceSubjectWarning = null
+        absenceSubjectError = null
+
+        if (response.absencesPerSubject.isNotEmpty() || response.absences.isEmpty()) {
+            isResolvingAbsenceSubjects = false
+            absenceSubjectResolutionJob = null
+            return
+        }
+
+        isResolvingAbsenceSubjects = true
+        absenceSubjectResolutionJob = scope.launch {
+            try {
+                val resolution = graph.schoolRepository.resolveAbsenceSubjects(response) { progress ->
+                    if (attempt == absenceSubjectResolutionAttempt) absenceSubjectProgress = progress
+                }
+                if (attempt != absenceSubjectResolutionAttempt) return@launch
+                if (resolution.failure == AbsenceSubjectResolutionFailure.NO_USABLE_TIMETABLE) {
+                    absenceSubjectError = context.getString(AbsenceR.string.absence_subjects_error_no_timetable)
+                } else {
+                    absence = response.copy(absencesPerSubject = resolution.subjects)
+                    if (resolution.isPartial) {
+                        absenceSubjectWarning = context.getString(AbsenceR.string.absence_subjects_partial_warning)
+                    }
+                }
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Throwable) {
+                if (attempt == absenceSubjectResolutionAttempt) {
+                    absenceSubjectError = error.userFacingMessage()
+                }
+            } finally {
+                if (attempt == absenceSubjectResolutionAttempt) {
+                    isResolvingAbsenceSubjects = false
+                    absenceSubjectResolutionJob = null
+                }
+            }
+        }
+    }
+
     suspend fun loadCachedSignedInData() {
         val storedSession = graph.schoolRepository.currentStoredSession()
         activeLinkedAccountID = storedSession?.linkedAccountID
         currentSchoolBaseURL = storedSession?.baseURL.orEmpty()
         graph.schoolRepository.loadCachedDashboard()?.let { dashboard = it }
-        graph.schoolRepository.loadCachedAbsence()?.let { absence = it }
+        graph.schoolRepository.loadCachedAbsence()?.let(::startAbsenceSubjectResolution)
         graph.schoolRepository.loadCachedTimetable(TimetableDates.todayString())?.let { timetable = it }
         stravaSession = runCatching { graph.stravaCZRepository.bootstrapSession() }.getOrNull()
         graph.stravaCZRepository.loadCachedMenu()?.let { stravaMenu = it }
@@ -358,6 +425,7 @@ private fun GradeyApp(
     fun routeToSchoolReconnect() {
         dashboard = null
         absence = null
+        resetAbsenceSubjectResolution()
         timetable = null
         stravaSession = null
         stravaMenu = null
@@ -402,6 +470,7 @@ private fun GradeyApp(
         }
         dashboard = null
         absence = null
+        resetAbsenceSubjectResolution()
         timetable = null
         stravaSession = null
         stravaMenu = null
@@ -541,6 +610,7 @@ private fun GradeyApp(
             val associatedSession = graph.schoolRepository.associateCurrentSession(updated)
             dashboard = candidateDashboard
             absence = null
+            resetAbsenceSubjectResolution()
             absenceRefreshError = null
             timetable = null
             gradeHistorySnapshot = null
@@ -577,6 +647,7 @@ private fun GradeyApp(
             dashboard = null
             marksRefreshError = null
             absence = null
+            resetAbsenceSubjectResolution()
             absenceRefreshError = null
             timetable = null
             stravaSession = null
@@ -658,7 +729,11 @@ private fun GradeyApp(
         val absenceRefresh = refreshRetainingContent(absence) {
             graph.schoolRepository.loadAbsence(forceRefresh = forceRefresh)
         }
-        absence = absenceRefresh.value
+        if (absenceRefresh.failure == null) {
+            absenceRefresh.value?.let(::startAbsenceSubjectResolution)
+        } else {
+            absence = absenceRefresh.value
+        }
         when (val error = absenceRefresh.failure) {
             is SchoolSessionExpiredException -> {
                 routeToSchoolReconnect()
@@ -1345,6 +1420,10 @@ private fun GradeyApp(
                             response = currentAbsence,
                             studentName = currentDashboard?.user?.fullName ?: "Student",
                             isRefreshing = absencePresentationState == AbsencePresentationState.REFRESHING,
+                            isResolvingSubjects = isResolvingAbsenceSubjects,
+                            subjectResolutionProgress = absenceSubjectProgress,
+                            subjectResolutionWarning = absenceSubjectWarning,
+                            subjectResolutionError = absenceSubjectError,
                             onRefresh = {
                                 if (!isLoading) {
                                     scope.launch {
@@ -1356,6 +1435,9 @@ private fun GradeyApp(
                                         }
                                     }
                                 }
+                            },
+                            onRetrySubjectResolution = {
+                                absenceSourceResponse?.let(::startAbsenceSubjectResolution)
                             },
                             onOpenAccount = { selectedTab = AppTab.ACCOUNT },
                             onOpenGradeyTools = { isGradeyAIPresented = true },

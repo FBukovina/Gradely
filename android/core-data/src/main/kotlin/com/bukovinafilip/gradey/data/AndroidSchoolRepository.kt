@@ -1,6 +1,12 @@
 package com.bukovinafilip.gradey.data
 
 import com.bukovinafilip.gradey.domain.BakalariClient
+import com.bukovinafilip.gradey.domain.AbsenceSubjectFallback
+import com.bukovinafilip.gradey.domain.AbsenceSubjectResolution
+import com.bukovinafilip.gradey.domain.AbsenceSubjectResolutionFailure
+import com.bukovinafilip.gradey.domain.AbsenceSubjectResolutionProgress
+import com.bukovinafilip.gradey.domain.AbsenceSubjectResolutionSource
+import com.bukovinafilip.gradey.domain.AbsenceTerms
 import com.bukovinafilip.gradey.domain.GradeMath
 import com.bukovinafilip.gradey.domain.SchoolRepository
 import com.bukovinafilip.gradey.domain.SchoolSessionExpiredException
@@ -16,14 +22,17 @@ import com.bukovinafilip.gradey.model.SchoolProvider
 import com.bukovinafilip.gradey.model.StoredSession
 import com.bukovinafilip.gradey.model.StoredSchoolSessionEnvelope
 import com.bukovinafilip.gradey.model.Subject
+import com.bukovinafilip.gradey.model.TimetableResponse
 import com.bukovinafilip.gradey.model.TimetableWeek
 import com.bukovinafilip.gradey.model.UserResponse
 import com.bukovinafilip.gradey.network.BakalariApiException
 import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withTimeoutOrNull
 import java.time.LocalDate
 
 class AndroidSchoolRepository(
@@ -31,6 +40,8 @@ class AndroidSchoolRepository(
     private val sessionStore: SchoolSessionStorage,
     private val cache: RoomGradeyCache,
     private val dateProvider: () -> LocalDate = { TimetableDates.today() },
+    private val timetableFallbackTimeoutMillis: Long = 12_000L,
+    private val timetableFallbackBatchSize: Int = 4,
 ) : SchoolRepository {
     private val refreshMutex = Mutex()
 
@@ -167,6 +178,61 @@ class AndroidSchoolRepository(
         return response
     }
 
+    override suspend fun resolveAbsenceSubjects(
+        response: AbsenceResponse,
+        onProgress: suspend (AbsenceSubjectResolutionProgress) -> Unit,
+    ): AbsenceSubjectResolution {
+        if (response.absencesPerSubject.isNotEmpty()) {
+            return AbsenceSubjectResolution(
+                subjects = response.absencesPerSubject,
+                source = AbsenceSubjectResolutionSource.OFFICIAL,
+            )
+        }
+        if (response.absences.isEmpty()) {
+            return AbsenceSubjectResolution(emptyList(), AbsenceSubjectResolutionSource.UNAVAILABLE)
+        }
+
+        val session = validSession()
+        val term = AbsenceTerms.resolve(response, dateProvider())
+        val markSubjects = try {
+            cache.loadMarks(session.cacheScope)?.subjects ?: fetchMarks(session).also {
+                cache.saveMarks(session.cacheScope, it)
+            }.subjects
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: Throwable) {
+            emptyList()
+        }
+        val timetableLoad = loadTermTimetables(term.weekStarts, session, onProgress)
+        if (timetableLoad.responses.isEmpty()) {
+            return AbsenceSubjectResolution(
+                subjects = emptyList(),
+                source = AbsenceSubjectResolutionSource.UNAVAILABLE,
+                loadedWeeks = 0,
+                totalWeeks = term.weekStarts.size,
+                failure = AbsenceSubjectResolutionFailure.NO_USABLE_TIMETABLE,
+            )
+        }
+
+        val subjects = AbsenceSubjectFallback.makeSubjects(
+            response = response,
+            timetables = timetableLoad.responses,
+            markSubjects = markSubjects,
+            validDateRange = term.start..term.endInclusive,
+        )
+        val source = when {
+            subjects.isEmpty() -> AbsenceSubjectResolutionSource.UNAVAILABLE
+            timetableLoad.failedWeeks > 0 -> AbsenceSubjectResolutionSource.PARTIAL_SYNTHESIZED
+            else -> AbsenceSubjectResolutionSource.SYNTHESIZED
+        }
+        return AbsenceSubjectResolution(
+            subjects = subjects,
+            source = source,
+            loadedWeeks = timetableLoad.responses.size,
+            totalWeeks = term.weekStarts.size,
+        )
+    }
+
     override suspend fun loadCachedTimetable(weekContaining: String): TimetableWeek? {
         val session = sessionStore.load() ?: return null
         val monday = TimetableDates.apiDateString(TimetableDates.monday(LocalDate.parse(weekContaining)))
@@ -293,11 +359,70 @@ class AndroidSchoolRepository(
     private suspend fun fetchTimetable(session: StoredSession, weekStart: String) =
         withBakalariRetry(session) { bakalariClient.fetchTimetable(it.baseURL, it.accessToken, weekStart) }
 
+    private suspend fun loadTermTimetables(
+        weekStarts: List<LocalDate>,
+        session: StoredSession,
+        onProgress: suspend (AbsenceSubjectResolutionProgress) -> Unit,
+    ): TermTimetableLoadResult {
+        val loaded = linkedMapOf<LocalDate, TimetableResponse>()
+        val missing = mutableListOf<LocalDate>()
+        weekStarts.forEach { weekStart ->
+            val key = TimetableDates.apiDateString(weekStart)
+            cache.loadRawTimetable(session.cacheScope, key)?.let { loaded[weekStart] = it }
+                ?: missing.add(weekStart)
+        }
+
+        var completedWeeks = loaded.size
+        var failedWeeks = 0
+        onProgress(AbsenceSubjectResolutionProgress(loaded.size, completedWeeks, weekStarts.size))
+
+        missing.chunked(timetableFallbackBatchSize.coerceAtLeast(1)).forEach { batch ->
+            val outcomes = coroutineScope {
+                batch.map { weekStart ->
+                    async { weekStart to loadFallbackTimetable(weekStart, session) }
+                }.awaitAll()
+            }
+            outcomes.forEach { (weekStart, timetable) ->
+                completedWeeks += 1
+                if (timetable == null) {
+                    failedWeeks += 1
+                } else {
+                    loaded[weekStart] = timetable
+                }
+                onProgress(AbsenceSubjectResolutionProgress(loaded.size, completedWeeks, weekStarts.size))
+            }
+        }
+
+        return TermTimetableLoadResult(
+            responses = loaded.toSortedMap().values.toList(),
+            failedWeeks = failedWeeks,
+        )
+    }
+
+    private suspend fun loadFallbackTimetable(
+        weekStart: LocalDate,
+        session: StoredSession,
+    ): TimetableResponse? = try {
+        withTimeoutOrNull(timetableFallbackTimeoutMillis) {
+            val key = TimetableDates.apiDateString(weekStart)
+            fetchTimetable(session, key).also { cache.saveRawTimetable(session.cacheScope, key, it) }
+        }
+    } catch (error: CancellationException) {
+        throw error
+    } catch (_: Throwable) {
+        null
+    }
+
     private fun UserResponse.resolvedFor(session: StoredSession): UserResponse =
         displaySchoolName?.let { resolved ->
             if (resolved == schoolName) this else copy(schoolName = resolved)
         } ?: copy(schoolName = session.linkedAccountSchoolName)
 }
+
+private data class TermTimetableLoadResult(
+    val responses: List<TimetableResponse>,
+    val failedWeeks: Int,
+)
 
 interface SchoolSessionStorage {
     fun load(): StoredSession?

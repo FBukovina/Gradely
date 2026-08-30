@@ -56,6 +56,10 @@ interface SchoolRepository {
     suspend fun loadCachedAbsence(): AbsenceResponse?
     suspend fun loadDashboard(forceRefresh: Boolean = false): DashboardData
     suspend fun loadAbsence(forceRefresh: Boolean = false): AbsenceResponse
+    suspend fun resolveAbsenceSubjects(
+        response: AbsenceResponse,
+        onProgress: suspend (AbsenceSubjectResolutionProgress) -> Unit = {},
+    ): AbsenceSubjectResolution
     suspend fun loadCachedTimetable(weekContaining: String): TimetableWeek?
     suspend fun loadTimetable(weekContaining: String): TimetableWeek
     suspend fun predictSubjectAverage(subject: Subject, markText: String, weight: Int): Double?

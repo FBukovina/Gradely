@@ -66,6 +66,7 @@ import com.bukovinafilip.gradey.domain.AbsenceDaySummary
 import com.bukovinafilip.gradey.domain.AbsenceMonthSummary
 import com.bukovinafilip.gradey.domain.AbsencePresentationState
 import com.bukovinafilip.gradey.domain.AbsenceRiskSummary
+import com.bukovinafilip.gradey.domain.AbsenceSubjectResolutionProgress
 import com.bukovinafilip.gradey.domain.AbsenceSubjectSummary
 import com.bukovinafilip.gradey.domain.AbsenceTimeline
 import com.bukovinafilip.gradey.domain.AbsenceTimelineSummary
@@ -186,7 +187,12 @@ fun AbsenceScreen(
     response: AbsenceResponse,
     studentName: String,
     isRefreshing: Boolean,
+    isResolvingSubjects: Boolean,
+    subjectResolutionProgress: AbsenceSubjectResolutionProgress?,
+    subjectResolutionWarning: String?,
+    subjectResolutionError: String?,
     onRefresh: () -> Unit,
+    onRetrySubjectResolution: () -> Unit,
     onOpenAccount: () -> Unit,
     onOpenGradeyTools: () -> Unit,
     modifier: Modifier = Modifier,
@@ -232,7 +238,17 @@ fun AbsenceScreen(
             when (mode) {
                 AbsenceMode.Subjects -> {
                     item { Spacer(Modifier.height(12.dp)) }
-                    item { SubjectsCard(riskSummary.subjects, locale) }
+                    item {
+                        SubjectsCard(
+                            subjects = riskSummary.subjects,
+                            locale = locale,
+                            isResolving = isResolvingSubjects,
+                            progress = subjectResolutionProgress,
+                            warning = subjectResolutionWarning,
+                            error = subjectResolutionError,
+                            onRetry = onRetrySubjectResolution,
+                        )
+                    }
                 }
 
                 AbsenceMode.Days -> {
@@ -523,21 +539,96 @@ private fun AbsenceMode.localizedLabel(): String = when (this) {
 }
 
 @Composable
-private fun SubjectsCard(subjects: List<AbsenceSubjectSummary>, locale: java.util.Locale) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        color = CardWhite,
-        shadowElevation = 1.dp,
-    ) {
-        if (subjects.isEmpty()) {
-            EmptyState(stringResource(R.string.absence_subjects_empty))
-        } else {
-            Column {
-                subjects.forEachIndexed { index, subject ->
-                    SubjectRow(subject, locale)
-                    if (index != subjects.lastIndex) {
-                        HorizontalDivider(color = Color(0xFFC6C6C8), thickness = 0.33.dp)
+private fun SubjectsCard(
+    subjects: List<AbsenceSubjectSummary>,
+    locale: java.util.Locale,
+    isResolving: Boolean,
+    progress: AbsenceSubjectResolutionProgress?,
+    warning: String?,
+    error: String?,
+    onRetry: () -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        if (!warning.isNullOrBlank()) {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp),
+                color = SoftOrange,
+                shadowElevation = 1.dp,
+            ) {
+                Row(
+                    modifier = Modifier.padding(14.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(Icons.Default.Error, contentDescription = null, tint = LateOrange)
+                    Text(warning, color = Color.Black, fontSize = 14.sp, lineHeight = 19.sp)
+                }
+            }
+        }
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(20.dp),
+            color = CardWhite,
+            shadowElevation = 1.dp,
+        ) {
+            when {
+                isResolving -> Row(
+                    modifier = Modifier.padding(18.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        color = AccentTeal,
+                        strokeWidth = 2.dp,
+                    )
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text(
+                            stringResource(R.string.absence_subjects_calculating),
+                            color = MutedText,
+                            fontSize = 14.sp,
+                            lineHeight = 19.sp,
+                        )
+                        if (progress != null) {
+                            Text(
+                                stringResource(
+                                    R.string.absence_subjects_progress,
+                                    progress.completedWeeks,
+                                    progress.totalWeeks,
+                                ),
+                                color = MutedText,
+                                fontSize = 12.sp,
+                                lineHeight = 16.sp,
+                            )
+                        }
+                    }
+                }
+
+                !error.isNullOrBlank() -> Column(
+                    modifier = Modifier.padding(18.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    Text(
+                        stringResource(R.string.absence_subjects_error_title),
+                        color = MissedRed,
+                        fontSize = 16.sp,
+                        lineHeight = 21.sp,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Text(error, color = MutedText, fontSize = 14.sp, lineHeight = 19.sp)
+                    Button(onClick = onRetry) {
+                        Text(stringResource(R.string.absence_retry))
+                    }
+                }
+
+                subjects.isEmpty() -> EmptyState(stringResource(R.string.absence_subjects_empty))
+                else -> Column {
+                    subjects.forEachIndexed { index, subject ->
+                        SubjectRow(subject, locale)
+                        if (index != subjects.lastIndex) {
+                            HorizontalDivider(color = Color(0xFFC6C6C8), thickness = 0.33.dp)
+                        }
                     }
                 }
             }

@@ -7,8 +7,11 @@ import com.bukovinafilip.gradey.model.GradeyAccount
 import com.bukovinafilip.gradey.model.GradeyAuthSession
 import com.bukovinafilip.gradey.model.GradeyAccountSettingsSnapshot
 import com.bukovinafilip.gradey.model.GradeyAIConsent
+import com.bukovinafilip.gradey.model.GradeyAIConversation
+import com.bukovinafilip.gradey.model.GradeyAIConversationDetail
 import com.bukovinafilip.gradey.model.GradeyAIContextSnapshot
 import com.bukovinafilip.gradey.model.GradeyAIStatus
+import com.bukovinafilip.gradey.model.GradeyAIStreamEvent
 import com.bukovinafilip.gradey.model.LinkedSchoolAccount
 import com.bukovinafilip.gradey.model.LinkedSchoolAccountActivation
 import com.bukovinafilip.gradey.model.GradeHistoryResponse
@@ -23,6 +26,7 @@ import com.bukovinafilip.gradey.model.StravaCZMenu
 import com.bukovinafilip.gradey.model.StravaCZStoredSession
 import com.bukovinafilip.gradey.model.Subject
 import com.bukovinafilip.gradey.model.TimetableWeek
+import kotlinx.coroutines.flow.Flow
 
 interface BakalariClient {
     suspend fun login(baseURL: String, username: String, password: String): com.bukovinafilip.gradey.model.LoginResponse
@@ -128,6 +132,79 @@ interface GradeyAIRepository {
     suspend fun loadStatus(): GradeyAIStatus
     suspend fun acceptConsent(): GradeyAIConsent
     suspend fun revokeConsent()
+    suspend fun listConversations(schoolScope: String): List<GradeyAIConversation>
+    suspend fun createConversation(schoolScope: String, title: String?): GradeyAIConversation
+    suspend fun loadConversation(id: String): GradeyAIConversationDetail
+    suspend fun deleteConversation(id: String)
+    suspend fun deleteAllConversations(schoolScope: String)
+    fun streamReply(
+        conversationID: String,
+        clientMessageID: String,
+        text: String,
+        context: GradeyAIContextSnapshot,
+        locale: String,
+    ): Flow<GradeyAIStreamEvent>
+}
+
+enum class GradeyAIErrorKind {
+    NOT_CONFIGURED,
+    INVALID_PROMPT,
+    REQUEST_TOO_LARGE,
+    UNAUTHENTICATED,
+    NO_CONTEXT,
+    LIMIT_REACHED,
+    TRANSPORT,
+    MALFORMED_RESPONSE,
+    SERVER,
+}
+
+class GradeyAIException(
+    val kind: GradeyAIErrorKind,
+    message: String,
+    val retryable: Boolean = false,
+    val serverCode: String? = null,
+    cause: Throwable? = null,
+) : IllegalStateException(message, cause)
+
+object GradeyAIErrorClassifier {
+    fun server(
+        code: String,
+        message: String,
+        retryable: Boolean,
+        cause: Throwable? = null,
+    ): GradeyAIException {
+        val normalizedCode = code.lowercase()
+        val normalizedMessage = message.lowercase()
+        val kind = when {
+            normalizedCode in AuthenticationCodes || "unauthenticated" in normalizedMessage -> {
+                GradeyAIErrorKind.UNAUTHENTICATED
+            }
+            normalizedCode in ContextCodes ||
+                ("context" in normalizedMessage && ("missing" in normalizedMessage || "unavailable" in normalizedMessage)) -> {
+                GradeyAIErrorKind.NO_CONTEXT
+            }
+            normalizedCode in LimitCodes ||
+                ("limit" in normalizedMessage && ("reached" in normalizedMessage || "exhausted" in normalizedMessage)) -> {
+                GradeyAIErrorKind.LIMIT_REACHED
+            }
+            normalizedCode in OversizeCodes || "too large" in normalizedMessage -> {
+                GradeyAIErrorKind.REQUEST_TOO_LARGE
+            }
+            else -> GradeyAIErrorKind.SERVER
+        }
+        return GradeyAIException(
+            kind = kind,
+            message = message,
+            retryable = retryable,
+            serverCode = code,
+            cause = cause,
+        )
+    }
+
+    private val AuthenticationCodes = setOf("unauthenticated", "authentication_required", "auth_required")
+    private val ContextCodes = setOf("no_context", "missing_context", "context_unavailable", "invalid_context")
+    private val LimitCodes = setOf("over_limit", "daily_limit", "limit_reached", "resource_exhausted")
+    private val OversizeCodes = setOf("request_too_large", "payload_too_large", "context_too_large", "oversize")
 }
 
 interface GradeyAIContextBuilding {

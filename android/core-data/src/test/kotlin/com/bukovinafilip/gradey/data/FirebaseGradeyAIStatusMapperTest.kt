@@ -56,6 +56,23 @@ class FirebaseGradeyAIStatusMapperTest {
         assertThat(status.canSend).isFalse()
     }
 
+    @Test
+    fun `normalizes firestore reset timestamps`() {
+        val status = FirebaseGradeyAIStatusMapper.decode(
+            mapOf(
+                "enabled" to true,
+                "consentRequired" to false,
+                "termsVersion" to "1",
+                "dailyLimit" to 5,
+                "dailyUsed" to 0,
+                "remaining" to 5,
+                "resetAt" to mapOf("_seconds" to 1_777_777_777, "_nanoseconds" to 123_000_000),
+            ),
+        )
+
+        assertThat(status.resetAtEpochMillis).isEqualTo(1_777_777_777_123L)
+    }
+
     @Test(expected = IllegalStateException::class)
     fun `rejects non object status payload`() {
         FirebaseGradeyAIStatusMapper.decode("invalid")

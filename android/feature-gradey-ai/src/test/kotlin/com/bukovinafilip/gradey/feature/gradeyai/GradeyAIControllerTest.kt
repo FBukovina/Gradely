@@ -1,0 +1,365 @@
+package com.bukovinafilip.gradey.feature.gradeyai
+
+import com.bukovinafilip.gradey.domain.GradeyAIContextBuilding
+import com.bukovinafilip.gradey.domain.GradeyAIContextError
+import com.bukovinafilip.gradey.domain.GradeyAIContextException
+import com.bukovinafilip.gradey.domain.GradeyAIRepository
+import com.bukovinafilip.gradey.model.GradeyAIConsent
+import com.bukovinafilip.gradey.model.GradeyAIContextSnapshot
+import com.bukovinafilip.gradey.model.GradeyAIConversation
+import com.bukovinafilip.gradey.model.GradeyAIConversationDetail
+import com.bukovinafilip.gradey.model.GradeyAIMessage
+import com.bukovinafilip.gradey.model.GradeyAIMessageRole
+import com.bukovinafilip.gradey.model.GradeyAIMessageStatus
+import com.bukovinafilip.gradey.model.GradeyAIStatus
+import com.bukovinafilip.gradey.model.GradeyAIStreamEvent
+import com.bukovinafilip.gradey.model.GradeySupportTier
+import com.google.common.truth.Truth.assertThat
+import java.util.ArrayDeque
+import java.util.Locale
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.test.runTest
+import org.junit.Test
+
+@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+class GradeyAIControllerTest {
+    @Test
+    fun `bootstrap loads scoped conversations context and support-adjusted limits`() = runTest {
+        val conversation = conversation("existing", "Existing chat")
+        val repository = FakeRepository(conversations = mutableListOf(conversation))
+        val controller = controller(repository = repository)
+        controller.applySupportTier(GradeySupportTier.STANDARD)
+
+        controller.bootstrap()
+
+        assertThat(controller.status?.dailyLimit).isEqualTo(10)
+        assertThat(controller.status?.remaining).isEqualTo(8)
+        assertThat(controller.conversations).containsExactly(conversation)
+        assertThat(controller.contextSnapshot?.schoolScope).isEqualTo("scope")
+        assertThat(repository.listScopes).containsExactly("scope")
+        assertThat(controller.failure).isNull()
+    }
+
+    @Test
+    fun `unresolved free support state preserves the server reported limit`() = runTest {
+        val repository = FakeRepository(
+            status = status().copy(dailyLimit = 25, dailyUsed = 4, remaining = 21),
+        )
+        val controller = controller(repository = repository)
+        controller.applySupportTier(GradeySupportTier.NONE)
+
+        controller.bootstrap()
+
+        assertThat(controller.status?.dailyLimit).isEqualTo(25)
+        assertThat(controller.status?.remaining).isEqualTo(21)
+    }
+
+    @Test
+    fun `send creates chat streams deltas persists assistant and updates remaining`() = runTest {
+        val persisted = message(
+            id = "assistant",
+            role = GradeyAIMessageRole.ASSISTANT,
+            content = "A clear answer",
+            status = GradeyAIMessageStatus.COMPLETE,
+        )
+        val repository = FakeRepository().apply {
+            streams += flowOf(
+                GradeyAIStreamEvent.Start("assistant", 2),
+                GradeyAIStreamEvent.Delta("A clear"),
+                GradeyAIStreamEvent.Delta(" answer"),
+                GradeyAIStreamEvent.Done("stop", 2, 10, 4, persisted),
+            )
+        }
+        val controller = controller(repository = repository)
+        controller.bootstrap()
+
+        controller.send("  Explain my marks  ")
+
+        assertThat(repository.createdTitles).containsExactly("Explain my marks")
+        assertThat(repository.streamRequests.single().text).isEqualTo("Explain my marks")
+        assertThat(repository.streamRequests.single().context.schoolScope).isEqualTo("scope")
+        assertThat(controller.messages.map { it.role })
+            .containsExactly(GradeyAIMessageRole.USER, GradeyAIMessageRole.ASSISTANT).inOrder()
+        assertThat(controller.messages.last()).isEqualTo(persisted)
+        assertThat(controller.status?.remaining).isEqualTo(2)
+        assertThat(controller.isStreaming).isFalse()
+    }
+
+    @Test
+    fun `retry replaces retryable failed response with successful reply`() = runTest {
+        val repository = FakeRepository().apply {
+            streams += flowOf(
+                GradeyAIStreamEvent.Start("failed-assistant", 3),
+                GradeyAIStreamEvent.Error("unavailable", "Try later", true, 3),
+            )
+            streams += flowOf(
+                GradeyAIStreamEvent.Start("retried-assistant", 2),
+                GradeyAIStreamEvent.Delta("Recovered"),
+                GradeyAIStreamEvent.Done("stop", 2, null, null, null),
+            )
+        }
+        val controller = controller(repository = repository)
+        controller.bootstrap()
+        controller.send("Help")
+        val failed = controller.messages.last()
+
+        assertThat(failed.status).isEqualTo(GradeyAIMessageStatus.FAILED)
+        assertThat(controller.canRetry(failed)).isTrue()
+
+        controller.retry()
+
+        assertThat(repository.streamRequests).hasSize(2)
+        assertThat(repository.streamRequests[1].clientMessageID)
+            .isEqualTo(repository.streamRequests[0].clientMessageID)
+        assertThat(controller.messages.none { it.status == GradeyAIMessageStatus.FAILED }).isTrue()
+        assertThat(controller.messages.last().content).isEqualTo("Recovered")
+        assertThat(controller.messages.last().status).isEqualTo(GradeyAIMessageStatus.COMPLETE)
+    }
+
+    @Test
+    fun `stop cancels active stream and marks partial assistant response cancelled`() = runTest {
+        val repository = FakeRepository().apply {
+            streams += flow {
+                emit(GradeyAIStreamEvent.Start("assistant", 3))
+                emit(GradeyAIStreamEvent.Delta("Partial"))
+                awaitCancellation()
+            }
+        }
+        val controller = controller(repository = repository, scope = this)
+        controller.bootstrap()
+        val sendJob = launch { controller.send("Help") }
+        runCurrent()
+
+        assertThat(controller.isStreaming).isTrue()
+        controller.stop()
+        runCurrent()
+
+        assertThat(controller.isStreaming).isFalse()
+        assertThat(controller.messages.last().content).isEqualTo("Partial")
+        assertThat(controller.messages.last().status).isEqualTo(GradeyAIMessageStatus.CANCELLED)
+        sendJob.join()
+        advanceUntilIdle()
+    }
+
+    @Test
+    fun `draft title remains localized and CRUD operations stay school scoped`() = runTest {
+        val existing = conversation("existing", "Existing")
+        val repository = FakeRepository(conversations = mutableListOf(existing))
+        val controller = controller(repository = repository)
+        controller.bootstrap()
+
+        controller.beginDraftChat("Nový chat")
+        assertThat(controller.currentConversation?.title).isEqualTo("Nový chat")
+        val draft = controller.currentConversation!!
+        controller.delete(draft)
+        assertThat(repository.deletedIDs).isEmpty()
+        assertThat(controller.currentConversation).isNull()
+
+        controller.open(existing)
+        assertThat(repository.loadedIDs).containsExactly("existing")
+        controller.delete(existing)
+        assertThat(repository.deletedIDs).containsExactly("existing")
+
+        controller.deleteAll()
+        assertThat(repository.deleteAllScopes).containsExactly("scope")
+        assertThat(controller.conversations).isEmpty()
+    }
+
+    @Test
+    fun `missing context is explicit and prevents sending`() = runTest {
+        val contextBuilder = FakeContextBuilder().apply {
+            refreshFailure = GradeyAIContextException(GradeyAIContextError.NO_CONTEXT_AVAILABLE)
+        }
+        val repository = FakeRepository()
+        val controller = controller(repository = repository, contextBuilder = contextBuilder)
+
+        controller.bootstrap()
+        controller.send("Help")
+
+        assertThat(controller.contextSnapshot).isNull()
+        assertThat(controller.contextFailure?.kind)
+            .isEqualTo(com.bukovinafilip.gradey.domain.GradeyAIErrorKind.NO_CONTEXT)
+        assertThat(controller.failure?.kind)
+            .isEqualTo(com.bukovinafilip.gradey.domain.GradeyAIErrorKind.NO_CONTEXT)
+        assertThat(repository.streamRequests).isEmpty()
+    }
+
+    @Test
+    fun `starter prompt descriptors contain context without hard coded locale copy`() = runTest {
+        val snapshot = context().copy(
+            trends = listOf(
+                com.bukovinafilip.gradey.model.GradeyAITrendContext(
+                    subjectID = "math",
+                    subjectName = "Mathematics",
+                    averageDelta = 0.4,
+                    firstMarkCount = 1,
+                    latestMarkCount = 2,
+                ),
+            ),
+            timetable = listOf(
+                com.bukovinafilip.gradey.model.GradeyAILessonContext(
+                    id = "lesson",
+                    date = "2026-09-01",
+                    subject = "Physics",
+                    beginsAt = "08:00",
+                    endsAt = "08:45",
+                    groups = emptyList(),
+                    changeKind = com.bukovinafilip.gradey.model.GradeyAILessonChangeKind.NONE,
+                ),
+            ),
+        )
+        val controller = controller(contextBuilder = FakeContextBuilder(snapshot))
+        controller.bootstrap()
+
+        assertThat(controller.starterPrompts()).containsExactly(
+            GradeyAIStarterPrompt(GradeyAIStarterPromptKind.IMPROVE_SUBJECT, "Mathematics"),
+            GradeyAIStarterPrompt(GradeyAIStarterPromptKind.PREPARE_SUBJECT, "Physics"),
+            GradeyAIStarterPrompt(GradeyAIStarterPromptKind.SUMMARIZE_MARKS),
+        ).inOrder()
+    }
+
+    private fun controller(
+        repository: FakeRepository = FakeRepository(),
+        contextBuilder: FakeContextBuilder = FakeContextBuilder(),
+        scope: kotlinx.coroutines.CoroutineScope? = null,
+    ): GradeyAIController {
+        var nextID = 0
+        val resolvedScope = scope ?: kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Unconfined)
+        return GradeyAIController(
+            repository = repository,
+            contextBuilder = contextBuilder,
+            scope = resolvedScope,
+            nowEpochMillis = { 1_700_000_000_000 + nextID },
+            idProvider = { "id-${nextID++}" },
+            localeProvider = { Locale.US },
+        )
+    }
+
+    private class FakeContextBuilder(
+        var snapshot: GradeyAIContextSnapshot = context(),
+    ) : GradeyAIContextBuilding {
+        var refreshFailure: Throwable? = null
+
+        override suspend fun currentSchoolScope(): String = snapshot.schoolScope
+        override suspend fun cachedContext(): GradeyAIContextSnapshot? = null
+        override suspend fun refreshContext(): GradeyAIContextSnapshot {
+            refreshFailure?.let { throw it }
+            return snapshot
+        }
+    }
+
+    private class FakeRepository(
+        var status: GradeyAIStatus = status(),
+        val conversations: MutableList<GradeyAIConversation> = mutableListOf(),
+    ) : GradeyAIRepository {
+        override val isConfigured = true
+        val listScopes = mutableListOf<String>()
+        val createdTitles = mutableListOf<String?>()
+        val loadedIDs = mutableListOf<String>()
+        val deletedIDs = mutableListOf<String>()
+        val deleteAllScopes = mutableListOf<String>()
+        val streamRequests = mutableListOf<StreamRequest>()
+        val streams = ArrayDeque<Flow<GradeyAIStreamEvent>>()
+
+        override suspend fun loadStatus(): GradeyAIStatus = status
+        override suspend fun acceptConsent(): GradeyAIConsent {
+            status = status.copy(consentRequired = false)
+            return GradeyAIConsent(true, status.termsVersion)
+        }
+        override suspend fun revokeConsent() {
+            status = status.copy(consentRequired = true)
+            conversations.clear()
+        }
+        override suspend fun listConversations(schoolScope: String): List<GradeyAIConversation> {
+            listScopes += schoolScope
+            return conversations.filter { it.schoolScope == schoolScope }
+        }
+        override suspend fun createConversation(schoolScope: String, title: String?): GradeyAIConversation {
+            createdTitles += title
+            return conversation("created", title.orEmpty()).also(conversations::add)
+        }
+        override suspend fun loadConversation(id: String): GradeyAIConversationDetail {
+            loadedIDs += id
+            val value = conversations.first { it.id == id }
+            return GradeyAIConversationDetail(value, emptyList())
+        }
+        override suspend fun deleteConversation(id: String) {
+            deletedIDs += id
+            conversations.removeAll { it.id == id }
+        }
+        override suspend fun deleteAllConversations(schoolScope: String) {
+            deleteAllScopes += schoolScope
+            conversations.removeAll { it.schoolScope == schoolScope }
+        }
+        override fun streamReply(
+            conversationID: String,
+            clientMessageID: String,
+            text: String,
+            context: GradeyAIContextSnapshot,
+            locale: String,
+        ): Flow<GradeyAIStreamEvent> {
+            streamRequests += StreamRequest(conversationID, clientMessageID, text, context, locale)
+            return (if (streams.isEmpty()) null else streams.removeFirst()) ?: flowOf(
+                GradeyAIStreamEvent.Start("assistant", status.remaining - 1),
+                GradeyAIStreamEvent.Done("stop", status.remaining - 1, null, null, null),
+            )
+        }
+    }
+
+    private data class StreamRequest(
+        val conversationID: String,
+        val clientMessageID: String,
+        val text: String,
+        val context: GradeyAIContextSnapshot,
+        val locale: String,
+    )
+
+    private companion object {
+        fun status() = GradeyAIStatus(
+            enabled = true,
+            consentRequired = false,
+            termsVersion = "1",
+            dailyLimit = 5,
+            dailyUsed = 2,
+            remaining = 3,
+        )
+
+        fun context() = GradeyAIContextSnapshot(
+            schoolScope = "scope",
+            generatedAtEpochMillis = 1_700_000_000_000,
+            isStale = false,
+            unavailableSections = emptyList(),
+            subjects = emptyList(),
+            trends = emptyList(),
+            timetable = emptyList(),
+        )
+
+        fun conversation(id: String, title: String) = GradeyAIConversation(
+            id = id,
+            schoolScope = "scope",
+            title = title,
+            createdAtEpochMillis = 1_700_000_000_000,
+            updatedAtEpochMillis = 1_700_000_000_000,
+        )
+
+        fun message(
+            id: String,
+            role: GradeyAIMessageRole,
+            content: String,
+            status: GradeyAIMessageStatus,
+        ) = GradeyAIMessage(
+            id = id,
+            conversationID = "created",
+            role = role,
+            content = content,
+            status = status,
+            createdAtEpochMillis = 1_700_000_000_000,
+        )
+    }
+}

@@ -24,13 +24,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CalendarMonth
-import androidx.compose.material.icons.filled.Error
-import androidx.compose.material.icons.filled.LightMode
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Restaurant
-import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -125,6 +118,7 @@ import com.bukovinafilip.gradey.model.SupportPlanOption
 import com.bukovinafilip.gradey.model.SupportPurchaseOutcome
 import com.bukovinafilip.gradey.model.TimetableWeek
 import com.bukovinafilip.gradey.ui.GradeyTheme
+import com.bukovinafilip.gradey.ui.GradeyIcons
 import com.bukovinafilip.gradey.ui.GradeyHero
 import com.bukovinafilip.gradey.ui.GradeyScreen
 import com.bukovinafilip.gradey.ui.GradeySectionCard
@@ -2438,11 +2432,18 @@ private fun GradeyApp(
             if (isGradeyAIPresented) {
                 GradeyAIScreen(
                     repository = graph.gradeyAIRepository,
+                    contextBuilder = graph.gradeyAIContextBuilder,
                     isGuestMode = isGuestMode,
                     supportTier = supportTier,
                     onOpenAccount = {
                         isGradeyAIPresented = false
                         selectedTab = AppTab.ACCOUNT
+                    },
+                    onOpenSupport = {
+                        isGradeyAIPresented = false
+                        selectedTab = AppTab.ACCOUNT
+                        supportMessage = null
+                        isSupportPresented = true
                     },
                     onClose = { isGradeyAIPresented = false },
                     modifier = Modifier.fillMaxSize(),
@@ -2487,7 +2488,7 @@ private fun DataRefreshWarning(message: String, modifier: Modifier = Modifier) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
-                imageVector = Icons.Default.Error,
+                imageVector = GradeyIcons.ErrorCircle,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onErrorContainer,
                 modifier = Modifier.size(20.dp),
@@ -2536,12 +2537,12 @@ private val MarksTabs = listOf(AppTab.TODAY, AppTab.SUBJECTS, AppTab.ABSENCE, Ap
 
 @Composable
 private fun AppTab.icon() = when (this) {
-    AppTab.TODAY -> Icons.Default.LightMode
-    AppTab.SUBJECTS -> Icons.Default.Verified
-    AppTab.ABSENCE -> Icons.Default.CalendarMonth
-    AppTab.TIMETABLE -> Icons.Default.CalendarMonth
-    AppTab.STRAVACZ -> Icons.Default.Restaurant
-    AppTab.ACCOUNT -> Icons.Default.Person
+    AppTab.TODAY -> GradeyIcons.Sun
+    AppTab.SUBJECTS -> GradeyIcons.CheckmarkBadge
+    AppTab.ABSENCE -> GradeyIcons.Calendar
+    AppTab.TIMETABLE -> GradeyIcons.Calendar
+    AppTab.STRAVACZ -> GradeyIcons.Restaurant
+    AppTab.ACCOUNT -> GradeyIcons.User
 }
 
 @Composable
@@ -2615,7 +2616,7 @@ private fun androidx.compose.foundation.layout.RowScope.BottomNavigationItem(
                 )
                 if (tab == AppTab.ABSENCE) {
                     Icon(
-                        imageVector = Icons.Default.Error,
+                        imageVector = GradeyIcons.ErrorCircle,
                         contentDescription = null,
                         tint = foreground,
                         modifier = Modifier

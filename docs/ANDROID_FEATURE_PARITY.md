@@ -274,9 +274,9 @@ Strava.cz verification (2026-08-30): Android now uses the same public Strava.cz 
 - [x] Port status/availability, identity tier, consent, context sections, conversations, messages, and stream-event models.
 - [x] Build context from current Bakaláři marks, absence, timetable, trends, and active school scope with partial/stale/unavailable states.
 - [x] Implement consent explanations, grant, revoke, and local/cloud state reset.
-- [ ] Implement conversation list/detail/new chat/delete/delete-all flows.
-- [ ] Implement streaming response, stop, retry failed prompt, cancellation, limits/reset time, and support-tier upgrade flow.
-- [ ] Render supported Markdown safely and keep the school-data disclaimer visible.
+- [x] Implement conversation list/detail/new chat/delete/delete-all flows.
+- [x] Implement streaming response, stop, retry failed prompt, cancellation, limits/reset time, and support-tier upgrade flow.
+- [x] Render supported Markdown safely and keep the school-data disclaimer visible.
 - [x] Prevent cross-school context reuse with the same scope hashing rules as iOS.
 - [x] Hide or clearly disable AI for local-only guest mode as iOS does.
 - [x] Integrate AI entry points on Today, Subjects, Absence, Timetable, and Meals.
@@ -289,6 +289,8 @@ Context and scope evidence (2026-08-31): the production graph now provides an iO
 Consent evidence (2026-08-31): all four Android language configurations explain the AI identity, limited school context, Azure AI processing, retention/control, and persistent AI disclaimer before consent. Consent acceptance uses the live terms version and reloads authoritative service status. After consent, a destructive, two-step revoke action calls the same `gradeyAIRevokeConsent` cloud function as iOS; success clears the screen's local conversation state by returning to the consent gate and resets displayed usage, while failure remains visible and does not falsely revoke local state.
 
 Entry-point evidence (2026-08-31): the Today, Subjects, Absence, Timetable, and Strava.cz Meals headers each expose a working Gradey AI action wired by `MainActivity` to the same full-screen service surface. The entry policy is evaluated before any service status request: local-only guest mode always shows the sign-in-required gate even when Firebase is configured, an unconfigured signed-in build shows an explicit unavailable state, and only a signed-in configured build calls the live service. JVM policy tests cover all three branches.
+
+Conversation and streaming evidence (2026-08-31): Android calls the same `gradeyAIListChats`, `gradeyAICreateChat`, `gradeyAILoadChat`, `gradeyAIDeleteChat`, `gradeyAIDeleteAll`, and true Firebase callable-streaming `gradeyAIStreamReply` endpoints as iOS with limited-use App Check tokens, a 120-second timeout, the opaque school scope, minimized context, client-message idempotency, locale, and optional Gradey account ID. The full-screen service provides localized conversation history, lazy new-chat creation, detail loading, single/all deletion confirmation, context refresh/warnings, starter prompts, live deltas, stop/cancel, bounded retry, usage and reset time, limit/upgrade handling, consent revocation, safe headings/lists/bold/italic/code/link-text Markdown, and a persistent school-data/AI disclaimer. JVM coverage includes eight wire/payload cases, seven controller lifecycle/CRUD/stream/retry/cancel/limit/context cases, three Markdown cases, and status/error mapping; the focused app compile, AI lint, AI tests, and core-data tests pass. Authentication, interruption, malformed-response, and limit classifications have automated coverage, while real app-background streaming remains part of the open edge-behavior row.
 
 ## Settings and account hub
 
@@ -349,15 +351,17 @@ Navigation verification evidence (2026-08-30): the bottom bar is a stable Today/
 
 ## Design system, Hugeicons, accessibility, and visual fidelity
 
-- [ ] Integrate a maintainable Android Hugeicons Stroke Rounded source and central icon API.
-- [ ] Replace obvious `Icons.Default` substitutions throughout production UI with the same or closest iOS Hugeicon.
+- [x] Integrate a maintainable Android Hugeicons Stroke Rounded source and central icon API.
+- [x] Replace obvious `Icons.Default` substitutions throughout production UI with the same or closest iOS Hugeicon.
 - [ ] Port the Brand primary/secondary gradient, on-accent ink, aurora background, grouped surfaces, spacing, radii, grade bands, status chips, and risk indicators.
-- [ ] Bundle and use Space Grotesk for display titles while retaining Android-readable body typography.
+- [x] Bundle and use Space Grotesk for display titles while retaining Android-readable body typography.
 - [ ] Match iOS screen hierarchy and content density while using Android-native touch targets, predictive back, scrolling, dialogs, and sheets.
 - [ ] Support light/dark themes, dynamic type/font scale, compact/expanded widths, edge-to-edge insets, keyboard/IME, and screen rotation.
 - [ ] Add meaningful content descriptions, headings, traversal order, selected/disabled state, and minimum touch targets.
 - [ ] Verify TalkBack and large-font usability on authentication, tabs, detail, settings, and modal flows.
 - [ ] Complete a final side-by-side visual audit for every major screen and state.
+
+Icon and typography evidence (2026-08-31): `GradeyIcons` is the single semantic Compose catalog for 41 cached 24-dp Hugeicons Stroke Rounded vectors, with official SVG path provenance, MIT attribution, RTL mirroring where applicable, and a runtime catalog test that constructs every unique vector. The migration replaced 117 production call sites; a production-source search finds no Material icon import or `Icons.Default` use, and the obsolete Material icon dependencies were removed. Core UI tests and lint pass. Android also packages the monorepo’s authoritative `Gradely/Resources/SpaceGrotesk-Bold.ttf` through a generated resource task rather than duplicating or moving the iOS asset; Material typography applies it only to display/headline/large-title roles so body text retains the Android-readable default face. System light/dark selection, grouped surfaces, iOS radius tokens, and grade-band fills/gradients are centralized, while the broader adaptive/accessibility and final visual rows remain open for device inspection.
 
 ## Android widget and Wear OS
 

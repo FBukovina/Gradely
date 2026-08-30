@@ -61,6 +61,7 @@ interface SchoolRepository {
         onProgress: suspend (AbsenceSubjectResolutionProgress) -> Unit = {},
     ): AbsenceSubjectResolution
     suspend fun saveManualAbsenceLessonSelections(selections: Map<String, Set<String>>)
+    suspend fun loadAbsencePredictionLessons(on: String): List<AbsenceLessonCandidate>
     suspend fun loadCachedTimetable(weekContaining: String): TimetableWeek?
     suspend fun loadTimetable(weekContaining: String): TimetableWeek
     suspend fun predictSubjectAverage(subject: Subject, markText: String, weight: Int): Double?

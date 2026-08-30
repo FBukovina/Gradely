@@ -1456,6 +1456,8 @@ private fun GradeyApp(
                                 absenceSourceResponse?.let(::startAbsenceSubjectResolution)
                             },
                             onSaveManualSelections = ::saveManualAbsenceSelections,
+                            predictorScopeKey = "$currentSchoolBaseURL:${activeLinkedAccountID.orEmpty()}",
+                            onLoadPredictionLessons = graph.schoolRepository::loadAbsencePredictionLessons,
                             onOpenAccount = { selectedTab = AppTab.ACCOUNT },
                             onOpenGradeyTools = { isGradeyAIPresented = true },
                             modifier = Modifier.fillMaxSize(),

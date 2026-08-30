@@ -168,4 +168,40 @@ class AbsenceSubjectFallbackTest {
         assertThat(AbsenceManualSelectionPolicy.toggle(second, lessons[0].id, 2))
             .containsExactly(lessons[1].id)
     }
+
+    @Test
+    fun predictionCandidatesUseExactDateOrderAliasesAndSkipCanceledLessons() {
+        val timetable = TimetableResponse(
+            hours = listOf(
+                TimetableHour("2", "2", "08:55", "09:40"),
+                TimetableHour("1", "1", "08:00", "08:45"),
+            ),
+            subjects = listOf(TimetableEntity("math", "MAT", "Matematika")),
+            days = listOf(
+                TimetableDayDTO(
+                    date = "2026-06-15T00:00:00+02:00",
+                    atoms = listOf(
+                        TimetableAtom(hourID = "1", subjectID = "MAT"),
+                        TimetableAtom(
+                            hourID = "2",
+                            subjectID = "math",
+                            change = com.bukovinafilip.gradey.model.TimetableChange("Canceled"),
+                        ),
+                    ),
+                ),
+                TimetableDayDTO(
+                    date = "2026-06-16",
+                    atoms = listOf(TimetableAtom(hourID = "1", subjectID = "math")),
+                ),
+            ),
+        )
+        val marks = listOf(Subject(subjectInfo = SubjectInfo("math", "MAT", "Mathematics")))
+
+        val lessons = AbsenceSubjectFallback.lessonCandidates(LocalDate.of(2026, 6, 15), timetable, marks)
+
+        assertThat(lessons).hasSize(1)
+        assertThat(lessons.single().subjectName).isEqualTo("Mathematics")
+        assertThat(lessons.single().hourCaption).isEqualTo("1")
+        assertThat(lessons.single().timeRange).isEqualTo("08:00-08:45")
+    }
 }

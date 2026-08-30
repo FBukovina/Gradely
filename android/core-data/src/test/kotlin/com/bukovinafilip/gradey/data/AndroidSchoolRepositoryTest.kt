@@ -468,6 +468,68 @@ class AndroidSchoolRepositoryTest {
     }
 
     @Test
+    fun predictionLessonsReuseSchoolScopedRawTimetableWithoutNetwork() = runTest {
+        val session = validSession()
+        val cache = RoomGradeyCache(InMemoryCacheEntryDao(), GradeyJson)
+        cache.saveMarks(
+            session.cacheScope,
+            MarksResponse(subjects = listOf(Subject(subjectInfo = SubjectInfo("math", "MAT", "Mathematics")))),
+        )
+        cache.saveRawTimetable(
+            session.cacheScope,
+            "2026-06-15",
+            TimetableResponse(
+                hours = listOf(TimetableHour("1", "1", "08:00", "08:45")),
+                subjects = listOf(TimetableEntity("math", "MAT", "Math alias")),
+                days = listOf(
+                    TimetableDayDTO(
+                        date = "2026-06-16",
+                        atoms = listOf(TimetableAtom(hourID = "1", subjectID = "math")),
+                    ),
+                ),
+            ),
+        )
+        val client = FakeBakalariClient()
+
+        val lessons = repository(client, InMemorySchoolSessionStorage(session), cache)
+            .loadAbsencePredictionLessons("2026-06-16")
+
+        assertThat(lessons.map { it.subjectName }).containsExactly("Mathematics")
+        assertThat(lessons.single().timeRange).isEqualTo("08:00-08:45")
+        assertThat(client.timetableCalls).isEqualTo(0)
+        assertThat(client.marksCalls).isEqualTo(0)
+    }
+
+    @Test
+    fun predictionLessonsFetchAndCacheMissingWeekOnlyOnce() = runTest {
+        val session = validSession()
+        val cache = RoomGradeyCache(InMemoryCacheEntryDao(), GradeyJson)
+        cache.saveMarks(session.cacheScope, MarksResponse())
+        val client = FakeBakalariClient().apply {
+            timetable = { _, _, _ ->
+                TimetableResponse(
+                    subjects = listOf(TimetableEntity("biology", "BIO", "Biology")),
+                    days = listOf(
+                        TimetableDayDTO(
+                            date = "2026-06-17",
+                            atoms = listOf(TimetableAtom(hourID = "3", subjectID = "biology")),
+                        ),
+                    ),
+                )
+            }
+        }
+        val repository = repository(client, InMemorySchoolSessionStorage(session), cache)
+
+        val first = repository.loadAbsencePredictionLessons("2026-06-17")
+        val second = repository.loadAbsencePredictionLessons("2026-06-17")
+
+        assertThat(first.map { it.subjectName }).containsExactly("Biology")
+        assertThat(second).isEqualTo(first)
+        assertThat(client.timetableDates).containsExactly("2026-06-15")
+        assertThat(cache.loadRawTimetable(session.cacheScope, "2026-06-15")).isNotNull()
+    }
+
+    @Test
     fun `what-if prediction uses the authenticated endpoint and parses its returned average`() = runTest {
         val subject = Subject(
             subjectInfo = SubjectInfo(id = "math", name = "Mathematics"),

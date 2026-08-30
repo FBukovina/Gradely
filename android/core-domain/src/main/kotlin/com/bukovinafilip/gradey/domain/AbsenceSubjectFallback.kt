@@ -119,6 +119,22 @@ object AbsenceTerms {
 }
 
 object AbsenceSubjectFallback {
+    fun lessonCandidates(
+        date: LocalDate,
+        timetable: TimetableResponse,
+        markSubjects: List<Subject>,
+    ): List<AbsenceLessonCandidate> {
+        val dateKey = TimetableDates.apiDateString(date)
+        val day = timetable.days.firstOrNull { AbsenceTerms.parseDate(it.date) == date }
+            ?: return emptyList()
+        return countableLessons(
+            dateKey = dateKey,
+            atoms = day.atoms,
+            timetable = timetable,
+            catalog = SubjectCatalog(markSubjects),
+        ).map(CountableLesson::candidate)
+    }
+
     fun makeSubjects(
         response: AbsenceResponse,
         timetables: List<TimetableResponse>,

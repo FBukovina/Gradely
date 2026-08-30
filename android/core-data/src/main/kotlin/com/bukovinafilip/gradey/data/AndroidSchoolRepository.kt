@@ -2,6 +2,7 @@ package com.bukovinafilip.gradey.data
 
 import com.bukovinafilip.gradey.domain.BakalariClient
 import com.bukovinafilip.gradey.domain.AbsenceSubjectFallback
+import com.bukovinafilip.gradey.domain.AbsenceLessonCandidate
 import com.bukovinafilip.gradey.domain.AbsenceLessonSelections
 import com.bukovinafilip.gradey.domain.AbsenceSubjectResolution
 import com.bukovinafilip.gradey.domain.AbsenceSubjectResolutionFailure
@@ -249,6 +250,25 @@ class AndroidSchoolRepository(
             session.cacheScope,
             AbsenceLessonSelections(merged.toSortedMap()),
         )
+    }
+
+    override suspend fun loadAbsencePredictionLessons(on: String): List<AbsenceLessonCandidate> {
+        val date = LocalDate.parse(on)
+        val session = validSession()
+        val weekStart = TimetableDates.apiDateString(TimetableDates.monday(date))
+        val timetable = cache.loadRawTimetable(session.cacheScope, weekStart) ?: fetchTimetable(session, weekStart).also {
+            cache.saveRawTimetable(session.cacheScope, weekStart, it)
+        }
+        val markSubjects = try {
+            cache.loadMarks(session.cacheScope)?.subjects ?: fetchMarks(session).also {
+                cache.saveMarks(session.cacheScope, it)
+            }.subjects
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: Throwable) {
+            emptyList()
+        }
+        return AbsenceSubjectFallback.lessonCandidates(date, timetable, markSubjects)
     }
 
     override suspend fun loadCachedTimetable(weekContaining: String): TimetableWeek? {

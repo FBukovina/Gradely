@@ -41,6 +41,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -68,19 +69,26 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.bukovinafilip.gradey.domain.AbsenceDaySummary
+import com.bukovinafilip.gradey.domain.AbsenceLessonCandidate
 import com.bukovinafilip.gradey.domain.AbsenceMonthSummary
 import com.bukovinafilip.gradey.domain.AbsenceManualSelectionPolicy
 import com.bukovinafilip.gradey.domain.AbsencePartialDayCandidate
+import com.bukovinafilip.gradey.domain.AbsencePrediction
+import com.bukovinafilip.gradey.domain.AbsencePredictionResult
+import com.bukovinafilip.gradey.domain.AbsencePredictionSubjectRow
 import com.bukovinafilip.gradey.domain.AbsencePresentationState
 import com.bukovinafilip.gradey.domain.AbsenceRiskSummary
 import com.bukovinafilip.gradey.domain.AbsenceSubjectResolutionProgress
 import com.bukovinafilip.gradey.domain.AbsenceSubjectSummary
 import com.bukovinafilip.gradey.domain.AbsenceTimeline
 import com.bukovinafilip.gradey.domain.AbsenceTimelineSummary
+import com.bukovinafilip.gradey.domain.TimetableDates
 import com.bukovinafilip.gradey.model.AbsenceCounts
 import com.bukovinafilip.gradey.model.AbsenceResponse
+import java.time.format.FormatStyle
 import java.time.format.DateTimeFormatter
 import java.time.LocalDate
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import kotlin.math.ceil
 import kotlin.math.max
@@ -204,6 +212,8 @@ fun AbsenceScreen(
     onRefresh: () -> Unit,
     onRetrySubjectResolution: () -> Unit,
     onSaveManualSelections: suspend (Map<String, Set<String>>) -> String?,
+    predictorScopeKey: String,
+    onLoadPredictionLessons: suspend (String) -> List<AbsenceLessonCandidate>,
     onOpenAccount: () -> Unit,
     onOpenGradeyTools: () -> Unit,
     modifier: Modifier = Modifier,
@@ -213,11 +223,24 @@ fun AbsenceScreen(
     var manualDrafts by remember { mutableStateOf<Map<String, Set<String>>>(emptyMap()) }
     var manualSelectionError by remember { mutableStateOf<String?>(null) }
     var isSavingManualSelections by remember { mutableStateOf(false) }
+    var isPredictionSheetPresented by rememberSaveable(predictorScopeKey) { mutableStateOf(false) }
+    var predictionSelectedDate by remember(predictorScopeKey) { mutableStateOf(TimetableDates.today()) }
+    var predictionSelectedLessons by remember(predictorScopeKey) {
+        mutableStateOf<List<AbsenceLessonCandidate>>(emptyList())
+    }
     val scope = rememberCoroutineScope()
     val locale = LocalConfiguration.current.locales[0]
     val timeline = remember(response) { AbsenceTimeline.make(response) }
     val riskSummary = remember(response) {
         AbsenceRiskSummary.make(response, response.absencesPerSubject)
+    }
+    val predictionResult = remember(timeline.total, riskSummary.subjects, predictionSelectedLessons, response.percentageThreshold) {
+        AbsencePrediction.project(
+            currentTotalCounts = timeline.total,
+            subjectRows = riskSummary.subjects,
+            selectedLessons = predictionSelectedLessons,
+            threshold = response.percentageThreshold,
+        )
     }
 
     Box(
@@ -247,6 +270,15 @@ fun AbsenceScreen(
                     counts = timeline.total,
                     threshold = normalizedThreshold(response.percentageThreshold),
                     locale = locale,
+                )
+            }
+            item { Spacer(Modifier.height(11.dp)) }
+            item {
+                AbsencePredictorCard(
+                    result = predictionResult,
+                    locale = locale,
+                    onOpen = { isPredictionSheetPresented = true },
+                    onClear = { predictionSelectedLessons = emptyList() },
                 )
             }
             item { Spacer(Modifier.height(11.dp)) }
@@ -332,6 +364,22 @@ fun AbsenceScreen(
                         isManualSheetPresented = false
                     }
                 }
+            },
+        )
+    }
+
+    if (isPredictionSheetPresented) {
+        AbsencePredictionSheet(
+            initialDate = predictionSelectedDate,
+            minimumDate = TimetableDates.today(),
+            initialSelectedLessons = predictionSelectedLessons,
+            locale = locale,
+            onLoadLessons = onLoadPredictionLessons,
+            onDismiss = { isPredictionSheetPresented = false },
+            onDone = { selectedDate, lessons ->
+                predictionSelectedDate = selectedDate
+                predictionSelectedLessons = lessons
+                isPredictionSheetPresented = false
             },
         )
     }
@@ -726,6 +774,390 @@ private fun SubjectsCard(
                             HorizontalDivider(color = Color(0xFFC6C6C8), thickness = 0.33.dp)
                         }
                     }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AbsencePredictorCard(
+    result: AbsencePredictionResult,
+    locale: java.util.Locale,
+    onOpen: () -> Unit,
+    onClear: () -> Unit,
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        color = CardWhite,
+        shadowElevation = 1.dp,
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    stringResource(R.string.absence_predictor_title),
+                    modifier = Modifier.weight(1f),
+                    color = Color.Black,
+                    fontSize = 17.sp,
+                    lineHeight = 22.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+                if (result.hasSelection) {
+                    TextButton(onClick = onClear) {
+                        Text(stringResource(R.string.absence_predictor_clear))
+                    }
+                }
+                Button(onClick = onOpen) {
+                    Text(
+                        stringResource(
+                            if (result.hasSelection) R.string.absence_predictor_edit else R.string.absence_predictor_open,
+                        ),
+                    )
+                }
+            }
+
+            if (!result.hasSelection) {
+                Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Text(
+                        stringResource(R.string.absence_predictor_empty_title),
+                        color = Color.Black,
+                        fontSize = 15.sp,
+                        lineHeight = 20.sp,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Text(
+                        stringResource(R.string.absence_predictor_empty_message),
+                        color = MutedText,
+                        fontSize = 14.sp,
+                        lineHeight = 19.sp,
+                    )
+                }
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            stringResource(R.string.absence_predictor_total),
+                            color = Color.Black,
+                            fontSize = 15.sp,
+                            lineHeight = 20.sp,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                        Text(
+                            stringResource(R.string.absence_predictor_added, result.addedHours),
+                            color = MutedText,
+                            fontSize = 13.sp,
+                            lineHeight = 17.sp,
+                        )
+                    }
+                    Text(
+                        "${result.currentTotal.total} → ${result.projectedTotal.total}",
+                        color = AccentTeal,
+                        fontSize = 19.sp,
+                        lineHeight = 24.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
+                if (result.subjectRows.isNotEmpty()) {
+                    HorizontalDivider(color = DividerColor, thickness = 0.33.dp)
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        result.subjectRows.forEach { row ->
+                            AbsencePredictionSubjectRow(row, locale)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AbsencePredictionSubjectRow(
+    row: AbsencePredictionSubjectRow,
+    locale: java.util.Locale,
+) {
+    val warningColor = if (row.exceedsThreshold) MissedRed else AccentTeal
+    val currentBase = row.currentBase
+    val projectedBase = row.projectedBase
+    val currentPercentage = row.currentPercentage
+    val projectedPercentage = row.projectedPercentage
+    val detail = if (
+        currentBase == null || projectedBase == null ||
+        currentPercentage == null || projectedPercentage == null
+    ) {
+        stringResource(R.string.absence_predictor_baseline_unavailable)
+    } else {
+        stringResource(
+            R.string.absence_predictor_subject_change,
+            currentBase,
+            projectedBase,
+            formatOneDecimal(currentPercentage, locale),
+            formatOneDecimal(projectedPercentage, locale),
+        )
+    }
+    val status = when {
+        row.crossesThreshold -> stringResource(R.string.absence_predictor_crosses_limit)
+        row.exceedsThreshold -> stringResource(R.string.absence_predictor_over_limit)
+        else -> stringResource(R.string.absence_predictor_added, row.addedHours)
+    }
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(
+                row.subjectName,
+                color = Color.Black,
+                fontSize = 15.sp,
+                lineHeight = 20.sp,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(detail, color = warningColor, fontSize = 13.sp, lineHeight = 18.sp)
+        }
+        Surface(shape = RoundedCornerShape(50), color = warningColor.copy(alpha = 0.12f)) {
+            Text(
+                status,
+                modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
+                color = warningColor,
+                fontSize = 12.sp,
+                lineHeight = 15.sp,
+                fontWeight = FontWeight.SemiBold,
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AbsencePredictionSheet(
+    initialDate: LocalDate,
+    minimumDate: LocalDate,
+    initialSelectedLessons: List<AbsenceLessonCandidate>,
+    locale: java.util.Locale,
+    onLoadLessons: suspend (String) -> List<AbsenceLessonCandidate>,
+    onDismiss: () -> Unit,
+    onDone: (LocalDate, List<AbsenceLessonCandidate>) -> Unit,
+) {
+    var selectedDate by remember { mutableStateOf(maxOf(initialDate, minimumDate)) }
+    var lessons by remember { mutableStateOf<List<AbsenceLessonCandidate>>(emptyList()) }
+    var lessonsByDate by remember { mutableStateOf<Map<String, List<AbsenceLessonCandidate>>>(emptyMap()) }
+    var lessonCacheByID by remember(initialSelectedLessons) {
+        mutableStateOf(initialSelectedLessons.associateBy(AbsenceLessonCandidate::id))
+    }
+    var draftLessonIDs by remember(initialSelectedLessons) {
+        mutableStateOf<Set<String>>(initialSelectedLessons.mapTo(mutableSetOf(), AbsenceLessonCandidate::id))
+    }
+    var isLoading by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+    var retryAttempt by remember { mutableStateOf(0) }
+    val dateFormatter = remember(locale) {
+        DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(locale)
+    }
+    val loadFailedMessage = stringResource(R.string.absence_predictor_load_failed)
+
+    LaunchedEffect(selectedDate, retryAttempt) {
+        val dateKey = TimetableDates.apiDateString(selectedDate)
+        lessonsByDate[dateKey]?.let { cached ->
+            lessons = cached
+            errorMessage = null
+            isLoading = false
+            return@LaunchedEffect
+        }
+        isLoading = true
+        errorMessage = null
+        lessons = emptyList()
+        try {
+            val loaded = onLoadLessons(dateKey)
+            if (selectedDate != LocalDate.parse(dateKey)) return@LaunchedEffect
+            lessonsByDate = lessonsByDate + (dateKey to loaded)
+            lessonCacheByID = lessonCacheByID + loaded.associateBy(AbsenceLessonCandidate::id)
+            lessons = loaded
+            isLoading = false
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Throwable) {
+            errorMessage = error.localizedMessage ?: error.message
+                ?: loadFailedMessage
+            lessons = emptyList()
+            isLoading = false
+        }
+    }
+
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 18.dp, end = 18.dp, bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text(
+                stringResource(R.string.absence_predictor_sheet_title),
+                color = Color.Black,
+                fontSize = 21.sp,
+                lineHeight = 26.sp,
+                fontWeight = FontWeight.Bold,
+            )
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                color = SoftGray,
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    TextButton(
+                        enabled = selectedDate > minimumDate,
+                        onClick = { selectedDate = selectedDate.minusDays(1) },
+                    ) {
+                        Text(stringResource(R.string.absence_predictor_previous_day))
+                    }
+                    Text(
+                        selectedDate.format(dateFormatter),
+                        modifier = Modifier.weight(1f),
+                        color = Color.Black,
+                        textAlign = TextAlign.Center,
+                        fontSize = 15.sp,
+                        lineHeight = 20.sp,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    TextButton(onClick = { selectedDate = selectedDate.plusDays(1) }) {
+                        Text(stringResource(R.string.absence_predictor_next_day))
+                    }
+                }
+            }
+
+            Text(
+                stringResource(R.string.absence_predictor_selected_count, draftLessonIDs.size),
+                color = MutedText,
+                fontSize = 13.sp,
+                lineHeight = 17.sp,
+            )
+
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 480.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                when {
+                    isLoading -> item {
+                        Row(
+                            modifier = Modifier.padding(vertical = 14.dp),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            CircularProgressIndicator(modifier = Modifier.size(22.dp), strokeWidth = 2.dp)
+                            Text(stringResource(R.string.absence_predictor_loading), color = MutedText)
+                        }
+                    }
+
+                    !errorMessage.isNullOrBlank() -> item {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text(errorMessage.orEmpty(), color = MissedRed, fontSize = 14.sp, lineHeight = 19.sp)
+                            Button(onClick = { retryAttempt += 1 }) {
+                                Text(stringResource(R.string.absence_retry))
+                            }
+                        }
+                    }
+
+                    lessons.isEmpty() -> item {
+                        Text(
+                            stringResource(R.string.absence_predictor_no_lessons),
+                            modifier = Modifier.padding(vertical = 14.dp),
+                            color = MutedText,
+                            fontSize = 14.sp,
+                            lineHeight = 19.sp,
+                        )
+                    }
+
+                    else -> lessons.forEach { lesson ->
+                        item(key = lesson.id) {
+                            val isSelected = lesson.id in draftLessonIDs
+                            Surface(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        draftLessonIDs = draftLessonIDs.toMutableSet().apply {
+                                            if (!remove(lesson.id)) add(lesson.id)
+                                        }
+                                    },
+                                shape = RoundedCornerShape(14.dp),
+                                color = if (isSelected) SoftTeal else CardWhite,
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 11.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            "${lesson.hourCaption}. ${lesson.subjectName}",
+                                            color = Color.Black,
+                                            fontSize = 15.sp,
+                                            lineHeight = 20.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                        )
+                                        if (lesson.timeRange.isNotBlank()) {
+                                            Text(
+                                                lesson.timeRange,
+                                                color = MutedText,
+                                                fontSize = 13.sp,
+                                                lineHeight = 17.sp,
+                                            )
+                                        }
+                                    }
+                                    Icon(
+                                        Icons.Default.Check,
+                                        contentDescription = if (isSelected) {
+                                            stringResource(R.string.absence_predictor_selected)
+                                        } else {
+                                            null
+                                        },
+                                        tint = if (isSelected) AccentTeal else Color.Transparent,
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            TextButton(
+                enabled = draftLessonIDs.isNotEmpty(),
+                onClick = { draftLessonIDs = emptySet() },
+            ) {
+                Text(stringResource(R.string.absence_predictor_clear))
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                TextButton(onClick = onDismiss) {
+                    Text(stringResource(R.string.absence_manual_cancel))
+                }
+                Button(
+                    onClick = {
+                        onDone(
+                            selectedDate,
+                            AbsencePrediction.selectedLessonsByID(
+                                draftLessonIDs.mapNotNull(lessonCacheByID::get),
+                            ),
+                        )
+                    },
+                ) {
+                    Text(stringResource(R.string.absence_predictor_done))
                 }
             }
         }

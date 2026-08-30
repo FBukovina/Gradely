@@ -110,4 +110,52 @@ class AbsenceToolsTest {
         ).inOrder()
         assertThat(timeline.months.first().counts.total).isEqualTo(29)
     }
+
+    @Test
+    fun predictionDeduplicatesLessonsAndProjectsSubjectAcrossThreshold() {
+        val response = AbsenceResponse(
+            percentageThreshold = 25.0,
+            absencesPerSubject = listOf(AbsencePerSubject("Mathematics", lessonsCount = 20, base = 4)),
+        )
+        val subjects = AbsenceRiskSummary.make(response, response.absencesPerSubject).subjects
+        val lesson = AbsenceLessonCandidate(
+            id = "lesson-2026-06-15-1-raw-math",
+            dateKey = "2026-06-15",
+            hourID = "1",
+            subjectKey = subjects.single().stableID,
+            subjectName = "Mathematics",
+        )
+        val second = lesson.copy(id = "lesson-2026-06-15-2-raw-math", hourID = "2")
+
+        val result = AbsencePrediction.project(
+            currentTotalCounts = com.bukovinafilip.gradey.model.AbsenceCounts(ok = 3, missed = 1),
+            subjectRows = subjects,
+            selectedLessons = listOf(lesson, second, second),
+            threshold = 25.0,
+        )
+
+        assertThat(result.addedHours).isEqualTo(2)
+        assertThat(result.projectedTotal.ok).isEqualTo(5)
+        assertThat(result.projectedTotal.total).isEqualTo(6)
+        assertThat(result.subjectRows.single().projectedBase).isEqualTo(6)
+        assertThat(result.subjectRows.single().projectedLessonsCount).isEqualTo(22)
+        assertThat(result.subjectRows.single().crossesThreshold).isTrue()
+    }
+
+    @Test
+    fun predictionDoesNotInventPercentageForUnknownSubject() {
+        val result = AbsencePrediction.project(
+            currentTotalCounts = com.bukovinafilip.gradey.model.AbsenceCounts(),
+            subjectRows = emptyList(),
+            selectedLessons = listOf(
+                AbsenceLessonCandidate("lesson-bio", "2026-06-15", "1", subjectKey = "raw-bio", subjectName = "Biology"),
+            ),
+            threshold = 25.0,
+        )
+
+        assertThat(result.addedHours).isEqualTo(1)
+        assertThat(result.projectedTotal.ok).isEqualTo(1)
+        assertThat(result.subjectRows.single().currentPercentage).isNull()
+        assertThat(result.subjectRows.single().projectedPercentage).isNull()
+    }
 }

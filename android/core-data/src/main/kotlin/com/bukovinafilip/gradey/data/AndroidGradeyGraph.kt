@@ -1,7 +1,6 @@
 package com.bukovinafilip.gradey.data
 
 import android.content.Context
-import androidx.room.Room
 import com.bukovinafilip.gradey.domain.DevicePushTokenClient
 import com.bukovinafilip.gradey.domain.GradeyAuthRepository
 import com.bukovinafilip.gradey.domain.GradeyAIRepository
@@ -57,8 +56,7 @@ class AndroidGradeyGraph private constructor(
 ) {
     companion object {
         fun create(context: Context, config: AndroidGradeyConfig): AndroidGradeyGraph {
-            val database = Room.databaseBuilder(context, GradeyDatabase::class.java, "gradey.db")
-                .build()
+            val database = buildGradeyDatabase(context)
             val cache = RoomGradeyCache(database.cacheEntries(), GradeyJson)
             val schoolSecureStore = SecureJsonStore(context, "gradey-school-secrets", GradeyJson)
             val authSecureStore = SecureJsonStore(context, "gradey-auth-secrets", GradeyJson)

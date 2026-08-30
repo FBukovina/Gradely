@@ -379,7 +379,7 @@ Wear implementation evidence (2026-08-30): the hard-coded watch timetable was re
 - [x] Add MockWebServer contract/fixture tests for every Bakaláři endpoint and error class used by Android.
 - [ ] Add ViewModel tests for cache-first state, retained-content refresh failure, empty state, retry, expired session, and account change.
 - [ ] Add Compose navigation/interaction tests for every visible control and major state.
-- [ ] Add Room migration/corruption and encrypted-session migration tests.
+- [x] Add Room migration/corruption and encrypted-session migration tests.
 - [ ] Run lint, resource checks, unit tests, Compose tests, app build, Wear build, and widget verification cleanly.
 - [ ] Search production sources for demo fallbacks, placeholders, TODOs, dead routes, hard-coded secrets, EduPage, and Material icon substitutions; resolve every finding.
 - [ ] Perform a clean install and upgrade install on representative phone/tablet API levels.
@@ -389,3 +389,5 @@ Wear implementation evidence (2026-08-30): the hard-coded watch timetable was re
 - [ ] Confirm every non-`N/A` row above is checked before declaring Android parity complete.
 
 Automated contract evidence (2026-08-31): `AndroidSchoolRepositoryTest` directly covers normalized login and persisted credentials, shared refresh concurrency, access-token retry versus non-authentication failure classification, rejected-refresh credential fallback and terminal expiry, school-scoped cache isolation/retention, account activation/switching, and logout teardown. `BakalariNetworkClientTest` uses MockWebServer to assert the password and refresh grants plus the authenticated marks, absence, user, timetable, and what-if routes; fixtures cover compatible response variants, and tests exercise invalid response, HTTP, authentication, decoding, timeout, offline, transport, and cancellation behavior without exposing server bodies.
+
+Persistence evidence (2026-08-31): Room now exports schema 2 and applies an explicit 1-to-2 migration that retains cache rows while adding the cache-age index. Because the database contains reproducible cache only, unknown schemas and corrupt SQLite files recover by rebuilding without affecting encrypted credentials or sessions. Four `GradeyPersistenceInstrumentedTest` cases passed on an API 37 phone emulator via `:core-data:connectedDebugAndroidTest`: v1 row retention/index creation, corrupt-cache recovery and subsequent writes, encrypted v1-to-v2 session-envelope migration, and malformed-current-session clearing without a crash.

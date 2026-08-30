@@ -96,6 +96,7 @@ import com.bukovinafilip.gradey.model.OnboardingProgress
 import com.bukovinafilip.gradey.model.OnboardingStep
 import com.bukovinafilip.gradey.model.SchoolDirectorySchool
 import com.bukovinafilip.gradey.model.StravaCZMenu
+import com.bukovinafilip.gradey.model.StravaCZStoredSession
 import com.bukovinafilip.gradey.model.TimetableWeek
 import com.bukovinafilip.gradey.ui.GradeyTheme
 import com.bukovinafilip.gradey.ui.GradeyHero
@@ -199,6 +200,7 @@ private fun GradeyApp(
     var dashboard by remember { mutableStateOf<DashboardData?>(null) }
     var absence by remember { mutableStateOf<AbsenceResponse?>(null) }
     var timetable by remember { mutableStateOf<TimetableWeek?>(null) }
+    var stravaSession by remember { mutableStateOf<StravaCZStoredSession?>(null) }
     var stravaMenu by remember { mutableStateOf<StravaCZMenu?>(null) }
     var gradeHistorySnapshot by remember { mutableStateOf<GradeHistorySnapshot?>(null) }
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
@@ -255,6 +257,7 @@ private fun GradeyApp(
         graph.schoolRepository.loadCachedDashboard()?.let { dashboard = it }
         graph.schoolRepository.loadCachedAbsence()?.let { absence = it }
         graph.schoolRepository.loadCachedTimetable(TimetableDates.todayString())?.let { timetable = it }
+        stravaSession = runCatching { graph.stravaCZRepository.bootstrapSession() }.getOrNull()
         graph.stravaCZRepository.loadCachedMenu()?.let { stravaMenu = it }
         linkedAccounts = runCatching { graph.linkedAccountRepository.localAccounts() }.getOrDefault(emptyList())
     }
@@ -336,6 +339,7 @@ private fun GradeyApp(
         dashboard = null
         absence = null
         timetable = null
+        stravaSession = null
         stravaMenu = null
         gradeHistorySnapshot = null
         activeLinkedAccountID = null
@@ -376,6 +380,7 @@ private fun GradeyApp(
         dashboard = null
         absence = null
         timetable = null
+        stravaSession = null
         stravaMenu = null
         gradeHistorySnapshot = null
         activeLinkedAccountID = null
@@ -509,6 +514,7 @@ private fun GradeyApp(
             marksRefreshError = null
             absence = null
             timetable = null
+            stravaSession = null
             stravaMenu = null
             gradeHistorySnapshot = null
             activeLinkedAccountID = activation.account.id
@@ -595,9 +601,26 @@ private fun GradeyApp(
             null -> Unit
             else -> failures += timetableFailure
         }
-        if (runCatching { graph.stravaCZRepository.bootstrapSession() }.getOrNull() != null) {
-            runCatching { graph.stravaCZRepository.loadMenu(forceRefresh = forceRefresh).second }
-                .onSuccess { stravaMenu = it }
+        try {
+            val restoredSession = graph.stravaCZRepository.bootstrapSession()
+            stravaSession = restoredSession
+            if (restoredSession != null) {
+                try {
+                    val (updatedSession, updatedMenu) = graph.stravaCZRepository.loadMenu(
+                        forceRefresh = forceRefresh,
+                    )
+                    stravaSession = updatedSession
+                    stravaMenu = updatedMenu
+                } catch (error: CancellationException) {
+                    throw error
+                } catch (_: Throwable) {
+                    // Meals fail independently and retain the last usable session/menu.
+                }
+            }
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: Throwable) {
+            // Meals fail independently and retain the last usable session/menu.
         }
         refreshLinkedAccountSnapshot()
         refreshGradeHistory()
@@ -1108,6 +1131,8 @@ private fun GradeyApp(
                         dashboard = currentDashboard,
                         absence = effectiveAbsence,
                         timetable = timetable,
+                        stravaMenu = stravaMenu,
+                        isMealsConnected = stravaSession != null,
                         cloudNewMarkEvents = gradeHistorySnapshot
                             ?.takeIf { it.linkedAccountID == activeLinkedAccountID }
                             ?.recentNewMarkEvents
@@ -1134,6 +1159,7 @@ private fun GradeyApp(
                         onOpenMarks = { selectedTab = AppTab.SUBJECTS },
                         onOpenAbsence = { selectedTab = AppTab.ABSENCE },
                         onOpenTimetable = { selectedTab = AppTab.TIMETABLE },
+                        onOpenMeals = { selectedTab = AppTab.STRAVACZ },
                         modifier = Modifier.fillMaxSize(),
                     )
                 } else {

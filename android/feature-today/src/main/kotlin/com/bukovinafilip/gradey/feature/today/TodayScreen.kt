@@ -30,6 +30,7 @@ import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
@@ -64,12 +65,15 @@ import com.bukovinafilip.gradey.domain.GradeHistoryTrends
 import com.bukovinafilip.gradey.domain.GradeMath
 import com.bukovinafilip.gradey.domain.GradeTrendRange
 import com.bukovinafilip.gradey.domain.SubjectGradeTrend
+import com.bukovinafilip.gradey.domain.TodayMealState
+import com.bukovinafilip.gradey.domain.TodayMeals
 import com.bukovinafilip.gradey.domain.TodayNewMark
 import com.bukovinafilip.gradey.domain.TodayNewMarks
 import com.bukovinafilip.gradey.model.AbsenceResponse
 import com.bukovinafilip.gradey.model.DashboardData
 import com.bukovinafilip.gradey.model.NewMarkEvent
 import com.bukovinafilip.gradey.model.ScheduledLesson
+import com.bukovinafilip.gradey.model.StravaCZMenu
 import com.bukovinafilip.gradey.model.TimetableWeek
 import java.time.LocalDate
 import java.time.LocalTime
@@ -100,6 +104,8 @@ fun TodayScreen(
     dashboard: DashboardData,
     absence: AbsenceResponse,
     timetable: TimetableWeek?,
+    stravaMenu: StravaCZMenu?,
+    isMealsConnected: Boolean,
     cloudNewMarkEvents: List<NewMarkEvent> = emptyList(),
     gradeTrends: List<SubjectGradeTrend> = emptyList(),
     isRefreshing: Boolean,
@@ -109,6 +115,7 @@ fun TodayScreen(
     onOpenMarks: () -> Unit,
     onOpenAbsence: () -> Unit,
     onOpenTimetable: () -> Unit,
+    onOpenMeals: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var showsTrendDetails by rememberSaveable { mutableStateOf(false) }
@@ -122,6 +129,13 @@ fun TodayScreen(
     }
     val absenceRows = absenceSummary.subjects.take(3)
     val featuredLesson = featuredLesson(timetable)
+    val mealState = remember(stravaMenu, isMealsConnected) {
+        TodayMeals.resolve(
+            isConnected = isMealsConnected,
+            menu = stravaMenu,
+            today = LocalDate.now(PragueZone),
+        )
+    }
     val newMarks = remember(subjects, cloudNewMarkEvents) {
         TodayNewMarks.resolve(subjects, cloudNewMarkEvents, PragueZone).take(3)
     }
@@ -183,6 +197,7 @@ fun TodayScreen(
                     onOpenAbsence = onOpenAbsence,
                 )
             }
+            item { LunchCard(state = mealState, onOpenMeals = onOpenMeals) }
             item { AbsencePredictorCard(onPlanAbsence = onOpenAbsence) }
             item {
                 NewMarksAndTrendsCard(
@@ -191,6 +206,83 @@ fun TodayScreen(
                     onOpenMarks = onOpenMarks,
                     onOpenTrends = { showsTrendDetails = true },
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun LunchCard(
+    state: TodayMealState,
+    onOpenMeals: () -> Unit,
+) {
+    DashboardSurface(modifier = Modifier.heightIn(min = 116.dp)) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 15.dp),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                SectionHeading(stringResource(R.string.today_lunch).uppercase(Locale.getDefault()))
+                ActionPill(text = stringResource(R.string.today_open), onClick = onOpenMeals)
+            }
+            Spacer(Modifier.height(12.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconTile(background = if (state is TodayMealState.Ordered) SoftMint else SoftGray) {
+                    Icon(
+                        imageVector = Icons.Default.Restaurant,
+                        contentDescription = null,
+                        tint = if (state is TodayMealState.Ordered) AccentTeal else MutedText,
+                        modifier = Modifier.size(22.dp),
+                    )
+                }
+                Spacer(Modifier.width(13.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    val title: String
+                    val subtitle: String
+                    when (state) {
+                        is TodayMealState.Ordered -> {
+                            val description = state.meal.description
+                                ?.trim()
+                                ?.takeIf(String::isNotEmpty)
+                            title = description ?: state.meal.title
+                            subtitle = state.meal.title
+                                .takeIf { description != null && !it.equals(description, ignoreCase = true) }
+                                ?: stringResource(R.string.today_meal_ordered)
+                        }
+
+                        TodayMealState.NoOrderedMeal -> {
+                            title = stringResource(R.string.today_no_meal)
+                            subtitle = stringResource(R.string.today_no_meal_subtitle)
+                        }
+
+                        TodayMealState.NotConnected -> {
+                            title = stringResource(R.string.today_meals_not_connected)
+                            subtitle = stringResource(R.string.today_meals_not_connected_subtitle)
+                        }
+                    }
+                    Text(
+                        text = title,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        color = Color.Black,
+                        fontSize = 16.sp,
+                        lineHeight = 20.sp,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Text(
+                        text = subtitle,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        color = MutedText,
+                        fontSize = 13.sp,
+                        lineHeight = 17.sp,
+                    )
+                }
             }
         }
     }

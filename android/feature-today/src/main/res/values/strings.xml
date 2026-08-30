@@ -19,6 +19,12 @@
     <string name="today_absence_missed">%1$d of %2$d lessons missed</string>
     <string name="today_absence_over_limit">Over the school limit</string>
     <string name="today_absence_until_limit">%1$d more until the limit</string>
+    <string name="today_lunch">Lunch</string>
+    <string name="today_meal_ordered">Ordered for today</string>
+    <string name="today_no_meal">No ordered meal</string>
+    <string name="today_no_meal_subtitle">Open Meals to order or check the menu.</string>
+    <string name="today_meals_not_connected">Meals not connected</string>
+    <string name="today_meals_not_connected_subtitle">Connect Strava.cz from Account.</string>
     <plurals name="today_trend_new_marks">
         <item quantity="one">%1$d new mark</item>
         <item quantity="other">%1$d new marks</item>

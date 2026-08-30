@@ -148,7 +148,7 @@ Cache verification (2026-08-30): Today and Marks now render from a cached/loaded
 - [x] Implement new-mark feed using cloud history with Bakaláři `IsNew` fallback.
 - [x] Implement grade trend summary and full 30/90-day/school-year trend navigation.
 - [x] Implement top absence risks, no-threshold messaging, and navigation to Absence.
-- [ ] Implement today’s ordered meal, not-connected/no-meal states, and optional navigation to Meals.
+- [x] Implement today’s ordered meal, not-connected/no-meal states, and optional navigation to Meals.
 - [ ] Preserve independent partial content when timetable, absence, meals, history, or linked-account refresh fails.
 - [ ] Wire the real Gradey AI entry rather than routing the sparkle button to Meals.
 
@@ -157,6 +157,8 @@ Today new-mark verification (2026-08-30): the account-scoped Gradey Cloud respon
 Today trend verification (2026-08-30): the combined New marks and trends card now matches iOS by showing up to four non-zero cloud movements in magnitude order, with subject label, sparkline, new-mark count or movement fallback, and signed improving/worsening delta; an honest cloud-history empty row remains when snapshots are not available. View all opens a dedicated, localized movement screen with saveable 30-day, 90-day (default), and full loaded school-year ranges. Range filtering rebuilds each subject from only events on or after the inclusive rolling cutoff, Android back and the visible back control return to the same Today scroll position, and the selected range survives navigation/configuration state. JVM coverage verifies exact 30/90-day boundaries, stale-subject removal through the existing regrouping policy, and the unfiltered school-year path.
 
 Today absence verification (2026-08-30): Android now uses the iOS risk boundaries (watch at 70% and high at 90% of the school limit), explicit over/high/watch/safe/unavailable ranking, percentage tie-breaking, and the same top-three presentation. When the school provides no threshold, the app does not invent one: subjects remain unavailable-risk rows ordered by their real percentages, each row shows missed and total lessons, and a localized explanation states that current percentages are shown without guessing a limit. The card's Open action navigates to the full Absence screen. JVM tests cover exact limit, missing-threshold ordering, and all four threshold bands.
+
+Today meal verification (2026-08-30): Today now derives its lunch card from the restored Strava.cz session plus the menu day for the current Prague date. It shows the first ordered meal, a connected-but-no-order state, or a not-connected state; a cached order is never exposed after its session disappears. The card uses the existing four Android language configurations and has its own Meals navigation instead of relying on the unrelated sparkle shortcut. Meal refresh errors retain the last usable session and menu, while the deliberately unavailable repository continues to produce the truthful not-connected state until the real Strava.cz client and secure store are implemented in the dedicated meals work. JVM tests cover multiple orders, wrong-day and un-ordered menus, a connected session without a loaded menu, and stale cache without a session.
 
 ## Subjects and marks
 

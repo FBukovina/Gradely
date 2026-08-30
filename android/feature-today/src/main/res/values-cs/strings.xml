@@ -19,6 +19,12 @@
     <string name="today_absence_missed">Zameškáno %1$d z %2$d hodin</string>
     <string name="today_absence_over_limit">Nad školním limitem</string>
     <string name="today_absence_until_limit">Ještě %1$d do limitu</string>
+    <string name="today_lunch">Oběd</string>
+    <string name="today_meal_ordered">Objednáno na dnešek</string>
+    <string name="today_no_meal">Žádný objednaný oběd</string>
+    <string name="today_no_meal_subtitle">Oběd objednáš nebo zkontroluješ v Jídelně.</string>
+    <string name="today_meals_not_connected">Jídelna není propojená</string>
+    <string name="today_meals_not_connected_subtitle">Strava.cz propojíš v účtu.</string>
     <plurals name="today_trend_new_marks">
         <item quantity="one">%1$d nová známka</item>
         <item quantity="few">%1$d nové známky</item>

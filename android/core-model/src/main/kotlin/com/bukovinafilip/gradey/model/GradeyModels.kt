@@ -93,8 +93,14 @@ data class StoredSession(
                 ?.sha256Prefix()
                 ?: "default"
             return "bakalari-$host-$userScope"
-        }
+    }
 }
+
+@Serializable
+data class StoredSchoolSessionEnvelope(
+    val formatVersion: Int,
+    val session: StoredSession,
+)
 
 private fun String.sha256Prefix(): String = MessageDigest
     .getInstance("SHA-256")

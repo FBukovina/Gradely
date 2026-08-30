@@ -12,6 +12,7 @@ import com.bukovinafilip.gradey.model.BakalariCredentials
 import com.bukovinafilip.gradey.model.DashboardData
 import com.bukovinafilip.gradey.model.SchoolProvider
 import com.bukovinafilip.gradey.model.StoredSession
+import com.bukovinafilip.gradey.model.StoredSchoolSessionEnvelope
 import com.bukovinafilip.gradey.model.Subject
 import com.bukovinafilip.gradey.model.TimetableWeek
 import com.bukovinafilip.gradey.model.UserResponse
@@ -228,14 +229,64 @@ interface SchoolSessionStorage {
     fun clear()
 }
 
-class SchoolSessionStore(
+internal interface SchoolSessionValueStore {
+    fun loadCurrent(): StoredSchoolSessionEnvelope?
+    fun loadLegacy(): StoredSession?
+    fun saveCurrent(envelope: StoredSchoolSessionEnvelope)
+    fun clearCurrent()
+    fun clearLegacy()
+}
+
+private class EncryptedSchoolSessionValueStore(
     private val secureJsonStore: SecureJsonStore,
-) : SchoolSessionStorage {
-    override fun load(): StoredSession? = secureJsonStore.loadOrClearInvalid(KEY, StoredSession.serializer())
-    override fun save(session: StoredSession) = secureJsonStore.save(KEY, session, StoredSession.serializer())
-    override fun clear() = secureJsonStore.clear(KEY)
+) : SchoolSessionValueStore {
+    override fun loadCurrent(): StoredSchoolSessionEnvelope? =
+        secureJsonStore.loadOrClearInvalid(CURRENT_KEY, StoredSchoolSessionEnvelope.serializer())
+
+    override fun loadLegacy(): StoredSession? =
+        secureJsonStore.loadOrClearInvalid(LEGACY_KEY, StoredSession.serializer())
+
+    override fun saveCurrent(envelope: StoredSchoolSessionEnvelope) =
+        secureJsonStore.save(CURRENT_KEY, envelope, StoredSchoolSessionEnvelope.serializer())
+
+    override fun clearCurrent() = secureJsonStore.clear(CURRENT_KEY)
+    override fun clearLegacy() = secureJsonStore.clear(LEGACY_KEY)
 
     private companion object {
-        const val KEY = "school.session.v1"
+        const val CURRENT_KEY = "school.session.v2"
+        const val LEGACY_KEY = "school.session.v1"
+    }
+}
+
+class SchoolSessionStore internal constructor(
+    private val valueStore: SchoolSessionValueStore,
+) : SchoolSessionStorage {
+    constructor(secureJsonStore: SecureJsonStore) : this(EncryptedSchoolSessionValueStore(secureJsonStore))
+
+    override fun load(): StoredSession? {
+        valueStore.loadCurrent()?.let { envelope ->
+            if (envelope.formatVersion == CURRENT_FORMAT_VERSION) return envelope.session
+            valueStore.clearCurrent()
+            return null
+        }
+
+        val legacy = valueStore.loadLegacy() ?: return null
+        save(legacy)
+        valueStore.clearLegacy()
+        return legacy
+    }
+
+    override fun save(session: StoredSession) {
+        valueStore.saveCurrent(StoredSchoolSessionEnvelope(CURRENT_FORMAT_VERSION, session))
+        valueStore.clearLegacy()
+    }
+
+    override fun clear() {
+        valueStore.clearCurrent()
+        valueStore.clearLegacy()
+    }
+
+    private companion object {
+        const val CURRENT_FORMAT_VERSION = 2
     }
 }

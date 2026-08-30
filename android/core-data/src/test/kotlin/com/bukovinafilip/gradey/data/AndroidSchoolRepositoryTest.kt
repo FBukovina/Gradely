@@ -24,6 +24,20 @@ import org.junit.Test
 
 class AndroidSchoolRepositoryTest {
     @Test
+    fun bootstrapRestoresStoredSessionWithoutCallingBakalari() = runTest {
+        val client = FakeBakalariClient()
+        val session = validSession()
+        val repository = repository(client, InMemorySchoolSessionStorage(session))
+
+        val restored = repository.bootstrapSession()
+
+        assertThat(restored).isEqualTo(session)
+        assertThat(client.loginCalls).isEqualTo(0)
+        assertThat(client.refreshCalls).isEqualTo(0)
+        assertThat(client.marksCalls).isEqualTo(0)
+    }
+
+    @Test
     fun serverFailureDoesNotRefreshOrRelogin() = runTest {
         val client = FakeBakalariClient().apply {
             marks = { _, _ -> throw BakalariApiException(500, "server unavailable") }

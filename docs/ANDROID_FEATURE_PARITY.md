@@ -78,8 +78,8 @@ Verification evidence (2026-08-30): Android decoded the live Bakaláři municipa
 
 ## Bakaláři session and account lifecycle
 
-- [ ] Store Bakaláři tokens and any fallback credentials with Android Keystore-backed encrypted storage and an explicit migration/version strategy.
-- [ ] Restore the current school session at startup without network access.
+- [x] Store Bakaláři tokens and any fallback credentials with Android Keystore-backed encrypted storage and an explicit migration/version strategy.
+- [x] Restore the current school session at startup without network access.
 - [x] Refresh before expiry and serialize simultaneous refresh requests.
 - [x] Retry a request only for access-token rejection, not for every network/decoding/server error.
 - [x] Fall back from a rejected refresh token to credential login only under the same conditions as iOS.
@@ -88,6 +88,8 @@ Verification evidence (2026-08-30): Android decoded the live Bakaláři municipa
 - [ ] Implement local linked-account persistence, cloud account linking, activation, reconnect, unlink, status, and per-account notification setting with real repositories.
 - [ ] Implement safe school account switching and reset all visible feature state after activation.
 - [ ] Preserve the local school session when a Gradey cloud call is temporarily unavailable.
+
+Verification evidence (2026-08-30): school tokens and fallback credentials remain in Android Keystore-backed encrypted preferences. The session store now writes a versioned `v2` envelope, migrates the prior raw `v1` Bakaláři record without signing the user out, rejects unknown future versions safely, clears both keys on explicit logout, and restores the saved session without making a Bakaláři request.
 
 ## Bakaláři HTTP, parsing, and compatibility
 

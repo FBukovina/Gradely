@@ -47,6 +47,7 @@ interface SchoolRepository {
     suspend fun bootstrapSession(): StoredSession?
     suspend fun currentStoredSession(): StoredSession?
     suspend fun login(schoolURL: String, username: String, password: String): StoredSession
+    suspend fun restoreSession(session: StoredSession): StoredSession
     suspend fun activateLinkedSchoolAccount(session: StoredSession): StoredSession
     suspend fun associateCurrentSession(account: LinkedSchoolAccount): StoredSession
     suspend fun disassociateCurrentSession(accountID: String): StoredSession?

@@ -56,6 +56,11 @@ class AndroidSchoolRepository(
         return session
     }
 
+    override suspend fun restoreSession(session: StoredSession): StoredSession {
+        sessionStore.save(session)
+        return session
+    }
+
     override suspend fun activateLinkedSchoolAccount(session: StoredSession): StoredSession {
         val existing = sessionStore.load()
         if (

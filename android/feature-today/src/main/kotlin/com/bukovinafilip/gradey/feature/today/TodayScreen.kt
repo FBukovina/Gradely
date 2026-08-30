@@ -4,6 +4,10 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,6 +29,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ChevronLeft
@@ -36,21 +41,32 @@ import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -61,6 +77,11 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -70,8 +91,11 @@ import com.bukovinafilip.gradey.domain.AbsenceRiskSummary
 import com.bukovinafilip.gradey.domain.GradeHistoryTrends
 import com.bukovinafilip.gradey.domain.GradeMath
 import com.bukovinafilip.gradey.domain.GradeTrendRange
+import com.bukovinafilip.gradey.domain.SchoolLoginValidator
 import com.bukovinafilip.gradey.domain.SubjectGradeTrend
 import com.bukovinafilip.gradey.domain.TodayMealState
+import com.bukovinafilip.gradey.domain.TodayLinkedAccounts
+import com.bukovinafilip.gradey.domain.TodayLinkedAccountSummary
 import com.bukovinafilip.gradey.domain.TodayMeals
 import com.bukovinafilip.gradey.domain.TodayNewMark
 import com.bukovinafilip.gradey.domain.TodayNewMarks
@@ -83,6 +107,8 @@ import com.bukovinafilip.gradey.domain.TodayTimetableSummary
 import com.bukovinafilip.gradey.model.AbsenceResponse
 import com.bukovinafilip.gradey.model.DashboardData
 import com.bukovinafilip.gradey.model.LessonChangeKind
+import com.bukovinafilip.gradey.model.LinkedAccountStatus
+import com.bukovinafilip.gradey.model.LinkedSchoolAccount
 import com.bukovinafilip.gradey.model.NewMarkEvent
 import com.bukovinafilip.gradey.model.ScheduledLesson
 import com.bukovinafilip.gradey.model.StravaCZMenu
@@ -92,6 +118,8 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import java.util.Locale
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
 private val BackgroundTop = Color(0xFFDDF4F2)
@@ -202,6 +230,10 @@ fun TodayScreen(
     stravaMenu: StravaCZMenu?,
     isMealsConnected: Boolean,
     activeLinkedAccountDisplayName: String? = null,
+    linkedSchoolAccounts: List<LinkedSchoolAccount> = emptyList(),
+    activeLinkedAccountID: String? = null,
+    mutatingLinkedAccountID: String? = null,
+    currentSchoolBaseURL: String = "",
     cloudNewMarkEvents: List<NewMarkEvent> = emptyList(),
     gradeTrends: List<SubjectGradeTrend> = emptyList(),
     isRefreshing: Boolean,
@@ -212,10 +244,13 @@ fun TodayScreen(
     onOpenAbsence: () -> Unit,
     onOpenTimetable: () -> Unit,
     onOpenMeals: () -> Unit,
+    onActivateLinkedAccount: (LinkedSchoolAccount) -> Unit = {},
+    onReconnectLinkedAccount: suspend (LinkedSchoolAccount, String, String, String) -> String? = { _, _, _, _ -> null },
     modifier: Modifier = Modifier,
 ) {
     var showsTrendDetails by rememberSaveable { mutableStateOf(false) }
     var selectedTrendRangeName by rememberSaveable { mutableStateOf(GradeTrendRange.NINETY_DAYS.name) }
+    var reconnectTarget by remember { mutableStateOf<LinkedSchoolAccount?>(null) }
     val todayListState = rememberLazyListState()
     val subjects = dashboard.marksResponse.subjects
     val overall = GradeMath.formattedAverage(GradeMath.overallAverage(subjects))
@@ -224,6 +259,9 @@ fun TodayScreen(
         schoolFullName = dashboard.user?.fullName,
         activeLinkedAccountDisplayName = activeLinkedAccountDisplayName,
     ) ?: stringResource(R.string.today_gradey)
+    val linkedAccountSummary = remember(linkedSchoolAccounts, activeLinkedAccountID) {
+        TodayLinkedAccounts.resolve(linkedSchoolAccounts, activeLinkedAccountID)
+    }
     val absenceSummary = remember(absence) {
         AbsenceRiskSummary.make(absence, absence.absencesPerSubject)
     }
@@ -280,6 +318,25 @@ fun TodayScreen(
                     onOpenGradeyTools = onOpenGradeyTools,
                 )
             }
+            if (linkedAccountSummary.schoolAccounts.isNotEmpty()) {
+                item {
+                    LinkedSchoolAccountPicker(
+                        summary = linkedAccountSummary,
+                        mutatingLinkedAccountID = mutatingLinkedAccountID,
+                        onActivate = onActivateLinkedAccount,
+                        onReconnect = { reconnectTarget = it },
+                    )
+                }
+            }
+            linkedAccountSummary.accountRequiringReconnect?.let { linked ->
+                item {
+                    SchoolConnectionNotice(
+                        account = linked,
+                        isBusy = mutatingLinkedAccountID != null,
+                        onReconnect = { reconnectTarget = linked },
+                    )
+                }
+            }
             item {
                 AverageCard(
                     fullName = studentName,
@@ -312,6 +369,364 @@ fun TodayScreen(
             }
         }
     }
+
+    reconnectTarget?.let { linked ->
+        TodaySchoolReconnectSheet(
+            account = linked,
+            initialSchoolURL = currentSchoolBaseURL.takeIf {
+                linked.id == activeLinkedAccountID || linkedAccountSummary.schoolAccounts.size == 1
+            }.orEmpty(),
+            onReconnect = { school, username, password ->
+                onReconnectLinkedAccount(linked, school, username, password)
+            },
+            onDismiss = { reconnectTarget = null },
+        )
+    }
+}
+
+@Composable
+private fun LinkedSchoolAccountPicker(
+    summary: TodayLinkedAccountSummary,
+    mutatingLinkedAccountID: String?,
+    onActivate: (LinkedSchoolAccount) -> Unit,
+    onReconnect: (LinkedSchoolAccount) -> Unit,
+) {
+    var isExpanded by remember { mutableStateOf(false) }
+    val active = summary.activeAccount
+    DashboardSurface {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            IconTile(background = SoftMint) {
+                Icon(
+                    imageVector = Icons.Default.Person,
+                    contentDescription = null,
+                    tint = AccentTeal,
+                    modifier = Modifier.size(22.dp),
+                )
+            }
+            Spacer(Modifier.width(13.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = active?.displayName ?: stringResource(R.string.today_school_account),
+                    color = Color.Black,
+                    fontSize = 16.sp,
+                    lineHeight = 20.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text = active?.schoolName ?: stringResource(R.string.today_linked_accounts),
+                    color = MutedText,
+                    fontSize = 12.sp,
+                    lineHeight = 16.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            Box {
+                if (mutatingLinkedAccountID != null) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        color = AccentTeal,
+                        strokeWidth = 2.dp,
+                    )
+                } else {
+                    IconButton(onClick = { isExpanded = true }) {
+                        Icon(
+                            imageVector = Icons.Default.ArrowDropDown,
+                            contentDescription = stringResource(R.string.today_choose_school_account),
+                            tint = AccentTeal,
+                        )
+                    }
+                }
+                DropdownMenu(
+                    expanded = isExpanded,
+                    onDismissRequest = { isExpanded = false },
+                ) {
+                    summary.schoolAccounts.forEach { linked ->
+                        val canActivate = linked.status == LinkedAccountStatus.ACTIVE && linked.id != active?.id
+                        val canReconnect = linked.status == LinkedAccountStatus.ACTION_REQUIRED ||
+                            linked.status == LinkedAccountStatus.FAILED
+                        DropdownMenuItem(
+                            text = {
+                                Column {
+                                    Text(linked.displayName, fontWeight = FontWeight.SemiBold)
+                                    Text(
+                                        text = linked.schoolName ?: linked.status.localizedLabel(),
+                                        color = MutedText,
+                                        fontSize = 12.sp,
+                                    )
+                                }
+                            },
+                            enabled = canActivate || canReconnect,
+                            onClick = {
+                                isExpanded = false
+                                if (canReconnect) {
+                                    onReconnect(linked)
+                                } else if (canActivate) {
+                                    onActivate(linked)
+                                }
+                            },
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SchoolConnectionNotice(
+    account: LinkedSchoolAccount,
+    isBusy: Boolean,
+    onReconnect: () -> Unit,
+) {
+    DashboardSurface {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 18.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.Warning,
+                    contentDescription = null,
+                    tint = WarningOrange,
+                    modifier = Modifier.size(22.dp),
+                )
+                Spacer(Modifier.width(10.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.today_school_attention),
+                        color = Color.Black,
+                        fontSize = 15.sp,
+                        lineHeight = 19.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Text(
+                        text = account.displayName,
+                        color = MutedText,
+                        fontSize = 12.sp,
+                        lineHeight = 16.sp,
+                    )
+                }
+            }
+            Text(
+                text = account.actionRequiredReason?.takeIf(String::isNotBlank)
+                    ?: stringResource(R.string.today_reconnect_fallback),
+                color = MutedText,
+                fontSize = 13.sp,
+                lineHeight = 18.sp,
+            )
+            Button(
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !isBusy,
+                onClick = onReconnect,
+            ) {
+                Text(stringResource(R.string.today_reconnect))
+            }
+        }
+    }
+}
+
+@Composable
+@OptIn(ExperimentalMaterial3Api::class)
+private fun TodaySchoolReconnectSheet(
+    account: LinkedSchoolAccount,
+    initialSchoolURL: String,
+    onReconnect: suspend (String, String, String) -> String?,
+    onDismiss: () -> Unit,
+) {
+    var school by remember(account.id, initialSchoolURL) { mutableStateOf(initialSchoolURL) }
+    var username by remember(account.id) { mutableStateOf("") }
+    var password by remember(account.id) { mutableStateOf("") }
+    var isPasswordVisible by remember(account.id) { mutableStateOf(false) }
+    var hasAttempted by remember(account.id) { mutableStateOf(false) }
+    var isSubmitting by remember(account.id) { mutableStateOf(false) }
+    var errorMessage by remember(account.id) { mutableStateOf<String?>(null) }
+    val focusManager = LocalFocusManager.current
+    val scope = rememberCoroutineScope()
+    val validation = remember(school, username, password) {
+        SchoolLoginValidator.validate(school, username, password)
+    }
+    val genericError = stringResource(R.string.today_reconnect_failed)
+
+    fun submit() {
+        hasAttempted = true
+        if (!validation.isValid || isSubmitting) return
+        focusManager.clearFocus()
+        scope.launch {
+            isSubmitting = true
+            errorMessage = null
+            try {
+                val error = onReconnect(school, username, password)
+                if (error == null) onDismiss() else errorMessage = error
+            } catch (error: CancellationException) {
+                throw error
+            } catch (_: Throwable) {
+                errorMessage = genericError
+            } finally {
+                isSubmitting = false
+            }
+        }
+    }
+
+    ModalBottomSheet(
+        onDismissRequest = { if (!isSubmitting) onDismiss() },
+        shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
+        dragHandle = null,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(max = 680.dp)
+                .verticalScroll(rememberScrollState())
+                .padding(start = 24.dp, top = 28.dp, end = 24.dp, bottom = 40.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            Text(
+                text = stringResource(R.string.today_reconnect_title, account.displayName),
+                color = Color.Black,
+                fontSize = 22.sp,
+                lineHeight = 28.sp,
+                fontWeight = FontWeight.Bold,
+            )
+            Text(
+                text = stringResource(R.string.today_reconnect_message),
+                color = MutedText,
+                fontSize = 14.sp,
+                lineHeight = 20.sp,
+            )
+            OutlinedTextField(
+                modifier = Modifier.fillMaxWidth(),
+                value = school,
+                onValueChange = {
+                    school = it
+                    errorMessage = null
+                },
+                label = { Text(stringResource(R.string.today_school_url)) },
+                singleLine = true,
+                enabled = !isSubmitting,
+                isError = hasAttempted && validation.schoolURLMessage != null,
+                supportingText = validation.schoolURLMessage
+                    ?.takeIf { hasAttempted }
+                    ?.let { message -> ({ Text(message) }) },
+                keyboardOptions = KeyboardOptions(
+                    capitalization = KeyboardCapitalization.None,
+                    keyboardType = KeyboardType.Uri,
+                    imeAction = ImeAction.Next,
+                ),
+                keyboardActions = KeyboardActions(
+                    onNext = { focusManager.moveFocus(FocusDirection.Down) },
+                ),
+            )
+            OutlinedTextField(
+                modifier = Modifier.fillMaxWidth(),
+                value = username,
+                onValueChange = {
+                    username = it
+                    errorMessage = null
+                },
+                label = { Text(stringResource(R.string.today_username)) },
+                singleLine = true,
+                enabled = !isSubmitting,
+                isError = hasAttempted && validation.usernameMessage != null,
+                supportingText = validation.usernameMessage
+                    ?.takeIf { hasAttempted }
+                    ?.let { message -> ({ Text(message) }) },
+                keyboardOptions = KeyboardOptions(
+                    capitalization = KeyboardCapitalization.None,
+                    keyboardType = KeyboardType.Text,
+                    imeAction = ImeAction.Next,
+                ),
+                keyboardActions = KeyboardActions(
+                    onNext = { focusManager.moveFocus(FocusDirection.Down) },
+                ),
+            )
+            OutlinedTextField(
+                modifier = Modifier.fillMaxWidth(),
+                value = password,
+                onValueChange = {
+                    password = it
+                    errorMessage = null
+                },
+                label = { Text(stringResource(R.string.today_password)) },
+                singleLine = true,
+                enabled = !isSubmitting,
+                isError = hasAttempted && validation.passwordMessage != null,
+                supportingText = validation.passwordMessage
+                    ?.takeIf { hasAttempted }
+                    ?.let { message -> ({ Text(message) }) },
+                visualTransformation = if (isPasswordVisible) {
+                    VisualTransformation.None
+                } else {
+                    PasswordVisualTransformation()
+                },
+                trailingIcon = {
+                    IconButton(
+                        enabled = !isSubmitting,
+                        onClick = { isPasswordVisible = !isPasswordVisible },
+                    ) {
+                        Icon(
+                            imageVector = if (isPasswordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                            contentDescription = stringResource(
+                                if (isPasswordVisible) R.string.today_hide_password else R.string.today_show_password,
+                            ),
+                        )
+                    }
+                },
+                keyboardOptions = KeyboardOptions(
+                    capitalization = KeyboardCapitalization.None,
+                    keyboardType = KeyboardType.Password,
+                    imeAction = ImeAction.Done,
+                ),
+                keyboardActions = KeyboardActions(onDone = { submit() }),
+            )
+            errorMessage?.let {
+                Text(
+                    text = it,
+                    color = DangerRed,
+                    fontSize = 13.sp,
+                    lineHeight = 18.sp,
+                )
+            }
+            Button(
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !isSubmitting,
+                onClick = ::submit,
+            ) {
+                if (isSubmitting) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(18.dp),
+                        strokeWidth = 2.dp,
+                    )
+                    Spacer(Modifier.width(8.dp))
+                }
+                Text(
+                    if (isSubmitting) {
+                        stringResource(R.string.today_reconnecting)
+                    } else {
+                        stringResource(R.string.today_reconnect)
+                    },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun LinkedAccountStatus.localizedLabel(): String = when (this) {
+    LinkedAccountStatus.ACTIVE -> stringResource(R.string.today_account_active)
+    LinkedAccountStatus.ACTION_REQUIRED -> stringResource(R.string.today_account_action_required)
+    LinkedAccountStatus.PAUSED -> stringResource(R.string.today_account_paused)
+    LinkedAccountStatus.LINKING -> stringResource(R.string.today_account_linking)
+    LinkedAccountStatus.FAILED -> stringResource(R.string.today_account_failed)
 }
 
 @Composable

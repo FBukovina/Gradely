@@ -47,6 +47,25 @@ class AndroidSchoolRepositoryTest {
     }
 
     @Test
+    fun `restore session replaces a reconnect candidate without network access`() = runTest {
+        val original = validSession().copy(linkedAccountID = "original")
+        val candidate = validSession().copy(
+            accessToken = "candidate-access",
+            linkedAccountID = "candidate",
+        )
+        val client = FakeBakalariClient()
+        val sessions = InMemorySchoolSessionStorage(candidate)
+        val repository = repository(client, sessions)
+
+        val restored = repository.restoreSession(original)
+
+        assertThat(restored).isEqualTo(original)
+        assertThat(repository.currentStoredSession()).isEqualTo(original)
+        assertThat(client.loginCalls).isEqualTo(0)
+        assertThat(client.refreshCalls).isEqualTo(0)
+    }
+
+    @Test
     fun `activation preserves the device token family for the same linked account`() = runTest {
         val current = validSession().copy(
             linkedAccountID = "account-1",

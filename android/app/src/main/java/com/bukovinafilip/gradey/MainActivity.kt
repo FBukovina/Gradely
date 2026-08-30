@@ -349,11 +349,14 @@ private fun GradeyApp(
                 .padding(bottom = 96.dp)
             val currentDashboard = dashboard
             val currentAbsence = absence
+            val effectiveAbsence = currentAbsence ?: currentDashboard?.let {
+                AbsenceResponse(absencesPerSubject = it.absencesPerSubject)
+            }
             when (selectedTab) {
-                AppTab.TODAY -> if (currentDashboard != null && currentAbsence != null) {
+                AppTab.TODAY -> if (currentDashboard != null && effectiveAbsence != null) {
                     TodayScreen(
                         dashboard = currentDashboard,
-                        absence = currentAbsence,
+                        absence = effectiveAbsence,
                         timetable = timetable,
                         isRefreshing = isLoading,
                         onRefresh = {
@@ -385,9 +388,9 @@ private fun GradeyApp(
                     )
                 }
 
-                AppTab.SUBJECTS -> if (currentDashboard != null && currentAbsence != null) SubjectsScreen(
+                AppTab.SUBJECTS -> if (currentDashboard != null && effectiveAbsence != null) SubjectsScreen(
                     subjects = currentDashboard.marksResponse.subjects,
-                    absence = currentAbsence,
+                    absence = effectiveAbsence,
                     isRefreshing = isLoading,
                     onRefresh = {
                         if (!isLoading) {
@@ -523,6 +526,19 @@ private fun GradeyApp(
                 )
             }
 
+            if (
+                selectedTab != AppTab.ACCOUNT &&
+                dataError != null &&
+                (dashboard != null || absence != null || timetable != null || stravaMenu != null)
+            ) {
+                DataRefreshWarning(
+                    message = dataError.orEmpty(),
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(start = 16.dp, end = 16.dp, bottom = 88.dp),
+                )
+            }
+
             if (selectedTab != AppTab.ACCOUNT) {
                 GradeyBottomNavigation(
                     selectedTab = selectedTab,
@@ -554,6 +570,41 @@ private suspend fun requestGoogleCredential(
 
 private fun Throwable.userFacingMessage(): String =
     message?.trim()?.takeIf { it.isNotEmpty() } ?: "Something went wrong. Please try again."
+
+@Composable
+private fun DataRefreshWarning(message: String, modifier: Modifier = Modifier) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        color = MaterialTheme.colorScheme.errorContainer,
+        shadowElevation = 4.dp,
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = Icons.Default.Error,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onErrorContainer,
+                modifier = Modifier.size(20.dp),
+            )
+            Column {
+                Text(
+                    text = "Some data could not refresh",
+                    color = MaterialTheme.colorScheme.onErrorContainer,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Text(
+                    text = message,
+                    color = MaterialTheme.colorScheme.onErrorContainer,
+                    fontSize = 12.sp,
+                )
+            }
+        }
+    }
+}
 
 @Composable
 private fun CoreDataUnavailableScreen(

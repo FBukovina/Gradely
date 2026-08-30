@@ -60,6 +60,24 @@ class AndroidSchoolRepositoryTest {
     }
 
     @Test
+    fun primaryRefreshFailureDoesNotDeleteCachedDashboard() = runTest {
+        val session = validSession()
+        val cached = DashboardData(MarksResponse(), user = UserResponse("Cached Student"))
+        val cache = RoomGradeyCache(InMemoryCacheEntryDao(), GradeyJson)
+        cache.saveDashboard(session.cacheScope, cached)
+        val client = FakeBakalariClient().apply {
+            marks = { _, _ -> throw java.io.IOException("offline") }
+        }
+        val repository = repository(client, InMemorySchoolSessionStorage(session), cache)
+
+        val failure = runCatching { repository.loadDashboard(forceRefresh = true) }.exceptionOrNull()
+
+        assertThat(failure).isInstanceOf(java.io.IOException::class.java)
+        assertThat(cache.loadDashboard(session.cacheScope)).isEqualTo(cached)
+        assertThat(repository.loadCachedDashboard()).isEqualTo(cached)
+    }
+
+    @Test
     fun rejectedAccessTokenRefreshesAndRetriesOnce() = runTest {
         val client = FakeBakalariClient().apply {
             marks = { _, token ->
@@ -264,11 +282,52 @@ class AndroidSchoolRepositoryTest {
     }
 
     @Test
+    fun failedTimetableRefreshRetainsTheCachedWeek() = runTest {
+        val session = validSession()
+        val cache = RoomGradeyCache(InMemoryCacheEntryDao(), GradeyJson)
+        val cachedWeek = com.bukovinafilip.gradey.model.TimetableWeek("2026-08-31", emptyList(), emptyList())
+        cache.saveTimetable(session.cacheScope, cachedWeek.weekStart, cachedWeek)
+        val client = FakeBakalariClient().apply {
+            timetable = { _, _, _ -> throw java.io.IOException("offline") }
+        }
+        val repository = repository(client, InMemorySchoolSessionStorage(session), cache)
+
+        val failure = runCatching { repository.loadTimetable("2026-09-01") }.exceptionOrNull()
+
+        assertThat(failure).isInstanceOf(java.io.IOException::class.java)
+        assertThat(repository.loadCachedTimetable("2026-09-01")).isEqualTo(cachedWeek)
+    }
+
+    @Test
+    fun separateTimetableWeeksRemainIndependentlyCached() = runTest {
+        val session = validSession()
+        val dao = InMemoryCacheEntryDao()
+        val cache = RoomGradeyCache(dao, GradeyJson)
+        val client = FakeBakalariClient().apply {
+            timetable = { _, _, date ->
+                TimetableResponse(days = listOf(TimetableDayDTO(dayOfWeek = 1, date = date)))
+            }
+        }
+        val repository = repository(client, InMemorySchoolSessionStorage(session), cache)
+
+        repository.loadTimetable("2026-08-31")
+        repository.loadTimetable("2026-09-07")
+
+        assertThat(repository.loadCachedTimetable("2026-08-31")?.weekStart).isEqualTo("2026-08-31")
+        assertThat(repository.loadCachedTimetable("2026-09-07")?.weekStart).isEqualTo("2026-09-07")
+        assertThat(dao.load("timetable-week:${session.cacheScope}-2026-08-31")?.cachedAtEpochMillis).isGreaterThan(0)
+        assertThat(dao.load("timetable-week:${session.cacheScope}-2026-09-07")?.cachedAtEpochMillis).isGreaterThan(0)
+    }
+
+    @Test
     fun logoutClearsSessionScopedCacheAndWidgetSnapshot() = runTest {
         val session = validSession()
         val sessions = InMemorySchoolSessionStorage(session)
         val cache = RoomGradeyCache(InMemoryCacheEntryDao(), GradeyJson)
+        val unrelatedScope = "bakalari-other.example.cz-unrelated"
+        val unrelated = DashboardData(MarksResponse(), user = UserResponse("Other Student"))
         cache.saveDashboard(session.cacheScope, DashboardData(MarksResponse()))
+        cache.saveDashboard(unrelatedScope, unrelated)
         cache.saveNextLessonSnapshot(
             NextLessonWidgetSnapshot(
                 cachedAtEpochMillis = 1,
@@ -282,6 +341,7 @@ class AndroidSchoolRepositoryTest {
         assertThat(sessions.load()).isNull()
         assertThat(cache.loadDashboard(session.cacheScope)).isNull()
         assertThat(cache.loadNextLessonSnapshot()).isNull()
+        assertThat(cache.loadDashboard(unrelatedScope)).isEqualTo(unrelated)
     }
 
     private fun repository(

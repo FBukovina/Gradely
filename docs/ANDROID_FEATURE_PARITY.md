@@ -115,11 +115,13 @@ Error verification (2026-08-30): Bakaláři transport now distinguishes safe HTT
 - [ ] Load scoped cached marks, absence, timetable weeks, meals, linked accounts, and grade history before refreshing.
 - [ ] Retain cached/loaded content on background refresh failure and expose a non-destructive stale/error indication.
 - [ ] Show full error/retry only when there is no usable content.
-- [ ] Preserve multiple timetable weeks and their cache timestamps.
-- [ ] Make force refresh refresh data rather than deleting usable cache before a network request succeeds.
+- [x] Preserve multiple timetable weeks and their cache timestamps.
+- [x] Make force refresh refresh data rather than deleting usable cache before a network request succeeds.
 - [ ] Implement targeted cache clearing for current school, all school data, account reset, and sign-out.
 - [x] Remove all refresh fallbacks to `DemoData` from production state.
 - [ ] Verify offline cold start, offline warm start, reconnect, expired offline session, and corrupt-cache recovery.
+
+Cache verification (2026-08-30): Today and Marks now render from a cached/loaded dashboard even when the optional absence request is unavailable, using any per-subject absence already embedded in the dashboard. A failed background refresh leaves existing content on-screen and displays a compact non-destructive warning; first-load errors retain the full retry surface. Repository tests prove forced dashboard and timetable failures do not delete their cached values, two timetable weeks and timestamps coexist under separate keys, and school logout clears only the active school scope while preserving an unrelated scope.
 
 ## Today
 

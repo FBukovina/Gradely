@@ -46,8 +46,12 @@ class NextLessonWidget : GlanceAppWidget() {
         } catch (_: Throwable) {
             null
         }
+        val strings = WidgetStrings.from(context)
         provideContent {
-            NextLessonWidgetContent(selection = NextLessonSelector.select(snapshot))
+            NextLessonWidgetContent(
+                selection = NextLessonSelector.select(snapshot),
+                strings = strings,
+            )
         }
     }
 }
@@ -57,7 +61,19 @@ suspend fun updateNextLessonWidgets(context: Context) {
 }
 
 @Composable
-private fun NextLessonWidgetContent(selection: NextLessonWidgetSelection) {
+private fun NextLessonWidgetContent(
+    selection: NextLessonWidgetSelection,
+    strings: WidgetStrings,
+) {
+    val localizedLessonStatus = (selection as? NextLessonWidgetSelection.Lesson)?.let {
+        lessonStatus(strings, it)
+    }
+    val emptyCopy = when (selection) {
+        NextLessonWidgetSelection.NoSnapshot -> strings.openGradey to strings.loadTimetable
+        NextLessonWidgetSelection.NoLessons -> strings.noLessons to strings.openGradey
+        NextLessonWidgetSelection.Stale -> strings.refreshTimetable to strings.openGradey
+        is NextLessonWidgetSelection.Lesson -> null
+    }
     Column(
         modifier = GlanceModifier
             .fillMaxSize()
@@ -68,9 +84,8 @@ private fun NextLessonWidgetContent(selection: NextLessonWidgetSelection) {
     ) {
         when (selection) {
             is NextLessonWidgetSelection.Lesson -> {
-                val status = lessonStatus(selection)
                 Text(
-                    text = status,
+                    text = localizedLessonStatus.orEmpty(),
                     style = TextStyle(color = ColorProvider(Color(0xFF137C68)), fontWeight = FontWeight.Bold),
                 )
                 Spacer(GlanceModifier.height(4.dp))
@@ -85,23 +100,52 @@ private fun NextLessonWidgetContent(selection: NextLessonWidgetSelection) {
                 )
             }
 
-            NextLessonWidgetSelection.NoSnapshot -> EmptyWidget("Open Gradey", "Load timetable")
-            NextLessonWidgetSelection.NoLessons -> EmptyWidget("No lessons", "Open Gradey")
-            NextLessonWidgetSelection.Stale -> EmptyWidget("Refresh timetable", "Open Gradey")
+            NextLessonWidgetSelection.NoSnapshot,
+            NextLessonWidgetSelection.NoLessons,
+            NextLessonWidgetSelection.Stale,
+            -> EmptyWidget(emptyCopy?.first.orEmpty(), emptyCopy?.second.orEmpty())
         }
     }
 }
 
-private fun lessonStatus(selection: NextLessonWidgetSelection.Lesson): String {
-    val timing = if (selection.timing == NextLessonWidgetTiming.CURRENT) "Now" else "Next"
+private fun lessonStatus(strings: WidgetStrings, selection: NextLessonWidgetSelection.Lesson): String {
+    val timing = if (selection.timing == NextLessonWidgetTiming.CURRENT) strings.now else strings.next
     val change = when (selection.lesson.changeKind) {
         NextLessonWidgetChangeKind.NONE -> null
-        NextLessonWidgetChangeKind.CANCELED -> "Canceled"
-        NextLessonWidgetChangeKind.SUBSTITUTION -> "Substitution"
-        NextLessonWidgetChangeKind.ROOM_CHANGED -> "Room changed"
-        NextLessonWidgetChangeKind.ADDED -> "Added"
+        NextLessonWidgetChangeKind.CANCELED -> strings.canceled
+        NextLessonWidgetChangeKind.SUBSTITUTION -> strings.substitution
+        NextLessonWidgetChangeKind.ROOM_CHANGED -> strings.roomChanged
+        NextLessonWidgetChangeKind.ADDED -> strings.added
     }
     return listOfNotNull(timing, change).joinToString(" · ")
+}
+
+private data class WidgetStrings(
+    val openGradey: String,
+    val loadTimetable: String,
+    val noLessons: String,
+    val refreshTimetable: String,
+    val now: String,
+    val next: String,
+    val canceled: String,
+    val substitution: String,
+    val roomChanged: String,
+    val added: String,
+) {
+    companion object {
+        fun from(context: Context) = WidgetStrings(
+            openGradey = context.getString(R.string.widget_open_gradey),
+            loadTimetable = context.getString(R.string.widget_load_timetable),
+            noLessons = context.getString(R.string.widget_no_lessons),
+            refreshTimetable = context.getString(R.string.widget_refresh_timetable),
+            now = context.getString(R.string.widget_now),
+            next = context.getString(R.string.widget_next),
+            canceled = context.getString(R.string.widget_canceled),
+            substitution = context.getString(R.string.widget_substitution),
+            roomChanged = context.getString(R.string.widget_room_changed),
+            added = context.getString(R.string.widget_added),
+        )
+    }
 }
 
 @Composable

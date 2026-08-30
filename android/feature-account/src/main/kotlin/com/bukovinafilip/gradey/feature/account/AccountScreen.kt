@@ -103,6 +103,7 @@ fun AccountScreen(
 ) {
     val context = LocalContext.current
     var pendingUnlink by remember { mutableStateOf<LinkedSchoolAccount?>(null) }
+    var showSignOutConfirmation by remember { mutableStateOf(false) }
     var deleteConfirmationStage by remember { mutableIntStateOf(0) }
     var fullNameDraft by remember(account?.id, account?.fullName) {
         mutableStateOf(account?.fullName.orEmpty())
@@ -123,8 +124,11 @@ fun AccountScreen(
     }
 
     GradeyScreen(modifier = modifier.verticalScroll(rememberScrollState())) {
-        GradeyHero("Account", account?.fullName ?: "Local-only mode")
-        GradeySectionCard(title = "Profile") {
+        GradeyHero(
+            stringResource(R.string.account_title),
+            account?.fullName ?: stringResource(R.string.account_local_only_mode),
+        )
+        GradeySectionCard(title = stringResource(R.string.account_profile)) {
             Icon(GradeyIcons.User, contentDescription = null)
             account?.let { signedInAccount ->
                 val avatarText = signedInAccount.fullName
@@ -157,8 +161,14 @@ fun AccountScreen(
                     ),
                 )
             }
-            MetadataRow("Email", account?.email ?: "Not connected")
-            MetadataRow("Account ID", account?.id ?: "No Gradey ID")
+            MetadataRow(
+                stringResource(R.string.account_email),
+                account?.email ?: stringResource(R.string.account_not_connected),
+            )
+            MetadataRow(
+                stringResource(R.string.account_id),
+                account?.id ?: stringResource(R.string.account_no_gradey_id),
+            )
             if (account != null) {
                 OutlinedTextField(
                     value = fullNameDraft,
@@ -166,11 +176,11 @@ fun AccountScreen(
                     modifier = Modifier.fillMaxWidth(),
                     enabled = !isUpdatingFullName,
                     singleLine = true,
-                    label = { Text("Full name") },
+                    label = { Text(stringResource(R.string.account_full_name)) },
                     isError = hasNameChanged && !isNameValid,
                     supportingText = {
                         when {
-                            hasNameChanged && !isNameValid -> Text("Use between 1 and 80 characters.")
+                            hasNameChanged && !isNameValid -> Text(stringResource(R.string.account_name_length_error))
                             profileErrorMessage != null -> Text(profileErrorMessage)
                         }
                     },
@@ -179,25 +189,37 @@ fun AccountScreen(
                     onClick = { onUpdateFullName(normalizedFullName) },
                     enabled = isNameValid && hasNameChanged && !isUpdatingFullName,
                 ) {
-                    Text(if (isUpdatingFullName) "Saving…" else "Save name")
+                    Text(
+                        stringResource(
+                            if (isUpdatingFullName) R.string.account_saving else R.string.account_save_name,
+                        ),
+                    )
                 }
             } else {
                 Text(
-                    if (isGuestMode) {
-                        "You're continuing without a Gradey ID. Your Bakaláři data stays local on this device."
-                    } else {
-                        "Gradey ID isn't configured in this build. Your Bakaláři data stays local on this device."
-                    },
+                    stringResource(
+                        if (isGuestMode) {
+                            R.string.account_guest_mode_body
+                        } else {
+                            R.string.account_gradey_id_unavailable_body
+                        },
+                    ),
                 )
                 if (isGuestMode && isGradeyIdAvailable) {
-                    Button(onClick = onConnectGradeyId) { Text("Connect Gradey ID") }
+                    Button(onClick = onConnectGradeyId) {
+                        Text(stringResource(R.string.account_connect_gradey_id))
+                    }
                 }
             }
-            Button(onClick = onSignOut) {
-                Text(if (account == null) "Disconnect Bakaláři" else "Sign out")
+            Button(onClick = { showSignOutConfirmation = true }) {
+                Text(
+                    stringResource(
+                        if (account == null) R.string.account_disconnect_bakalari else R.string.account_sign_out,
+                    ),
+                )
             }
         }
-        GradeySectionCard(title = "Notifications") {
+        GradeySectionCard(title = stringResource(R.string.account_notifications)) {
             Icon(GradeyIcons.Notification, contentDescription = null)
             if (account == null) {
                 Text(stringResource(R.string.notifications_gradey_id_required))
@@ -317,9 +339,9 @@ fun AccountScreen(
             Switch(checked = showMealsTab, onCheckedChange = onShowMealsTabChange)
         }
         if (account != null) {
-            GradeySectionCard(title = "Connected services") {
+            GradeySectionCard(title = stringResource(R.string.account_connected_services)) {
                 Text(
-                    "Your linked Bakaláři accounts are encrypted by Gradey and available on your signed-in devices.",
+                    stringResource(R.string.account_connected_services_body),
                 )
                 Button(
                     onClick = onAddSchool,
@@ -366,13 +388,21 @@ fun AccountScreen(
                     onClick = onRefreshLinkedAccounts,
                     enabled = !isRefreshingLinkedAccounts && mutatingLinkedAccountID == null,
                 ) {
-                    Text(if (isRefreshingLinkedAccounts) "Refreshing…" else "Refresh accounts")
+                    Text(
+                        stringResource(
+                            if (isRefreshingLinkedAccounts) {
+                                R.string.account_refreshing
+                            } else {
+                                R.string.account_refresh_accounts
+                            },
+                        ),
+                    )
                 }
                 if (!linkedAccountErrorMessage.isNullOrBlank()) {
                     Text(linkedAccountErrorMessage)
                 }
                 if (linkedAccounts.isEmpty() && !isRefreshingLinkedAccounts) {
-                    Text("No school account is linked to this Gradey ID yet.")
+                    Text(stringResource(R.string.account_no_linked_school))
                 }
             }
         }
@@ -382,18 +412,18 @@ fun AccountScreen(
                 Text(stringResource(R.string.support_open))
             }
         }
-        GradeySectionCard(title = "Privacy & data") {
+        GradeySectionCard(title = stringResource(R.string.account_privacy_data)) {
             MetadataRow(
-                "Age",
+                stringResource(R.string.account_age),
                 when (ageAttestationKind) {
-                    AgeAttestationKind.SIXTEEN_OR_OLDER -> "Confirmed: 16 or older"
+                    AgeAttestationKind.SIXTEEN_OR_OLDER -> stringResource(R.string.account_age_sixteen_confirmed)
                     AgeAttestationKind.THIRTEEN_TO_FIFTEEN_WITH_PARENT,
                     AgeAttestationKind.UNDER_THIRTEEN,
-                    -> "Confirmed: under 16 with parent or guardian"
-                    null -> "Not confirmed"
+                    -> stringResource(R.string.account_age_under_sixteen_confirmed)
+                    null -> stringResource(R.string.account_age_not_confirmed)
                 },
             )
-            Text("Gradey asks for age confirmation before school data, support chat, or AI leave the device for our servers.")
+            Text(stringResource(R.string.account_age_body))
             OutlinedButton(onClick = onOpenPrivacyPolicy) {
                 Text(stringResource(R.string.privacy_policy))
             }
@@ -446,10 +476,15 @@ fun AccountScreen(
                     val isActive = activeLinkedAccountID == linked.id
                     GradeySectionCard {
                         Text(linked.displayName)
-                        MetadataRow("Provider", linked.provider.displayName)
-                        MetadataRow("School", linked.schoolName ?: "-")
-                        MetadataRow("Status", linked.status.displayName())
-                        MetadataRow("On this device", if (isActive) "Active" else "Not active")
+                        MetadataRow(stringResource(R.string.account_provider), linked.provider.displayName)
+                        MetadataRow(stringResource(R.string.account_school), linked.schoolName ?: "-")
+                        MetadataRow(stringResource(R.string.account_status), linked.status.localizedDisplayName())
+                        MetadataRow(
+                            stringResource(R.string.account_on_this_device),
+                            stringResource(
+                                if (isActive) R.string.account_active else R.string.account_not_active,
+                            ),
+                        )
                         linked.lastSyncedAt?.let { timestamp ->
                             MetadataRow(
                                 stringResource(R.string.connected_last_synced),
@@ -467,13 +502,16 @@ fun AccountScreen(
                         }
                         if (
                             linked.provider.isSupportedSchoolProvider &&
-                            linked.status == LinkedAccountStatus.ACTION_REQUIRED
+                            (
+                                linked.status == LinkedAccountStatus.ACTION_REQUIRED ||
+                                    linked.status == LinkedAccountStatus.FAILED
+                            )
                         ) {
                             Button(
                                 onClick = { onReconnectLinkedAccount(linked) },
                                 enabled = !isMutating,
                             ) {
-                                Text("Reconnect")
+                                Text(stringResource(R.string.account_reconnect))
                             }
                         } else if (
                             linked.provider.isSupportedSchoolProvider &&
@@ -484,29 +522,45 @@ fun AccountScreen(
                                 onClick = { onActivateLinkedAccount(linked) },
                                 enabled = !isMutating && mutatingLinkedAccountID == null,
                             ) {
-                                Text(if (isMutating) "Switching…" else "Use this school")
+                                Text(
+                                    stringResource(
+                                        if (isMutating) {
+                                            R.string.account_switching
+                                        } else {
+                                            R.string.account_use_this_school
+                                        },
+                                    ),
+                                )
                             }
                         }
                         if (linked.provider.isSupportedSchoolProvider) {
                             MetadataRow(
-                                "New-mark notifications",
-                                if (linked.notificationsEnabled) "Enabled" else "Disabled",
+                                stringResource(R.string.account_new_mark_notifications),
+                                stringResource(
+                                    if (linked.notificationsEnabled) {
+                                        R.string.notifications_enabled
+                                    } else {
+                                        R.string.notifications_disabled
+                                    },
+                                ),
                             )
                             Switch(
                                 checked = linked.notificationsEnabled,
                                 onCheckedChange = { onToggleLinkedNotifications(linked, it) },
-                                enabled = !isMutating && mutatingLinkedAccountID == null,
+                                enabled = notificationPreferences.newMarksEnabled &&
+                                    !isMutating &&
+                                    mutatingLinkedAccountID == null,
                             )
                         } else if (linked.provider == LinkedAccountProvider.STRAVA_CZ) {
                             Text(stringResource(R.string.meals_manage_from_tab))
                         } else {
-                            Text("This provider is not available in Gradey for Android yet.")
+                            Text(stringResource(R.string.account_provider_unavailable))
                         }
                         OutlinedButton(
                             onClick = { pendingUnlink = linked },
                             enabled = !isMutating && mutatingLinkedAccountID == null,
                         ) {
-                            Text("Unlink")
+                            Text(stringResource(R.string.account_unlink))
                         }
                     }
                 }
@@ -517,13 +571,13 @@ fun AccountScreen(
     pendingUnlink?.let { linked ->
         AlertDialog(
             onDismissRequest = { pendingUnlink = null },
-            title = { Text("Unlink ${linked.displayName}?") },
+            title = { Text(stringResource(R.string.account_unlink_title, linked.displayName)) },
             text = {
                 Text(
                     if (linked.provider == LinkedAccountProvider.STRAVA_CZ) {
                         stringResource(R.string.meals_unlink_message)
                     } else {
-                        "This removes the school from your Gradey ID. It does not delete the Bakaláři account at your school."
+                        stringResource(R.string.account_unlink_school_body)
                     },
                 )
             },
@@ -533,10 +587,63 @@ fun AccountScreen(
                         pendingUnlink = null
                         onUnlinkLinkedAccount(linked)
                     },
-                ) { Text("Unlink") }
+                ) { Text(stringResource(R.string.account_unlink)) }
             },
             dismissButton = {
-                TextButton(onClick = { pendingUnlink = null }) { Text("Cancel") }
+                TextButton(onClick = { pendingUnlink = null }) {
+                    Text(stringResource(R.string.account_cancel))
+                }
+            },
+        )
+    }
+
+    if (showSignOutConfirmation) {
+        AlertDialog(
+            onDismissRequest = { showSignOutConfirmation = false },
+            title = {
+                Text(
+                    stringResource(
+                        if (account == null) {
+                            R.string.account_disconnect_title
+                        } else {
+                            R.string.account_sign_out_title
+                        },
+                    ),
+                )
+            },
+            text = {
+                Text(
+                    stringResource(
+                        if (account == null) {
+                            R.string.account_disconnect_body
+                        } else {
+                            R.string.account_sign_out_body
+                        },
+                    ),
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showSignOutConfirmation = false
+                        onSignOut()
+                    },
+                ) {
+                    Text(
+                        stringResource(
+                            if (account == null) {
+                                R.string.account_disconnect_confirm
+                            } else {
+                                R.string.account_sign_out_confirm
+                            },
+                        ),
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showSignOutConfirmation = false }) {
+                    Text(stringResource(R.string.account_cancel))
+                }
             },
         )
     }
@@ -585,13 +692,16 @@ fun AccountScreen(
     }
 }
 
-private fun LinkedAccountStatus.displayName(): String = when (this) {
-    LinkedAccountStatus.ACTIVE -> "Active"
-    LinkedAccountStatus.ACTION_REQUIRED -> "Action required"
-    LinkedAccountStatus.PAUSED -> "Paused"
-    LinkedAccountStatus.LINKING -> "Linking"
-    LinkedAccountStatus.FAILED -> "Failed"
-}
+@Composable
+private fun LinkedAccountStatus.localizedDisplayName(): String = stringResource(
+    when (this) {
+        LinkedAccountStatus.ACTIVE -> R.string.account_status_active
+        LinkedAccountStatus.ACTION_REQUIRED -> R.string.account_status_action_required
+        LinkedAccountStatus.PAUSED -> R.string.account_status_paused
+        LinkedAccountStatus.LINKING -> R.string.account_status_linking
+        LinkedAccountStatus.FAILED -> R.string.account_status_failed
+    },
+)
 
 private fun NotificationLockScreenDetail.labelResource(): Int = when (this) {
     NotificationLockScreenDetail.PRIVATE_SUMMARY -> R.string.notifications_private_summary

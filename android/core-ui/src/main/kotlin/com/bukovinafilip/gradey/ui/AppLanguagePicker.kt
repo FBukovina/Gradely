@@ -36,7 +36,7 @@ fun AppLanguagePicker(
             onClick = { onSelectionChange(AppLanguage.SYSTEM) },
         )
         LanguageOption(
-            title = "English",
+            title = stringResource(R.string.language_english),
             subtitle = if (selection.isChronicallyOnline && selection.pickerLanguage == AppLanguage.ENGLISH) {
                 stringResource(R.string.language_chronically_online_subtitle)
             } else {
@@ -53,7 +53,7 @@ fun AppLanguagePicker(
             },
         )
         LanguageOption(
-            title = "Čeština",
+            title = stringResource(R.string.language_czech),
             subtitle = if (selection.isChronicallyOnline && selection.pickerLanguage == AppLanguage.CZECH) {
                 stringResource(R.string.language_chronically_online_subtitle)
             } else {

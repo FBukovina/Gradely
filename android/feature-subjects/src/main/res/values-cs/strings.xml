@@ -94,4 +94,17 @@
     <string name="marks_refresh_failed_title">Známky se nepodařilo aktualizovat</string>
     <string name="marks_refresh_failed_cached">Zobrazují se naposledy uložené známky.</string>
     <string name="marks_refresh_retry">Zkusit znovu</string>
+    <string name="marks_open_gradey_tools">Otevřít nástroje Gradey</string>
+    <string name="marks_refresh_content_description">Obnovit známky</string>
+    <string name="marks_open_account">Otevřít účet</string>
+    <string name="marks_open_subject">Otevřít %1$s</string>
+    <string name="subject_back">Zpět</string>
+    <plurals name="subject_average_chart_description">
+        <item quantity="one">Vývoj průměru, %1$d bod</item>
+        <item quantity="few">Vývoj průměru, %1$d body</item>
+        <item quantity="many">Vývoj průměru, %1$d bodu</item>
+        <item quantity="other">Vývoj průměru, %1$d bodů</item>
+    </plurals>
+    <string name="subject_no_marks">Zatím žádné známky</string>
+    <string name="subject_marks_section">ZNÁMKY</string>
 </resources>

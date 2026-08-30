@@ -73,6 +73,7 @@ fun SupportScreen(
     onEmailGraphics: () -> Unit,
     onClearCache: () -> Unit,
     onRestartOnboarding: () -> Unit,
+    onOpenDeveloperInstagram: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     var selectedInterval by remember { mutableStateOf(SupportBillingInterval.MONTHLY) }
@@ -337,6 +338,9 @@ fun SupportScreen(
                     TextButton(onClick = onOpenOpenSide) { Text("openside.tech") }
                     TextButton(onClick = onEmailDeveloper) { Text("filip@openside.tech") }
                     TextButton(onClick = onEmailGraphics) { Text("tom@openside.tech") }
+                    TextButton(onClick = onOpenDeveloperInstagram) {
+                        Text(stringResource(R.string.credits_developer_instagram))
+                    }
                 }
             },
             confirmButton = {

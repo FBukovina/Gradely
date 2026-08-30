@@ -66,7 +66,7 @@ fun GradeyCheckingScreen(modifier: Modifier = Modifier) {
             )
             CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
             Text(
-                "Restoring your account…",
+                stringResource(R.string.auth_restoring_account),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 style = MaterialTheme.typography.bodyMedium,
             )
@@ -154,19 +154,19 @@ fun OnboardingNotificationsScreen(
     modifier: Modifier = Modifier,
 ) {
     GradeyScreen(modifier = modifier.statusBarsPadding().verticalScroll(rememberScrollState())) {
-        TextButton(onClick = onBack) { Text("Back") }
+        TextButton(onClick = onBack) { Text(stringResource(R.string.auth_back)) }
         GradeyHero(
-            title = "Stay up to date",
-            subtitle = "Android will ask before Gradey can notify you about new marks. You can change this later in system settings.",
+            title = stringResource(R.string.onboarding_notifications_title),
+            subtitle = stringResource(R.string.onboarding_notifications_body),
         )
-        GradeySectionCard(title = "Notifications stay under your control") {
-            Text("Gradey registers this device only after permission is granted. School credentials are never included in notifications.")
+        GradeySectionCard(title = stringResource(R.string.onboarding_notifications_control_title)) {
+            Text(stringResource(R.string.onboarding_notifications_control_body))
         }
         Button(modifier = Modifier.fillMaxWidth(), onClick = onEnable) {
-            Text("Enable notifications")
+            Text(stringResource(R.string.onboarding_notifications_enable))
         }
         OutlinedButton(modifier = Modifier.fillMaxWidth(), onClick = onNotNow) {
-            Text("Not now")
+            Text(stringResource(R.string.onboarding_notifications_not_now))
         }
     }
 }
@@ -180,18 +180,30 @@ fun OnboardingReadyScreen(
     modifier: Modifier = Modifier,
 ) {
     GradeyScreen(modifier = modifier.statusBarsPadding().verticalScroll(rememberScrollState())) {
-        TextButton(onClick = onBack) { Text("Back") }
+        TextButton(onClick = onBack) { Text(stringResource(R.string.auth_back)) }
         GradeyHero(
-            title = "You're ready",
-            subtitle = "Your Bakaláři connection is saved and Gradey can now build your school overview.",
+            title = stringResource(R.string.onboarding_ready_title),
+            subtitle = stringResource(R.string.onboarding_ready_body),
         )
-        GradeySectionCard(title = "Setup summary") {
-            Text("Bakaláři · Connected")
-            Text(if (isGuestMode) "Account · Local only" else "Account · Gradey ID")
-            Text(if (notificationsEnabled) "Notifications · Enabled" else "Notifications · Off")
+        GradeySectionCard(title = stringResource(R.string.onboarding_ready_summary)) {
+            Text(stringResource(R.string.onboarding_ready_bakalari_connected))
+            Text(
+                stringResource(
+                    if (isGuestMode) R.string.onboarding_ready_account_local else R.string.onboarding_ready_account_gradey_id,
+                ),
+            )
+            Text(
+                stringResource(
+                    if (notificationsEnabled) {
+                        R.string.onboarding_ready_notifications_enabled
+                    } else {
+                        R.string.onboarding_ready_notifications_off
+                    },
+                ),
+            )
         }
         Button(modifier = Modifier.fillMaxWidth(), onClick = onFinish) {
-            Text("Open Gradey")
+            Text(stringResource(R.string.onboarding_ready_open))
         }
     }
 }
@@ -207,22 +219,24 @@ fun OnboardingUpgradeSupportScreen(
     modifier: Modifier = Modifier,
 ) {
     GradeyScreen(modifier = modifier.statusBarsPadding().verticalScroll(rememberScrollState())) {
-        TextButton(onClick = onBack) { Text("Back") }
+        TextButton(onClick = onBack) { Text(stringResource(R.string.auth_back)) }
         GradeyHero(
-            title = "Your connection is ready",
-            subtitle = "The existing Bakaláři session was kept during this upgrade.",
+            title = stringResource(R.string.onboarding_upgrade_ready_title),
+            subtitle = stringResource(R.string.onboarding_upgrade_ready_body),
         )
-        GradeySectionCard(title = "Account mode") {
+        GradeySectionCard(title = stringResource(R.string.onboarding_upgrade_account_mode)) {
             Text(
-                if (isGuestMode) {
-                    "Local-only mode keeps Bakaláři on this device. You can connect Gradey ID later."
-                } else {
-                    "Gradey ID is connected. Cloud linking will retry safely without replacing your local school session."
-                },
+                stringResource(
+                    if (isGuestMode) {
+                        R.string.onboarding_upgrade_local_mode
+                    } else {
+                        R.string.onboarding_upgrade_gradey_id_mode
+                    },
+                ),
             )
             if (!isGuestMode && cloudLinkErrorMessage != null) {
                 Text(
-                    "Your local Bakaláři connection is safe, but Gradey ID could not link it yet: $cloudLinkErrorMessage",
+                    stringResource(R.string.onboarding_upgrade_link_error, cloudLinkErrorMessage),
                     color = MaterialTheme.colorScheme.error,
                 )
                 Button(
@@ -230,14 +244,22 @@ fun OnboardingUpgradeSupportScreen(
                     enabled = !isRetryingCloudLink,
                     onClick = onRetryCloudLink,
                 ) {
-                    Text(if (isRetryingCloudLink) "Retrying…" else "Retry cloud link")
+                    Text(
+                        stringResource(
+                            if (isRetryingCloudLink) {
+                                R.string.onboarding_upgrade_retrying
+                            } else {
+                                R.string.onboarding_upgrade_retry
+                            },
+                        ),
+                    )
                 }
             } else if (!isGuestMode) {
-                Text("Your Bakaláři account is linked to Gradey ID.")
+                Text(stringResource(R.string.onboarding_upgrade_linked))
             }
         }
         Button(modifier = Modifier.fillMaxWidth(), onClick = onFinish) {
-            Text("Continue to Gradey")
+            Text(stringResource(R.string.onboarding_continue_to_gradey))
         }
     }
 }
@@ -255,57 +277,61 @@ fun AgeAttestationScreen(
     GradeyScreen(modifier = modifier.statusBarsPadding().verticalScroll(rememberScrollState())) {
         if (pending == null) {
             GradeyHero(
-                title = "Confirm your age",
-                subtitle = "Gradey handles school records, optional AI, and support chat. If you are under 16, a parent or guardian must agree (GDPR).",
+                title = stringResource(R.string.age_title),
+                subtitle = stringResource(R.string.age_body),
             )
-            GradeySectionCard(title = "Choose the option that applies") {
+            GradeySectionCard(title = stringResource(R.string.age_choose_option)) {
                 AgeChoiceButton(
-                    title = "I am 16 or older",
-                    subtitle = "I can use Gradey and agree to the privacy policy.",
+                    title = stringResource(R.string.age_sixteen_or_older),
+                    subtitle = stringResource(R.string.age_sixteen_or_older_body),
                     onClick = { onConfirm(AgeAttestationKind.SIXTEEN_OR_OLDER) },
                 )
                 AgeChoiceButton(
-                    title = "I am 13, 14, or 15",
-                    subtitle = "A parent or guardian must agree before school data goes to Gradey.",
+                    title = stringResource(R.string.age_thirteen_to_fifteen),
+                    subtitle = stringResource(R.string.age_parent_required),
                     onClick = {
                         pendingParentalKind = AgeAttestationKind.THIRTEEN_TO_FIFTEEN_WITH_PARENT
                         parentConfirmed = false
                     },
                 )
                 AgeChoiceButton(
-                    title = "I am under 13",
-                    subtitle = "A parent or guardian must agree before school data goes to Gradey.",
+                    title = stringResource(R.string.age_under_thirteen),
+                    subtitle = stringResource(R.string.age_parent_required),
                     onClick = {
                         pendingParentalKind = AgeAttestationKind.UNDER_THIRTEEN
                         parentConfirmed = false
                     },
                 )
-                TextButton(onClick = onOpenPrivacyPolicy) { Text("Privacy Policy") }
+                TextButton(onClick = onOpenPrivacyPolicy) {
+                    Text(stringResource(R.string.age_privacy_policy))
+                }
             }
         } else {
             GradeyHero(
                 title = if (pending == AgeAttestationKind.UNDER_THIRTEEN) {
-                    "I am under 13"
+                    stringResource(R.string.age_under_thirteen)
                 } else {
-                    "I am 13, 14, or 15"
+                    stringResource(R.string.age_thirteen_to_fifteen)
                 },
-                subtitle = "Ask a parent or guardian to review the privacy policy. They must agree that Gradey may process your school records, support chat, and optional AI.",
+                subtitle = stringResource(R.string.age_parent_review_body),
             )
-            GradeySectionCard(title = "Parent or guardian confirmation") {
+            GradeySectionCard(title = stringResource(R.string.age_parent_confirmation)) {
                 Column(verticalArrangement = Arrangement.spacedBy(GradeySpacing.sm)) {
                     Checkbox(
                         checked = parentConfirmed,
                         onCheckedChange = { parentConfirmed = it },
                     )
-                    Text("A parent or guardian has reviewed the privacy policy and agrees.")
+                    Text(stringResource(R.string.age_parent_agreement))
                 }
-                TextButton(onClick = onOpenPrivacyPolicy) { Text("Privacy Policy") }
+                TextButton(onClick = onOpenPrivacyPolicy) {
+                    Text(stringResource(R.string.age_privacy_policy))
+                }
                 Button(
                     modifier = Modifier.fillMaxWidth(),
                     enabled = parentConfirmed,
                     onClick = { onConfirm(pending) },
                 ) {
-                    Text("Continue")
+                    Text(stringResource(R.string.age_continue))
                 }
                 TextButton(
                     modifier = Modifier.fillMaxWidth(),
@@ -314,7 +340,7 @@ fun AgeAttestationScreen(
                         parentConfirmed = false
                     },
                 ) {
-                    Text("Choose a different age")
+                    Text(stringResource(R.string.age_choose_different))
                 }
             }
         }
@@ -352,25 +378,31 @@ fun GradeyIdLoginScreen(
     isGoogleSignInAvailable: Boolean = true,
     onGoogleSignIn: () -> Unit,
     onContinueWithoutAccount: (() -> Unit)? = null,
+    onOpenHelp: () -> Unit = {},
+    onOpenGitHub: () -> Unit = {},
     onBack: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     GradeyScreen(modifier = modifier.verticalScroll(rememberScrollState())) {
         if (onBack != null) {
-            TextButton(onClick = onBack, enabled = !isLoading) { Text("Back") }
+            TextButton(onClick = onBack, enabled = !isLoading) {
+                Text(stringResource(R.string.auth_back))
+            }
         }
         GradeyHero(
-            title = "Gradey ID",
-            subtitle = "Sync linked school accounts, grade history, and new-mark notifications across your Android devices.",
+            title = stringResource(R.string.gradey_id_title),
+            subtitle = stringResource(R.string.gradey_id_body),
         )
 
-        GradeySectionCard(title = "Sign in") {
+        GradeySectionCard(title = stringResource(R.string.gradey_id_sign_in)) {
             Text(
-                if (isGoogleSignInAvailable) {
-                    "Use your Google account to create or open a Gradey ID. School credentials stay encrypted on device or in provider-secret storage when you link an account."
-                } else {
-                    "Gradey ID isn't configured in this build. You can continue with encrypted local Bakaláři storage."
-                },
+                stringResource(
+                    if (isGoogleSignInAvailable) {
+                        R.string.gradey_id_google_body
+                    } else {
+                        R.string.gradey_id_unavailable_body
+                    },
+                ),
                 style = MaterialTheme.typography.bodyMedium,
             )
             if (isGoogleSignInAvailable) {
@@ -380,7 +412,11 @@ fun GradeyIdLoginScreen(
                     onClick = onGoogleSignIn,
                 ) {
                     Icon(GradeyIcons.User, contentDescription = null)
-                    Text(if (isLoading) "Signing in" else "Continue with Google")
+                    Text(
+                        stringResource(
+                            if (isLoading) R.string.gradey_id_signing_in else R.string.gradey_id_continue_google,
+                        ),
+                    )
                 }
             }
             if (onContinueWithoutAccount != null) {
@@ -389,10 +425,10 @@ fun GradeyIdLoginScreen(
                     enabled = !isLoading,
                     onClick = onContinueWithoutAccount,
                 ) {
-                    Text("Continue without an account")
+                    Text(stringResource(R.string.gradey_id_continue_without_account))
                 }
                 Text(
-                    "You can use Bakaláři locally and connect a Gradey ID later without signing in to school again.",
+                    stringResource(R.string.gradey_id_local_body),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -409,8 +445,16 @@ fun GradeyIdLoginScreen(
         GradeySectionCard {
             Column(verticalArrangement = Arrangement.spacedBy(GradeySpacing.sm)) {
                 Icon(GradeyIcons.SecurityLock, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                Text("Private by default", fontWeight = FontWeight.SemiBold)
-                Text("Gradey uses encrypted local storage and only registers push tokens after notification permission is granted.")
+                Text(stringResource(R.string.gradey_id_private_title), fontWeight = FontWeight.SemiBold)
+                Text(stringResource(R.string.gradey_id_private_body))
+            }
+        }
+        GradeySectionCard(title = stringResource(R.string.auth_resources_title)) {
+            OutlinedButton(modifier = Modifier.fillMaxWidth(), onClick = onOpenHelp) {
+                Text(stringResource(R.string.auth_help))
+            }
+            OutlinedButton(modifier = Modifier.fillMaxWidth(), onClick = onOpenGitHub) {
+                Text(stringResource(R.string.auth_github))
             }
         }
     }

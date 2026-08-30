@@ -6,4 +6,6 @@
     <string name="language_standard_subtitle">Standard</string>
     <string name="language_chronically_online_title">Chronically online</string>
     <string name="language_chronically_online_subtitle">lowercase, slang, the works</string>
+    <string name="language_english">English</string>
+    <string name="language_czech">Čeština</string>
 </resources>

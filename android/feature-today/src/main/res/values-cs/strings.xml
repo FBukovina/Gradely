@@ -82,11 +82,13 @@
     <plurals name="today_minutes_remaining">
         <item quantity="one">Zbývá %1$d minuta</item>
         <item quantity="few">Zbývají %1$d minuty</item>
+        <item quantity="many">Zbývá %1$d minuty</item>
         <item quantity="other">Zbývá %1$d minut</item>
     </plurals>
     <plurals name="today_starts_in_minutes">
         <item quantity="one">Začíná za %1$d minutu</item>
         <item quantity="few">Začíná za %1$d minuty</item>
+        <item quantity="many">Začíná za %1$d minuty</item>
         <item quantity="other">Začíná za %1$d minut</item>
     </plurals>
     <plurals name="today_subject_count">
@@ -107,4 +109,12 @@
         <item quantity="many">%1$d nových známek</item>
         <item quantity="other">%1$d nových známek</item>
     </plurals>
+    <string name="today_absence_predictor">PLÁNOVAČ ABSENCE</string>
+    <string name="today_plan_absence">Naplánovat absenci</string>
+    <string name="today_no_planned_absences">Žádná plánovaná absence</string>
+    <string name="today_plan_absence_body">Naplánujte hodiny a zobrazte odhad rizika absence.</string>
+    <string name="today_school_url_required">Adresa školy je povinná.</string>
+    <string name="today_school_url_invalid">Zadejte platnou adresu školy.</string>
+    <string name="today_username_required">Uživatelské jméno je povinné.</string>
+    <string name="today_password_required">Heslo je povinné.</string>
 </resources>

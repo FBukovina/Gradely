@@ -429,7 +429,7 @@ private fun MarksHeader(
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
                             imageVector = GradeyIcons.Sparkles,
-                            contentDescription = "Open Gradey tools",
+                            contentDescription = stringResource(R.string.marks_open_gradey_tools),
                             tint = AccentTeal,
                             modifier = Modifier.size(22.dp),
                         )
@@ -477,7 +477,7 @@ private fun MarksHeader(
                         } else {
                             Icon(
                                 imageVector = GradeyIcons.Refresh,
-                                contentDescription = "Refresh Marks",
+                                contentDescription = stringResource(R.string.marks_refresh_content_description),
                                 tint = AccentTeal,
                                 modifier = Modifier.size(27.dp),
                             )
@@ -493,7 +493,7 @@ private fun MarksHeader(
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
                             imageVector = GradeyIcons.User,
-                            contentDescription = "Open account",
+                            contentDescription = stringResource(R.string.marks_open_account),
                             tint = AccentTeal,
                             modifier = Modifier.size(22.dp),
                         )
@@ -800,7 +800,7 @@ private fun SubjectRow(
         Spacer(Modifier.width(4.dp))
         Icon(
             imageVector = GradeyIcons.ArrowRight,
-            contentDescription = "Open ${subject.displayName}",
+            contentDescription = stringResource(R.string.marks_open_subject, subject.displayName),
             tint = Color(0xFFC7C7CC),
             modifier = Modifier.size(22.dp),
         )
@@ -1039,7 +1039,7 @@ private fun SubjectDetail(
                 )
             }
             item { Spacer(Modifier.height(8.dp)) }
-            item { SectionHeading("MARKS") }
+            item { SectionHeading(stringResource(R.string.subject_marks_section)) }
             item { Spacer(Modifier.height(25.dp)) }
             if (subject.marks.isEmpty()) {
                 item { EmptyMarksCard() }
@@ -1098,7 +1098,7 @@ private fun SubjectDetailHeader(
             Box(contentAlignment = Alignment.Center) {
                 Icon(
                     imageVector = GradeyIcons.ArrowLeft,
-                    contentDescription = "Back",
+                    contentDescription = stringResource(R.string.subject_back),
                     tint = Color(0xFF061C1B),
                     modifier = Modifier.size(28.dp),
                 )
@@ -1297,13 +1297,18 @@ private fun AverageChartCard(chart: AverageHistoryChart) {
         },
     )
     val delta = chart.averageDelta?.let { String.format(Locale.getDefault(), "%+.2f", it) }
+    val chartDescription = pluralStringResource(
+        R.plurals.subject_average_chart_description,
+        points.size,
+        points.size,
+    )
 
     Surface(
         modifier = Modifier
             .fillMaxWidth()
             .height(237.dp)
             .semantics {
-                contentDescription = "Average over time, ${points.size} ${plural(points.size, "point", "points")}"
+                contentDescription = chartDescription
             },
         shape = RoundedCornerShape(20.dp),
         color = CardWhite,
@@ -1742,7 +1747,7 @@ private fun EmptyMarksCard() {
         shadowElevation = 1.dp,
     ) {
         Box(contentAlignment = Alignment.Center) {
-            Text("No marks yet", color = MutedText, fontSize = 15.sp)
+            Text(stringResource(R.string.subject_no_marks), color = MutedText, fontSize = 15.sp)
         }
     }
 }
@@ -1905,6 +1910,3 @@ private fun formatAverage(average: Double?): String =
 
 private fun formatOneDecimal(value: Double): String =
     String.format(Locale.US, "%.1f", value).replace('.', ',')
-
-private fun plural(count: Int, singular: String, plural: String): String =
-    if (count == 1) singular else plural

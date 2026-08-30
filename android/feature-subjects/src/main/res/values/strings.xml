@@ -80,4 +80,15 @@
     <string name="marks_refresh_failed_title">Couldn’t refresh marks</string>
     <string name="marks_refresh_failed_cached">Showing your last saved marks.</string>
     <string name="marks_refresh_retry">Try again</string>
+    <string name="marks_open_gradey_tools">Open Gradey tools</string>
+    <string name="marks_refresh_content_description">Refresh marks</string>
+    <string name="marks_open_account">Open account</string>
+    <string name="marks_open_subject">Open %1$s</string>
+    <string name="subject_back">Back</string>
+    <plurals name="subject_average_chart_description">
+        <item quantity="one">Average over time, %1$d point</item>
+        <item quantity="other">Average over time, %1$d points</item>
+    </plurals>
+    <string name="subject_no_marks">No marks yet</string>
+    <string name="subject_marks_section">MARKS</string>
 </resources>

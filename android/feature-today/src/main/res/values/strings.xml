@@ -99,4 +99,12 @@
         <item quantity="one">%1$d new mark</item>
         <item quantity="other">%1$d new marks</item>
     </plurals>
+    <string name="today_absence_predictor">ABSENCE PREDICTOR</string>
+    <string name="today_plan_absence">Plan absence</string>
+    <string name="today_no_planned_absences">No planned absences</string>
+    <string name="today_plan_absence_body">Plan lessons to preview your absence risk.</string>
+    <string name="today_school_url_required">School URL is required.</string>
+    <string name="today_school_url_invalid">Enter a valid school URL.</string>
+    <string name="today_username_required">Username is required.</string>
+    <string name="today_password_required">Password is required.</string>
 </resources>

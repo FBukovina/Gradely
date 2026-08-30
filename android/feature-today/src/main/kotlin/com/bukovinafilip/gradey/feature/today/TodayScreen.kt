@@ -599,9 +599,21 @@ private fun TodaySchoolReconnectSheet(
                 singleLine = true,
                 enabled = !isSubmitting,
                 isError = hasAttempted && validation.schoolURLMessage != null,
-                supportingText = validation.schoolURLMessage
-                    ?.takeIf { hasAttempted }
-                    ?.let { message -> ({ Text(message) }) },
+                supportingText = if (hasAttempted && validation.schoolURLMessage != null) {
+                    {
+                        Text(
+                            stringResource(
+                                if (school.isBlank()) {
+                                    R.string.today_school_url_required
+                                } else {
+                                    R.string.today_school_url_invalid
+                                },
+                            ),
+                        )
+                    }
+                } else {
+                    null
+                },
                 keyboardOptions = KeyboardOptions(
                     capitalization = KeyboardCapitalization.None,
                     keyboardType = KeyboardType.Uri,
@@ -622,9 +634,11 @@ private fun TodaySchoolReconnectSheet(
                 singleLine = true,
                 enabled = !isSubmitting,
                 isError = hasAttempted && validation.usernameMessage != null,
-                supportingText = validation.usernameMessage
-                    ?.takeIf { hasAttempted }
-                    ?.let { message -> ({ Text(message) }) },
+                supportingText = if (hasAttempted && validation.usernameMessage != null) {
+                    { Text(stringResource(R.string.today_username_required)) }
+                } else {
+                    null
+                },
                 keyboardOptions = KeyboardOptions(
                     capitalization = KeyboardCapitalization.None,
                     keyboardType = KeyboardType.Text,
@@ -645,9 +659,11 @@ private fun TodaySchoolReconnectSheet(
                 singleLine = true,
                 enabled = !isSubmitting,
                 isError = hasAttempted && validation.passwordMessage != null,
-                supportingText = validation.passwordMessage
-                    ?.takeIf { hasAttempted }
-                    ?.let { message -> ({ Text(message) }) },
+                supportingText = if (hasAttempted && validation.passwordMessage != null) {
+                    { Text(stringResource(R.string.today_password_required)) }
+                } else {
+                    null
+                },
                 visualTransformation = if (isPasswordVisible) {
                     VisualTransformation.None
                 } else {
@@ -1389,8 +1405,8 @@ private fun AbsencePredictorCard(onPlanAbsence: () -> Unit) {
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                SectionHeading("ABSENCE PREDICTOR")
-                ActionPill(text = "Plan absence", onClick = onPlanAbsence)
+                SectionHeading(stringResource(R.string.today_absence_predictor))
+                ActionPill(text = stringResource(R.string.today_plan_absence), onClick = onPlanAbsence)
             }
             Spacer(Modifier.height(13.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1405,14 +1421,14 @@ private fun AbsencePredictorCard(onPlanAbsence: () -> Unit) {
                 Spacer(Modifier.width(13.dp))
                 Column {
                     Text(
-                        text = "No planned absences",
+                        text = stringResource(R.string.today_no_planned_absences),
                         color = Color.Black,
                         fontSize = 16.sp,
                         lineHeight = 20.sp,
                         fontWeight = FontWeight.SemiBold,
                     )
                     Text(
-                        text = "Plan lessons to preview your absence risk.",
+                        text = stringResource(R.string.today_plan_absence_body),
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                         color = MutedText,

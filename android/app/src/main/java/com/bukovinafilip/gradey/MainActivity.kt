@@ -7,6 +7,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
+import androidx.annotation.StringRes
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.enableEdgeToEdge
@@ -45,6 +46,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -193,13 +195,13 @@ private enum class AppPhase {
     SIGNED_IN,
 }
 
-private enum class AppTab(val label: String) {
-    TODAY("Today"),
-    SUBJECTS("Marks"),
-    ABSENCE("Absence"),
-    TIMETABLE("Timetable"),
-    STRAVACZ("Meals"),
-    ACCOUNT("Account"),
+private enum class AppTab(@StringRes val labelRes: Int) {
+    TODAY(R.string.tab_today),
+    SUBJECTS(R.string.tab_marks),
+    ABSENCE(R.string.tab_absence),
+    TIMETABLE(R.string.tab_timetable),
+    STRAVACZ(R.string.tab_meals),
+    ACCOUNT(R.string.tab_account),
 }
 
 private fun DeepLinkDestination?.toAppTab(): AppTab? = when (this) {
@@ -368,7 +370,7 @@ private fun GradeyApp(
             } catch (error: CancellationException) {
                 throw error
             } catch (error: Throwable) {
-                schoolLoginError = error.userFacingMessage()
+                schoolLoginError = error.userFacingMessage(context)
             } finally {
                 if (attempt == schoolLoginAttempt) {
                     isLoading = false
@@ -441,7 +443,7 @@ private fun GradeyApp(
                 throw error
             } catch (error: Throwable) {
                 if (attempt == absenceSubjectResolutionAttempt) {
-                    absenceSubjectError = error.userFacingMessage()
+                    absenceSubjectError = error.userFacingMessage(context)
                 }
             } finally {
                 if (attempt == absenceSubjectResolutionAttempt) {
@@ -459,7 +461,7 @@ private fun GradeyApp(
     } catch (error: CancellationException) {
         throw error
     } catch (error: Throwable) {
-        error.userFacingMessage()
+        error.userFacingMessage(context)
     }
 
     suspend fun loadCachedSignedInData() {
@@ -500,7 +502,7 @@ private fun GradeyApp(
             throw error
         } catch (error: Throwable) {
             // The local meals connection remains usable if optional cloud linking fails.
-            linkedAccountError = error.userFacingMessage()
+            linkedAccountError = error.userFacingMessage(context)
             false
         }
     }
@@ -531,7 +533,7 @@ private fun GradeyApp(
         } catch (error: CancellationException) {
             throw error
         } catch (error: Throwable) {
-            stravaError = error.userFacingMessage()
+            stravaError = error.userFacingMessage(context)
         } finally {
             isStravaLoading = false
         }
@@ -548,7 +550,7 @@ private fun GradeyApp(
         } catch (error: CancellationException) {
             throw error
         } catch (error: Throwable) {
-            stravaError = error.userFacingMessage()
+            stravaError = error.userFacingMessage(context)
             if (graph.stravaCZRepository.bootstrapSession() == null) {
                 stravaSession = null
                 stravaMenu = null
@@ -569,7 +571,7 @@ private fun GradeyApp(
         } catch (error: CancellationException) {
             throw error
         } catch (error: Throwable) {
-            stravaError = error.userFacingMessage()
+            stravaError = error.userFacingMessage(context)
             graph.stravaCZRepository.loadCachedMenu()?.let { stravaMenu = it }
             if (graph.stravaCZRepository.bootstrapSession() == null) {
                 stravaSession = null
@@ -629,8 +631,7 @@ private fun GradeyApp(
         } catch (_: Throwable) {
             hasLoadedSchoolDirectory = false
             if (directorySchools.isEmpty()) {
-                schoolDirectoryError =
-                    "We couldn't load the Bakaláři school directory. You can still enter the school URL manually."
+                schoolDirectoryError = context.getString(R.string.school_directory_load_failed)
             }
         } finally {
             isSchoolDirectoryLoading = false
@@ -704,7 +705,7 @@ private fun GradeyApp(
         dataError = null
         marksRefreshError = null
         absenceRefreshError = null
-        schoolLoginError = "Your Bakaláři session expired. Please reconnect your school account."
+        schoolLoginError = context.getString(R.string.school_session_expired)
         phase = AppPhase.NEEDS_SCHOOL
     }
 
@@ -777,10 +778,10 @@ private fun GradeyApp(
             throw error
         } catch (error: GradeySessionExpiredException) {
             account = null
-            authError = error.userFacingMessage()
+            authError = error.userFacingMessage(context)
             phase = AppPhase.SIGNED_OUT
         } catch (error: Throwable) {
-            linkedAccountError = error.userFacingMessage()
+            linkedAccountError = error.userFacingMessage(context)
         } finally {
             isRefreshingLinkedAccounts = false
         }
@@ -816,12 +817,12 @@ private fun GradeyApp(
             graph.notificationPreferencesStore.preferences = previous
             graph.pushRegistrationStore.clear()
             account = null
-            authError = error.userFacingMessage()
+            authError = error.userFacingMessage(context)
             phase = AppPhase.SIGNED_OUT
         } catch (error: Throwable) {
             notificationPreferences = previous
             graph.notificationPreferencesStore.preferences = previous
-            notificationPreferencesError = error.userFacingMessage()
+            notificationPreferencesError = error.userFacingMessage(context)
         } finally {
             isUpdatingNotificationPreferences = false
         }
@@ -847,7 +848,7 @@ private fun GradeyApp(
             )
         }
         gradeHistorySnapshot = refresh.value
-        gradeHistoryRefreshError = refresh.failure?.userFacingMessage()
+        gradeHistoryRefreshError = refresh.failure?.userFacingMessage(context)
     }
 
     suspend fun linkCurrentSchoolIfNeeded(): Boolean {
@@ -872,11 +873,11 @@ private fun GradeyApp(
             throw error
         } catch (error: GradeySessionExpiredException) {
             account = null
-            authError = error.userFacingMessage()
+            authError = error.userFacingMessage(context)
             phase = AppPhase.SIGNED_OUT
             false
         } catch (error: Throwable) {
-            linkedAccountError = error.userFacingMessage()
+            linkedAccountError = error.userFacingMessage(context)
             false
         }
     }
@@ -888,7 +889,7 @@ private fun GradeyApp(
         password: String,
     ): String? {
         if (mutatingLinkedAccountID != null) {
-            return "Another school account change is already in progress."
+            return context.getString(R.string.school_account_change_in_progress)
         }
         val previousSession = graph.schoolRepository.currentStoredSession()
 
@@ -935,7 +936,7 @@ private fun GradeyApp(
             throw error
         } catch (error: Throwable) {
             rollback()
-            error.userFacingMessage().also { linkedAccountError = it }
+            error.userFacingMessage(context).also { linkedAccountError = it }
         } finally {
             mutatingLinkedAccountID = null
         }
@@ -966,7 +967,7 @@ private fun GradeyApp(
         } catch (error: CancellationException) {
             throw error
         } catch (error: Throwable) {
-            linkedAccountError = error.userFacingMessage()
+            linkedAccountError = error.userFacingMessage(context)
             return false
         } finally {
             mutatingLinkedAccountID = null
@@ -983,7 +984,7 @@ private fun GradeyApp(
         } catch (error: CancellationException) {
             throw error
         } catch (error: Throwable) {
-            linkedAccountError = error.userFacingMessage()
+            linkedAccountError = error.userFacingMessage(context)
         } finally {
             mutatingLinkedAccountID = null
         }
@@ -1012,7 +1013,7 @@ private fun GradeyApp(
         } catch (error: CancellationException) {
             throw error
         } catch (error: Throwable) {
-            linkedAccountError = error.userFacingMessage()
+            linkedAccountError = error.userFacingMessage(context)
         } finally {
             mutatingLinkedAccountID = null
         }
@@ -1038,7 +1039,7 @@ private fun GradeyApp(
             null -> Unit
             else -> {
                 failures += error
-                marksRefreshError = error.userFacingMessage()
+                marksRefreshError = error.userFacingMessage(context)
             }
         }
         val absenceRefresh = refreshRetainingContent(absence) {
@@ -1058,7 +1059,7 @@ private fun GradeyApp(
             null -> Unit
             else -> {
                 failures += error
-                absenceRefreshError = error.userFacingMessage()
+                absenceRefreshError = error.userFacingMessage(context)
             }
         }
         when (val timetableFailure = loadTimetable(TimetableDates.todayString())) {
@@ -1069,7 +1070,7 @@ private fun GradeyApp(
             null -> Unit
             else -> {
                 failures += timetableFailure
-                timetableError = timetableFailure.userFacingMessage()
+                timetableError = timetableFailure.userFacingMessage(context)
             }
         }
         val mealsSessionRefresh = refreshRetainingContent(stravaSession) {
@@ -1078,7 +1079,7 @@ private fun GradeyApp(
         stravaSession = mealsSessionRefresh.value
         val mealsSessionFailure = mealsSessionRefresh.failure
         if (mealsSessionFailure != null) {
-            stravaError = mealsSessionFailure.userFacingMessage()
+            stravaError = mealsSessionFailure.userFacingMessage(context)
         } else if (stravaSession != null) {
             val mealsRefresh = refreshRetainingContent(MealsSnapshot(stravaSession, stravaMenu)) {
                 val (updatedSession, updatedMenu) = graph.stravaCZRepository.loadMenu(
@@ -1089,7 +1090,7 @@ private fun GradeyApp(
             stravaSession = mealsRefresh.value.session
             stravaMenu = mealsRefresh.value.menu
             mealsRefresh.failure?.let { error ->
-                stravaError = error.userFacingMessage()
+                stravaError = error.userFacingMessage(context)
                 if (graph.stravaCZRepository.bootstrapSession() == null) {
                     stravaSession = null
                     stravaMenu = null
@@ -1100,7 +1101,7 @@ private fun GradeyApp(
         }
         refreshLinkedAccountSnapshot()
         refreshGradeHistory()
-        dataError = failures.firstOrNull()?.userFacingMessage()
+        dataError = failures.firstOrNull()?.userFacingMessage(context)
     }
 
     suspend fun openStoredSchoolOrLogin() {
@@ -1193,7 +1194,7 @@ private fun GradeyApp(
             GradeyJson.parseToJsonElement(payload)
             val exportDirectory = File(context.cacheDir, "exports")
             check(exportDirectory.exists() || exportDirectory.mkdirs()) {
-                "Could not prepare the export folder."
+                context.getString(R.string.export_folder_failed)
             }
             val exportFile = File(exportDirectory, "gradey-data-${LocalDate.now()}.json")
             exportFile.writeText(payload, Charsets.UTF_8)
@@ -1207,16 +1208,18 @@ private fun GradeyApp(
                 putExtra(Intent.EXTRA_STREAM, contentUri)
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
-            context.startActivity(Intent.createChooser(shareIntent, "Share Gradey data"))
+            context.startActivity(
+                Intent.createChooser(shareIntent, context.getString(R.string.share_gradey_data)),
+            )
         } catch (error: CancellationException) {
             throw error
         } catch (error: GradeySessionExpiredException) {
             graph.pushRegistrationStore.clear()
             account = null
-            authError = error.userFacingMessage()
+            authError = error.userFacingMessage(context)
             phase = AppPhase.SIGNED_OUT
         } catch (error: Throwable) {
-            privacyDataError = error.userFacingMessage()
+            privacyDataError = error.userFacingMessage(context)
         } finally {
             isExportingData = false
         }
@@ -1269,10 +1272,10 @@ private fun GradeyApp(
         } catch (error: GradeySessionExpiredException) {
             graph.pushRegistrationStore.clear()
             account = null
-            authError = error.userFacingMessage()
+            authError = error.userFacingMessage(context)
             phase = AppPhase.SIGNED_OUT
         } catch (error: Throwable) {
-            privacyDataError = error.userFacingMessage()
+            privacyDataError = error.userFacingMessage(context)
         } finally {
             isDeletingAccount = false
         }
@@ -1318,7 +1321,7 @@ private fun GradeyApp(
             throw error
         } catch (error: Throwable) {
             supportCatalog = null
-            supportMessage = error.userFacingMessage()
+            supportMessage = error.userFacingMessage(context)
         } finally {
             isSupportLoading = false
         }
@@ -1354,7 +1357,7 @@ private fun GradeyApp(
         } catch (error: CancellationException) {
             throw error
         } catch (error: Throwable) {
-            supportMessage = error.userFacingMessage()
+            supportMessage = error.userFacingMessage(context)
         } finally {
             purchasingSupportOptionID = null
         }
@@ -1378,7 +1381,7 @@ private fun GradeyApp(
         } catch (error: CancellationException) {
             throw error
         } catch (error: Throwable) {
-            supportMessage = error.userFacingMessage()
+            supportMessage = error.userFacingMessage(context)
         } finally {
             isRestoringSupport = false
         }
@@ -1590,7 +1593,7 @@ private fun GradeyApp(
                             } catch (error: CancellationException) {
                                 throw error
                             } catch (error: Throwable) {
-                                authError = error.userFacingMessage()
+                                authError = error.userFacingMessage(context)
                             } finally {
                                 isLoading = false
                             }
@@ -1610,10 +1613,28 @@ private fun GradeyApp(
                             } catch (error: CancellationException) {
                                 throw error
                             } catch (error: Throwable) {
-                                authError = error.userFacingMessage()
+                                authError = error.userFacingMessage(context)
                             } finally {
                                 isLoading = false
                             }
+                        }
+                    },
+                    onOpenHelp = {
+                        val language = if (appLanguage.pickerLanguage == AppLanguage.CZECH) "cs" else "en"
+                        runCatching {
+                            activity.startActivity(
+                                Intent(
+                                    Intent.ACTION_VIEW,
+                                    Uri.parse("https://help.bukovinafilip.com/$language"),
+                                ),
+                            )
+                        }
+                    },
+                    onOpenGitHub = {
+                        runCatching {
+                            activity.startActivity(
+                                Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/FBukovina/Gradely")),
+                            )
                         }
                     },
                     onBack = ::goBackInOnboarding,
@@ -1674,7 +1695,7 @@ private fun GradeyApp(
                             } catch (error: CancellationException) {
                                 throw error
                             } catch (error: Throwable) {
-                                dataError = error.userFacingMessage()
+                                dataError = error.userFacingMessage(context)
                             } finally {
                                 isLoading = false
                             }
@@ -1706,7 +1727,7 @@ private fun GradeyApp(
                             } catch (error: CancellationException) {
                                 throw error
                             } catch (error: Throwable) {
-                                dataError = error.userFacingMessage()
+                                dataError = error.userFacingMessage(context)
                             } finally {
                                 isLoading = false
                             }
@@ -1746,7 +1767,7 @@ private fun GradeyApp(
                     } catch (error: CancellationException) {
                         throw error
                     } catch (error: Throwable) {
-                        authError = error.userFacingMessage()
+                        authError = error.userFacingMessage(context)
                     } finally {
                         isLoading = false
                     }
@@ -1766,10 +1787,28 @@ private fun GradeyApp(
                     } catch (error: CancellationException) {
                         throw error
                     } catch (error: Throwable) {
-                        authError = error.userFacingMessage()
+                        authError = error.userFacingMessage(context)
                     } finally {
                         isLoading = false
                     }
+                }
+            },
+            onOpenHelp = {
+                val language = if (appLanguage.pickerLanguage == AppLanguage.CZECH) "cs" else "en"
+                runCatching {
+                    activity.startActivity(
+                        Intent(
+                            Intent.ACTION_VIEW,
+                            Uri.parse("https://help.bukovinafilip.com/$language"),
+                        ),
+                    )
+                }
+            },
+            onOpenGitHub = {
+                runCatching {
+                    activity.startActivity(
+                        Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/FBukovina/Gradely")),
+                    )
                 }
             },
         )
@@ -1777,11 +1816,15 @@ private fun GradeyApp(
         AppPhase.NEEDS_SCHOOL -> SchoolLoginScreen(
             isLoading = isLoading,
             initialSchoolURL = reconnectSchoolURL,
-            title = if (reconnectLinkedAccount == null) "Connect Bakaláři" else "Reconnect ${reconnectLinkedAccount?.displayName}",
-            subtitle = if (reconnectLinkedAccount == null) {
-                "Sign in with the same school address, username, and password you use for Bakaláři."
+            title = if (reconnectLinkedAccount == null) {
+                context.getString(R.string.connect_bakalari)
             } else {
-                "Enter the Bakaláři credentials for this exact linked school account. Gradey will reject credentials for a different student."
+                context.getString(R.string.reconnect_school, reconnectLinkedAccount?.displayName.orEmpty())
+            },
+            subtitle = if (reconnectLinkedAccount == null) {
+                context.getString(R.string.connect_bakalari_subtitle)
+            } else {
+                context.getString(R.string.reconnect_school_subtitle)
             },
             errorMessage = schoolLoginError,
             directorySchools = directorySchools,
@@ -1789,6 +1832,24 @@ private fun GradeyApp(
             directoryErrorMessage = schoolDirectoryError,
             onLoadDirectory = { scope.launch { loadSchoolDirectory() } },
             onRetryDirectory = { scope.launch { loadSchoolDirectory(forceRefresh = true) } },
+            onOpenHelp = {
+                val language = if (appLanguage.pickerLanguage == AppLanguage.CZECH) "cs" else "en"
+                runCatching {
+                    activity.startActivity(
+                        Intent(
+                            Intent.ACTION_VIEW,
+                            Uri.parse("https://help.bukovinafilip.com/$language"),
+                        ),
+                    )
+                }
+            },
+            onOpenGitHub = {
+                runCatching {
+                    activity.startActivity(
+                        Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/FBukovina/Gradely")),
+                    )
+                }
+            },
             onLogin = { school, username, password ->
                 launchSchoolLogin {
                     val reconnectTarget = reconnectLinkedAccount
@@ -1964,7 +2025,7 @@ private fun GradeyApp(
                     onOpenGradeyTools = { isGradeyAIPresented = true },
                     modifier = Modifier.fillMaxSize(),
                 ) else CoreDataUnavailableScreen(
-                    title = "Marks",
+                    title = context.getString(R.string.tab_marks),
                     isLoading = isLoading,
                     errorMessage = dataError,
                     onRetry = { scope.launch { runWithLoading { refreshSignedInData(true) } } },
@@ -1983,7 +2044,8 @@ private fun GradeyApp(
                     else -> if (currentAbsence != null) {
                         AbsenceScreen(
                             response = currentAbsence,
-                            studentName = currentDashboard?.user?.fullName ?: "Student",
+                            studentName = currentDashboard?.user?.fullName
+                                ?: context.getString(R.string.student_fallback),
                             isRefreshing = absencePresentationState == AbsencePresentationState.REFRESHING,
                             isResolvingSubjects = isResolvingAbsenceSubjects,
                             subjectResolutionProgress = absenceSubjectProgress,
@@ -2031,7 +2093,7 @@ private fun GradeyApp(
                                 isLoading = true
                                 try {
                                     timetableError = null
-                                    timetableError = loadTimetable(timetable?.weekStart ?: timetableRequestedWeek)?.userFacingMessage()
+                                    timetableError = loadTimetable(timetable?.weekStart ?: timetableRequestedWeek)?.userFacingMessage(context)
                                 } finally {
                                     isLoading = false
                                 }
@@ -2044,7 +2106,7 @@ private fun GradeyApp(
                                 isLoading = true
                                 try {
                                     timetableError = null
-                                    timetableError = loadTimetableCacheFirst(weekContaining)?.userFacingMessage()
+                                    timetableError = loadTimetableCacheFirst(weekContaining)?.userFacingMessage(context)
                                 } finally {
                                     isLoading = false
                                 }
@@ -2062,7 +2124,7 @@ private fun GradeyApp(
                         scope.launch {
                             runWithLoading {
                                 timetableError = null
-                                timetableError = loadTimetableCacheFirst(timetableRequestedWeek)?.userFacingMessage()
+                                timetableError = loadTimetableCacheFirst(timetableRequestedWeek)?.userFacingMessage(context)
                             }
                         }
                     },
@@ -2175,6 +2237,16 @@ private fun GradeyApp(
                                 )
                             }
                         },
+                        onOpenDeveloperInstagram = {
+                            runCatching {
+                                activity.startActivity(
+                                    Intent(
+                                        Intent.ACTION_VIEW,
+                                        Uri.parse("https://www.instagram.com/bukovinafilip"),
+                                    ),
+                                )
+                            }
+                        },
                         onClearCache = {
                             scope.launch {
                                 graph.cache?.clearAll()
@@ -2245,11 +2317,11 @@ private fun GradeyApp(
                                 throw error
                             } catch (error: GradeySessionExpiredException) {
                                 account = null
-                                authError = error.userFacingMessage()
+                                authError = error.userFacingMessage(context)
                                 selectedTab = AppTab.TODAY
                                 phase = AppPhase.SIGNED_OUT
                             } catch (error: Throwable) {
-                                profileError = error.userFacingMessage()
+                                profileError = error.userFacingMessage(context)
                             } finally {
                                 isUpdatingProfile = false
                             }
@@ -2382,7 +2454,7 @@ private fun GradeyApp(
                             } catch (error: CancellationException) {
                                 throw error
                             } catch (error: Throwable) {
-                                profileError = error.userFacingMessage()
+                                profileError = error.userFacingMessage(context)
                             }
                         }
                     },
@@ -2458,7 +2530,7 @@ private suspend fun requestGoogleCredential(
     serverClientId: String,
 ): GoogleIdTokenCredential {
     if (serverClientId.isBlank()) {
-        throw IllegalStateException("Google sign-in is not configured in this build.")
+        throw IllegalStateException(context.getString(R.string.google_sign_in_not_configured))
     }
     val option = GetSignInWithGoogleOption.Builder(serverClientId).build()
     val request = GetCredentialRequest.Builder()
@@ -2466,13 +2538,13 @@ private suspend fun requestGoogleCredential(
         .build()
     val credential = CredentialManager.create(context).getCredential(context, request).credential
     if (credential !is CustomCredential || credential.type != GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
-        throw IllegalStateException("Google sign-in returned an unsupported credential.")
+        throw IllegalStateException(context.getString(R.string.google_sign_in_unsupported))
     }
     return GoogleIdTokenCredential.createFrom(credential.data)
 }
 
-private fun Throwable.userFacingMessage(): String =
-    message?.trim()?.takeIf { it.isNotEmpty() } ?: "Something went wrong. Please try again."
+private fun Throwable.userFacingMessage(context: android.content.Context): String =
+    message?.trim()?.takeIf { it.isNotEmpty() } ?: context.getString(R.string.generic_error)
 
 @Composable
 private fun DataRefreshWarning(message: String, modifier: Modifier = Modifier) {
@@ -2495,7 +2567,7 @@ private fun DataRefreshWarning(message: String, modifier: Modifier = Modifier) {
             )
             Column {
                 Text(
-                    text = "Some data could not refresh",
+                    text = stringResource(R.string.data_refresh_partial),
                     color = MaterialTheme.colorScheme.onErrorContainer,
                     fontWeight = FontWeight.SemiBold,
                 )
@@ -2518,15 +2590,18 @@ private fun CoreDataUnavailableScreen(
     modifier: Modifier = Modifier,
 ) {
     GradeyScreen(modifier = modifier) {
-        GradeyHero(title = title, subtitle = "Your Bakaláři data will appear here after it loads.")
+        GradeyHero(title = title, subtitle = stringResource(R.string.core_data_subtitle))
         GradeySectionCard {
             if (isLoading) {
                 CircularProgressIndicator()
-                Text("Loading from Bakaláři…")
+                Text(stringResource(R.string.core_data_loading))
             } else {
-                Text(errorMessage ?: "No data is available yet.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    errorMessage ?: stringResource(R.string.core_data_empty),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
                 Button(onClick = onRetry) {
-                    Text("Try again")
+                    Text(stringResource(R.string.action_try_again))
                 }
             }
         }
@@ -2590,6 +2665,7 @@ private fun androidx.compose.foundation.layout.RowScope.BottomNavigationItem(
     selected: Boolean,
     onClick: () -> Unit,
 ) {
+    val label = stringResource(tab.labelRes)
     val foreground = if (selected) Color(0xFF0DA388) else Color(0xFF19191D)
     Surface(
         modifier = Modifier
@@ -2610,7 +2686,7 @@ private fun androidx.compose.foundation.layout.RowScope.BottomNavigationItem(
             ) {
                 Icon(
                     imageVector = tab.icon(),
-                    contentDescription = tab.label,
+                    contentDescription = label,
                     tint = foreground,
                     modifier = Modifier.size(24.dp),
                 )
@@ -2626,7 +2702,7 @@ private fun androidx.compose.foundation.layout.RowScope.BottomNavigationItem(
                 }
             }
             Text(
-                text = tab.label,
+                text = label,
                 color = if (selected) Color(0xFF0DA388) else Color.Black,
                 fontSize = 12.sp,
                 lineHeight = 14.sp,

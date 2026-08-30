@@ -35,6 +35,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
@@ -55,8 +56,8 @@ import com.bukovinafilip.gradey.ui.GradeySpacing
 fun SchoolLoginScreen(
     isLoading: Boolean,
     initialSchoolURL: String = "",
-    title: String = "Connect Bakaláři",
-    subtitle: String = "Sign in with the same school address, username, and password you use for Bakaláři.",
+    title: String? = null,
+    subtitle: String? = null,
     errorMessage: String? = null,
     directorySchools: List<SchoolDirectorySchool> = emptyList(),
     isDirectoryLoading: Boolean = false,
@@ -66,6 +67,8 @@ fun SchoolLoginScreen(
     onLogin: (String, String, String) -> Unit,
     onCancelLogin: (() -> Unit)? = null,
     onInputChanged: () -> Unit = {},
+    onOpenHelp: () -> Unit = {},
+    onOpenGitHub: () -> Unit = {},
     onBack: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
@@ -77,6 +80,8 @@ fun SchoolLoginScreen(
     var isPasswordVisible by remember { mutableStateOf(false) }
     var hasAttemptedLogin by remember { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
+    val resolvedTitle = title ?: stringResource(R.string.login_title)
+    val resolvedSubtitle = subtitle ?: stringResource(R.string.login_subtitle)
     val validation = remember(school, username, password) {
         SchoolLoginValidator.validate(school, username, password)
     }
@@ -99,13 +104,15 @@ fun SchoolLoginScreen(
 
     GradeyScreen(modifier = modifier.verticalScroll(rememberScrollState())) {
         if (onBack != null) {
-            TextButton(onClick = onBack, enabled = !isLoading) { Text("Back") }
+            TextButton(onClick = onBack, enabled = !isLoading) {
+                Text(stringResource(R.string.login_back))
+            }
         }
         GradeyHero(
-            title = title,
-            subtitle = subtitle,
+            title = resolvedTitle,
+            subtitle = resolvedSubtitle,
         )
-        GradeySectionCard(title = "Bakaláři credentials") {
+        GradeySectionCard(title = stringResource(R.string.login_credentials_title)) {
             Column(verticalArrangement = Arrangement.spacedBy(GradeySpacing.md)) {
                 OutlinedTextField(
                     modifier = Modifier.fillMaxWidth(),
@@ -115,8 +122,8 @@ fun SchoolLoginScreen(
                         isSchoolSearchActive = true
                         onInputChanged()
                     },
-                    label = { Text("Find your school") },
-                    placeholder = { Text("School name or town") },
+                    label = { Text(stringResource(R.string.login_find_school)) },
+                    placeholder = { Text(stringResource(R.string.login_school_search_placeholder)) },
                     leadingIcon = { Icon(GradeyIcons.Search, contentDescription = null) },
                     trailingIcon = {
                         if (isDirectoryLoading) {
@@ -138,7 +145,7 @@ fun SchoolLoginScreen(
                             style = MaterialTheme.typography.bodySmall,
                         )
                         TextButton(onClick = onRetryDirectory, enabled = !isDirectoryLoading) {
-                            Text("Retry")
+                            Text(stringResource(R.string.login_retry))
                         }
                     }
                 }
@@ -184,15 +191,25 @@ fun SchoolLoginScreen(
                     directoryErrorMessage == null
                 ) {
                     Text(
-                        "No matching school. You can enter its address below.",
+                        stringResource(R.string.login_no_matching_school),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         style = MaterialTheme.typography.bodySmall,
                     )
                 }
                 Text(
-                    "Or enter the Bakaláři school address",
+                    stringResource(R.string.login_manual_address_prompt),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.labelMedium,
+                )
+                Text(
+                    stringResource(R.string.login_manual_address_steps),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                Text(
+                    stringResource(R.string.login_manual_address_example),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodySmall,
                 )
                 OutlinedButton(
                     modifier = Modifier.fillMaxWidth(),
@@ -208,7 +225,7 @@ fun SchoolLoginScreen(
                         focusManager.clearFocus()
                     },
                 ) {
-                    Text("Use demo account")
+                    Text(stringResource(R.string.login_use_demo_account))
                 }
                 OutlinedTextField(
                     modifier = Modifier.fillMaxWidth(),
@@ -219,14 +236,24 @@ fun SchoolLoginScreen(
                         schoolSearch = ""
                         onInputChanged()
                     },
-                    label = { Text("School URL") },
-                    placeholder = { Text("school.example.cz") },
+                    label = { Text(stringResource(R.string.login_school_url)) },
+                    placeholder = { Text(stringResource(R.string.login_school_url_placeholder)) },
                     leadingIcon = { Icon(GradeyIcons.Link, contentDescription = null) },
                     singleLine = true,
                     enabled = !isLoading,
                     isError = hasAttemptedLogin && validation.schoolURLMessage != null,
                     supportingText = if (hasAttemptedLogin && validation.schoolURLMessage != null) {
-                        { Text(validation.schoolURLMessage.orEmpty()) }
+                        {
+                            Text(
+                                stringResource(
+                                    if (school.isBlank()) {
+                                        R.string.login_school_url_required
+                                    } else {
+                                        R.string.login_school_url_invalid
+                                    },
+                                ),
+                            )
+                        }
                     } else {
                         null
                     },
@@ -246,12 +273,12 @@ fun SchoolLoginScreen(
                         username = it
                         onInputChanged()
                     },
-                    label = { Text("Username") },
+                    label = { Text(stringResource(R.string.login_username)) },
                     singleLine = true,
                     enabled = !isLoading,
                     isError = hasAttemptedLogin && validation.usernameMessage != null,
                     supportingText = if (hasAttemptedLogin && validation.usernameMessage != null) {
-                        { Text(validation.usernameMessage.orEmpty()) }
+                        { Text(stringResource(R.string.login_username_required)) }
                     } else {
                         null
                     },
@@ -271,7 +298,7 @@ fun SchoolLoginScreen(
                         password = it
                         onInputChanged()
                     },
-                    label = { Text("Password") },
+                    label = { Text(stringResource(R.string.login_password)) },
                     singleLine = true,
                     visualTransformation = if (isPasswordVisible) {
                         VisualTransformation.None
@@ -285,14 +312,20 @@ fun SchoolLoginScreen(
                         ) {
                             Icon(
                                 imageVector = if (isPasswordVisible) GradeyIcons.ViewOff else GradeyIcons.View,
-                                contentDescription = if (isPasswordVisible) "Hide password" else "Show password",
+                                contentDescription = stringResource(
+                                    if (isPasswordVisible) {
+                                        R.string.login_hide_password
+                                    } else {
+                                        R.string.login_show_password
+                                    },
+                                ),
                             )
                         }
                     },
                     enabled = !isLoading,
                     isError = hasAttemptedLogin && validation.passwordMessage != null,
                     supportingText = if (hasAttemptedLogin && validation.passwordMessage != null) {
-                        { Text(validation.passwordMessage.orEmpty()) }
+                        { Text(stringResource(R.string.login_password_required)) }
                     } else {
                         null
                     },
@@ -323,9 +356,9 @@ fun SchoolLoginScreen(
                     }
                     Text(
                         when {
-                            isLoading -> "Connecting…"
-                            errorMessage != null -> "Try again"
-                            else -> "Connect school"
+                            isLoading -> stringResource(R.string.login_connecting)
+                            errorMessage != null -> stringResource(R.string.login_try_again)
+                            else -> stringResource(R.string.login_connect_school)
                         },
                     )
                 }
@@ -334,13 +367,21 @@ fun SchoolLoginScreen(
                         modifier = Modifier.fillMaxWidth(),
                         onClick = onCancelLogin,
                     ) {
-                        Text("Cancel")
+                        Text(stringResource(R.string.login_cancel))
                     }
                 }
                 Text(
-                    "Your credentials are stored in Android encrypted storage and are used only to connect to your school server.",
+                    stringResource(R.string.login_credentials_privacy),
                     style = MaterialTheme.typography.bodySmall,
                 )
+                Row(horizontalArrangement = Arrangement.spacedBy(GradeySpacing.sm)) {
+                    TextButton(onClick = onOpenHelp) {
+                        Text(stringResource(R.string.login_help))
+                    }
+                    TextButton(onClick = onOpenGitHub) {
+                        Text(stringResource(R.string.login_github))
+                    }
+                }
             }
         }
     }

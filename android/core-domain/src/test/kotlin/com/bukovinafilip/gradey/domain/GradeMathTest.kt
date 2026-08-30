@@ -4,6 +4,7 @@ import com.bukovinafilip.gradey.model.Mark
 import com.bukovinafilip.gradey.model.Subject
 import com.bukovinafilip.gradey.model.SubjectInfo
 import com.google.common.truth.Truth.assertThat
+import java.util.Locale
 import org.junit.Test
 
 class GradeMathTest {
@@ -60,6 +61,13 @@ class GradeMathTest {
         val average = GradeMath.weightedAverage(subject.marks, subject)
 
         assertThat(average).isWithin(0.0001).of(1.5)
+    }
+
+    @Test
+    fun formattedAverageUsesTheRequestedLocale() {
+        assertThat(GradeMath.formattedAverage(1.25, Locale.ENGLISH)).isEqualTo("1.25")
+        assertThat(GradeMath.formattedAverage(1.25, Locale.forLanguageTag("cs-CZ"))).isEqualTo("1,25")
+        assertThat(GradeMath.formattedAverage(null, Locale.ENGLISH)).isEqualTo("-")
     }
 
     private fun mark(

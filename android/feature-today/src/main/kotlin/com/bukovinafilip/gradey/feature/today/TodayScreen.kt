@@ -76,6 +76,7 @@ import com.bukovinafilip.gradey.domain.TodayMeals
 import com.bukovinafilip.gradey.domain.TodayNewMark
 import com.bukovinafilip.gradey.domain.TodayNewMarks
 import com.bukovinafilip.gradey.domain.TodayPresentationState
+import com.bukovinafilip.gradey.domain.TodayStudentNames
 import com.bukovinafilip.gradey.domain.TodayTimetableState
 import com.bukovinafilip.gradey.domain.TodayTimetableSummaries
 import com.bukovinafilip.gradey.domain.TodayTimetableSummary
@@ -200,6 +201,7 @@ fun TodayScreen(
     timetable: TimetableWeek?,
     stravaMenu: StravaCZMenu?,
     isMealsConnected: Boolean,
+    activeLinkedAccountDisplayName: String? = null,
     cloudNewMarkEvents: List<NewMarkEvent> = emptyList(),
     gradeTrends: List<SubjectGradeTrend> = emptyList(),
     isRefreshing: Boolean,
@@ -216,8 +218,12 @@ fun TodayScreen(
     var selectedTrendRangeName by rememberSaveable { mutableStateOf(GradeTrendRange.NINETY_DAYS.name) }
     val todayListState = rememberLazyListState()
     val subjects = dashboard.marksResponse.subjects
-    val overall = GradeMath.formattedAverage(GradeMath.overallAverage(subjects)).replace('.', ',')
+    val overall = GradeMath.formattedAverage(GradeMath.overallAverage(subjects))
     val totalMarks = subjects.sumOf { it.marks.size }
+    val studentName = TodayStudentNames.resolve(
+        schoolFullName = dashboard.user?.fullName,
+        activeLinkedAccountDisplayName = activeLinkedAccountDisplayName,
+    ) ?: stringResource(R.string.today_gradey)
     val absenceSummary = remember(absence) {
         AbsenceRiskSummary.make(absence, absence.absencesPerSubject)
     }
@@ -276,7 +282,7 @@ fun TodayScreen(
             }
             item {
                 AverageCard(
-                    fullName = dashboard.user?.fullName ?: "Student",
+                    fullName = studentName,
                     overallAverage = overall,
                     subjectCount = subjects.size,
                     markCount = totalMarks,
@@ -416,7 +422,7 @@ private fun TodayHeader(
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
                             imageVector = Icons.Default.AutoAwesome,
-                            contentDescription = "Open Gradey tools",
+                            contentDescription = stringResource(R.string.today_open_gradey_ai),
                             tint = AccentTeal,
                             modifier = Modifier.size(22.dp),
                         )
@@ -426,7 +432,7 @@ private fun TodayHeader(
         }
 
         Text(
-            text = "Today",
+            text = stringResource(R.string.today_title),
             color = Color.Black,
             fontSize = 18.sp,
             lineHeight = 22.sp,
@@ -464,7 +470,7 @@ private fun TodayHeader(
                         } else {
                             Icon(
                                 imageVector = Icons.Default.Refresh,
-                                contentDescription = "Refresh Today",
+                                contentDescription = stringResource(R.string.today_refresh),
                                 tint = AccentTeal,
                                 modifier = Modifier.size(27.dp),
                             )
@@ -480,7 +486,7 @@ private fun TodayHeader(
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
                             imageVector = Icons.Default.Person,
-                            contentDescription = "Open account",
+                            contentDescription = stringResource(R.string.today_open_account),
                             tint = AccentTeal,
                             modifier = Modifier.size(23.dp),
                         )
@@ -501,7 +507,7 @@ private fun AverageCard(
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .height(166.dp),
+            .heightIn(min = 166.dp),
         shape = RoundedCornerShape(20.dp),
         color = Color.Transparent,
         shadowElevation = 4.dp,
@@ -513,7 +519,7 @@ private fun AverageCard(
         ) {
             Text(
                 text = fullName,
-                maxLines = 1,
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
                 color = Color(0xFF021D1A),
                 fontSize = 22.sp,
@@ -528,7 +534,7 @@ private fun AverageCard(
             ) {
                 Column {
                     Text(
-                        text = "Overall average",
+                        text = stringResource(R.string.today_overall_average),
                         color = AccentDark,
                         fontSize = 12.sp,
                         lineHeight = 18.sp,
@@ -548,14 +554,22 @@ private fun AverageCard(
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     Text(
-                        text = "$subjectCount ${plural(subjectCount, "subject", "subjects")}",
+                        text = pluralStringResource(
+                            R.plurals.today_subject_count,
+                            subjectCount,
+                            subjectCount,
+                        ),
                         color = AccentDark,
                         fontSize = 12.sp,
                         lineHeight = 18.sp,
                         fontWeight = FontWeight.Bold,
                     )
                     Text(
-                        text = "$markCount ${plural(markCount, "mark", "marks")}",
+                        text = pluralStringResource(
+                            R.plurals.today_mark_count,
+                            markCount,
+                            markCount,
+                        ),
                         color = AccentDark,
                         fontSize = 12.sp,
                         lineHeight = 18.sp,
@@ -590,14 +604,14 @@ private fun MarksShortcut(onClick: () -> Unit) {
             Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Marks",
+                    text = stringResource(R.string.today_marks),
                     color = Color.Black,
                     fontSize = 17.sp,
                     lineHeight = 22.sp,
                     fontWeight = FontWeight.SemiBold,
                 )
                 Text(
-                    text = "Averages, subjects, trends, and calculator",
+                    text = stringResource(R.string.today_marks_subtitle),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     color = MutedText,
@@ -1519,6 +1533,3 @@ private fun absenceLimitDescription(
     0 -> stringResource(R.string.today_absence_over_limit)
     else -> stringResource(R.string.today_absence_until_limit, missesUntilLimit)
 }
-
-private fun plural(count: Int, singular: String, plural: String): String =
-    if (count == 1) singular else plural

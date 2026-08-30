@@ -129,8 +129,8 @@ object GradeMath {
         ?.replace(" ", "")
         ?.toDoubleOrNull()
 
-    fun formattedAverage(average: Double?): String =
-        average?.let { String.format(Locale.getDefault(), "%.2f", it) } ?: "-"
+    fun formattedAverage(average: Double?, locale: Locale = Locale.getDefault()): String =
+        average?.let { String.format(locale, "%.2f", it) } ?: "-"
 
     fun formattedWeight(weight: Double): String =
         if (weight == round(weight)) weight.toInt().toString() else String.format(Locale.US, "%g", weight)
@@ -280,7 +280,7 @@ object GradeMath {
                 val folded = Normalizer
                     .normalize(trimmed, Normalizer.Form.NFD)
                     .replace("\\p{M}+".toRegex(), "")
-                    .lowercase(Locale("cs", "CZ"))
+                    .lowercase(Locale.forLanguageTag("cs-CZ"))
                     .split(Regex("\\s+"))
                     .filter { it.isNotBlank() }
                     .joinToString(" ")

@@ -1167,6 +1167,9 @@ private fun GradeyApp(
                             timetable = timetable,
                             stravaMenu = stravaMenu,
                             isMealsConnected = stravaSession != null,
+                            activeLinkedAccountDisplayName = linkedAccounts
+                                .firstOrNull { it.id == activeLinkedAccountID }
+                                ?.displayName,
                             cloudNewMarkEvents = gradeHistorySnapshot
                                 ?.takeIf { it.linkedAccountID == activeLinkedAccountID }
                                 ?.recentNewMarkEvents

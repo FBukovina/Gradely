@@ -1,6 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="today_title">dnes</string>
+    <string name="today_gradey">Gradey</string>
+    <string name="today_open_gradey_ai">otevřít Gradey AI</string>
+    <string name="today_refresh">obnovit dnešek</string>
+    <string name="today_open_account">otevřít účet</string>
+    <string name="today_overall_average">celkový průměr</string>
+    <string name="today_marks">známky</string>
+    <string name="today_marks_subtitle">průměry, předměty, trendy a kalkulačka</string>
     <string name="today_loading">načítám dnešek…</string>
     <string name="today_loading_subtitle">po načtení se tu objeví tvoje data z Bakalářů.</string>
     <string name="today_load_failed">dnešek se nepodařilo načíst</string>
@@ -61,6 +68,18 @@
         <item quantity="one">začíná za %1$d minutu</item>
         <item quantity="few">začíná za %1$d minuty</item>
         <item quantity="other">začíná za %1$d minut</item>
+    </plurals>
+    <plurals name="today_subject_count">
+        <item quantity="one">%1$d předmět</item>
+        <item quantity="few">%1$d předměty</item>
+        <item quantity="many">%1$d předmětu</item>
+        <item quantity="other">%1$d předmětů</item>
+    </plurals>
+    <plurals name="today_mark_count">
+        <item quantity="one">%1$d známka</item>
+        <item quantity="few">%1$d známky</item>
+        <item quantity="many">%1$d známek</item>
+        <item quantity="other">%1$d známek</item>
     </plurals>
     <plurals name="today_trend_new_marks">
         <item quantity="one">%1$d nová známka</item>

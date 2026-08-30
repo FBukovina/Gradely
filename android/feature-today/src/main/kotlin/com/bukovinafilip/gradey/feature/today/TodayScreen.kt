@@ -229,8 +229,8 @@ fun TodayScreen(
     onOpenAbsence: () -> Unit,
     onOpenTimetable: () -> Unit,
     onOpenMeals: () -> Unit,
-    onActivateLinkedAccount: (LinkedSchoolAccount) -> Unit = {},
-    onReconnectLinkedAccount: suspend (LinkedSchoolAccount, String, String, String) -> String? = { _, _, _, _ -> null },
+    onActivateLinkedAccount: (LinkedSchoolAccount) -> Unit,
+    onReconnectLinkedAccount: suspend (LinkedSchoolAccount, String, String, String) -> String?,
     modifier: Modifier = Modifier,
 ) {
     var showsTrendDetails by rememberSaveable { mutableStateOf(false) }
@@ -503,8 +503,7 @@ private fun SchoolConnectionNotice(
                 }
             }
             Text(
-                text = account.actionRequiredReason?.takeIf(String::isNotBlank)
-                    ?: stringResource(R.string.today_reconnect_fallback),
+                text = stringResource(R.string.today_reconnect_fallback),
                 color = MutedText,
                 fontSize = 13.sp,
                 lineHeight = 18.sp,
@@ -598,8 +597,8 @@ private fun TodaySchoolReconnectSheet(
                 label = { Text(stringResource(R.string.today_school_url)) },
                 singleLine = true,
                 enabled = !isSubmitting,
-                isError = hasAttempted && validation.schoolURLMessage != null,
-                supportingText = if (hasAttempted && validation.schoolURLMessage != null) {
+                isError = hasAttempted && validation.schoolURLError != null,
+                supportingText = if (hasAttempted && validation.schoolURLError != null) {
                     {
                         Text(
                             stringResource(
@@ -633,8 +632,8 @@ private fun TodaySchoolReconnectSheet(
                 label = { Text(stringResource(R.string.today_username)) },
                 singleLine = true,
                 enabled = !isSubmitting,
-                isError = hasAttempted && validation.usernameMessage != null,
-                supportingText = if (hasAttempted && validation.usernameMessage != null) {
+                isError = hasAttempted && validation.usernameError != null,
+                supportingText = if (hasAttempted && validation.usernameError != null) {
                     { Text(stringResource(R.string.today_username_required)) }
                 } else {
                     null
@@ -658,8 +657,8 @@ private fun TodaySchoolReconnectSheet(
                 label = { Text(stringResource(R.string.today_password)) },
                 singleLine = true,
                 enabled = !isSubmitting,
-                isError = hasAttempted && validation.passwordMessage != null,
-                supportingText = if (hasAttempted && validation.passwordMessage != null) {
+                isError = hasAttempted && validation.passwordError != null,
+                supportingText = if (hasAttempted && validation.passwordError != null) {
                     { Text(stringResource(R.string.today_password_required)) }
                 } else {
                     null
@@ -1083,17 +1082,18 @@ private fun NowAndNextCard(
     onClick: () -> Unit,
 ) {
     val currentOrNext = summary.currentLesson ?: summary.nextLesson
+    val lessonFallback = stringResource(R.string.today_lesson_fallback)
     val title = when (summary.state) {
         TodayTimetableState.CURRENT -> stringResource(
             R.string.today_lesson_now,
-            currentOrNext?.displayTitle().orEmpty(),
+            currentOrNext?.displayTitle(lessonFallback).orEmpty(),
         )
 
         TodayTimetableState.BEFORE_SCHOOL,
         TodayTimetableState.BETWEEN_LESSONS,
         -> stringResource(
             R.string.today_lesson_next,
-            currentOrNext?.displayTitle().orEmpty(),
+            currentOrNext?.displayTitle(lessonFallback).orEmpty(),
         )
 
         TodayTimetableState.AFTER_SCHOOL -> stringResource(R.string.today_no_more_lessons)
@@ -1205,6 +1205,7 @@ private fun NowAndNextCard(
 
 @Composable
 private fun TimetableChangeRow(lesson: ScheduledLesson) {
+    val lessonFallback = stringResource(R.string.today_lesson_fallback)
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
@@ -1218,7 +1219,7 @@ private fun TimetableChangeRow(lesson: ScheduledLesson) {
         Spacer(Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = "${lesson.changeKind.localizedLabel()} · ${lesson.displayTitle()}",
+                text = "${lesson.changeKind.localizedLabel()} · ${lesson.displayTitle(lessonFallback)}",
                 color = Color.Black,
                 fontSize = 14.sp,
                 lineHeight = 18.sp,
@@ -1495,7 +1496,7 @@ private fun NewMarksAndTrendsCard(
                             text = stringResource(
                                 R.string.today_mark_in_subject,
                                 mark.markText,
-                                mark.subjectName,
+                                mark.subjectName ?: stringResource(R.string.today_school_fallback),
                             ),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
@@ -1923,8 +1924,8 @@ private fun formatDetectedAt(instant: java.time.Instant): String =
         .withZone(PragueZone)
         .format(instant)
 
-private fun ScheduledLesson.displayTitle(): String =
-    subjectName?.takeIf { it.isNotBlank() } ?: title
+private fun ScheduledLesson.displayTitle(fallback: String): String =
+    subjectName?.trim()?.takeIf(String::isNotEmpty) ?: title ?: fallback
 
 private fun ScheduledLesson.details(): String =
     listOf(timeRange.takeIf { it.isNotBlank() }, roomTitle).filterNotNull().joinToString(" · ")

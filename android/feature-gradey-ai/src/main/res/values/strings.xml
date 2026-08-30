@@ -59,7 +59,6 @@
     <string name="gradey_ai_upgrade_message">Recurring support raises the daily limit to 10 or 25 messages.</string>
     <string name="gradey_ai_upgrade_action">See support options</string>
     <string name="gradey_ai_upgrade_account_hint">Support options are available from Account.</string>
-    <string name="gradey_ai_chat_next">Conversation history and chat streaming are not available in this Android build yet.</string>
     <string name="gradey_ai_identity_anonymous">Private guest AI identity</string>
     <string name="gradey_ai_identity_linked">Linked to your Gradey ID</string>
     <string name="gradey_ai_support_tier">Support tier: %1$s</string>

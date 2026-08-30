@@ -62,13 +62,13 @@ fun SchoolLoginScreen(
     directorySchools: List<SchoolDirectorySchool> = emptyList(),
     isDirectoryLoading: Boolean = false,
     directoryErrorMessage: String? = null,
-    onLoadDirectory: () -> Unit = {},
-    onRetryDirectory: () -> Unit = {},
+    onLoadDirectory: () -> Unit,
+    onRetryDirectory: () -> Unit,
     onLogin: (String, String, String) -> Unit,
     onCancelLogin: (() -> Unit)? = null,
-    onInputChanged: () -> Unit = {},
-    onOpenHelp: () -> Unit = {},
-    onOpenGitHub: () -> Unit = {},
+    onInputChanged: () -> Unit,
+    onOpenHelp: () -> Unit,
+    onOpenGitHub: () -> Unit,
     onBack: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
@@ -241,8 +241,8 @@ fun SchoolLoginScreen(
                     leadingIcon = { Icon(GradeyIcons.Link, contentDescription = null) },
                     singleLine = true,
                     enabled = !isLoading,
-                    isError = hasAttemptedLogin && validation.schoolURLMessage != null,
-                    supportingText = if (hasAttemptedLogin && validation.schoolURLMessage != null) {
+                    isError = hasAttemptedLogin && validation.schoolURLError != null,
+                    supportingText = if (hasAttemptedLogin && validation.schoolURLError != null) {
                         {
                             Text(
                                 stringResource(
@@ -276,8 +276,8 @@ fun SchoolLoginScreen(
                     label = { Text(stringResource(R.string.login_username)) },
                     singleLine = true,
                     enabled = !isLoading,
-                    isError = hasAttemptedLogin && validation.usernameMessage != null,
-                    supportingText = if (hasAttemptedLogin && validation.usernameMessage != null) {
+                    isError = hasAttemptedLogin && validation.usernameError != null,
+                    supportingText = if (hasAttemptedLogin && validation.usernameError != null) {
                         { Text(stringResource(R.string.login_username_required)) }
                     } else {
                         null
@@ -323,8 +323,8 @@ fun SchoolLoginScreen(
                         }
                     },
                     enabled = !isLoading,
-                    isError = hasAttemptedLogin && validation.passwordMessage != null,
-                    supportingText = if (hasAttemptedLogin && validation.passwordMessage != null) {
+                    isError = hasAttemptedLogin && validation.passwordError != null,
+                    supportingText = if (hasAttemptedLogin && validation.passwordError != null) {
                         { Text(stringResource(R.string.login_password_required)) }
                     } else {
                         null

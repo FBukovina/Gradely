@@ -59,7 +59,6 @@
     <string name="gradey_ai_upgrade_message">pravidelná podpora zvyšuje denní limit na 10 nebo 25 zpráv.</string>
     <string name="gradey_ai_upgrade_action">zobrazit možnosti podpory</string>
     <string name="gradey_ai_upgrade_account_hint">možnosti podpory najdeš v účtu.</string>
-    <string name="gradey_ai_chat_next">historie konverzací a streamování chatu v této sestavě pro Android zatím nejsou dostupné.</string>
     <string name="gradey_ai_identity_anonymous">soukromá identita hosta pro AI</string>
     <string name="gradey_ai_identity_linked">propojeno s tvým Gradey ID</string>
     <string name="gradey_ai_support_tier">úroveň podpory: %1$s</string>

@@ -9,9 +9,9 @@ class BakalariLoginTest {
         val missing = SchoolLoginValidator.validate("", "  ", "")
 
         assertThat(missing.isValid).isFalse()
-        assertThat(missing.schoolURLMessage).isEqualTo("School URL is required.")
-        assertThat(missing.usernameMessage).isEqualTo("Username is required.")
-        assertThat(missing.passwordMessage).isEqualTo("Password is required.")
+        assertThat(missing.schoolURLError).isEqualTo(SchoolLoginValidationError.REQUIRED)
+        assertThat(missing.usernameError).isEqualTo(SchoolLoginValidationError.REQUIRED)
+        assertThat(missing.passwordError).isEqualTo(SchoolLoginValidationError.REQUIRED)
 
         val valid = SchoolLoginValidator.validate("school.example.cz", " student ", " password ")
 
@@ -20,14 +20,14 @@ class BakalariLoginTest {
     }
 
     @Test
-    fun `surfaces the URL normalizer validation message`() {
+    fun `classifies URL normalizer failures without exposing exception text`() {
         val validation = SchoolLoginValidator.validate(
             schoolURL = "http://school.example.cz",
             username = "student",
             password = "secret",
         )
 
-        assertThat(validation.schoolURLMessage).isEqualTo("School URL must use HTTPS.")
+        assertThat(validation.schoolURLError).isEqualTo(SchoolLoginValidationError.INVALID)
         assertThat(validation.isValid).isFalse()
     }
 

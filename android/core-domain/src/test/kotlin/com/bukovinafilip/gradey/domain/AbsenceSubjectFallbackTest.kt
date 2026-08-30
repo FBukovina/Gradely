@@ -251,7 +251,7 @@ class AbsenceSubjectFallbackTest {
         val lessons = AbsenceSubjectFallback.lessonCandidates(LocalDate.of(2026, 6, 15), timetable, marks)
 
         assertThat(lessons.map { it.subjectName })
-            .containsExactly("Český jazyk", "unknown-code", "Subject", "Biology")
+            .containsExactly("Český jazyk", "unknown-code", "Biology")
             .inOrder()
         assertThat(lessons[1].timeRange).isEmpty()
         assertThat(AbsenceSubjectFallback.lessonCandidates(LocalDate.of(2026, 6, 16), timetable, marks)).isEmpty()

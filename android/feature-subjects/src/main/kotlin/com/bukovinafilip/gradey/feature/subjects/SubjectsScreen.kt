@@ -134,7 +134,7 @@ fun SubjectsScreen(
     subjects: List<Subject>,
     absence: AbsenceResponse,
     gradeTrends: List<SubjectGradeTrend> = emptyList(),
-    onPredictSubjectAverage: suspend (Subject, String, Int) -> Double? = { _, _, _ -> null },
+    onPredictSubjectAverage: suspend (Subject, String, Int) -> Double?,
     refreshErrorMessage: String? = null,
     isRefreshing: Boolean,
     onRefresh: () -> Unit,

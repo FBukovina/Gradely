@@ -13,6 +13,7 @@
     <string name="wear_status_up_next">Další</string>
     <string name="wear_status_in">Za %1$s</string>
     <string name="wear_status_canceled">Zrušeno</string>
+    <string name="wear_lesson_fallback">Hodina</string>
     <string name="wear_break">Přestávka</string>
     <string name="wear_start">Začátek</string>
     <string name="wear_end">Konec</string>

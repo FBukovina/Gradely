@@ -3,6 +3,7 @@ package com.bukovinafilip.gradey.feature.gradeyai
 import com.bukovinafilip.gradey.domain.GradeyAIContextBuilding
 import com.bukovinafilip.gradey.domain.GradeyAIContextError
 import com.bukovinafilip.gradey.domain.GradeyAIContextException
+import com.bukovinafilip.gradey.domain.GradeyAIErrorKind
 import com.bukovinafilip.gradey.domain.GradeyAIRepository
 import com.bukovinafilip.gradey.model.GradeyAIConsent
 import com.bukovinafilip.gradey.model.GradeyAIContextSnapshot
@@ -99,7 +100,12 @@ class GradeyAIControllerTest {
         val repository = FakeRepository().apply {
             streams += flowOf(
                 GradeyAIStreamEvent.Start("failed-assistant", 3),
-                GradeyAIStreamEvent.Error("unavailable", "Try later", true, 3),
+                GradeyAIStreamEvent.Error(
+                    "unavailable",
+                    "Internal backend detail that must never reach the UI",
+                    true,
+                    3,
+                ),
             )
             streams += flowOf(
                 GradeyAIStreamEvent.Start("retried-assistant", 2),
@@ -114,6 +120,10 @@ class GradeyAIControllerTest {
 
         assertThat(failed.status).isEqualTo(GradeyAIMessageStatus.FAILED)
         assertThat(controller.canRetry(failed)).isTrue()
+        assertThat(controller.failure)
+            .isEqualTo(GradeyAIFailure(GradeyAIErrorKind.SERVER, retryable = true))
+        assertThat(failureMessageResource(controller.failure!!.kind))
+            .isEqualTo(R.string.gradey_ai_unavailable_message)
 
         controller.retry()
 
@@ -123,6 +133,16 @@ class GradeyAIControllerTest {
         assertThat(controller.messages.none { it.status == GradeyAIMessageStatus.FAILED }).isTrue()
         assertThat(controller.messages.last().content).isEqualTo("Recovered")
         assertThat(controller.messages.last().status).isEqualTo(GradeyAIMessageStatus.COMPLETE)
+    }
+
+    @Test
+    fun `every failure kind resolves to product owned copy`() {
+        val resources = GradeyAIErrorKind.entries.associateWith(::failureMessageResource)
+
+        assertThat(resources.keys).containsExactlyElementsIn(GradeyAIErrorKind.entries)
+        assertThat(resources[GradeyAIErrorKind.SERVER])
+            .isEqualTo(R.string.gradey_ai_unavailable_message)
+        assertThat(resources.values).doesNotContain(0)
     }
 
     @Test

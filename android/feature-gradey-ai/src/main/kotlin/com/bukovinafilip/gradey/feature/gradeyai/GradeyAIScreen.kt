@@ -976,16 +976,19 @@ private fun GradeyAIUnavailableCard(
 }
 
 @Composable
-private fun failureText(failure: GradeyAIFailure): String = when (failure.kind) {
-    GradeyAIErrorKind.NOT_CONFIGURED -> stringResource(R.string.gradey_ai_not_configured_message)
-    GradeyAIErrorKind.INVALID_PROMPT -> stringResource(R.string.gradey_ai_error_invalid_prompt)
-    GradeyAIErrorKind.REQUEST_TOO_LARGE -> stringResource(R.string.gradey_ai_error_request_too_large)
-    GradeyAIErrorKind.UNAUTHENTICATED -> stringResource(R.string.gradey_ai_error_unauthenticated)
-    GradeyAIErrorKind.NO_CONTEXT -> stringResource(R.string.gradey_ai_error_no_context)
-    GradeyAIErrorKind.LIMIT_REACHED -> stringResource(R.string.gradey_ai_limit_reached)
-    GradeyAIErrorKind.TRANSPORT -> stringResource(R.string.gradey_ai_load_failed_message)
-    GradeyAIErrorKind.MALFORMED_RESPONSE -> stringResource(R.string.gradey_ai_error_invalid_response)
-    GradeyAIErrorKind.SERVER -> failure.message.ifBlank { stringResource(R.string.gradey_ai_unavailable_message) }
+private fun failureText(failure: GradeyAIFailure): String =
+    stringResource(failureMessageResource(failure.kind))
+
+internal fun failureMessageResource(kind: GradeyAIErrorKind): Int = when (kind) {
+    GradeyAIErrorKind.NOT_CONFIGURED -> R.string.gradey_ai_not_configured_message
+    GradeyAIErrorKind.INVALID_PROMPT -> R.string.gradey_ai_error_invalid_prompt
+    GradeyAIErrorKind.REQUEST_TOO_LARGE -> R.string.gradey_ai_error_request_too_large
+    GradeyAIErrorKind.UNAUTHENTICATED -> R.string.gradey_ai_error_unauthenticated
+    GradeyAIErrorKind.NO_CONTEXT -> R.string.gradey_ai_error_no_context
+    GradeyAIErrorKind.LIMIT_REACHED -> R.string.gradey_ai_limit_reached
+    GradeyAIErrorKind.TRANSPORT -> R.string.gradey_ai_load_failed_message
+    GradeyAIErrorKind.MALFORMED_RESPONSE -> R.string.gradey_ai_error_invalid_response
+    GradeyAIErrorKind.SERVER -> R.string.gradey_ai_unavailable_message
 }
 
 private fun relativeConversationTime(conversation: GradeyAIConversation): String {

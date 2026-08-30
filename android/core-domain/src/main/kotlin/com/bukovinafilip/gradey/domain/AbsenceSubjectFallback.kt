@@ -240,7 +240,7 @@ object AbsenceSubjectFallback {
             if (LessonChangeKind.fromApi(atom.change?.changeType) == LessonChangeKind.CANCELED) return@mapNotNull null
             val changedReference = atom.change?.changeSubject?.trim().orEmpty()
             val rawReference = changedReference.takeIf(String::isNotEmpty)
-                ?: atom.subjectID?.trim()
+                ?: atom.subjectID?.trim()?.takeIf(String::isNotEmpty)
                 ?: return@mapNotNull null
             val entity = subjectsByID[rawReference] ?: timetable.subjects.firstOrNull { candidate ->
                 listOf(candidate.id, candidate.abbrev, candidate.name)
@@ -328,7 +328,7 @@ object AbsenceSubjectFallback {
                 val displayName = mark?.displayName?.trim()?.takeIf(String::isNotEmpty)
                     ?: entity?.name?.trim()?.takeIf(String::isNotEmpty)
                     ?: entity?.abbrev?.trim()?.takeIf(String::isNotEmpty)
-                    ?: rawID.trim().ifEmpty { "Subject" }
+                    ?: rawID.trim()
                 ResolvedSubject(key, displayName)
             }
         }

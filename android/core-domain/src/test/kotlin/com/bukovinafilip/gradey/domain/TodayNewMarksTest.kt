@@ -88,6 +88,29 @@ class TodayNewMarksTest {
         assertThat(rows.single().subjectName).isEqualTo("Mathematics")
     }
 
+    @Test
+    fun `missing cloud and Bakalari subject labels remain null for localized UI fallback`() {
+        val cloudRow = TodayNewMarks.resolve(
+            subjects = emptyList(),
+            cloudEvents = listOf(event(id = "cloud", abbrev = " ", name = null, createdAt = "not-a-date")),
+            zoneId = zone,
+        ).single()
+        val localRow = TodayNewMarks.resolve(
+            subjects = listOf(
+                subject(
+                    name = " ",
+                    abbrev = " ",
+                    marks = listOf(mark(id = "local", date = "unknown", isNew = true)),
+                ),
+            ),
+            cloudEvents = emptyList(),
+            zoneId = zone,
+        ).single()
+
+        assertThat(cloudRow.subjectName).isNull()
+        assertThat(localRow.subjectName).isNull()
+    }
+
     private fun event(
         id: String,
         abbrev: String?,

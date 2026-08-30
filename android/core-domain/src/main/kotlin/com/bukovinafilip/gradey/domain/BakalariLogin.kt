@@ -3,25 +3,29 @@ package com.bukovinafilip.gradey.domain
 import java.net.URI
 
 data class SchoolLoginValidation(
-    val schoolURLMessage: String? = null,
-    val usernameMessage: String? = null,
-    val passwordMessage: String? = null,
+    val schoolURLError: SchoolLoginValidationError? = null,
+    val usernameError: SchoolLoginValidationError? = null,
+    val passwordError: SchoolLoginValidationError? = null,
 ) {
     val isValid: Boolean
-        get() = schoolURLMessage == null && usernameMessage == null && passwordMessage == null
+        get() = schoolURLError == null && usernameError == null && passwordError == null
 }
+
+enum class SchoolLoginValidationError { REQUIRED, INVALID }
 
 object SchoolLoginValidator {
     fun validate(schoolURL: String, username: String, password: String): SchoolLoginValidation {
-        val schoolURLMessage = runCatching { SchoolURLNormalizer.normalizedBaseURL(schoolURL) }
-            .exceptionOrNull()
-            ?.message
-            ?: if (schoolURL.isBlank()) "School URL is required." else null
+        val schoolURLError = when {
+            schoolURL.isBlank() -> SchoolLoginValidationError.REQUIRED
+            runCatching { SchoolURLNormalizer.normalizedBaseURL(schoolURL) }.isFailure ->
+                SchoolLoginValidationError.INVALID
+            else -> null
+        }
 
         return SchoolLoginValidation(
-            schoolURLMessage = schoolURLMessage,
-            usernameMessage = if (username.isBlank()) "Username is required." else null,
-            passwordMessage = if (password.isEmpty()) "Password is required." else null,
+            schoolURLError = schoolURLError,
+            usernameError = SchoolLoginValidationError.REQUIRED.takeIf { username.isBlank() },
+            passwordError = SchoolLoginValidationError.REQUIRED.takeIf { password.isEmpty() },
         )
     }
 }

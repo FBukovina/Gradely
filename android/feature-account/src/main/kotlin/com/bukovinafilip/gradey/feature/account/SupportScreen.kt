@@ -76,7 +76,7 @@ fun SupportScreen(
     onEmailGraphics: () -> Unit,
     onClearCache: () -> Unit,
     onRestartOnboarding: () -> Unit,
-    onOpenDeveloperInstagram: () -> Unit = {},
+    onOpenDeveloperInstagram: () -> Unit,
     gradeyAccountID: String? = null,
     revenueCatAppUserID: String? = null,
     revenueCatOriginalAppUserID: String? = null,

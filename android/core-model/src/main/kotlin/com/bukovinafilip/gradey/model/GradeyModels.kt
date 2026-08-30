@@ -495,7 +495,11 @@ data class ScheduledLesson(
     val changeKind: LessonChangeKind = LessonChangeKind.NONE,
     val change: TimetableChange? = null,
 ) {
-    val title: String get() = subjectAbbrev ?: subjectName ?: "Lesson"
+    /**
+     * The best subject label supplied by Bakaláři, or null when the payload has no label.
+     * Human-readable fallbacks belong at the localized UI boundary.
+     */
+    val title: String? get() = subjectAbbrev.nonBlankValue() ?: subjectName.nonBlankValue()
     val roomTitle: String? get() = roomAbbrev ?: roomName
     val teacherTitle: String? get() = teacherAbbrev ?: teacherName
     val timeRange: String get() = listOf(hour.beginTime, hour.endTime).filter { it.isNotBlank() }.joinToString("-")
@@ -919,8 +923,8 @@ data class NextLessonWidgetLesson(
     val teacher: String? = null,
     val changeKind: NextLessonWidgetChangeKind = NextLessonWidgetChangeKind.NONE,
 ) {
-    val title: String get() = subjectAbbrev?.ifBlank { null } ?: subjectName?.ifBlank { null } ?: "Lesson"
-    val detailTitle: String get() = subjectName?.ifBlank { null } ?: subjectAbbrev?.ifBlank { null } ?: "Lesson"
+    val title: String? get() = subjectAbbrev.nonBlankValue() ?: subjectName.nonBlankValue()
+    val detailTitle: String? get() = subjectName.nonBlankValue() ?: subjectAbbrev.nonBlankValue()
     val sortEpochMillis: Long get() = startEpochMillis ?: dayStartEpochMillis
 }
 
@@ -1008,10 +1012,12 @@ data class GradeyWearTimetableLesson(
     val teacher: String? = null,
     val changeKind: NextLessonWidgetChangeKind = NextLessonWidgetChangeKind.NONE,
 ) {
-    val title: String get() = subjectAbbrev?.ifBlank { null } ?: subjectName?.ifBlank { null } ?: "Lesson"
-    val detailTitle: String get() = subjectName?.ifBlank { null } ?: subjectAbbrev?.ifBlank { null } ?: "Lesson"
+    val title: String? get() = subjectAbbrev.nonBlankValue() ?: subjectName.nonBlankValue()
+    val detailTitle: String? get() = subjectName.nonBlankValue() ?: subjectAbbrev.nonBlankValue()
     val sortEpochMillis: Long get() = startEpochMillis ?: dayStartEpochMillis
 }
+
+private fun String?.nonBlankValue(): String? = this?.trim()?.takeIf(String::isNotEmpty)
 
 sealed interface GradeyWearLessonSelection {
     data class Lesson(val lesson: GradeyWearTimetableLesson, val timing: NextLessonWidgetTiming) : GradeyWearLessonSelection

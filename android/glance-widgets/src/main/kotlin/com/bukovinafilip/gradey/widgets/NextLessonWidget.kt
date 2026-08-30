@@ -90,7 +90,7 @@ private fun NextLessonWidgetContent(
                 )
                 Spacer(GlanceModifier.height(4.dp))
                 Text(
-                    text = selection.lesson.detailTitle,
+                    text = selection.lesson.detailTitle ?: strings.lessonFallback,
                     style = TextStyle(color = ColorProvider(Color(0xFF031F1B)), fontWeight = FontWeight.Bold),
                     modifier = GlanceModifier.fillMaxWidth(),
                 )
@@ -131,6 +131,7 @@ private data class WidgetStrings(
     val substitution: String,
     val roomChanged: String,
     val added: String,
+    val lessonFallback: String,
 ) {
     companion object {
         fun from(context: Context) = WidgetStrings(
@@ -144,6 +145,7 @@ private data class WidgetStrings(
             substitution = context.getString(R.string.widget_substitution),
             roomChanged = context.getString(R.string.widget_room_changed),
             added = context.getString(R.string.widget_added),
+            lessonFallback = context.getString(R.string.widget_lesson_fallback),
         )
     }
 }

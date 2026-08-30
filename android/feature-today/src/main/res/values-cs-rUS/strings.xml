@@ -39,6 +39,7 @@
     <string name="today_new_marks_and_trends">nové známky a trendy</string>
     <string name="today_mark_in_subject">%1$s z předmětu %2$s</string>
     <string name="today_new_from_school">nové ze školy</string>
+    <string name="today_school_fallback">škola</string>
     <string name="today_view_all">zobrazit vše</string>
     <string name="today_grade_movement">vývoj známek</string>
     <string name="today_range_30">30 dní</string>
@@ -64,6 +65,7 @@
     <string name="today_now_and_next">teď a další</string>
     <string name="today_lesson_now">teď · %1$s</string>
     <string name="today_lesson_next">další · %1$s</string>
+    <string name="today_lesson_fallback">hodina</string>
     <string name="today_no_more_lessons">dnes už nic není</string>
     <string name="today_no_more_lessons_subtitle">školní den je volný.</string>
     <string name="today_weekend">víkend</string>

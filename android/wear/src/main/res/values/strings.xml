@@ -13,6 +13,7 @@
     <string name="wear_status_up_next">Up next</string>
     <string name="wear_status_in">In %1$s</string>
     <string name="wear_status_canceled">Canceled</string>
+    <string name="wear_lesson_fallback">Lesson</string>
     <string name="wear_break">Break</string>
     <string name="wear_start">Start</string>
     <string name="wear_end">End</string>

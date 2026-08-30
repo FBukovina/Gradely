@@ -99,7 +99,7 @@ class RevenueCatSupportService {
     suspend fun purchase(activity: Activity, optionID: String): RevenueCatPurchaseResult = mutex.withLock {
         val purchases = configuredPurchases()
         val storePackage = packagesByID[optionID]
-            ?: error("This purchase option is no longer available. Refresh and try again.")
+            ?: throw SupportServiceException(SupportServiceError.OPTION_UNAVAILABLE)
         try {
             val result = purchases.awaitPurchase(
                 PurchaseParams.Builder(activity, storePackage).build(),
@@ -125,13 +125,15 @@ class RevenueCatSupportService {
 
     suspend fun restore(accountID: String?): SupportEntitlement = mutex.withLock {
         val purchases = configuredPurchases()
-        if (accountID == null) error("Sign in with a Gradey ID before restoring a support plan.")
+        if (accountID == null) throw SupportServiceException(SupportServiceError.SIGN_IN_REQUIRED)
         if (purchases.appUserID != accountID) purchases.awaitLogIn(accountID)
         entitlement(purchases.awaitRestore()).also { lastEntitlement = it }
     }
 
     private fun configuredPurchases(): Purchases {
-        check(Purchases.isConfigured) { "Google Play purchases aren't configured in this build." }
+        if (!Purchases.isConfigured) {
+            throw SupportServiceException(SupportServiceError.NOT_CONFIGURED)
+        }
         return Purchases.sharedInstance
     }
 

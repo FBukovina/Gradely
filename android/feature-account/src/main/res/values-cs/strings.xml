@@ -162,6 +162,7 @@
     <string name="account_active">Aktivní</string>
     <string name="account_not_active">Neaktivní</string>
     <string name="account_reconnect">Znovu připojit</string>
+    <string name="account_reconnect_reason">Zadejte přihlašovací údaje Bakalářů přesně pro tento školní účet.</string>
     <string name="account_switching">Přepínání…</string>
     <string name="account_use_this_school">Použít tuto školu</string>
     <string name="account_new_mark_notifications">Upozornění na nové známky</string>

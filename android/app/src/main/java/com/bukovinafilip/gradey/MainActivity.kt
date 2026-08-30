@@ -242,7 +242,7 @@ private fun GradeyApp(
     val scope = rememberCoroutineScope()
     var phase by remember { mutableStateOf(AppPhase.CHECKING) }
     var selectedTab by rememberSaveable { mutableStateOf(initialTab) }
-    var isGradeyAIPresented by remember { mutableStateOf(false) }
+    var isGradeyAIPresented by rememberSaveable { mutableStateOf(false) }
     var isSupportPresented by rememberSaveable { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
     var authError by remember { mutableStateOf<String?>(null) }
@@ -272,8 +272,9 @@ private fun GradeyApp(
     var activeLinkedAccountID by remember { mutableStateOf<String?>(null) }
     var currentSchoolBaseURL by remember { mutableStateOf("") }
     var reconnectLinkedAccount by remember { mutableStateOf<LinkedSchoolAccount?>(null) }
-    var reconnectSchoolURL by remember { mutableStateOf("") }
-    var isAddingSchool by remember { mutableStateOf(false) }
+    var reconnectLinkedAccountID by rememberSaveable { mutableStateOf<String?>(null) }
+    var reconnectSchoolURL by rememberSaveable { mutableStateOf("") }
+    var isAddingSchool by rememberSaveable { mutableStateOf(false) }
     var linkedAccountError by remember { mutableStateOf<String?>(null) }
     var isRefreshingLinkedAccounts by remember { mutableStateOf(false) }
     var mutatingLinkedAccountID by remember { mutableStateOf<String?>(null) }
@@ -470,7 +471,7 @@ private fun GradeyApp(
         currentSchoolBaseURL = storedSession?.baseURL.orEmpty()
         graph.schoolRepository.loadCachedDashboard()?.let { dashboard = it }
         graph.schoolRepository.loadCachedAbsence()?.let(::startAbsenceSubjectResolution)
-        graph.schoolRepository.loadCachedTimetable(TimetableDates.todayString())?.let {
+        graph.schoolRepository.loadCachedTimetable(timetableRequestedWeek)?.let {
             timetable = it
             timetableRequestedWeek = it.weekStart
         }
@@ -700,6 +701,9 @@ private fun GradeyApp(
         activeLinkedAccountID = null
         currentSchoolBaseURL = ""
         reconnectLinkedAccount = null
+        reconnectLinkedAccountID = null
+        reconnectSchoolURL = ""
+        isAddingSchool = false
         selectedTab = AppTab.TODAY
         isGradeyAIPresented = false
         dataError = null
@@ -738,6 +742,9 @@ private fun GradeyApp(
         activeLinkedAccountID = null
         currentSchoolBaseURL = ""
         reconnectLinkedAccount = null
+        reconnectLinkedAccountID = null
+        reconnectSchoolURL = ""
+        isAddingSchool = false
         selectedTab = AppTab.TODAY
         isGradeyAIPresented = false
         dataError = null
@@ -928,6 +935,7 @@ private fun GradeyApp(
                 .plus(updated)
                 .sortedBy { it.displayName.lowercase() }
             reconnectLinkedAccount = null
+            reconnectLinkedAccountID = null
             reconnectSchoolURL = ""
             linkedAccountError = null
             null
@@ -1062,7 +1070,7 @@ private fun GradeyApp(
                 absenceRefreshError = error.userFacingMessage(context)
             }
         }
-        when (val timetableFailure = loadTimetable(TimetableDates.todayString())) {
+        when (val timetableFailure = loadTimetable(timetableRequestedWeek)) {
             is SchoolSessionExpiredException -> {
                 routeToSchoolReconnect()
                 return
@@ -1514,8 +1522,16 @@ private fun GradeyApp(
                         accounts = snapshot?.linkedAccounts.orEmpty(),
                         preferredAccountID = snapshot?.activeSchoolAccountID,
                     )
+                    reconnectLinkedAccountID = reconnectLinkedAccount?.id
                 }
             }
+        }
+        if (
+            reconnectLinkedAccountID != null &&
+            linkedAccounts.none { it.id == reconnectLinkedAccountID }
+        ) {
+            linkedAccounts = runCatching { graph.linkedAccountRepository.localAccounts() }
+                .getOrDefault(linkedAccounts)
         }
         activeLinkedAccountID = schoolSession?.linkedAccountID
         currentSchoolBaseURL = schoolSession?.baseURL.orEmpty()
@@ -1546,13 +1562,46 @@ private fun GradeyApp(
         }
         onboardingProgress = resolvedOnboarding
 
-        if (resolvedOnboarding == null && phase == AppPhase.SIGNED_IN) {
+        if (resolvedOnboarding == null) {
+            val restoredSchoolRoute = restoreSchoolRoute(
+                isAddingSchool = isAddingSchool,
+                reconnectAccountID = reconnectLinkedAccountID,
+                hasSchoolSession = schoolSession != null,
+                availableLinkedAccountIDs = linkedAccounts.mapTo(mutableSetOf()) { it.id },
+            )
+            when (restoredSchoolRoute.destination) {
+                RestoredSchoolDestination.ADD_SCHOOL -> {
+                    reconnectLinkedAccount = null
+                    reconnectLinkedAccountID = null
+                    phase = AppPhase.NEEDS_SCHOOL
+                }
+                RestoredSchoolDestination.RECONNECT_SCHOOL -> {
+                    isAddingSchool = false
+                    reconnectLinkedAccountID = restoredSchoolRoute.reconnectAccountID
+                    reconnectLinkedAccount = linkedAccounts.firstOrNull {
+                        it.id == restoredSchoolRoute.reconnectAccountID
+                    }
+                    phase = AppPhase.NEEDS_SCHOOL
+                }
+                RestoredSchoolDestination.NONE -> {
+                    if (schoolSession != null) {
+                        isAddingSchool = false
+                        reconnectLinkedAccountID = null
+                        reconnectSchoolURL = ""
+                    }
+                }
+            }
+        }
+
+        if (resolvedOnboarding == null && schoolSession != null) {
             loadCachedSignedInData()
-            isLoading = true
-            try {
-                refreshSignedInData()
-            } finally {
-                isLoading = false
+            if (phase == AppPhase.SIGNED_IN) {
+                isLoading = true
+                try {
+                    refreshSignedInData()
+                } finally {
+                    isLoading = false
+                }
             }
         }
     }
@@ -1903,6 +1952,7 @@ private fun GradeyApp(
                             schoolLoginError = reconnectError
                         } else {
                             isAddingSchool = false
+                            reconnectLinkedAccountID = null
                             phase = AppPhase.SIGNED_IN
                             loadCachedSignedInData()
                             refreshSignedInData()
@@ -1914,6 +1964,7 @@ private fun GradeyApp(
                         }.getOrNull()
                         linkCurrentSchoolIfNeeded()
                         isAddingSchool = false
+                        reconnectLinkedAccountID = null
                         phase = AppPhase.SIGNED_IN
                         loadCachedSignedInData()
                         refreshSignedInData()
@@ -1927,6 +1978,7 @@ private fun GradeyApp(
             } else {
                 {
                     reconnectLinkedAccount = null
+                    reconnectLinkedAccountID = null
                     reconnectSchoolURL = ""
                     isAddingSchool = false
                     schoolLoginError = null
@@ -2012,7 +2064,11 @@ private fun GradeyApp(
                             onOpenAbsence = { selectedTab = AppTab.ABSENCE },
                             onOpenTimetable = { selectedTab = AppTab.TIMETABLE },
                             onOpenMeals = {
-                                if (showMealsTab) selectedTab = AppTab.STRAVACZ
+                                if (!showMealsTab) {
+                                    graph.mealsTabPreferenceStore.isVisible = true
+                                    showMealsTab = true
+                                }
+                                selectedTab = AppTab.STRAVACZ
                             },
                             onActivateLinkedAccount = { linked ->
                                 scope.launch {
@@ -2431,6 +2487,7 @@ private fun GradeyApp(
                     onAddSchool = {
                         isAddingSchool = true
                         reconnectLinkedAccount = null
+                        reconnectLinkedAccountID = null
                         reconnectSchoolURL = ""
                         schoolLoginError = null
                         phase = AppPhase.NEEDS_SCHOOL
@@ -2442,7 +2499,9 @@ private fun GradeyApp(
                     },
                     onReconnectLinkedAccount = { linked ->
                         scope.launch {
+                            isAddingSchool = false
                             reconnectLinkedAccount = linked
+                            reconnectLinkedAccountID = linked.id
                             reconnectSchoolURL = graph.schoolRepository.currentStoredSession()
                                 ?.takeIf { it.linkedAccountID == linked.id || linkedAccounts.size == 1 }
                                 ?.baseURL
@@ -2605,7 +2664,7 @@ private suspend fun requestGoogleCredential(
     serverClientId: String,
 ): GoogleIdTokenCredential {
     if (serverClientId.isBlank()) {
-        throw IllegalStateException(context.getString(R.string.google_sign_in_not_configured))
+        throw AppAuthException(AppAuthError.GOOGLE_NOT_CONFIGURED)
     }
     val option = GetSignInWithGoogleOption.Builder(serverClientId).build()
     val request = GetCredentialRequest.Builder()
@@ -2613,13 +2672,10 @@ private suspend fun requestGoogleCredential(
         .build()
     val credential = CredentialManager.create(context).getCredential(context, request).credential
     if (credential !is CustomCredential || credential.type != GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
-        throw IllegalStateException(context.getString(R.string.google_sign_in_unsupported))
+        throw AppAuthException(AppAuthError.GOOGLE_UNSUPPORTED_CREDENTIAL)
     }
     return GoogleIdTokenCredential.createFrom(credential.data)
 }
-
-private fun Throwable.userFacingMessage(context: android.content.Context): String =
-    message?.trim()?.takeIf { it.isNotEmpty() } ?: context.getString(R.string.generic_error)
 
 @Composable
 private fun DataRefreshWarning(message: String, modifier: Modifier = Modifier) {

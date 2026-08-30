@@ -65,7 +65,7 @@ class GradeyComplicationDataSourceService : SuspendingComplicationDataSourceServ
             getString(R.string.wear_complication_next)
         }
         val contentDescription = lesson?.let {
-            listOf(status, it.detailTitle, it.timeRange, it.room)
+            listOf(status, it.localizedDetailTitle(), it.timeRange, it.room)
                 .filterNotNull()
                 .filter(String::isNotBlank)
                 .joinToString(", ")
@@ -74,7 +74,7 @@ class GradeyComplicationDataSourceService : SuspendingComplicationDataSourceServ
         return when (type) {
             ComplicationType.SHORT_TEXT -> shortText(
                 title = if (lesson == null) null else status,
-                lessonTitle = lesson?.title ?: getString(R.string.wear_complication_no_lessons),
+                lessonTitle = lesson?.localizedTitle() ?: getString(R.string.wear_complication_no_lessons),
                 contentDescription = contentDescription,
             )
 
@@ -87,7 +87,7 @@ class GradeyComplicationDataSourceService : SuspendingComplicationDataSourceServ
             )
 
             ComplicationType.RANGED_VALUE -> rangedValue(
-                title = lesson?.title ?: "—",
+                title = lesson?.localizedTitle() ?: "—",
                 text = if (lesson == null) getString(R.string.wear_complication_no_lessons) else status,
                 progress = lesson?.takeIf { nowNext.current != null }?.progress(nowEpochMillis) ?: 0f,
                 contentDescription = contentDescription,
@@ -95,7 +95,7 @@ class GradeyComplicationDataSourceService : SuspendingComplicationDataSourceServ
 
             else -> shortText(
                 title = null,
-                lessonTitle = lesson?.title ?: getString(R.string.wear_complication_no_lessons),
+                lessonTitle = lesson?.localizedTitle() ?: getString(R.string.wear_complication_no_lessons),
                 contentDescription = contentDescription,
             )
         }
@@ -147,10 +147,16 @@ class GradeyComplicationDataSourceService : SuspendingComplicationDataSourceServ
     )
 
     private fun GradeyWearTimetableLesson.longText(status: String): String =
-        listOf(status, detailTitle, timeRange ?: startEpochMillis?.let(::timeText), room)
+        listOf(status, localizedDetailTitle(), timeRange ?: startEpochMillis?.let(::timeText), room)
             .filterNotNull()
             .filter(String::isNotBlank)
             .joinToString(" · ")
+
+    private fun GradeyWearTimetableLesson.localizedTitle(): String =
+        title ?: getString(R.string.wear_lesson_fallback)
+
+    private fun GradeyWearTimetableLesson.localizedDetailTitle(): String =
+        detailTitle ?: getString(R.string.wear_lesson_fallback)
 
     private fun GradeyWearTimetableLesson.progress(nowEpochMillis: Long): Float {
         val start = startEpochMillis ?: return 0f

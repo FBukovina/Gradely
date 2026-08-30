@@ -9,7 +9,8 @@ import java.time.ZoneId
 data class TodayNewMark(
     val id: String,
     val markText: String,
-    val subjectName: String,
+    /** The Bakaláři subject label, or null when neither name nor abbreviation is available. */
+    val subjectName: String?,
     val detectedAt: Instant?,
 )
 
@@ -25,8 +26,7 @@ object TodayNewMarks {
                     id = "history-${event.id}",
                     markText = event.markText,
                     subjectName = event.subjectAbbrev.nonBlank()
-                        ?: event.subjectName.nonBlank()
-                        ?: "school",
+                        ?: event.subjectName.nonBlank(),
                     detectedAt = event.createdAt.asInstant(),
                 )
             }
@@ -39,8 +39,7 @@ object TodayNewMarks {
                         id = "mark-${mark.id}",
                         markText = mark.displayText(),
                         subjectName = subject.subjectInfo.abbrev.nonBlank()
-                            ?: subject.subjectInfo.name.nonBlank()
-                            ?: "school",
+                            ?: subject.subjectInfo.name.nonBlank(),
                         detectedAt = MarkDateParser.instant(mark.markDate, zoneId),
                     )
                 }

@@ -66,7 +66,7 @@ class TimetableMapperTest {
         assertThat(day.lessons[1].teacherTitle).isEqualTo("JS")
         assertThat(day.lessons[1].roomTitle).isEqualTo("12")
         assertThat(day.lessons[1].groups).containsExactly("A")
-        assertThat(day.lessons.last().title).isEqualTo("Lesson")
+        assertThat(day.lessons.last().title).isNull()
     }
 
     @Test
@@ -119,6 +119,6 @@ class TimetableMapperTest {
         assertThat(day.dayOfWeek).isEqualTo(9)
         assertThat(day.date).isNull()
         assertThat(day.isToday).isFalse()
-        assertThat(day.lessons.single().title).isEqualTo("Lesson")
+        assertThat(day.lessons.single().title).isNull()
     }
 }

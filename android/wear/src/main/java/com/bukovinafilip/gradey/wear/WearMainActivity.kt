@@ -350,7 +350,7 @@ private fun CurrentLessonHero(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Text(
-                    text = lesson.title,
+                    text = lesson.title ?: stringResource(R.string.wear_lesson_fallback),
                     color = Color.White,
                     fontWeight = FontWeight.ExtraBold,
                     maxLines = 1,
@@ -456,7 +456,7 @@ private fun RemainingLessonRow(lesson: GradeyWearTimetableLesson) {
         Spacer(Modifier.width(7.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = lesson.detailTitle,
+                text = lesson.detailTitle ?: stringResource(R.string.wear_lesson_fallback),
                 color = Color.White,
                 fontWeight = FontWeight.Bold,
                 maxLines = 1,

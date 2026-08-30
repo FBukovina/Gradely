@@ -31,7 +31,6 @@ import kotlinx.coroutines.launch
 
 internal data class GradeyAIFailure(
     val kind: GradeyAIErrorKind,
-    val message: String = "",
     val retryable: Boolean = false,
 )
 
@@ -795,7 +794,7 @@ internal class GradeyAIController(
     }
 
     private fun failure(error: Throwable): GradeyAIFailure = when (error) {
-        is GradeyAIException -> GradeyAIFailure(error.kind, error.message.orEmpty(), error.retryable)
+        is GradeyAIException -> GradeyAIFailure(error.kind, retryable = error.retryable)
         is GradeyAIContextException -> GradeyAIFailure(GradeyAIErrorKind.NO_CONTEXT)
         else -> GradeyAIFailure(
             GradeyAIErrorKind.TRANSPORT,

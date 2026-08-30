@@ -10,4 +10,5 @@
     <string name="widget_substitution">Suplování</string>
     <string name="widget_room_changed">Změna učebny</string>
     <string name="widget_added">Přidáno</string>
+    <string name="widget_lesson_fallback">Hodina</string>
 </resources>

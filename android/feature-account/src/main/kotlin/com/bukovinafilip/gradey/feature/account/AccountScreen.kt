@@ -88,25 +88,25 @@ fun AccountScreen(
     isExportingData: Boolean = false,
     isDeletingAccount: Boolean = false,
     privacyDataErrorMessage: String? = null,
-    onUpdateFullName: (String) -> Unit = {},
-    onConnectGradeyId: () -> Unit = {},
-    onRefreshLinkedAccounts: () -> Unit = {},
-    onAddSchool: () -> Unit = {},
-    onActivateLinkedAccount: (LinkedSchoolAccount) -> Unit = {},
-    onReconnectLinkedAccount: (LinkedSchoolAccount) -> Unit = {},
-    onToggleLinkedNotifications: (LinkedSchoolAccount, Boolean) -> Unit = { _, _ -> },
-    onOpenNotificationSettings: () -> Unit = {},
-    onUpdateNotificationPreferences: (NotificationPreferences) -> Unit = {},
-    onOpenMeals: () -> Unit = {},
-    onRetryStravaCloudLink: () -> Unit = {},
-    onOpenPrivacyPolicy: () -> Unit = {},
-    onOpenTermsOfUse: () -> Unit = {},
-    onExportData: () -> Unit = {},
-    onDeleteAccount: () -> Unit = {},
-    onOpenSupport: () -> Unit = {},
-    onUnlinkLinkedAccount: (LinkedSchoolAccount) -> Unit = {},
-    onAppLanguageChange: (AppLanguage) -> Unit = {},
-    onShowMealsTabChange: (Boolean) -> Unit = {},
+    onUpdateFullName: (String) -> Unit,
+    onConnectGradeyId: () -> Unit,
+    onRefreshLinkedAccounts: () -> Unit,
+    onAddSchool: () -> Unit,
+    onActivateLinkedAccount: (LinkedSchoolAccount) -> Unit,
+    onReconnectLinkedAccount: (LinkedSchoolAccount) -> Unit,
+    onToggleLinkedNotifications: (LinkedSchoolAccount, Boolean) -> Unit,
+    onOpenNotificationSettings: () -> Unit,
+    onUpdateNotificationPreferences: (NotificationPreferences) -> Unit,
+    onOpenMeals: () -> Unit,
+    onRetryStravaCloudLink: () -> Unit,
+    onOpenPrivacyPolicy: () -> Unit,
+    onOpenTermsOfUse: () -> Unit,
+    onExportData: () -> Unit,
+    onDeleteAccount: () -> Unit,
+    onOpenSupport: () -> Unit,
+    onUnlinkLinkedAccount: (LinkedSchoolAccount) -> Unit,
+    onAppLanguageChange: (AppLanguage) -> Unit,
+    onShowMealsTabChange: (Boolean) -> Unit,
     onSignOut: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -488,9 +488,6 @@ fun AccountScreen(
                                 formatSyncTimestamp(timestamp),
                             )
                         }
-                        linked.actionRequiredReason?.takeIf(String::isNotBlank)?.let { reason ->
-                            Text(reason)
-                        }
                         if (
                             linked.provider.isSupportedSchoolProvider &&
                             (
@@ -498,6 +495,7 @@ fun AccountScreen(
                                     linked.status == LinkedAccountStatus.FAILED
                             )
                         ) {
+                            Text(stringResource(R.string.account_reconnect_reason))
                             Button(
                                 onClick = { onReconnectLinkedAccount(linked) },
                                 enabled = !isMutating,

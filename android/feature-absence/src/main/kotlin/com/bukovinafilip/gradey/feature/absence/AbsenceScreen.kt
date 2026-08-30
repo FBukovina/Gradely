@@ -952,23 +952,21 @@ private fun AbsencePredictionSheet(
         mutableStateOf<Set<String>>(initialSelectedLessons.mapTo(mutableSetOf(), AbsenceLessonCandidate::id))
     }
     var isLoading by remember { mutableStateOf(false) }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
+    var hasLoadError by remember { mutableStateOf(false) }
     var retryAttempt by remember { mutableStateOf(0) }
     val dateFormatter = remember(locale) {
         DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(locale)
     }
-    val loadFailedMessage = stringResource(R.string.absence_predictor_load_failed)
-
     LaunchedEffect(selectedDate, retryAttempt) {
         val dateKey = TimetableDates.apiDateString(selectedDate)
         lessonsByDate[dateKey]?.let { cached ->
             lessons = cached
-            errorMessage = null
+            hasLoadError = false
             isLoading = false
             return@LaunchedEffect
         }
         isLoading = true
-        errorMessage = null
+        hasLoadError = false
         lessons = emptyList()
         try {
             val loaded = onLoadLessons(dateKey)
@@ -979,9 +977,8 @@ private fun AbsencePredictionSheet(
             isLoading = false
         } catch (error: CancellationException) {
             throw error
-        } catch (error: Throwable) {
-            errorMessage = error.localizedMessage ?: error.message
-                ?: loadFailedMessage
+        } catch (_: Throwable) {
+            hasLoadError = true
             lessons = emptyList()
             isLoading = false
         }
@@ -1056,9 +1053,14 @@ private fun AbsencePredictionSheet(
                         }
                     }
 
-                    !errorMessage.isNullOrBlank() -> item {
+                    hasLoadError -> item {
                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text(errorMessage.orEmpty(), color = MissedRed, fontSize = 14.sp, lineHeight = 19.sp)
+                            Text(
+                                stringResource(R.string.absence_predictor_load_failed),
+                                color = MissedRed,
+                                fontSize = 14.sp,
+                                lineHeight = 19.sp,
+                            )
                             Button(onClick = { retryAttempt += 1 }) {
                                 Text(stringResource(R.string.absence_retry))
                             }

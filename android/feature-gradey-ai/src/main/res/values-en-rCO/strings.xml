@@ -36,4 +36,8 @@
     <string name="gradey_ai_support_free">free</string>
     <string name="gradey_ai_support_standard">standard</string>
     <string name="gradey_ai_support_plus">plus</string>
+    <string name="gradey_ai_revoke_action">revoke AI consent</string>
+    <string name="gradey_ai_revoke_title">revoke Gradey AI consent?</string>
+    <string name="gradey_ai_revoke_message">this deletes your Gradey AI chats from the cloud and resets the conversation state on this device. you can consent again later.</string>
+    <string name="gradey_ai_cancel">cancel</string>
 </resources>

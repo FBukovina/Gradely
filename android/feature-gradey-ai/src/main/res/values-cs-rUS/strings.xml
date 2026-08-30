@@ -36,4 +36,8 @@
     <string name="gradey_ai_support_free">zdarma</string>
     <string name="gradey_ai_support_standard">standard</string>
     <string name="gradey_ai_support_plus">plus</string>
+    <string name="gradey_ai_revoke_action">odvolat souhlas s AI</string>
+    <string name="gradey_ai_revoke_title">odvolat souhlas s Gradey AI?</string>
+    <string name="gradey_ai_revoke_message">tím se smažou tvoje chaty Gradey AI z cloudu a obnoví stav konverzací v tomto zařízení. souhlas můžeš později udělit znovu.</string>
+    <string name="gradey_ai_cancel">zrušit</string>
 </resources>

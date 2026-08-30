@@ -127,6 +127,7 @@ interface GradeyAIRepository {
 
     suspend fun loadStatus(): GradeyAIStatus
     suspend fun acceptConsent(): GradeyAIConsent
+    suspend fun revokeConsent()
 }
 
 interface GradeyAIContextBuilding {

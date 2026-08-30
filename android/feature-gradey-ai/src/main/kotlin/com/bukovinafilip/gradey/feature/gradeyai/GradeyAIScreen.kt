@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.Button
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -27,6 +28,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -68,6 +70,7 @@ fun GradeyAIScreen(
     var isLoading by remember { mutableStateOf(false) }
     var hasLoadError by remember { mutableStateOf(false) }
     var reloadKey by remember { mutableIntStateOf(0) }
+    var showRevokeConfirmation by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val entryState = GradeyAIEntryPolicy.resolve(isGuestMode, repository.isConfigured)
 
@@ -158,10 +161,59 @@ fun GradeyAIScreen(
                 }
 
                 status != null -> item {
-                    GradeyAIStatusContent(status = status!!, supportTier = supportTier)
+                    GradeyAIStatusContent(
+                        status = status!!,
+                        supportTier = supportTier,
+                        isLoading = isLoading,
+                        onRevokeConsent = { showRevokeConfirmation = true },
+                    )
                 }
             }
         }
+    }
+    if (showRevokeConfirmation) {
+        AlertDialog(
+            onDismissRequest = { if (!isLoading) showRevokeConfirmation = false },
+            title = { Text(stringResource(R.string.gradey_ai_revoke_title)) },
+            text = { Text(stringResource(R.string.gradey_ai_revoke_message)) },
+            confirmButton = {
+                TextButton(
+                    enabled = !isLoading,
+                    onClick = {
+                        scope.launch {
+                            isLoading = true
+                            hasLoadError = false
+                            try {
+                                repository.revokeConsent()
+                                status = status?.copy(
+                                    consentRequired = true,
+                                    dailyUsed = 0,
+                                    remaining = status?.dailyLimit ?: 0,
+                                )
+                                showRevokeConfirmation = false
+                            } catch (error: CancellationException) {
+                                throw error
+                            } catch (_: Throwable) {
+                                hasLoadError = true
+                            } finally {
+                                isLoading = false
+                            }
+                        }
+                    },
+                ) {
+                    Text(
+                        stringResource(R.string.gradey_ai_revoke_action),
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    enabled = !isLoading,
+                    onClick = { showRevokeConfirmation = false },
+                ) { Text(stringResource(R.string.gradey_ai_cancel)) }
+            },
+        )
     }
 }
 
@@ -305,7 +357,12 @@ private fun ConsentDetail(icon: ImageVector, title: String, message: String) {
 }
 
 @Composable
-private fun GradeyAIStatusContent(status: GradeyAIStatus, supportTier: GradeySupportTier) {
+private fun GradeyAIStatusContent(
+    status: GradeyAIStatus,
+    supportTier: GradeySupportTier,
+    isLoading: Boolean,
+    onRevokeConsent: () -> Unit,
+) {
     Column(verticalArrangement = Arrangement.spacedBy(GradeySpacing.lg)) {
         GradeyHero(
             title = stringResource(R.string.gradey_ai_ready_title),
@@ -371,6 +428,16 @@ private fun GradeyAIStatusContent(status: GradeyAIStatus, supportTier: GradeySup
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 style = MaterialTheme.typography.bodySmall,
                 textAlign = TextAlign.Start,
+            )
+        }
+        OutlinedButton(
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !isLoading,
+            onClick = onRevokeConsent,
+        ) {
+            Text(
+                text = stringResource(R.string.gradey_ai_revoke_action),
+                color = MaterialTheme.colorScheme.error,
             )
         }
     }

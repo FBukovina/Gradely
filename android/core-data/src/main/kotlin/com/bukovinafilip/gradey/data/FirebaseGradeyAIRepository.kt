@@ -47,6 +47,13 @@ class FirebaseGradeyAIRepository(
         )
     }
 
+    override suspend fun revokeConsent() {
+        call(
+            name = "gradeyAIRevokeConsent",
+            payload = accountPayload(),
+        )
+    }
+
     private suspend fun call(name: String, payload: Map<String, Any?>): Any? {
         val app = firebaseApp()
         ensureIdentity(app)

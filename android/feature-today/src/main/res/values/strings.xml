@@ -12,6 +12,13 @@
     <string name="today_cloud_trends_subtitle">Cloud trends start after Gradey records grade snapshots.</string>
     <string name="today_average_movement">Average movement</string>
     <string name="today_back">Back to Today</string>
+    <string name="today_absence_risk">Absence risk</string>
+    <string name="today_open">Open</string>
+    <string name="today_absence_unavailable">Absence data unavailable</string>
+    <string name="today_school_limit_unavailable">School limit unavailable. Current percentages are shown without guessing a threshold.</string>
+    <string name="today_absence_missed">%1$d of %2$d lessons missed</string>
+    <string name="today_absence_over_limit">Over the school limit</string>
+    <string name="today_absence_until_limit">%1$d more until the limit</string>
     <plurals name="today_trend_new_marks">
         <item quantity="one">%1$d new mark</item>
         <item quantity="other">%1$d new marks</item>

@@ -12,6 +12,13 @@
     <string name="today_cloud_trends_subtitle">Cloudové trendy začnou po uložení snímků známek.</string>
     <string name="today_average_movement">Pohyb průměru</string>
     <string name="today_back">Zpět na Dnes</string>
+    <string name="today_absence_risk">Riziko absence</string>
+    <string name="today_open">Otevřít</string>
+    <string name="today_absence_unavailable">Údaje o absenci nejsou dostupné</string>
+    <string name="today_school_limit_unavailable">Školní limit není k dispozici. Aktuální procenta se zobrazují bez odhadu limitu.</string>
+    <string name="today_absence_missed">Zameškáno %1$d z %2$d hodin</string>
+    <string name="today_absence_over_limit">Nad školním limitem</string>
+    <string name="today_absence_until_limit">Ještě %1$d do limitu</string>
     <plurals name="today_trend_new_marks">
         <item quantity="one">%1$d nová známka</item>
         <item quantity="few">%1$d nové známky</item>

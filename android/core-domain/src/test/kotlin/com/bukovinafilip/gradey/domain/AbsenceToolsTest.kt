@@ -25,13 +25,43 @@ class AbsenceToolsTest {
     fun missingThresholdDoesNotGuessRisk() {
         val response = AbsenceResponse(
             percentageThreshold = null,
-            absencesPerSubject = listOf(AbsencePerSubject("Biology", lessonsCount = 10, base = 3)),
+            absencesPerSubject = listOf(
+                AbsencePerSubject("Biology", lessonsCount = 10, base = 3),
+                AbsencePerSubject("Math", lessonsCount = 10, base = 1),
+                AbsencePerSubject("English", lessonsCount = 10, base = 2),
+            ),
         )
 
         val summary = AbsenceRiskSummary.make(response, response.absencesPerSubject)
 
         assertThat(summary.isThresholdUnavailable).isTrue()
-        assertThat(summary.subjects.single().level).isEqualTo(AbsenceRiskLevel.UNAVAILABLE)
+        assertThat(summary.subjects.map { it.level }.distinct()).containsExactly(AbsenceRiskLevel.UNAVAILABLE)
+        assertThat(summary.subjects.map { it.subjectName })
+            .containsExactly("Biology", "English", "Math")
+            .inOrder()
+    }
+
+    @Test
+    fun riskBandsAndOrderingMatchIOS() {
+        val response = AbsenceResponse(
+            percentageThreshold = 25.0,
+            absencesPerSubject = listOf(
+                AbsencePerSubject("Safe", lessonsCount = 20, base = 3),
+                AbsencePerSubject("Watch", lessonsCount = 80, base = 14),
+                AbsencePerSubject("High", lessonsCount = 80, base = 18),
+                AbsencePerSubject("Over", lessonsCount = 20, base = 5),
+            ),
+        )
+
+        val rows = AbsenceRiskSummary.make(response, response.absencesPerSubject).subjects
+
+        assertThat(rows.map { it.subjectName }).containsExactly("Over", "High", "Watch", "Safe").inOrder()
+        assertThat(rows.map { it.level }).containsExactly(
+            AbsenceRiskLevel.OVER_LIMIT,
+            AbsenceRiskLevel.HIGH,
+            AbsenceRiskLevel.WATCH,
+            AbsenceRiskLevel.SAFE,
+        ).inOrder()
     }
 
     @Test

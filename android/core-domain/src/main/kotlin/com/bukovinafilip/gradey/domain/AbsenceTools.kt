@@ -48,7 +48,11 @@ data class AbsenceRiskSummary(
                     missesUntilLimit = missesUntilLimit,
                     level = level,
                 )
-            }.sortedWith(compareByDescending<AbsenceSubjectSummary> { it.level.ordinal }.thenBy { it.subjectName.lowercase() })
+            }.sortedWith(
+                compareByDescending<AbsenceSubjectSummary> { riskRank(it.level) }
+                    .thenByDescending(AbsenceSubjectSummary::absencePercentage)
+                    .thenBy { it.subjectName.lowercase() },
+            )
             return AbsenceRiskSummary(rows, threshold == null)
         }
 
@@ -59,10 +63,18 @@ data class AbsenceRiskSummary(
             if (threshold == null) return AbsenceRiskLevel.UNAVAILABLE
             return when {
                 percentage >= threshold -> AbsenceRiskLevel.OVER_LIMIT
-                percentage >= threshold * 0.8 -> AbsenceRiskLevel.HIGH
-                percentage >= threshold * 0.6 -> AbsenceRiskLevel.WATCH
+                percentage >= threshold * 0.9 -> AbsenceRiskLevel.HIGH
+                percentage >= threshold * 0.7 -> AbsenceRiskLevel.WATCH
                 else -> AbsenceRiskLevel.SAFE
             }
+        }
+
+        private fun riskRank(level: AbsenceRiskLevel): Int = when (level) {
+            AbsenceRiskLevel.OVER_LIMIT -> 4
+            AbsenceRiskLevel.HIGH -> 3
+            AbsenceRiskLevel.WATCH -> 2
+            AbsenceRiskLevel.SAFE -> 1
+            AbsenceRiskLevel.UNAVAILABLE -> 0
         }
 
         private fun missesUntilLimit(base: Int, lessonsCount: Int, threshold: Double): Int {

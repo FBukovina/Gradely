@@ -117,7 +117,10 @@ fun TodayScreen(
     val subjects = dashboard.marksResponse.subjects
     val overall = GradeMath.formattedAverage(GradeMath.overallAverage(subjects)).replace('.', ',')
     val totalMarks = subjects.sumOf { it.marks.size }
-    val absenceRows = AbsenceRiskSummary.make(absence, absence.absencesPerSubject).subjects.take(2)
+    val absenceSummary = remember(absence) {
+        AbsenceRiskSummary.make(absence, absence.absencesPerSubject)
+    }
+    val absenceRows = absenceSummary.subjects.take(3)
     val featuredLesson = featuredLesson(timetable)
     val newMarks = remember(subjects, cloudNewMarkEvents) {
         TodayNewMarks.resolve(subjects, cloudNewMarkEvents, PragueZone).take(3)
@@ -173,7 +176,13 @@ fun TodayScreen(
             }
             item { MarksShortcut(onClick = onOpenMarks) }
             item { NowAndNextCard(featuredLesson = featuredLesson, onClick = onOpenTimetable) }
-            item { AbsenceRiskCard(rows = absenceRows, onOpenAbsence = onOpenAbsence) }
+            item {
+                AbsenceRiskCard(
+                    rows = absenceRows,
+                    isThresholdUnavailable = absenceSummary.isThresholdUnavailable,
+                    onOpenAbsence = onOpenAbsence,
+                )
+            }
             item { AbsencePredictorCard(onPlanAbsence = onOpenAbsence) }
             item {
                 NewMarksAndTrendsCard(
@@ -471,6 +480,7 @@ private fun NowAndNextCard(
 @Composable
 private fun AbsenceRiskCard(
     rows: List<com.bukovinafilip.gradey.domain.AbsenceSubjectSummary>,
+    isThresholdUnavailable: Boolean,
     onOpenAbsence: () -> Unit,
 ) {
     DashboardSurface(modifier = Modifier.heightIn(min = 190.dp)) {
@@ -486,8 +496,8 @@ private fun AbsenceRiskCard(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                SectionHeading("ABSENCE RISK")
-                ActionPill(text = "Open", onClick = onOpenAbsence)
+                SectionHeading(stringResource(R.string.today_absence_risk).uppercase(Locale.getDefault()))
+                ActionPill(text = stringResource(R.string.today_open), onClick = onOpenAbsence)
             }
             Spacer(Modifier.height(5.dp))
             if (rows.isEmpty()) {
@@ -501,17 +511,32 @@ private fun AbsenceRiskCard(
                         Icon(Icons.Default.CalendarMonth, contentDescription = null, tint = MutedText)
                     }
                     Spacer(Modifier.width(13.dp))
-                    Text("Absence data unavailable", color = MutedText, fontSize = 14.sp)
+                    Text(
+                        text = stringResource(R.string.today_absence_unavailable),
+                        color = MutedText,
+                        fontSize = 14.sp,
+                    )
                 }
             } else {
                 rows.forEach { row ->
                     val color = row.level.riskColor()
                     RiskRow(
                         subjectName = row.subjectName,
+                        missedLessons = row.base,
+                        totalLessons = row.lessonsCount,
                         percentage = row.absencePercentage,
                         threshold = row.threshold,
                         missesUntilLimit = row.missesUntilLimit,
                         color = color,
+                    )
+                }
+                if (isThresholdUnavailable) {
+                    Text(
+                        text = stringResource(R.string.today_school_limit_unavailable),
+                        modifier = Modifier.padding(start = 16.dp, top = 4.dp, end = 16.dp, bottom = 6.dp),
+                        color = MutedText,
+                        fontSize = 12.sp,
+                        lineHeight = 16.sp,
                     )
                 }
             }
@@ -522,6 +547,8 @@ private fun AbsenceRiskCard(
 @Composable
 private fun RiskRow(
     subjectName: String,
+    missedLessons: Int,
+    totalLessons: Int,
     percentage: Double,
     threshold: Double?,
     missesUntilLimit: Int?,
@@ -550,7 +577,7 @@ private fun RiskRow(
                 fontWeight = FontWeight.SemiBold,
             )
             Text(
-                text = absenceLimitDescription(missesUntilLimit),
+                text = absenceLimitDescription(missedLessons, totalLessons, missesUntilLimit),
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
                 color = MutedText,
@@ -1162,11 +1189,15 @@ private fun AbsenceRiskLevel.riskColor(): Color = when (this) {
     AbsenceRiskLevel.UNAVAILABLE -> MutedText
 }
 
-private fun absenceLimitDescription(missesUntilLimit: Int?): String = when (missesUntilLimit) {
-    null -> "Absence limit unavailable"
-    0 -> "At or above the absence limit"
-    1 -> "1 more missed lesson reaches the limit"
-    else -> "$missesUntilLimit more missed lessons reaches the limit"
+@Composable
+private fun absenceLimitDescription(
+    missedLessons: Int,
+    totalLessons: Int,
+    missesUntilLimit: Int?,
+): String = when (missesUntilLimit) {
+    null -> stringResource(R.string.today_absence_missed, missedLessons, totalLessons)
+    0 -> stringResource(R.string.today_absence_over_limit)
+    else -> stringResource(R.string.today_absence_until_limit, missesUntilLimit)
 }
 
 private fun plural(count: Int, singular: String, plural: String): String =

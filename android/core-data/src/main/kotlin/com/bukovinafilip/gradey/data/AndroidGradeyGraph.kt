@@ -5,6 +5,7 @@ import androidx.room.Room
 import com.bukovinafilip.gradey.domain.DevicePushTokenClient
 import com.bukovinafilip.gradey.domain.GradeyAuthRepository
 import com.bukovinafilip.gradey.domain.GradeyAIRepository
+import com.bukovinafilip.gradey.domain.GradeyAIContextBuilding
 import com.bukovinafilip.gradey.domain.GradeyHistoryRepository
 import com.bukovinafilip.gradey.domain.LinkedAccountRepository
 import com.bukovinafilip.gradey.domain.SchoolRepository
@@ -41,6 +42,7 @@ class AndroidGradeyGraph private constructor(
     val historyRepository: GradeyHistoryRepository,
     val devicePushTokenClient: DevicePushTokenClient,
     val gradeyAIRepository: GradeyAIRepository,
+    val gradeyAIContextBuilder: GradeyAIContextBuilding,
     val stravaCZRepository: StravaCZRepository,
     val cache: RoomGradeyCache?,
     val ageAttestationStore: AgeAttestationStore,
@@ -126,32 +128,40 @@ class AndroidGradeyGraph private constructor(
                 LocalLinkedAccountRepository(linkedAccountStore)
             }
 
-            return AndroidGradeyGraph(
-                schoolRepository = AndroidSchoolRepository(
-                    bakalariClient = DemoAwareBakalariClient(BakalariNetworkClient()),
-                    sessionStore = sessionStore,
+            val schoolRepository = AndroidSchoolRepository(
+                bakalariClient = DemoAwareBakalariClient(BakalariNetworkClient()),
+                sessionStore = sessionStore,
+                cache = cache,
+            )
+            val historyRepository = if (supabase.isConfigured) {
+                CachedGradeyHistoryRepository(
+                    remote = SupabaseGradeyHistoryRepository(supabase, authRepository),
                     cache = cache,
-                ),
+                )
+            } else {
+                EmptyGradeyHistoryRepository()
+            }
+
+            return AndroidGradeyGraph(
+                schoolRepository = schoolRepository,
                 schoolDirectoryRepository = AndroidSchoolDirectoryRepository(
                     client = BakalariSchoolDirectoryClient(),
                     storage = RoomSchoolDirectoryStorage(cache),
                 ),
                 gradeyAuthRepository = authRepository,
                 linkedAccountRepository = linkedAccountRepository,
-                historyRepository = if (supabase.isConfigured) {
-                    CachedGradeyHistoryRepository(
-                        remote = SupabaseGradeyHistoryRepository(supabase, authRepository),
-                        cache = cache,
-                    )
-                } else {
-                    EmptyGradeyHistoryRepository()
-                },
+                historyRepository = historyRepository,
                 devicePushTokenClient = if (supabase.isConfigured) {
                     SupabaseDevicePushTokenClient(supabase)
                 } else {
                     UnavailableDevicePushTokenClient()
                 },
                 gradeyAIRepository = FirebaseGradeyAIRepository(context, authRepository),
+                gradeyAIContextBuilder = AndroidGradeyAIContextBuilder(
+                    schoolRepository = schoolRepository,
+                    historyRepository = historyRepository,
+                    scopeHasher = GradeyAISchoolScopeHasher(context),
+                ),
                 stravaCZRepository = AndroidStravaCZRepository(
                     client = StravaCZNetworkClient(),
                     sessionStore = StravaCZSessionStore(stravaCZSecureStore),

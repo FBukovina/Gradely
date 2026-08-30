@@ -271,17 +271,19 @@ Strava.cz verification (2026-08-30): Android now uses the same public Strava.cz 
 ## Gradey AI
 
 - [x] Port status/availability, identity tier, consent, context sections, conversations, messages, and stream-event models.
-- [ ] Build context from current Bakaláři marks, absence, timetable, trends, and active school scope with partial/stale/unavailable states.
+- [x] Build context from current Bakaláři marks, absence, timetable, trends, and active school scope with partial/stale/unavailable states.
 - [ ] Implement consent explanations, grant, revoke, and local/cloud state reset.
 - [ ] Implement conversation list/detail/new chat/delete/delete-all flows.
 - [ ] Implement streaming response, stop, retry failed prompt, cancellation, limits/reset time, and support-tier upgrade flow.
 - [ ] Render supported Markdown safely and keep the school-data disclaimer visible.
-- [ ] Prevent cross-school context reuse with the same scope hashing rules as iOS.
+- [x] Prevent cross-school context reuse with the same scope hashing rules as iOS.
 - [ ] Hide or clearly disable AI for local-only guest mode as iOS does.
 - [ ] Integrate AI entry points on Today, Subjects, Absence, Timetable, and Meals.
 - [ ] Verify authentication, no-context, over-limit, oversized prompt, transport interruption, malformed stream, and app-background behavior.
 
 Model parity evidence (2026-08-31): Android now carries the complete iOS Gradey AI domain vocabulary: service status and identity tier, consent, school-scoped conversation summaries/details, user and assistant messages with streaming/completed/cancelled/failed states, marks/subjects/trends/timetable context with stale/partial/unavailable semantics, lesson-change kinds, and start/delta/done/error stream events including token usage and an optional persisted message. Wire-facing model fields retain the backend snake-case names, epoch timestamps remain platform-native, and JVM tests lock the context and event semantics.
+
+Context and scope evidence (2026-08-31): the production graph now provides an iOS-equivalent context builder over the active Bakaláři dashboard (including the refreshed absence-bearing dashboard), 90-day Gradey history, and current/next timetable weeks. It loads the independent sections concurrently, falls back only to cache from the same opaque school scope, reports ordered marks/trends/timetable unavailable sections, and distinguishes complete, stale partial, empty, and no-account states. The minimizer enforces the iOS limits of five marks per subject, 80 marks total, 20 trends, 120 lessons, bounded text/group fields, and excludes credentials, tokens, private teacher IDs, and unrelated DTO fields. The per-install 32-byte salt plus school/provider/host/student identity is SHA-256 hashed with the same separators/prefix as iOS; account, school, user, and salt changes produce distinct scopes, and a mid-load account switch aborts rather than publishing mixed context. JVM tests cover deterministic opaque hashing, isolation inputs, cached partial context, fresh-section fallback, total failure, minimization, and limits.
 
 ## Settings and account hub
 

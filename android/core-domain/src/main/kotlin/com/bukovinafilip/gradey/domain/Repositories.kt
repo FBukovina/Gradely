@@ -7,6 +7,7 @@ import com.bukovinafilip.gradey.model.GradeyAccount
 import com.bukovinafilip.gradey.model.GradeyAuthSession
 import com.bukovinafilip.gradey.model.GradeyAccountSettingsSnapshot
 import com.bukovinafilip.gradey.model.GradeyAIConsent
+import com.bukovinafilip.gradey.model.GradeyAIContextSnapshot
 import com.bukovinafilip.gradey.model.GradeyAIStatus
 import com.bukovinafilip.gradey.model.LinkedSchoolAccount
 import com.bukovinafilip.gradey.model.LinkedSchoolAccountActivation
@@ -127,6 +128,28 @@ interface GradeyAIRepository {
     suspend fun loadStatus(): GradeyAIStatus
     suspend fun acceptConsent(): GradeyAIConsent
 }
+
+interface GradeyAIContextBuilding {
+    suspend fun currentSchoolScope(): String
+    suspend fun cachedContext(): GradeyAIContextSnapshot?
+    suspend fun refreshContext(): GradeyAIContextSnapshot
+}
+
+enum class GradeyAIContextError {
+    NO_SCHOOL_ACCOUNT,
+    NO_CONTEXT_AVAILABLE,
+    SCHOOL_ACCOUNT_CHANGED,
+}
+
+class GradeyAIContextException(
+    val error: GradeyAIContextError,
+) : IllegalStateException(
+    when (error) {
+        GradeyAIContextError.NO_SCHOOL_ACCOUNT -> "Connect a Bakaláři account first."
+        GradeyAIContextError.NO_CONTEXT_AVAILABLE -> "No school context is available for Gradey AI."
+        GradeyAIContextError.SCHOOL_ACCOUNT_CHANGED -> "The active school changed while Gradey AI context was loading."
+    },
+)
 
 interface StravaCZRepository {
     suspend fun bootstrapSession(): StravaCZStoredSession?

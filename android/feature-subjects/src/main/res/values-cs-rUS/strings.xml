@@ -4,4 +4,35 @@
     <string name="marks_search_empty">žádné předměty</string>
     <string name="marks_search_clear">vymazat hledání předmětů</string>
     <string name="mark_prediction_invalid">zadejte známku třeba 1, 2+ nebo 3-.</string>
+    <string name="mark_untitled">bez názvu</string>
+    <string name="mark_date_unavailable">datum není dostupné</string>
+    <string name="mark_date_today">dnes</string>
+    <string name="mark_date_yesterday">včera</string>
+    <plurals name="mark_date_days_ago">
+        <item quantity="one">před %1$d dnem</item>
+        <item quantity="few">před %1$d dny</item>
+        <item quantity="many">před %1$d dny</item>
+        <item quantity="other">před %1$d dny</item>
+    </plurals>
+    <plurals name="mark_date_weeks_ago">
+        <item quantity="one">před %1$d týdnem</item>
+        <item quantity="few">před %1$d týdny</item>
+        <item quantity="many">před %1$d týdny</item>
+        <item quantity="other">před %1$d týdny</item>
+    </plurals>
+    <plurals name="mark_date_months_ago">
+        <item quantity="one">před %1$d měsícem</item>
+        <item quantity="few">před %1$d měsíci</item>
+        <item quantity="many">před %1$d měsíci</item>
+        <item quantity="other">před %1$d měsíci</item>
+    </plurals>
+    <plurals name="mark_date_years_ago">
+        <item quantity="one">před %1$d rokem</item>
+        <item quantity="few">před %1$d lety</item>
+        <item quantity="many">před %1$d lety</item>
+        <item quantity="other">před %1$d lety</item>
+    </plurals>
+    <string name="mark_weight">váha %1$s×</string>
+    <string name="mark_weight_estimated">odhadovaná váha %1$s×</string>
+    <string name="mark_new">nová</string>
 </resources>

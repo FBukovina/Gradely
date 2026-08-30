@@ -8,12 +8,15 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -69,6 +72,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -84,8 +88,10 @@ import androidx.core.view.WindowCompat
 import com.bukovinafilip.gradey.domain.AbsenceRiskSummary
 import com.bukovinafilip.gradey.domain.GradeBand
 import com.bukovinafilip.gradey.domain.GradeMath
+import com.bukovinafilip.gradey.domain.MarkCardMetadataPolicy
 import com.bukovinafilip.gradey.domain.MarkDateParser
 import com.bukovinafilip.gradey.domain.MarkPredictionInput
+import com.bukovinafilip.gradey.domain.MarkWeightBadgeKind
 import com.bukovinafilip.gradey.domain.SubjectDirectorySearch
 import com.bukovinafilip.gradey.model.AbsenceResponse
 import com.bukovinafilip.gradey.model.Mark
@@ -1119,16 +1125,19 @@ private fun StepperButton(
 }
 
 @Composable
+@OptIn(ExperimentalLayoutApi::class)
 private fun MarkCard(subject: Subject, mark: Mark) {
     val date = parseMarkDate(mark.markDate)
-    val caption = mark.caption?.takeIf(String::isNotBlank) ?: mark.type?.takeIf(String::isNotBlank) ?: "Mark"
-    val detail = mark.theme?.takeIf(String::isNotBlank) ?: mark.typeNote?.takeIf(String::isNotBlank) ?: ""
-    val weight = GradeMath.resolvedWeight(mark, subject).value
+    val metadata = MarkCardMetadataPolicy.resolve(
+        mark = mark,
+        resolvedWeight = GradeMath.resolvedWeight(mark, subject),
+        untitledCaption = stringResource(R.string.mark_untitled),
+    )
 
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .height(112.dp),
+            .heightIn(min = 112.dp),
         shape = RoundedCornerShape(20.dp),
         color = CardWhite,
         shadowElevation = 1.dp,
@@ -1142,22 +1151,24 @@ private fun MarkCard(subject: Subject, mark: Mark) {
                 verticalArrangement = Arrangement.spacedBy(1.dp),
             ) {
                 Text(
-                    text = caption,
+                    text = metadata.caption,
                     color = Color.Black,
                     fontSize = 18.sp,
                     lineHeight = 22.sp,
                     fontWeight = FontWeight.Bold,
-                    maxLines = 1,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
-                Text(
-                    text = detail,
-                    color = MutedText,
-                    fontSize = 17.sp,
-                    lineHeight = 20.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                metadata.theme?.let { theme ->
+                    Text(
+                        text = theme,
+                        color = MutedText,
+                        fontSize = 17.sp,
+                        lineHeight = 20.sp,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = relativeDate(date),
@@ -1166,24 +1177,44 @@ private fun MarkCard(subject: Subject, mark: Mark) {
                         lineHeight = 17.sp,
                         fontWeight = FontWeight.SemiBold,
                     )
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        text = date?.fullDate().orEmpty(),
-                        color = MutedText,
-                        fontSize = 13.sp,
-                        lineHeight = 17.sp,
-                    )
+                    date?.let {
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = it.fullDate(),
+                            color = MutedText,
+                            fontSize = 13.sp,
+                            lineHeight = 17.sp,
+                        )
+                    }
                 }
-                Row(
+                FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
-                    TagPill(text = caption, color = Color(0xFFF0F0F2), textColor = MutedText)
-                    TagPill(
-                        text = "Weight ${GradeMath.formattedWeight(weight)}×",
-                        color = SoftMint,
-                        textColor = ExcellentGreen,
-                    )
+                    metadata.typeLabel?.let {
+                        TagPill(text = it, color = Color(0xFFF0F0F2), textColor = MutedText)
+                    }
+                    metadata.weightBadge?.let { weight ->
+                        val label = when (weight.kind) {
+                            MarkWeightBadgeKind.EXPLICIT -> R.string.mark_weight
+                            MarkWeightBadgeKind.ESTIMATED -> R.string.mark_weight_estimated
+                        }
+                        TagPill(
+                            text = stringResource(label, GradeMath.formattedWeight(weight.value)),
+                            color = SoftMint,
+                            textColor = ExcellentGreen,
+                        )
+                    }
+                    metadata.pointsLabel?.let {
+                        TagPill(text = it, color = SoftTeal, textColor = AccentTeal)
+                    }
+                    if (metadata.isNew) {
+                        TagPill(
+                            text = stringResource(R.string.mark_new),
+                            color = Color(0xFFFFF0D7),
+                            textColor = WarningOrange,
+                        )
+                    }
                 }
             }
             GradePill(mark = mark, compact = false)
@@ -1333,18 +1364,25 @@ private fun parseMarkDate(raw: String?): LocalDate? {
     return MarkDateParser.localDate(raw, PragueZone)
 }
 
+@Composable
 private fun relativeDate(date: LocalDate?): String {
-    date ?: return "Date unavailable"
+    date ?: return stringResource(R.string.mark_date_unavailable)
     val days = ChronoUnit.DAYS.between(date, LocalDate.now(PragueZone)).coerceAtLeast(0)
     return when {
-        days == 0L -> "Today"
-        days == 1L -> "Yesterday"
-        days < 7L -> "$days days ago"
-        days < 30L -> "${days / 7} ${plural((days / 7).toInt(), "week", "weeks")} ago"
-        days < 60L -> "1 month ago"
-        days < 365L -> "${days / 30} months ago"
-        else -> "${days / 365} ${plural((days / 365).toInt(), "year", "years")} ago"
+        days == 0L -> stringResource(R.string.mark_date_today)
+        days == 1L -> stringResource(R.string.mark_date_yesterday)
+        days < 7L -> relativeQuantity(R.plurals.mark_date_days_ago, days)
+        days < 30L -> relativeQuantity(R.plurals.mark_date_weeks_ago, days / 7)
+        days < 60L -> relativeQuantity(R.plurals.mark_date_months_ago, 1)
+        days < 365L -> relativeQuantity(R.plurals.mark_date_months_ago, days / 30)
+        else -> relativeQuantity(R.plurals.mark_date_years_ago, days / 365)
     }
+}
+
+@Composable
+private fun relativeQuantity(resource: Int, count: Long): String {
+    val safeCount = count.coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+    return pluralStringResource(resource, safeCount, safeCount)
 }
 
 private fun LocalDate.shortDate(): String = "$dayOfMonth. $monthValue."

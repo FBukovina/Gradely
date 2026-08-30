@@ -167,7 +167,7 @@ Subject search verification (2026-08-30): the Marks overview keeps its full unfi
 ## Subject detail, grade history, and calculator
 
 - [ ] Show the subject average hero, absence percentage, subject/temporary notes, and complete mark list.
-- [ ] Show mark caption/theme/date/type/type note/weight/points/new-state with optional-field fallbacks.
+- [x] Show mark caption/theme/date/type/type note/weight/points/new-state with optional-field fallbacks.
 - [x] Match iOS mark date parsing and ordering for multiple Bakaláři formats.
 - [ ] Implement average-history chart with cloud/local source indication and empty state.
 - [ ] Implement grade-history loading by active linked account and time range.
@@ -178,6 +178,8 @@ Subject search verification (2026-08-30): the Marks overview keeps its full unfi
 Calculator-input verification (2026-08-30): Android now follows the iOS three-character mark-input limit, treats empty input as neutral, accepts every value supported by the shared grade parser (including plus/minus and decimal/comma forms), and surfaces localized guidance for non-empty invalid input. The decrement/increment controls remain disabled at their visible boundaries and the shared policy clamps every transition to the inclusive 1...10 range. JVM tests cover neutral, invalid, valid plus-mark, length-limit, and both weight boundaries.
 
 Mark-date verification (2026-08-30): Subject Detail now orders marks using the full parsed timestamp rather than discarding its time and timezone. The shared parser matches the iOS sequence of ISO internet timestamps (fractional or whole seconds, offset or `Z`) followed by a `yyyy-MM-dd` fallback, converts dates in the app's Prague display timezone, and keeps malformed values after valid marks without destabilizing their source order. JVM tests cover every accepted form, timezone day rollover, fallback behavior, malformed values, and full-instant ordering.
+
+Mark-card verification (2026-08-30): Android now applies the iOS caption → theme → localized untitled fallback, only repeats a distinct non-empty theme, prefers the trimmed type note over type, distinguishes explicit from estimated weights above 1×, suppresses weight badges for points/default weights, and exposes point totals and the Bakaláři new-mark state. Relative dates and missing-date fallback text are localized in all four language configurations, while wrapping variable-height cards retain two-line titles/themes and every available badge on narrow screens. JVM tests cover every optional-field branch and all weight/points/new-state badge rules.
 
 ## Absence
 

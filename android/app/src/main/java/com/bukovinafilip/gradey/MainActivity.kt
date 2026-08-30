@@ -1,5 +1,7 @@
 package com.bukovinafilip.gradey
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.enableEdgeToEdge
@@ -49,6 +51,7 @@ import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
 import com.bukovinafilip.gradey.feature.absence.AbsenceScreen
 import com.bukovinafilip.gradey.feature.account.AccountScreen
+import com.bukovinafilip.gradey.feature.auth.AgeAttestationScreen
 import com.bukovinafilip.gradey.feature.auth.GradeyIdLoginScreen
 import com.bukovinafilip.gradey.feature.login.SchoolLoginScreen
 import com.bukovinafilip.gradey.feature.stravacz.StravaCZScreen
@@ -62,6 +65,7 @@ import com.bukovinafilip.gradey.domain.TimetableDates
 import com.bukovinafilip.gradey.domain.WearPayloadBuilder
 import com.bukovinafilip.gradey.domain.selectGradeyStartupDestination
 import com.bukovinafilip.gradey.model.AbsenceResponse
+import com.bukovinafilip.gradey.model.AgeAttestationKind
 import com.bukovinafilip.gradey.model.DashboardData
 import com.bukovinafilip.gradey.model.GradeyAccount
 import com.bukovinafilip.gradey.model.LinkedSchoolAccount
@@ -126,6 +130,7 @@ private fun GradeyApp(
     var dataError by remember { mutableStateOf<String?>(null) }
     var profileError by remember { mutableStateOf<String?>(null) }
     var isUpdatingProfile by remember { mutableStateOf(false) }
+    var ageAttestationKind by remember { mutableStateOf(graph.ageAttestationStore.kind) }
     var isGuestMode by remember { mutableStateOf(graph.guestModeStore.isEnabled) }
     var account by remember { mutableStateOf<GradeyAccount?>(null) }
     var linkedAccounts by remember { mutableStateOf<List<LinkedSchoolAccount>>(emptyList()) }
@@ -326,7 +331,8 @@ private fun GradeyApp(
         refreshSignedInData()
     }
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(ageAttestationKind) {
+        if (ageAttestationKind == null) return@LaunchedEffect
         if (isGuestMode) {
             try {
                 graph.gradeyAuthRepository.signOut()
@@ -404,7 +410,25 @@ private fun GradeyApp(
         }
     }
 
-    when (phase) {
+    if (ageAttestationKind == null) {
+        AgeAttestationScreen(
+            onConfirm = { kind ->
+                graph.ageAttestationStore.confirm(kind)
+                ageAttestationKind = kind
+            },
+            onOpenPrivacyPolicy = {
+                runCatching {
+                    context.startActivity(
+                        Intent(
+                            Intent.ACTION_VIEW,
+                            Uri.parse("https://help.bukovinafilip.com/en/articles/10-privacy-policy"),
+                        ),
+                    )
+                }
+            },
+            modifier = Modifier.fillMaxSize(),
+        )
+    } else when (phase) {
         AppPhase.CHECKING -> GradeyIdLoginScreen(isLoading = true, onGoogleSignIn = {})
         AppPhase.SIGNED_OUT -> GradeyIdLoginScreen(
             isLoading = isLoading,
@@ -624,6 +648,7 @@ private fun GradeyApp(
                 AppTab.ACCOUNT -> AccountScreen(
                     account = account,
                     linkedAccounts = linkedAccounts,
+                    ageAttestationKind = ageAttestationKind,
                     isGuestMode = isGuestMode,
                     isGradeyIdAvailable = graph.isGradeyCloudConfigured,
                     isUpdatingFullName = isUpdatingProfile,

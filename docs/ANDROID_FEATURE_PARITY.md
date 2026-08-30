@@ -42,13 +42,15 @@ Last source audit: 2026-08-30 on `codex/android-monorepo`.
 ## Startup, age gate, onboarding, and language
 
 - [ ] Show a branded checking/splash state while local Gradey ID and school sessions are restored.
-- [ ] Reproduce the iOS age-attestation gate, persisted choice, under-13 block, teen confirmation, privacy link, and Settings summary.
+- [x] Reproduce the current iOS age-attestation gate, persisted choice, under-16 parent/guardian confirmation (including under 13), privacy link, and Settings summary.
 - [ ] Reproduce new-user onboarding: welcome/benefits, language, Gradey ID or local guest choice, school discovery/credentials, meals choice, notification permission, readiness summary, and resumable progress.
 - [ ] Reproduce upgrade onboarding for existing school sessions, including local connection migration and cloud-link warning/retry states.
 - [ ] Persist onboarding progress and completion without restart loops.
 - [ ] Implement system language, English, Czech, and Chronically Online variants using Android resources.
 - [ ] Apply locale changes throughout the running app and persist them.
 - [ ] Remove hard-coded English strings from production Compose screens.
+
+Age-gate verification (2026-08-30): Android uses the same three self-attestation categories and persisted `gradey.ageAttestation.v1` values as current iOS. Until a valid value exists, the age chooser precedes auth/school bootstrap. The 13–15 and under-13 paths both require an affirmative parent/guardian checkbox, matching the current EU/GDPR iOS implementation; the 16+ path confirms directly. The gate links to Gradey's privacy policy and Account shows the saved age summary. Model and store tests cover every cross-platform storage value, unknown-value fail-closed behavior, parental-consent classification, persistence, and restoration.
 
 ## Gradey ID and guest mode
 

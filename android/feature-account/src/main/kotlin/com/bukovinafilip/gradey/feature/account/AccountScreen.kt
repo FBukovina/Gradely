@@ -20,6 +20,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.bukovinafilip.gradey.model.AgeAttestationKind
 import com.bukovinafilip.gradey.model.GradeyAccount
 import com.bukovinafilip.gradey.model.LinkedSchoolAccount
 import com.bukovinafilip.gradey.ui.GradeyHero
@@ -32,6 +33,7 @@ import com.bukovinafilip.gradey.ui.MetadataRow
 fun AccountScreen(
     account: GradeyAccount?,
     linkedAccounts: List<LinkedSchoolAccount>,
+    ageAttestationKind: AgeAttestationKind? = null,
     isGuestMode: Boolean = false,
     isGradeyIdAvailable: Boolean = true,
     isUpdatingFullName: Boolean = false,
@@ -101,6 +103,19 @@ fun AccountScreen(
                 MetadataRow("New marks", if (notifications) "Enabled" else "Disabled")
                 Switch(checked = notifications, onCheckedChange = { notifications = it })
             }
+        }
+        GradeySectionCard(title = "Privacy & data") {
+            MetadataRow(
+                "Age",
+                when (ageAttestationKind) {
+                    AgeAttestationKind.SIXTEEN_OR_OLDER -> "Confirmed: 16 or older"
+                    AgeAttestationKind.THIRTEEN_TO_FIFTEEN_WITH_PARENT,
+                    AgeAttestationKind.UNDER_THIRTEEN,
+                    -> "Confirmed: under 16 with parent or guardian"
+                    null -> "Not confirmed"
+                },
+            )
+            Text("Gradey asks for age confirmation before school data, support chat, or AI leave the device for our servers.")
         }
         LazyColumn(
             verticalArrangement = Arrangement.spacedBy(GradeySpacing.md),

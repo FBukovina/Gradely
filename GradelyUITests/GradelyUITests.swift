@@ -561,6 +561,7 @@ final class GradelyUITests: XCTestCase {
         XCTAssertTrue(app.buttons["supportPlan-standard"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["supportPlan-plus"].exists)
         XCTAssertTrue(app.descendants(matching: .any)["supportPlanIntervalPicker"].exists)
+        XCTAssertTrue(app.buttons["supportOfferCodeRedeemButton"].exists)
 
         let supportScroll = app.scrollViews["supportTipsScreen"]
         let smallTip = app.buttons["supportTip-tip_small"]
@@ -612,6 +613,7 @@ final class GradelyUITests: XCTestCase {
 
         XCTAssertTrue(app.buttons["supportPlan-standard"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["supportRestorePurchasesButton"].exists)
+        XCTAssertTrue(app.buttons["supportOfferCodeRedeemButton"].exists)
         app.buttons["supportPlan-standard"].tap()
 
         XCTAssertTrue(app.descendants(matching: .any)["supportTipsThankYou"].waitForExistence(timeout: 5))

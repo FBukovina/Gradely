@@ -1,4 +1,5 @@
 import SwiftUI
+import StoreKit
 
 struct SupportTipView: View {
     @Environment(\.dismiss) private var dismiss
@@ -67,9 +68,17 @@ struct SupportTipOptionsContent: View {
     var onThankYouDone: (() -> Void)?
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.openURL) private var openURL
+    @State private var isOfferCodeRedemptionPresented = false
 
     var body: some View {
         content
+            .offerCodeRedemption(
+                isPresented: $isOfferCodeRedemptionPresented
+            ) { result in
+                Task {
+                    await viewModel.completeOfferCodeRedemption(with: result)
+                }
+            }
             .task {
                 await viewModel.loadIfNeeded()
             }
@@ -188,6 +197,50 @@ struct SupportTipOptionsContent: View {
                 }
             }
             .accessibilityIdentifier("supportPlansList")
+
+            if viewModel.isSignedIn {
+                offerCodeRow
+            }
+        }
+    }
+
+    private var offerCodeRow: some View {
+        SettingsModalSurface(padding: 0) {
+            Button {
+                isOfferCodeRedemptionPresented = true
+            } label: {
+                HStack(spacing: Spacing.md) {
+                    SettingsModalIcon(name: "favourite")
+
+                    VStack(alignment: .leading, spacing: Spacing.xs) {
+                        Text("support.plans.offerCode.title")
+                            .font(.headline)
+                            .foregroundStyle(.primary)
+
+                        Text("support.plans.offerCode.message")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                    if viewModel.isRefreshingOfferCode {
+                        ProgressView()
+                            .tint(Brand.primary)
+                            .accessibilityLabel(AppL10n.string("support.plans.offerCode.refresh.progress"))
+                    } else {
+                        SettingsModalDisclosureIcon()
+                    }
+                }
+                .padding(.horizontal, 20)
+                .padding(.vertical, Spacing.md)
+                .frame(maxWidth: .infinity, minHeight: 84, alignment: .leading)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .disabled(!viewModel.canRedeemOfferCode)
+            .accessibilityElement(children: .combine)
+            .accessibilityIdentifier("supportOfferCodeRedeemButton")
         }
     }
 

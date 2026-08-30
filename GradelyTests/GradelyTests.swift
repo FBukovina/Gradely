@@ -1,5 +1,8 @@
 import Foundation
 import Testing
+#if canImport(StoreKit)
+import StoreKit
+#endif
 @testable import Gradely
 
 struct GradelyIconCatalogTests {
@@ -795,6 +798,77 @@ struct GradelyTests {
         #expect(viewModel.didCompletePurchase)
         #expect(viewModel.completedPurchaseKind == .plan)
     }
+
+    @Test func supportTipViewModelRefreshesEntitlementAfterOfferCodeRedemption() async {
+        let redeemed = SupportEntitlement(
+            tier: .standard,
+            interval: .yearly,
+            productIdentifier: "com.bukovinafilip.BakalariMarks.support.standard.yearly",
+            expirationDate: Date().addingTimeInterval(31_536_000),
+            willRenew: true,
+            managementURL: SupportTipCatalog.managementURL
+        )
+        let service = MockSupportTipService(
+            offerCodeRefreshResult: .success(redeemed)
+        )
+        var entitlementChangeCount = 0
+        let viewModel = SupportTipViewModel(
+            supportTipProvider: service,
+            isSignedIn: true,
+            onEntitlementChanged: { entitlementChangeCount += 1 }
+        )
+
+        await viewModel.load()
+        await viewModel.completeOfferCodeRedemption(with: .success(()))
+
+        #expect(service.didRefreshPurchasesAfterOfferCodeRedemption)
+        #expect(viewModel.entitlement == redeemed)
+        #expect(viewModel.purchaseErrorMessage == nil)
+        #expect(!viewModel.isRefreshingOfferCode)
+        #expect(entitlementChangeCount == 1)
+    }
+
+    @Test func supportTipViewModelShowsOfferCodeRefreshFailure() async {
+        let service = MockSupportTipService(
+            offerCodeRefreshResult: .failure(
+                SupportTipServiceError.offerCodeRefreshFailed("Could not refresh the subscription.")
+            )
+        )
+        let viewModel = SupportTipViewModel(supportTipProvider: service, isSignedIn: true)
+
+        await viewModel.load()
+        await viewModel.completeOfferCodeRedemption(with: .success(()))
+
+        #expect(service.didRefreshPurchasesAfterOfferCodeRedemption)
+        #expect(viewModel.entitlement == .none)
+        #expect(viewModel.purchaseErrorMessage == "Could not refresh the subscription.")
+        #expect(!viewModel.isRefreshingOfferCode)
+    }
+
+    @Test func supportTipViewModelDoesNotRedeemOfferCodeWhenSignedOut() async {
+        let service = MockSupportTipService()
+        let viewModel = SupportTipViewModel(supportTipProvider: service, isSignedIn: false)
+
+        await viewModel.load()
+        await viewModel.completeOfferCodeRedemption(with: .success(()))
+
+        #expect(!viewModel.canRedeemOfferCode)
+        #expect(!service.didRefreshPurchasesAfterOfferCodeRedemption)
+        #expect(viewModel.entitlement == .none)
+    }
+
+    #if canImport(StoreKit)
+    @Test func supportTipViewModelTreatsOfferCodeCancellationSilently() async {
+        let service = MockSupportTipService()
+        let viewModel = SupportTipViewModel(supportTipProvider: service, isSignedIn: true)
+
+        await viewModel.load()
+        await viewModel.completeOfferCodeRedemption(with: .failure(StoreKitError.userCancelled))
+
+        #expect(!service.didRefreshPurchasesAfterOfferCodeRedemption)
+        #expect(viewModel.purchaseErrorMessage == nil)
+    }
+    #endif
 
     @Test func supportCatalogPlusEntitlementOutranksStandard() {
         let entitlement = SupportTipCatalog.entitlement(

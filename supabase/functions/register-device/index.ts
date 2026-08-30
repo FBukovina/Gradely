@@ -9,15 +9,24 @@ Deno.serve(async (req) => {
     const { supabase, user } = await requireUser(req);
     const body = await req.json();
     if (!body.token || !body.platform || !body.environment) {
-      return json({ error: "Missing push token, platform, or environment" }, 422);
+      return json(
+        { error: "Missing push token, platform, or environment" },
+        422,
+      );
+    }
+    if (!["ios", "macos", "android"].includes(body.platform)) {
+      return json({ error: "Unsupported push platform" }, 422);
     }
 
     const tokenHash = await sha256(body.token);
-    const { data: tokenSecretID, error: secretError } = await supabase.rpc("store_provider_secret", {
-      p_user_id: user.id,
-      p_payload: { token: body.token },
-      p_key: providerSecretKey(),
-    });
+    const { data: tokenSecretID, error: secretError } = await supabase.rpc(
+      "store_provider_secret",
+      {
+        p_user_id: user.id,
+        p_payload: { token: body.token },
+        p_key: providerSecretKey(),
+      },
+    );
     if (secretError) throw secretError;
 
     const { error } = await supabase
@@ -42,5 +51,7 @@ Deno.serve(async (req) => {
 async function sha256(value: string) {
   const data = new TextEncoder().encode(value);
   const hash = await crypto.subtle.digest("SHA-256", data);
-  return Array.from(new Uint8Array(hash)).map((byte) => byte.toString(16).padStart(2, "0")).join("");
+  return Array.from(new Uint8Array(hash)).map((byte) =>
+    byte.toString(16).padStart(2, "0")
+  ).join("");
 }

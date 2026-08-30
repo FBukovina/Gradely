@@ -5,7 +5,7 @@ This folder contains the Gradey ID platform backend:
 - Auth uses Supabase Auth with Sign in with Apple.
 - Linked provider sessions are stored as encrypted payloads through `store_provider_secret`; school and canteen passwords are intentionally not accepted by the app payloads.
 - `poll-new-marks` baselines marks on first link, then inserts new mark events only for unseen fingerprints.
-- `send-apns` atomically claims due events, enforces global and per-school switches, defers quiet-hours events, summarizes one complete quiet-window group, applies lock-screen privacy, and tracks acceptance, retry, or suppression independently for every target device.
+- `send-apns` is the backward-compatible cross-platform push endpoint. It atomically claims due events, enforces global and per-school switches, defers quiet-hours events, summarizes one complete quiet-window group, sends through APNs or FCM, and tracks acceptance, retry, or suppression independently for every target device.
 - Authenticated settings functions return canonical account state, update preferences, reconnect an owned school account in place, export user-owned data, and delete the Gradey ID account.
 
 ## Remote project
@@ -26,6 +26,9 @@ supabase secrets set APNS_TEAM_ID="..."
 supabase secrets set APNS_KEY_ID="..."
 supabase secrets set APNS_TOPIC="com.bukovinafilip.BakalariMarks"
 supabase secrets set APNS_PRIVATE_KEY_P8="$(cat AuthKey_XXXXXXXXXX.p8)"
+supabase secrets set FCM_PROJECT_ID="..."
+supabase secrets set FCM_CLIENT_EMAIL="..."
+supabase secrets set FCM_PRIVATE_KEY="$(cat firebase-service-account-private-key.pem)"
 ```
 
 Schedule polling with Supabase scheduled functions:
@@ -43,7 +46,7 @@ The nested `poll-new-marks` → `send-apns` request is latency-only and best eff
 
 Before deploying the client, apply migrations and deploy the backward-compatible functions. The notification migration suppresses pre-migration undelivered events so an old-notification burst cannot occur. Verify `cron.job_run_details` for both `gradey-poll-new-marks` and `gradey-send-apns`, and inspect dispatcher logs for claimed, sent, rescheduled, suppressed, retried, and invalidated-token counts.
 
-APNs delivery is intentionally at-least-once. Each event/device target persists its `apns-id`; quiet summaries derive a stable request and collapse identity from the persisted quiet-window key and device ID. If a worker stops after APNs accepts a request but before the database commit, the retry therefore reuses the same identity so APNs can collapse the duplicate. A successful target is terminal and is never retried merely because a different device failed.
+Push delivery is intentionally at-least-once. Each event/device target persists a stable delivery identity; quiet summaries derive a stable request and collapse identity from the persisted quiet-window key and device ID. If a worker stops after a provider accepts a request but before the database commit, a successful target remains independently terminal once recorded and is never retried merely because a different device failed.
 
 ## Apple auth maintenance
 

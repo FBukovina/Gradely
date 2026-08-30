@@ -79,6 +79,7 @@ import com.bukovinafilip.gradey.domain.SchoolSessionExpiredException
 import com.bukovinafilip.gradey.domain.TimetableDates
 import com.bukovinafilip.gradey.domain.WearPayloadBuilder
 import com.bukovinafilip.gradey.domain.loadCacheFirst
+import com.bukovinafilip.gradey.domain.refreshRetainingContent
 import com.bukovinafilip.gradey.domain.reconcileOnboardingProgress
 import com.bukovinafilip.gradey.domain.selectGradeyStartupDestination
 import com.bukovinafilip.gradey.domain.selectRestorableSchoolAccount
@@ -160,6 +161,11 @@ private data class GradeHistorySnapshot(
     val linkedAccountID: String?,
     val trends: List<SubjectGradeTrend>,
     val recentNewMarkEvents: List<NewMarkEvent>,
+)
+
+private data class MealsSnapshot(
+    val session: StravaCZStoredSession?,
+    val menu: StravaCZMenu?,
 )
 
 @Composable
@@ -405,22 +411,28 @@ private fun GradeyApp(
     }
 
     suspend fun refreshLinkedAccountSnapshot() {
-        linkedAccounts = runCatching { graph.linkedAccountRepository.localAccounts() }
-            .getOrDefault(linkedAccounts)
+        linkedAccounts = refreshRetainingContent(linkedAccounts) {
+            graph.linkedAccountRepository.localAccounts()
+        }.value
         if (account == null || isGuestMode || !graph.isGradeyCloudConfigured) return
 
         isRefreshingLinkedAccounts = true
         linkedAccountError = null
         try {
-            linkedAccounts = graph.linkedAccountRepository.refreshAccounts().linkedAccounts
-        } catch (error: CancellationException) {
-            throw error
-        } catch (error: GradeySessionExpiredException) {
-            account = null
-            authError = error.userFacingMessage()
-            phase = AppPhase.SIGNED_OUT
-        } catch (error: Throwable) {
-            linkedAccountError = error.userFacingMessage()
+            val refresh = refreshRetainingContent(linkedAccounts) {
+                graph.linkedAccountRepository.refreshAccounts().linkedAccounts
+            }
+            linkedAccounts = refresh.value
+            when (val error = refresh.failure) {
+                is GradeySessionExpiredException -> {
+                    account = null
+                    authError = error.userFacingMessage()
+                    phase = AppPhase.SIGNED_OUT
+                }
+
+                null -> Unit
+                else -> linkedAccountError = error.userFacingMessage()
+            }
         } finally {
             isRefreshingLinkedAccounts = false
         }
@@ -433,18 +445,15 @@ private fun GradeyApp(
         }
         val linkedAccountID = graph.schoolRepository.currentStoredSession()?.linkedAccountID
         if (gradeHistorySnapshot?.linkedAccountID != linkedAccountID) gradeHistorySnapshot = null
-        try {
+        val refresh = refreshRetainingContent(gradeHistorySnapshot) {
             val response = graph.historyRepository.gradeHistory(linkedAccountID, days = 400)
-            gradeHistorySnapshot = GradeHistorySnapshot(
+            GradeHistorySnapshot(
                 linkedAccountID = linkedAccountID,
                 trends = GradeHistoryTrends.make(response.events),
                 recentNewMarkEvents = response.recentNewMarkEvents,
             )
-        } catch (error: CancellationException) {
-            throw error
-        } catch (_: Throwable) {
-            // History is optional; retain a same-account snapshot and keep core school data usable.
         }
+        gradeHistorySnapshot = refresh.value
     }
 
     suspend fun linkCurrentSchoolIfNeeded(): Boolean {
@@ -572,26 +581,34 @@ private fun GradeyApp(
         dataError = null
         marksRefreshError = null
         val failures = mutableListOf<Throwable>()
-        try {
-            dashboard = graph.schoolRepository.loadDashboard(forceRefresh = forceRefresh)
-        } catch (error: CancellationException) {
-            throw error
-        } catch (_: SchoolSessionExpiredException) {
-            routeToSchoolReconnect()
-            return
-        } catch (error: Throwable) {
-            failures += error
-            marksRefreshError = error.userFacingMessage()
+        val dashboardRefresh = refreshRetainingContent(dashboard) {
+            graph.schoolRepository.loadDashboard(forceRefresh = forceRefresh)
         }
-        try {
-            absence = graph.schoolRepository.loadAbsence(forceRefresh = forceRefresh)
-        } catch (error: CancellationException) {
-            throw error
-        } catch (_: SchoolSessionExpiredException) {
-            routeToSchoolReconnect()
-            return
-        } catch (error: Throwable) {
-            failures += error
+        dashboard = dashboardRefresh.value
+        when (val error = dashboardRefresh.failure) {
+            is SchoolSessionExpiredException -> {
+                routeToSchoolReconnect()
+                return
+            }
+
+            null -> Unit
+            else -> {
+                failures += error
+                marksRefreshError = error.userFacingMessage()
+            }
+        }
+        val absenceRefresh = refreshRetainingContent(absence) {
+            graph.schoolRepository.loadAbsence(forceRefresh = forceRefresh)
+        }
+        absence = absenceRefresh.value
+        when (val error = absenceRefresh.failure) {
+            is SchoolSessionExpiredException -> {
+                routeToSchoolReconnect()
+                return
+            }
+
+            null -> Unit
+            else -> failures += error
         }
         when (val timetableFailure = loadTimetable(TimetableDates.todayString())) {
             is SchoolSessionExpiredException -> {
@@ -601,26 +618,19 @@ private fun GradeyApp(
             null -> Unit
             else -> failures += timetableFailure
         }
-        try {
-            val restoredSession = graph.stravaCZRepository.bootstrapSession()
-            stravaSession = restoredSession
-            if (restoredSession != null) {
-                try {
-                    val (updatedSession, updatedMenu) = graph.stravaCZRepository.loadMenu(
-                        forceRefresh = forceRefresh,
-                    )
-                    stravaSession = updatedSession
-                    stravaMenu = updatedMenu
-                } catch (error: CancellationException) {
-                    throw error
-                } catch (_: Throwable) {
-                    // Meals fail independently and retain the last usable session/menu.
-                }
+        val mealsSessionRefresh = refreshRetainingContent(stravaSession) {
+            graph.stravaCZRepository.bootstrapSession()
+        }
+        stravaSession = mealsSessionRefresh.value
+        if (mealsSessionRefresh.failure == null && stravaSession != null) {
+            val mealsRefresh = refreshRetainingContent(MealsSnapshot(stravaSession, stravaMenu)) {
+                val (updatedSession, updatedMenu) = graph.stravaCZRepository.loadMenu(
+                    forceRefresh = forceRefresh,
+                )
+                MealsSnapshot(session = updatedSession, menu = updatedMenu)
             }
-        } catch (error: CancellationException) {
-            throw error
-        } catch (_: Throwable) {
-            // Meals fail independently and retain the last usable session/menu.
+            stravaSession = mealsRefresh.value.session
+            stravaMenu = mealsRefresh.value.menu
         }
         refreshLinkedAccountSnapshot()
         refreshGradeHistory()

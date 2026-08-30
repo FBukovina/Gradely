@@ -3,12 +3,12 @@ package com.bukovinafilip.gradey.data
 import com.bukovinafilip.gradey.domain.DevicePushTokenClient
 import com.bukovinafilip.gradey.domain.GradeyAuthRepository
 import com.bukovinafilip.gradey.domain.GradeyHistoryRepository
-import com.bukovinafilip.gradey.domain.GradeHistoryTrend
 import com.bukovinafilip.gradey.domain.LinkedAccountRepository
 import com.bukovinafilip.gradey.domain.StravaCZRepository
 import com.bukovinafilip.gradey.model.GradeyAuthSession
 import com.bukovinafilip.gradey.model.GradeyAccount
 import com.bukovinafilip.gradey.model.GradeyAccountSettingsSnapshot
+import com.bukovinafilip.gradey.model.GradeHistoryResponse
 import com.bukovinafilip.gradey.model.LinkedSchoolAccount
 import com.bukovinafilip.gradey.model.LinkedAccountProvider
 import com.bukovinafilip.gradey.model.LinkedSchoolAccountActivation
@@ -121,7 +121,7 @@ class LocalLinkedAccountRepository(
 }
 
 class EmptyGradeyHistoryRepository : GradeyHistoryRepository {
-    override suspend fun gradeHistory(accountID: String?): List<GradeHistoryTrend> = emptyList()
+    override suspend fun gradeHistory(accountID: String?, days: Int?): GradeHistoryResponse = GradeHistoryResponse()
 }
 
 class UnavailableDevicePushTokenClient : DevicePushTokenClient {

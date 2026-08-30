@@ -514,6 +514,46 @@ data class GradeyAuthSession(
 }
 
 @Serializable
+enum class GradeHistoryEventType {
+    @SerialName("baseline")
+    BASELINE,
+
+    @SerialName("changed")
+    CHANGED,
+}
+
+@Serializable
+data class GradeHistoryEvent(
+    val id: String,
+    @SerialName("linked_account_id")
+    val linkedAccountID: String,
+    val provider: LinkedAccountProvider,
+    @SerialName("subject_id")
+    val subjectID: String,
+    @SerialName("subject_abbrev")
+    val subjectAbbrev: String? = null,
+    @SerialName("subject_name")
+    val subjectName: String? = null,
+    @SerialName("average_value")
+    val averageValue: Double? = null,
+    @SerialName("mark_count")
+    val markCount: Int = 0,
+    @SerialName("average_delta")
+    val averageDelta: Double? = null,
+    @SerialName("mark_count_delta")
+    val markCountDelta: Int = 0,
+    @SerialName("event_type")
+    val eventType: GradeHistoryEventType,
+    @SerialName("captured_at")
+    val capturedAt: String,
+)
+
+@Serializable
+data class GradeHistoryResponse(
+    val events: List<GradeHistoryEvent> = emptyList(),
+)
+
+@Serializable
 enum class LinkedAccountStatus {
     @SerialName("active")
     ACTIVE,

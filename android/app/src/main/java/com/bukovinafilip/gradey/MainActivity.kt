@@ -73,6 +73,7 @@ import com.bukovinafilip.gradey.feature.subjects.SubjectsScreen
 import com.bukovinafilip.gradey.feature.timetable.TimetableScreen
 import com.bukovinafilip.gradey.feature.today.TodayScreen
 import com.bukovinafilip.gradey.domain.GradeySessionExpiredException
+import com.bukovinafilip.gradey.domain.GradeHistoryTrends
 import com.bukovinafilip.gradey.domain.GradeyStartupDestination
 import com.bukovinafilip.gradey.domain.SchoolSessionExpiredException
 import com.bukovinafilip.gradey.domain.TimetableDates
@@ -82,6 +83,7 @@ import com.bukovinafilip.gradey.domain.reconcileOnboardingProgress
 import com.bukovinafilip.gradey.domain.selectGradeyStartupDestination
 import com.bukovinafilip.gradey.domain.selectRestorableSchoolAccount
 import com.bukovinafilip.gradey.domain.selectSchoolAccountRequiringReconnect
+import com.bukovinafilip.gradey.domain.SubjectGradeTrend
 import com.bukovinafilip.gradey.model.AbsenceResponse
 import com.bukovinafilip.gradey.model.AgeAttestationKind
 import com.bukovinafilip.gradey.model.AppLanguage
@@ -152,6 +154,11 @@ private enum class AppTab(val label: String) {
     ACCOUNT("Account"),
 }
 
+private data class GradeHistorySnapshot(
+    val linkedAccountID: String?,
+    val trends: List<SubjectGradeTrend>,
+)
+
 @Composable
 private fun GradeyApp(
     graph: com.bukovinafilip.gradey.data.AndroidGradeyGraph,
@@ -190,6 +197,7 @@ private fun GradeyApp(
     var absence by remember { mutableStateOf<AbsenceResponse?>(null) }
     var timetable by remember { mutableStateOf<TimetableWeek?>(null) }
     var stravaMenu by remember { mutableStateOf<StravaCZMenu?>(null) }
+    var gradeHistorySnapshot by remember { mutableStateOf<GradeHistorySnapshot?>(null) }
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
     ) {
@@ -326,6 +334,7 @@ private fun GradeyApp(
         absence = null
         timetable = null
         stravaMenu = null
+        gradeHistorySnapshot = null
         activeLinkedAccountID = null
         reconnectLinkedAccount = null
         selectedTab = AppTab.TODAY
@@ -364,6 +373,7 @@ private fun GradeyApp(
         absence = null
         timetable = null
         stravaMenu = null
+        gradeHistorySnapshot = null
         activeLinkedAccountID = null
         reconnectLinkedAccount = null
         selectedTab = AppTab.TODAY
@@ -380,6 +390,7 @@ private fun GradeyApp(
             // A damaged optional linked-account snapshot must not block local Bakaláři use.
         }
         linkedAccounts = emptyList()
+        gradeHistorySnapshot = null
         activeLinkedAccountID = null
     }
 
@@ -402,6 +413,26 @@ private fun GradeyApp(
             linkedAccountError = error.userFacingMessage()
         } finally {
             isRefreshingLinkedAccounts = false
+        }
+    }
+
+    suspend fun refreshGradeHistory() {
+        if (account == null || isGuestMode || !graph.isGradeyCloudConfigured) {
+            gradeHistorySnapshot = null
+            return
+        }
+        val linkedAccountID = graph.schoolRepository.currentStoredSession()?.linkedAccountID
+        if (gradeHistorySnapshot?.linkedAccountID != linkedAccountID) gradeHistorySnapshot = null
+        try {
+            val response = graph.historyRepository.gradeHistory(linkedAccountID, days = 400)
+            gradeHistorySnapshot = GradeHistorySnapshot(
+                linkedAccountID = linkedAccountID,
+                trends = GradeHistoryTrends.make(response.events),
+            )
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: Throwable) {
+            // History is optional; retain a same-account snapshot and keep core school data usable.
         }
     }
 
@@ -472,6 +503,7 @@ private fun GradeyApp(
             absence = null
             timetable = null
             stravaMenu = null
+            gradeHistorySnapshot = null
             activeLinkedAccountID = activation.account.id
             selectedTab = AppTab.TODAY
             loadCachedSignedInData()
@@ -510,6 +542,7 @@ private fun GradeyApp(
             graph.linkedAccountRepository.unlinkAccount(linked.id)
             if (activeLinkedAccountID == linked.id) {
                 graph.schoolRepository.disassociateCurrentSession(linked.id)
+                gradeHistorySnapshot = null
                 activeLinkedAccountID = null
             }
             linkedAccounts = graph.linkedAccountRepository.localAccounts()
@@ -558,6 +591,7 @@ private fun GradeyApp(
                 .onSuccess { stravaMenu = it }
         }
         refreshLinkedAccountSnapshot()
+        refreshGradeHistory()
         dataError = failures.firstOrNull()?.userFacingMessage()
     }
 
@@ -1098,6 +1132,10 @@ private fun GradeyApp(
                 AppTab.SUBJECTS -> if (currentDashboard != null && effectiveAbsence != null) SubjectsScreen(
                     subjects = currentDashboard.marksResponse.subjects,
                     absence = effectiveAbsence,
+                    gradeTrends = gradeHistorySnapshot
+                        ?.takeIf { it.linkedAccountID == activeLinkedAccountID }
+                        ?.trends
+                        .orEmpty(),
                     isRefreshing = isLoading,
                     onRefresh = {
                         if (!isLoading) {

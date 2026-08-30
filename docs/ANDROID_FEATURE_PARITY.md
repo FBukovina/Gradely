@@ -157,20 +157,20 @@ Cache verification (2026-08-30): Today and Marks now render from a cached/loaded
 - [ ] Implement cache-first loading, empty, first-load error/retry, refresh, and retained-content refresh failure states.
 - [ ] Match overall average, subject count, mark count, best/watch summary, and grade bands.
 - [x] Implement subject search and search-empty state.
-- [ ] Implement focus/average/name sorting with the same focus score inputs as iOS.
-- [ ] Show subject average, mark count, absence percentage, and recent trend direction on each row.
+- [x] Implement focus/average/name sorting with the same focus score inputs as iOS.
+- [x] Show subject average, mark count, absence percentage, and recent trend direction on each row.
 - [ ] Navigate every subject row to its real detail screen and preserve back state.
 - [x] Grade parsing, weighted averages, overall average, grade bands, formatted averages, and theoretical-average logic have JVM unit coverage.
 
-Subject search verification (2026-08-30): the Marks overview keeps its full unfiltered hero metrics while filtering the directory by subject name, abbreviation, or stable ID. Search is case-insensitive, diacritic-insensitive, whitespace/token aware, retains the active query across subject detail navigation, provides a clear action, and shows the localized iOS search-empty copy in all four Android language configurations. JVM tests cover blank-query ordering, Czech diacritics, abbreviation and multi-token matching, and true empty results. The focus-sort row remains open because Android grade-history trends are not yet backed by a real repository, so claiming the iOS trend input would be premature.
+Subject search verification (2026-08-30): the Marks overview keeps its full unfiltered hero metrics while filtering the directory by subject name, abbreviation, or stable ID. Search is case-insensitive, diacritic-insensitive, whitespace/token aware, retains the active query across subject detail navigation, provides a clear action, and shows the localized iOS search-empty copy in all four Android language configurations. JVM tests cover blank-query ordering, Czech diacritics, abbreviation and multi-token matching, and true empty results. Focus sorting and row trend indicators now consume the account-scoped grade-history trends described below.
 
 ## Subject detail, grade history, and calculator
 
 - [x] Show the subject average hero, absence percentage, subject/temporary notes, and complete mark list.
 - [x] Show mark caption/theme/date/type/type note/weight/points/new-state with optional-field fallbacks.
 - [x] Match iOS mark date parsing and ordering for multiple Bakaláři formats.
-- [ ] Implement average-history chart with cloud/local source indication and empty state.
-- [ ] Implement grade-history loading by active linked account and time range.
+- [x] Implement average-history chart with cloud/local source indication and empty state.
+- [x] Implement grade-history loading by active linked account and time range.
 - [x] Implement mark-input validation and weight controls from 1 through 10.
 - [ ] Use the Bakaláři what-if endpoint when enabled; use verified local calculation only when the provider/server requires it.
 - [ ] Show better/same/worse predicted result and retain current subject data if prediction fails.
@@ -182,6 +182,8 @@ Mark-date verification (2026-08-30): Subject Detail now orders marks using the f
 Mark-card verification (2026-08-30): Android now applies the iOS caption → theme → localized untitled fallback, only repeats a distinct non-empty theme, prefers the trimmed type note over type, distinguishes explicit from estimated weights above 1×, suppresses weight badges for points/default weights, and exposes point totals and the Bakaláři new-mark state. Relative dates and missing-date fallback text are localized in all four language configurations, while wrapping variable-height cards retain two-line titles/themes and every available badge on narrow screens. JVM tests cover every optional-field branch and all weight/points/new-state badge rules.
 
 Subject-summary verification (2026-08-30): Subject Detail retains its computed/current average hero, subject absence percentage, and complete newest-first mark list, and now renders every non-blank Bakaláři `SubjectNote`, `TemporaryMark`, and `TemporaryMarkNote` value in an optional card. Empty whitespace cannot create a blank section, a temporary note remains visible without a temporary mark value, and hero average/mark-count/absence copy is localized across all four Android language configurations. JVM tests cover trimming, empty suppression, and independent temporary-note content.
+
+Grade-history verification (2026-08-30): Android now calls the authenticated `grade-history` edge function with the current school account and the same 400-day range as iOS. History refresh is best effort, retained only for the same linked account, and cannot turn a successful Bakaláři refresh into an error. Subject matching prefers the stable ID with case-insensitive name/abbreviation fallbacks. Detail charts prefer two or more cloud snapshots, otherwise build a chronological weighted timeline from dated grade-scale marks, excluding points, unsupported values, and malformed dates; when neither source exists, the UI shows a localized honest empty state instead of inventing a point. Cloud/local captions, movement deltas, overview trend arrows, and all chart-empty copy are localized across the four Android language configurations. Focus sorting now uses the iOS average, worsening-trend, absence, and no-marks inputs. Mock-server tests cover endpoint path, Gradey authorization, account/range payload, response decoding, optional empty responses, and bounded errors; JVM tests cover grouping/order/deltas, subject matching, cloud precedence, local weighting/filtering, empty fallback, and focus-score inputs. Cached grade-history persistence remains tracked separately in the broader cache-first row.
 
 ## Absence
 

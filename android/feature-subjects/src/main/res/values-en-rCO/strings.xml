@@ -38,4 +38,11 @@
     <string name="subject_notes_section">notes</string>
     <string name="subject_note_label">subject note</string>
     <string name="subject_temporary_mark_label">temporary mark</string>
+    <string name="subject_history_section">average over time</string>
+    <string name="subject_history_source_cloud">synced by Gradey</string>
+    <string name="subject_history_source_local">computed from marks</string>
+    <string name="subject_history_empty_title">no average history</string>
+    <string name="subject_history_empty_body">dated grades will build this chart. Gradey ID can also sync longer-term history.</string>
+    <string name="subject_trend_better">average improved by %1$s</string>
+    <string name="subject_trend_worse">average worsened by %1$s</string>
 </resources>

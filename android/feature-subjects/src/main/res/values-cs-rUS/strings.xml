@@ -48,4 +48,11 @@
     <string name="subject_notes_section">poznámky</string>
     <string name="subject_note_label">poznámka k předmětu</string>
     <string name="subject_temporary_mark_label">dočasná známka</string>
+    <string name="subject_history_section">vývoj průměru</string>
+    <string name="subject_history_source_cloud">synchronizováno přes Gradey</string>
+    <string name="subject_history_source_local">vypočítáno ze známek</string>
+    <string name="subject_history_empty_title">historie průměru není k dispozici</string>
+    <string name="subject_history_empty_body">graf se vytvoří ze známek s datem. Gradey ID může synchronizovat i dlouhodobější historii.</string>
+    <string name="subject_trend_better">průměr se zlepšil o %1$s</string>
+    <string name="subject_trend_worse">průměr se zhoršil o %1$s</string>
 </resources>

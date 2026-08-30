@@ -16,6 +16,7 @@ import com.bukovinafilip.gradey.network.GradeyJson
 import com.bukovinafilip.gradey.network.SupabaseConfiguration
 import com.bukovinafilip.gradey.network.SupabaseDevicePushTokenClient
 import com.bukovinafilip.gradey.network.SupabaseGradeyAuthRepository
+import com.bukovinafilip.gradey.network.SupabaseGradeyHistoryRepository
 import com.bukovinafilip.gradey.network.SupabaseLinkedAccountRepository
 import kotlinx.serialization.builtins.ListSerializer
 
@@ -130,7 +131,11 @@ class AndroidGradeyGraph private constructor(
                 ),
                 gradeyAuthRepository = authRepository,
                 linkedAccountRepository = linkedAccountRepository,
-                historyRepository = EmptyGradeyHistoryRepository(),
+                historyRepository = if (supabase.isConfigured) {
+                    SupabaseGradeyHistoryRepository(supabase, authRepository)
+                } else {
+                    EmptyGradeyHistoryRepository()
+                },
                 devicePushTokenClient = if (supabase.isConfigured) {
                     SupabaseDevicePushTokenClient(supabase)
                 } else {

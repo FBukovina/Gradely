@@ -8,6 +8,7 @@ import com.bukovinafilip.gradey.model.GradeyAuthSession
 import com.bukovinafilip.gradey.model.GradeyAccountSettingsSnapshot
 import com.bukovinafilip.gradey.model.LinkedSchoolAccount
 import com.bukovinafilip.gradey.model.LinkedSchoolAccountActivation
+import com.bukovinafilip.gradey.model.GradeHistoryResponse
 import com.bukovinafilip.gradey.model.MarksResponse
 import com.bukovinafilip.gradey.model.NotificationPreferences
 import com.bukovinafilip.gradey.model.SchoolProvider
@@ -96,15 +97,8 @@ interface LinkedAccountRepository {
 }
 
 interface GradeyHistoryRepository {
-    suspend fun gradeHistory(accountID: String?): List<GradeHistoryTrend>
+    suspend fun gradeHistory(accountID: String?, days: Int? = 90): GradeHistoryResponse
 }
-
-data class GradeHistoryTrend(
-    val subjectID: String,
-    val subjectName: String,
-    val averageDelta: Double,
-    val markCountDelta: Int,
-)
 
 interface DevicePushTokenClient {
     suspend fun registerDeviceToken(token: String, platform: String, environment: String, gradeySession: GradeyAuthSession)

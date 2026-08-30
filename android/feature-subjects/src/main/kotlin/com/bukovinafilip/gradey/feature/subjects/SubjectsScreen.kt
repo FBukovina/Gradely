@@ -31,6 +31,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.TrendingDown
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CalendarMonth
@@ -86,7 +88,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
 import com.bukovinafilip.gradey.domain.AbsenceRiskSummary
+import com.bukovinafilip.gradey.domain.AverageHistoryChart
+import com.bukovinafilip.gradey.domain.AverageHistoryPolicy
+import com.bukovinafilip.gradey.domain.AverageHistoryPoint
+import com.bukovinafilip.gradey.domain.AverageHistorySource
 import com.bukovinafilip.gradey.domain.GradeBand
+import com.bukovinafilip.gradey.domain.GradeHistoryTrends
 import com.bukovinafilip.gradey.domain.GradeMath
 import com.bukovinafilip.gradey.domain.MarkCardMetadataPolicy
 import com.bukovinafilip.gradey.domain.MarkDateParser
@@ -95,6 +102,8 @@ import com.bukovinafilip.gradey.domain.MarkWeightBadgeKind
 import com.bukovinafilip.gradey.domain.SubjectDirectorySearch
 import com.bukovinafilip.gradey.domain.SubjectDetailNotes
 import com.bukovinafilip.gradey.domain.SubjectDetailNotesPolicy
+import com.bukovinafilip.gradey.domain.SubjectGradeTrend
+import com.bukovinafilip.gradey.domain.SubjectAttentionScore
 import com.bukovinafilip.gradey.model.AbsenceResponse
 import com.bukovinafilip.gradey.model.Mark
 import com.bukovinafilip.gradey.model.Subject
@@ -134,6 +143,7 @@ private enum class SubjectSortMode(val label: String) {
 fun SubjectsScreen(
     subjects: List<Subject>,
     absence: AbsenceResponse,
+    gradeTrends: List<SubjectGradeTrend> = emptyList(),
     isRefreshing: Boolean,
     onRefresh: () -> Unit,
     onOpenAccount: () -> Unit,
@@ -144,6 +154,9 @@ fun SubjectsScreen(
     var sortMode by remember { mutableStateOf(SubjectSortMode.Focus) }
     var searchQuery by rememberSaveable { mutableStateOf("") }
     val selectedSubject = subjects.firstOrNull { it.id == selectedSubjectID }
+    val selectedTrend = remember(selectedSubject, gradeTrends) {
+        selectedSubject?.let { GradeHistoryTrends.matching(it, gradeTrends) }
+    }
 
     LaunchedEffect(selectedSubjectID, subjects) {
         if (selectedSubjectID != null && selectedSubject == null) selectedSubjectID = null
@@ -154,6 +167,7 @@ fun SubjectsScreen(
         SubjectsOverview(
             subjects = subjects,
             absence = absence,
+            gradeTrends = gradeTrends,
             sortMode = sortMode,
             onSortModeChange = { sortMode = it },
             searchQuery = searchQuery,
@@ -169,6 +183,7 @@ fun SubjectsScreen(
         SubjectDetail(
             subject = selectedSubject,
             absence = absence,
+            trend = selectedTrend,
             onBack = { selectedSubjectID = null },
             modifier = modifier,
         )
@@ -179,6 +194,7 @@ fun SubjectsScreen(
 private fun SubjectsOverview(
     subjects: List<Subject>,
     absence: AbsenceResponse,
+    gradeTrends: List<SubjectGradeTrend>,
     sortMode: SubjectSortMode,
     onSortModeChange: (SubjectSortMode) -> Unit,
     searchQuery: String,
@@ -196,13 +212,18 @@ private fun SubjectsOverview(
     val filteredSubjects = remember(subjects, searchQuery) {
         SubjectDirectorySearch.results(searchQuery, subjects)
     }
-    val sortedSubjects = remember(filteredSubjects, absenceRows, sortMode) {
+    val trendsBySubjectID = remember(subjects, gradeTrends) {
+        subjects.associate { it.id to GradeHistoryTrends.matching(it, gradeTrends) }
+    }
+    val sortedSubjects = remember(filteredSubjects, absenceRows, trendsBySubjectID, sortMode) {
         when (sortMode) {
             SubjectSortMode.Focus -> filteredSubjects.sortedWith(
                 compareByDescending<Subject> {
-                    val average = GradeMath.subjectAverage(it) ?: -1.0
-                    val absencePercentage = absenceRows[it.displayName.subjectKey()]?.absencePercentage ?: 0.0
-                    average + absencePercentage / 100.0
+                    SubjectAttentionScore.value(
+                        subject = it,
+                        absencePercentage = absenceRows[it.displayName.subjectKey()]?.absencePercentage,
+                        trend = trendsBySubjectID[it.id],
+                    )
                 }.thenBy { it.displayName },
             )
 
@@ -253,6 +274,7 @@ private fun SubjectsOverview(
                     SubjectsCard(
                         subjects = sortedSubjects,
                         absenceByName = absenceRows,
+                        trendsBySubjectID = trendsBySubjectID,
                         emptyMessage = if (searchQuery.isBlank()) {
                             "No subjects available"
                         } else {
@@ -539,6 +561,7 @@ private fun SortSegment(
 private fun SubjectsCard(
     subjects: List<Subject>,
     absenceByName: Map<String, com.bukovinafilip.gradey.domain.AbsenceSubjectSummary>,
+    trendsBySubjectID: Map<String, SubjectGradeTrend?>,
     emptyMessage: String,
     onOpenSubject: (Subject) -> Unit,
 ) {
@@ -563,6 +586,7 @@ private fun SubjectsCard(
                     SubjectRow(
                         subject = subject,
                         absencePercentage = absenceByName[subject.displayName.subjectKey()]?.absencePercentage,
+                        trend = trendsBySubjectID[subject.id],
                         onClick = { onOpenSubject(subject) },
                     )
                     if (index != subjects.lastIndex) {
@@ -582,10 +606,18 @@ private fun SubjectsCard(
 private fun SubjectRow(
     subject: Subject,
     absencePercentage: Double?,
+    trend: SubjectGradeTrend?,
     onClick: () -> Unit,
 ) {
     val average = GradeMath.subjectAverage(subject)
-    val latestMark = subject.marks.maxByOrNull { it.markDate.orEmpty() }
+    val latestMark = MarkDateParser.newestFirst(subject.marks, PragueZone, Mark::markDate).firstOrNull()
+    val trendDelta = trend?.averageDelta?.takeUnless { it == 0.0 }
+    val trendDescription = trendDelta?.let { delta ->
+        stringResource(
+            if (delta < 0) R.string.subject_trend_better else R.string.subject_trend_worse,
+            String.format(Locale.getDefault(), "%.2f", kotlin.math.abs(delta)),
+        )
+    }
 
     Row(
         modifier = Modifier
@@ -636,6 +668,29 @@ private fun SubjectRow(
                     Spacer(Modifier.width(8.dp))
                     GradePill(mark = it, compact = true)
                 }
+                trendDelta?.let { delta ->
+                    Spacer(Modifier.width(6.dp))
+                    Icon(
+                        imageVector = if (delta < 0) {
+                            Icons.AutoMirrored.Filled.TrendingDown
+                        } else {
+                            Icons.AutoMirrored.Filled.TrendingUp
+                        },
+                        contentDescription = null,
+                        tint = if (delta < 0) AccentTeal else DangerRed,
+                        modifier = Modifier.size(14.dp),
+                    )
+                    Text(
+                        text = String.format(Locale.getDefault(), "%+.2f", delta),
+                        color = if (delta < 0) AccentTeal else DangerRed,
+                        fontSize = 12.sp,
+                        lineHeight = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.semantics {
+                            contentDescription = trendDescription.orEmpty()
+                        },
+                    )
+                }
             }
         }
         Column(
@@ -672,6 +727,7 @@ private fun SubjectRow(
 private fun SubjectDetail(
     subject: Subject,
     absence: AbsenceResponse,
+    trend: SubjectGradeTrend?,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -702,6 +758,7 @@ private fun SubjectDetail(
         } ?: GradeMath.subjectAverage(subject)
     }
     val notes = remember(subject) { SubjectDetailNotesPolicy.resolve(subject) }
+    val historyChart = remember(subject, trend) { AverageHistoryPolicy.resolve(subject, trend, PragueZone) }
 
     StatusBarAppearance(useDarkIcons = !isScrolled)
 
@@ -731,9 +788,9 @@ private fun SubjectDetail(
                 item { SubjectNotesCard(notes) }
             }
             item { Spacer(Modifier.height(16.dp)) }
-            item { SectionHeading("AVERAGE OVER TIME") }
+            item { SectionHeading(stringResource(R.string.subject_history_section)) }
             item { Spacer(Modifier.height(18.dp)) }
-            item { AverageChartCard(subject) }
+            item { AverageChartCard(historyChart) }
             item { Spacer(Modifier.height(10.dp)) }
             item { SectionHeading("TRY A MARK") }
             item { Spacer(Modifier.height(24.dp)) }
@@ -982,22 +1039,31 @@ private fun DetailChip(
     }
 }
 
-private data class AveragePoint(
-    val date: LocalDate?,
-    val average: Double,
-)
-
 @Composable
-private fun AverageChartCard(subject: Subject) {
-    val points = remember(subject) { subject.averagePoints() }
-    val fallbackAverage = GradeMath.subjectAverage(subject) ?: 3.0
-    val values = points.map(AveragePoint::average).ifEmpty { listOf(fallbackAverage) }
+private fun AverageChartCard(chart: AverageHistoryChart) {
+    if (chart.source == AverageHistorySource.NONE) {
+        EmptyAverageChartCard()
+        return
+    }
+    val points = chart.points
+    val values = points.map(AverageHistoryPoint::average)
     val topValue = ((values.minOrNull()!! * 10.0).roundToInt() - 1) / 10.0
     val bottomValue = ((values.maxOrNull()!! * 10.0).roundToInt() + 1) / 10.0
     val safeBottomValue = if (bottomValue <= topValue) topValue + 0.2 else bottomValue
-    val firstDate = points.firstOrNull()?.date
-    val firstLabel = firstDate?.minusDays(1)?.shortDate() ?: "—"
-    val secondLabel = firstDate?.plusDays(1)?.shortDate() ?: "—"
+    val dateLabels = when (points.size) {
+        1 -> listOf(points.single().date?.shortDate() ?: "—")
+        2 -> points.map { it.date?.shortDate() ?: "—" }
+        else -> listOf(points.first(), points[points.lastIndex / 2], points.last())
+            .map { it.date?.shortDate() ?: "—" }
+    }
+    val sourceCaption = stringResource(
+        if (chart.source == AverageHistorySource.CLOUD) {
+            R.string.subject_history_source_cloud
+        } else {
+            R.string.subject_history_source_local
+        },
+    )
+    val delta = chart.averageDelta?.let { String.format(Locale.getDefault(), "%+.2f", it) }
 
     Surface(
         modifier = Modifier
@@ -1019,12 +1085,11 @@ private fun AverageChartCard(subject: Subject) {
                 drawLine(Color(0xFFE6E6E8), Offset(xStart, yTop), Offset(xEnd, yTop), strokeWidth = 0.7.dp.toPx())
                 drawLine(Color(0xFFE6E6E8), Offset(xStart, yBottom), Offset(xEnd, yBottom), strokeWidth = 0.7.dp.toPx())
 
-                val drawablePoints = if (points.isEmpty()) listOf(AveragePoint(null, fallbackAverage)) else points
-                val offsets = drawablePoints.mapIndexed { index, point ->
-                    val x = if (drawablePoints.size == 1) {
+                val offsets = points.mapIndexed { index, point ->
+                    val x = if (points.size == 1) {
                         (xStart + xEnd) / 2f
                     } else {
-                        xStart + (xEnd - xStart) * index.toFloat() / drawablePoints.lastIndex.toFloat()
+                        xStart + (xEnd - xStart) * index.toFloat() / points.lastIndex.toFloat()
                     }
                     val progress = ((point.average - topValue) / (safeBottomValue - topValue)).coerceIn(0.0, 1.0)
                     val y = yTop + (yBottom - yTop) * progress.toFloat()
@@ -1071,18 +1136,65 @@ private fun AverageChartCard(subject: Subject) {
                     .offset(y = 170.dp)
                     .padding(start = 54.dp),
             ) {
-                listOf(firstLabel, secondLabel, "...").forEach { label ->
+                dateLabels.forEach { label ->
                     Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
                         Text(label, color = MutedText, fontSize = 13.sp, lineHeight = 17.sp)
                     }
                 }
             }
+            Row(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .padding(start = 16.dp, end = 16.dp, bottom = 20.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text(sourceCaption, color = MutedText, fontSize = 13.sp, lineHeight = 17.sp)
+                delta?.let {
+                    Text(
+                        text = it,
+                        color = if ((chart.averageDelta ?: 0.0) > 0) DangerRed else AccentTeal,
+                        fontSize = 13.sp,
+                        lineHeight = 17.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun EmptyAverageChartCard() {
+    val title = stringResource(R.string.subject_history_empty_title)
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(160.dp)
+            .semantics { contentDescription = title },
+        shape = RoundedCornerShape(20.dp),
+        color = CardWhite,
+        shadowElevation = 1.dp,
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
             Text(
-                text = "Computed from marks",
-                modifier = Modifier.offset(x = 16.dp, y = 194.dp),
+                text = title,
+                color = Color.Black,
+                fontSize = 17.sp,
+                lineHeight = 21.sp,
+                fontWeight = FontWeight.Bold,
+            )
+            Spacer(Modifier.height(6.dp))
+            Text(
+                text = stringResource(R.string.subject_history_empty_body),
                 color = MutedText,
                 fontSize = 13.sp,
-                lineHeight = 17.sp,
+                lineHeight = 18.sp,
+                textAlign = TextAlign.Center,
             )
         }
     }
@@ -1421,17 +1533,6 @@ private fun MarksBackgroundGlow() {
                 radius = size.width * 0.70f,
             ),
         )
-    }
-}
-
-private fun Subject.averagePoints(): List<AveragePoint> {
-    val ordered = marks
-        .filter { GradeMath.parseMarkValue(it.markText) != null }
-        .sortedWith(compareBy<Mark> { parseMarkDate(it.markDate) ?: LocalDate.MIN }.thenBy(Mark::id))
-    return ordered.mapIndexedNotNull { index, mark ->
-        GradeMath.weightedAverage(ordered.take(index + 1), this)?.let { average ->
-            AveragePoint(parseMarkDate(mark.markDate), average)
-        }
     }
 }
 

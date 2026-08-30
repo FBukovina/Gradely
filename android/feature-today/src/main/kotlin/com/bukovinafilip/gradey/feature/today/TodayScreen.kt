@@ -26,12 +26,16 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Restaurant
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Verified
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -52,6 +56,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -69,14 +74,17 @@ import com.bukovinafilip.gradey.domain.TodayMealState
 import com.bukovinafilip.gradey.domain.TodayMeals
 import com.bukovinafilip.gradey.domain.TodayNewMark
 import com.bukovinafilip.gradey.domain.TodayNewMarks
+import com.bukovinafilip.gradey.domain.TodayTimetableState
+import com.bukovinafilip.gradey.domain.TodayTimetableSummaries
+import com.bukovinafilip.gradey.domain.TodayTimetableSummary
 import com.bukovinafilip.gradey.model.AbsenceResponse
 import com.bukovinafilip.gradey.model.DashboardData
+import com.bukovinafilip.gradey.model.LessonChangeKind
 import com.bukovinafilip.gradey.model.NewMarkEvent
 import com.bukovinafilip.gradey.model.ScheduledLesson
 import com.bukovinafilip.gradey.model.StravaCZMenu
 import com.bukovinafilip.gradey.model.TimetableWeek
 import java.time.LocalDate
-import java.time.LocalTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
@@ -97,7 +105,6 @@ private val SoftGray = Color(0xFFF0F0F2)
 private val WarningOrange = Color(0xFFFF8D28)
 private val DangerRed = Color(0xFFE5545D)
 private val PragueZone = ZoneId.of("Europe/Prague")
-private val HourFormatter = DateTimeFormatter.ofPattern("H:mm")
 
 @Composable
 fun TodayScreen(
@@ -128,7 +135,7 @@ fun TodayScreen(
         AbsenceRiskSummary.make(absence, absence.absencesPerSubject)
     }
     val absenceRows = absenceSummary.subjects.take(3)
-    val featuredLesson = featuredLesson(timetable)
+    val timetableSummary = TodayTimetableSummaries.resolve(timetable)
     val mealState = remember(stravaMenu, isMealsConnected) {
         TodayMeals.resolve(
             isConnected = isMealsConnected,
@@ -189,7 +196,7 @@ fun TodayScreen(
                 )
             }
             item { MarksShortcut(onClick = onOpenMarks) }
-            item { NowAndNextCard(featuredLesson = featuredLesson, onClick = onOpenTimetable) }
+            item { NowAndNextCard(summary = timetableSummary, onClick = onOpenTimetable) }
             item {
                 AbsenceRiskCard(
                     rows = absenceRows,
@@ -520,34 +527,96 @@ private fun MarksShortcut(onClick: () -> Unit) {
 
 @Composable
 private fun NowAndNextCard(
-    featuredLesson: FeaturedLesson?,
+    summary: TodayTimetableSummary,
     onClick: () -> Unit,
 ) {
+    val currentOrNext = summary.currentLesson ?: summary.nextLesson
+    val title = when (summary.state) {
+        TodayTimetableState.CURRENT -> stringResource(
+            R.string.today_lesson_now,
+            currentOrNext?.displayTitle().orEmpty(),
+        )
+
+        TodayTimetableState.BEFORE_SCHOOL,
+        TodayTimetableState.BETWEEN_LESSONS,
+        -> stringResource(
+            R.string.today_lesson_next,
+            currentOrNext?.displayTitle().orEmpty(),
+        )
+
+        TodayTimetableState.AFTER_SCHOOL -> stringResource(R.string.today_no_more_lessons)
+        TodayTimetableState.WEEKEND -> stringResource(R.string.today_weekend)
+        TodayTimetableState.HOLIDAY -> summary.dayDescription ?: stringResource(R.string.today_holiday)
+        TodayTimetableState.EMPTY -> stringResource(R.string.today_no_lessons)
+        TodayTimetableState.UNAVAILABLE -> stringResource(R.string.today_timetable_unavailable)
+    }
+    val timingDetail = when (summary.state) {
+        TodayTimetableState.CURRENT -> summary.minutesRemainingInCurrent?.let {
+            pluralStringResource(R.plurals.today_minutes_remaining, it, it)
+        }
+
+        TodayTimetableState.BEFORE_SCHOOL,
+        TodayTimetableState.BETWEEN_LESSONS,
+        -> summary.minutesUntilNext?.let {
+            pluralStringResource(R.plurals.today_starts_in_minutes, it, it)
+        }
+
+        else -> null
+    }
+    val subtitle = when (summary.state) {
+        TodayTimetableState.CURRENT,
+        TodayTimetableState.BEFORE_SCHOOL,
+        TodayTimetableState.BETWEEN_LESSONS,
+        -> listOfNotNull(currentOrNext?.details()?.takeIf(String::isNotBlank), timingDetail).joinToString(" · ")
+
+        TodayTimetableState.AFTER_SCHOOL -> stringResource(R.string.today_no_more_lessons_subtitle)
+        TodayTimetableState.WEEKEND -> stringResource(R.string.today_weekend_subtitle)
+        TodayTimetableState.HOLIDAY -> stringResource(R.string.today_holiday_subtitle)
+        TodayTimetableState.EMPTY -> stringResource(R.string.today_no_lessons_subtitle)
+        TodayTimetableState.UNAVAILABLE -> stringResource(R.string.today_timetable_unavailable_subtitle)
+    }
+    val icon: ImageVector = when (summary.state) {
+        TodayTimetableState.CURRENT -> Icons.Default.PlayCircle
+        TodayTimetableState.BEFORE_SCHOOL,
+        TodayTimetableState.BETWEEN_LESSONS,
+        -> Icons.Default.Schedule
+
+        TodayTimetableState.AFTER_SCHOOL,
+        TodayTimetableState.EMPTY,
+        -> Icons.Default.CheckCircle
+
+        TodayTimetableState.WEEKEND,
+        TodayTimetableState.HOLIDAY,
+        TodayTimetableState.UNAVAILABLE,
+        -> Icons.Default.CalendarMonth
+    }
+    val iconTint = if (summary.state == TodayTimetableState.CURRENT) AccentTeal else MutedText
+    val iconBackground = if (summary.state == TodayTimetableState.CURRENT) SoftMint else SoftGray
+
     DashboardSurface(
-        modifier = Modifier.height(96.dp),
+        modifier = Modifier.heightIn(min = 96.dp),
         onClick = onClick,
     ) {
         Column(
             modifier = Modifier
-                .fillMaxSize()
+                .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 14.dp),
         ) {
-            SectionHeading("NOW AND NEXT")
+            SectionHeading(stringResource(R.string.today_now_and_next).uppercase(Locale.getDefault()))
             Spacer(Modifier.height(9.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                IconTile(background = SoftGray, size = 32.dp) {
+                IconTile(background = iconBackground, size = 32.dp) {
                     Icon(
-                        imageVector = Icons.Default.CalendarMonth,
+                        imageVector = icon,
                         contentDescription = null,
-                        tint = MutedText,
+                        tint = iconTint,
                         modifier = Modifier.size(20.dp),
                     )
                 }
                 Spacer(Modifier.width(13.dp))
-                Column {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = featuredLesson?.let { if (it.isCurrent) "Now · ${it.lesson.displayTitle()}" else "Next · ${it.lesson.displayTitle()}" }
-                            ?: "Timetable unavailable",
+                        text = title,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         color = Color.Black,
@@ -556,7 +625,7 @@ private fun NowAndNextCard(
                         fontWeight = FontWeight.SemiBold,
                     )
                     Text(
-                        text = featuredLesson?.lesson?.details().orEmpty().ifBlank { "Pull to refresh or open Timetable." },
+                        text = subtitle,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         color = MutedText,
@@ -565,8 +634,68 @@ private fun NowAndNextCard(
                     )
                 }
             }
+            if (summary.hasChanges) {
+                HorizontalDivider(
+                    modifier = Modifier.padding(vertical = 12.dp),
+                    color = Color(0xFFE7E7EA),
+                )
+                val changedLessons = summary.changedLessons.take(3)
+                changedLessons.forEachIndexed { index, lesson ->
+                    TimetableChangeRow(lesson)
+                    if (index != changedLessons.lastIndex) {
+                        Spacer(Modifier.height(10.dp))
+                    }
+                }
+            }
         }
     }
+}
+
+@Composable
+private fun TimetableChangeRow(lesson: ScheduledLesson) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = Icons.Default.Warning,
+            contentDescription = null,
+            tint = WarningOrange,
+            modifier = Modifier.size(20.dp),
+        )
+        Spacer(Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = "${lesson.changeKind.localizedLabel()} · ${lesson.displayTitle()}",
+                color = Color.Black,
+                fontSize = 14.sp,
+                lineHeight = 18.sp,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            val detail = lesson.changeDescription?.takeIf(String::isNotBlank) ?: lesson.details()
+            if (detail.isNotBlank()) {
+                Text(
+                    text = detail,
+                    color = MutedText,
+                    fontSize = 12.sp,
+                    lineHeight = 16.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun LessonChangeKind.localizedLabel(): String = when (this) {
+    LessonChangeKind.NONE -> stringResource(R.string.today_timetable_change)
+    LessonChangeKind.CANCELED -> stringResource(R.string.today_change_canceled)
+    LessonChangeKind.SUBSTITUTION -> stringResource(R.string.today_change_substitution)
+    LessonChangeKind.ROOM_CHANGED -> stringResource(R.string.today_change_room)
+    LessonChangeKind.ADDED -> stringResource(R.string.today_change_added)
 }
 
 @Composable
@@ -1234,31 +1363,6 @@ private fun IconTile(
         Box(contentAlignment = Alignment.Center) { content() }
     }
 }
-
-private data class FeaturedLesson(
-    val lesson: ScheduledLesson,
-    val isCurrent: Boolean,
-)
-
-private fun featuredLesson(timetable: TimetableWeek?): FeaturedLesson? {
-    val today = LocalDate.now(PragueZone).toString()
-    val lessons = timetable?.days?.firstOrNull { it.date == today }?.lessons.orEmpty()
-    if (lessons.isEmpty()) return null
-
-    val now = LocalTime.now(PragueZone)
-    lessons.firstOrNull { lesson ->
-        val start = lesson.hour.beginTime.asLocalTime()
-        val end = lesson.hour.endTime.asLocalTime()
-        start != null && end != null && !now.isBefore(start) && !now.isAfter(end)
-    }?.let { return FeaturedLesson(it, isCurrent = true) }
-
-    return lessons.firstOrNull { lesson ->
-        lesson.hour.beginTime.asLocalTime()?.isAfter(now) == true
-    }?.let { FeaturedLesson(it, isCurrent = false) }
-}
-
-private fun String.asLocalTime(): LocalTime? =
-    runCatching { LocalTime.parse(trim(), HourFormatter) }.getOrNull()
 
 private fun formatDetectedAt(instant: java.time.Instant): String =
     DateTimeFormatter

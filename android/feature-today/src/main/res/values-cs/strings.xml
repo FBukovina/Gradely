@@ -25,6 +25,34 @@
     <string name="today_no_meal_subtitle">Oběd objednáš nebo zkontroluješ v Jídelně.</string>
     <string name="today_meals_not_connected">Jídelna není propojená</string>
     <string name="today_meals_not_connected_subtitle">Strava.cz propojíš v účtu.</string>
+    <string name="today_now_and_next">Teď a další</string>
+    <string name="today_lesson_now">Teď · %1$s</string>
+    <string name="today_lesson_next">Další · %1$s</string>
+    <string name="today_no_more_lessons">Dnes už nic není</string>
+    <string name="today_no_more_lessons_subtitle">Školní den je volný.</string>
+    <string name="today_weekend">Víkend</string>
+    <string name="today_weekend_subtitle">O víkendu nejsou naplánované žádné hodiny.</string>
+    <string name="today_holiday">Školní volno</string>
+    <string name="today_holiday_subtitle">Dnes nejsou naplánované žádné hodiny.</string>
+    <string name="today_no_lessons">Dnes nejsou žádné hodiny</string>
+    <string name="today_no_lessons_subtitle">Dnešní rozvrh je volný.</string>
+    <string name="today_timetable_unavailable">Rozvrh není k dispozici</string>
+    <string name="today_timetable_unavailable_subtitle">Potáhni pro obnovení, nebo otevři Rozvrh.</string>
+    <string name="today_timetable_change">Změna v rozvrhu</string>
+    <string name="today_change_canceled">Odpadá</string>
+    <string name="today_change_substitution">Suplování</string>
+    <string name="today_change_room">Změna učebny</string>
+    <string name="today_change_added">Přidáno</string>
+    <plurals name="today_minutes_remaining">
+        <item quantity="one">Zbývá %1$d minuta</item>
+        <item quantity="few">Zbývají %1$d minuty</item>
+        <item quantity="other">Zbývá %1$d minut</item>
+    </plurals>
+    <plurals name="today_starts_in_minutes">
+        <item quantity="one">Začíná za %1$d minutu</item>
+        <item quantity="few">Začíná za %1$d minuty</item>
+        <item quantity="other">Začíná za %1$d minut</item>
+    </plurals>
     <plurals name="today_trend_new_marks">
         <item quantity="one">%1$d nová známka</item>
         <item quantity="few">%1$d nové známky</item>

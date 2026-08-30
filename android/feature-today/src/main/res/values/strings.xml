@@ -25,6 +25,32 @@
     <string name="today_no_meal_subtitle">Open Meals to order or check the menu.</string>
     <string name="today_meals_not_connected">Meals not connected</string>
     <string name="today_meals_not_connected_subtitle">Connect Strava.cz from Account.</string>
+    <string name="today_now_and_next">Now and next</string>
+    <string name="today_lesson_now">Now · %1$s</string>
+    <string name="today_lesson_next">Next · %1$s</string>
+    <string name="today_no_more_lessons">No more lessons</string>
+    <string name="today_no_more_lessons_subtitle">The school day is clear.</string>
+    <string name="today_weekend">Weekend</string>
+    <string name="today_weekend_subtitle">No lessons are scheduled this weekend.</string>
+    <string name="today_holiday">School holiday</string>
+    <string name="today_holiday_subtitle">No lessons are scheduled today.</string>
+    <string name="today_no_lessons">No lessons today</string>
+    <string name="today_no_lessons_subtitle">Your timetable is clear.</string>
+    <string name="today_timetable_unavailable">Timetable unavailable</string>
+    <string name="today_timetable_unavailable_subtitle">Pull to refresh or open Timetable.</string>
+    <string name="today_timetable_change">Timetable change</string>
+    <string name="today_change_canceled">Cancelled</string>
+    <string name="today_change_substitution">Substitution</string>
+    <string name="today_change_room">Room change</string>
+    <string name="today_change_added">Added</string>
+    <plurals name="today_minutes_remaining">
+        <item quantity="one">%1$d minute remaining</item>
+        <item quantity="other">%1$d minutes remaining</item>
+    </plurals>
+    <plurals name="today_starts_in_minutes">
+        <item quantity="one">Starts in %1$d minute</item>
+        <item quantity="other">Starts in %1$d minutes</item>
+    </plurals>
     <plurals name="today_trend_new_marks">
         <item quantity="one">%1$d new mark</item>
         <item quantity="other">%1$d new marks</item>

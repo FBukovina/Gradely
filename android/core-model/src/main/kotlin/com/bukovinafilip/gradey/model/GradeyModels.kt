@@ -514,21 +514,148 @@ data class GradeyAuthSession(
 }
 
 @Serializable
+enum class LinkedAccountStatus {
+    @SerialName("active")
+    ACTIVE,
+
+    @SerialName("action_required")
+    ACTION_REQUIRED,
+
+    @SerialName("paused")
+    PAUSED,
+
+    @SerialName("linking")
+    LINKING,
+
+    @SerialName("failed")
+    FAILED,
+}
+
+@Serializable
+enum class LinkedAccountProvider {
+    @SerialName("bakalari")
+    BAKALARI,
+
+    @SerialName("eduPage")
+    EDU_PAGE,
+
+    @SerialName("stravaCZ")
+    STRAVA_CZ;
+
+    val displayName: String
+        get() = when (this) {
+            BAKALARI -> "Bakaláři"
+            EDU_PAGE -> "EduPage"
+            STRAVA_CZ -> "Strava.cz"
+        }
+
+    val isSupportedSchoolProvider: Boolean get() = this == BAKALARI
+
+    companion object {
+        fun from(provider: SchoolProvider): LinkedAccountProvider = when (provider) {
+            SchoolProvider.BAKALARI -> BAKALARI
+        }
+    }
+}
+
+@Serializable
 data class LinkedSchoolAccount(
     val id: String,
-    val provider: SchoolProvider,
+    val provider: LinkedAccountProvider,
+    val providerUserID: String? = null,
     val displayName: String,
     val schoolName: String? = null,
-    val status: String = "active",
+    val canteenName: String? = null,
+    val status: LinkedAccountStatus = LinkedAccountStatus.ACTIVE,
     val notificationsEnabled: Boolean = true,
+    val lastPolledAt: String? = null,
+    val lastSyncedAt: String? = null,
+    val actionRequiredReason: String? = null,
 )
 
 @Serializable
+data class LinkedSchoolTokenPayload(
+    val provider: SchoolProvider,
+    val baseURL: String,
+    val accessToken: String,
+    val refreshToken: String? = null,
+    val tokenType: String,
+    val expiresAt: String? = null,
+    val bakalari: BakalariCredentials? = null,
+) {
+    fun makeStoredSession(account: LinkedSchoolAccount): StoredSession = StoredSession(
+        accessToken = accessToken,
+        refreshToken = refreshToken.orEmpty(),
+        tokenType = tokenType,
+        expiresAtEpochMillis = expiresAt
+            ?.let { runCatching { java.time.Instant.parse(it).toEpochMilli() }.getOrNull() }
+            ?: Long.MAX_VALUE,
+        baseURL = baseURL,
+        provider = provider,
+        bakalari = bakalari,
+        linkedAccountID = account.id,
+        linkedAccountDisplayName = account.displayName,
+        linkedAccountSchoolName = account.schoolName,
+    )
+
+    companion object {
+        fun from(session: StoredSession): LinkedSchoolTokenPayload = LinkedSchoolTokenPayload(
+            provider = session.provider,
+            baseURL = session.baseURL,
+            accessToken = session.accessToken,
+            refreshToken = session.refreshToken.takeIf(String::isNotEmpty),
+            tokenType = session.tokenType,
+            expiresAt = session.expiresAtEpochMillis
+                .takeUnless { it == Long.MAX_VALUE }
+                ?.let { java.time.Instant.ofEpochMilli(it).toString() },
+            bakalari = session.bakalari,
+        )
+    }
+}
+
+@Serializable
+data class LinkedSchoolAccountActivation(
+    val account: LinkedSchoolAccount,
+    @SerialName("token_payload")
+    val tokenPayload: LinkedSchoolTokenPayload,
+)
+
+@Serializable
+data class GradeyAccountSettingsSnapshot(
+    @SerialName("active_school_account_id")
+    val activeSchoolAccountID: String? = null,
+    @SerialName("linked_accounts")
+    val linkedAccounts: List<LinkedSchoolAccount> = emptyList(),
+    @SerialName("notification_preferences")
+    val notificationPreferences: NotificationPreferences = NotificationPreferences.Default,
+)
+
+@Serializable
+enum class NotificationLockScreenDetail {
+    @SerialName("private_summary")
+    PRIVATE_SUMMARY,
+
+    @SerialName("mark_and_subject")
+    MARK_AND_SUBJECT,
+
+    @SerialName("full_details")
+    FULL_DETAILS,
+}
+
+@Serializable
 data class NotificationPreferences(
+    @SerialName("new_marks_enabled")
     val newMarksEnabled: Boolean = true,
+    @SerialName("lock_screen_detail")
+    val lockScreenDetail: NotificationLockScreenDetail = NotificationLockScreenDetail.MARK_AND_SUBJECT,
+    @SerialName("quiet_hours_enabled")
     val quietHoursEnabled: Boolean = false,
-    val quietHoursStart: String = "22:00",
-    val quietHoursEnd: String = "06:00",
+    @SerialName("quiet_hours_start_minute")
+    val quietHoursStartMinute: Int = 22 * 60,
+    @SerialName("quiet_hours_end_minute")
+    val quietHoursEndMinute: Int = 6 * 60,
+    @SerialName("quiet_hours_time_zone")
+    val quietHoursTimeZone: String = "Europe/Prague",
 ) {
     companion object {
         val Default = NotificationPreferences()

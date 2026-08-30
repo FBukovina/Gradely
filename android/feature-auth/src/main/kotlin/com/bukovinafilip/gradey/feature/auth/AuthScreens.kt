@@ -158,6 +158,9 @@ fun OnboardingReadyScreen(
 @Composable
 fun OnboardingUpgradeSupportScreen(
     isGuestMode: Boolean,
+    cloudLinkErrorMessage: String? = null,
+    isRetryingCloudLink: Boolean = false,
+    onRetryCloudLink: () -> Unit = {},
     onFinish: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
@@ -176,6 +179,21 @@ fun OnboardingUpgradeSupportScreen(
                     "Gradey ID is connected. Cloud linking will retry safely without replacing your local school session."
                 },
             )
+            if (!isGuestMode && cloudLinkErrorMessage != null) {
+                Text(
+                    "Your local Bakaláři connection is safe, but Gradey ID could not link it yet: $cloudLinkErrorMessage",
+                    color = MaterialTheme.colorScheme.error,
+                )
+                Button(
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !isRetryingCloudLink,
+                    onClick = onRetryCloudLink,
+                ) {
+                    Text(if (isRetryingCloudLink) "Retrying…" else "Retry cloud link")
+                }
+            } else if (!isGuestMode) {
+                Text("Your Bakaláři account is linked to Gradey ID.")
+            }
         }
         Button(modifier = Modifier.fillMaxWidth(), onClick = onFinish) {
             Text("Continue to Gradey")

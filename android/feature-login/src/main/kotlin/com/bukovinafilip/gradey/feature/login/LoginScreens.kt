@@ -49,6 +49,9 @@ import com.bukovinafilip.gradey.ui.GradeySpacing
 @Composable
 fun SchoolLoginScreen(
     isLoading: Boolean,
+    initialSchoolURL: String = "",
+    title: String = "Connect Bakaláři",
+    subtitle: String = "Sign in with the same school address, username, and password you use for Bakaláři.",
     errorMessage: String? = null,
     directorySchools: List<SchoolDirectorySchool> = emptyList(),
     isDirectoryLoading: Boolean = false,
@@ -59,7 +62,7 @@ fun SchoolLoginScreen(
     onBack: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
-    var school by remember { mutableStateOf("") }
+    var school by remember(initialSchoolURL) { mutableStateOf(initialSchoolURL) }
     var schoolSearch by remember { mutableStateOf("") }
     var isSchoolSearchActive by remember { mutableStateOf(false) }
     var username by remember { mutableStateOf("") }
@@ -81,8 +84,8 @@ fun SchoolLoginScreen(
             TextButton(onClick = onBack, enabled = !isLoading) { Text("Back") }
         }
         GradeyHero(
-            title = "Connect Bakaláři",
-            subtitle = "Sign in with the same school address, username, and password you use for Bakaláři.",
+            title = title,
+            subtitle = subtitle,
         )
         GradeySectionCard(title = "Bakaláři credentials") {
             Column(verticalArrangement = Arrangement.spacedBy(GradeySpacing.md)) {

@@ -7,6 +7,8 @@ import com.bukovinafilip.gradey.model.AbsenceResponse
 import com.bukovinafilip.gradey.model.BakalariCredentials
 import com.bukovinafilip.gradey.model.DashboardData
 import com.bukovinafilip.gradey.model.LoginResponse
+import com.bukovinafilip.gradey.model.LinkedSchoolAccount
+import com.bukovinafilip.gradey.model.LinkedAccountProvider
 import com.bukovinafilip.gradey.model.MarksResponse
 import com.bukovinafilip.gradey.model.NextLessonWidgetLesson
 import com.bukovinafilip.gradey.model.NextLessonWidgetSnapshot
@@ -41,6 +43,95 @@ class AndroidSchoolRepositoryTest {
         assertThat(client.loginCalls).isEqualTo(0)
         assertThat(client.refreshCalls).isEqualTo(0)
         assertThat(client.marksCalls).isEqualTo(0)
+    }
+
+    @Test
+    fun `activation preserves the device token family for the same linked account`() = runTest {
+        val current = validSession().copy(
+            linkedAccountID = "account-1",
+            linkedAccountDisplayName = "Old name",
+        )
+        val incoming = current.copy(
+            accessToken = "cloud-poller-access",
+            refreshToken = "cloud-poller-refresh",
+            linkedAccountDisplayName = "Canonical name",
+            linkedAccountSchoolName = "Canonical school",
+        )
+        val client = FakeBakalariClient()
+        val sessions = InMemorySchoolSessionStorage(current)
+
+        val activated = repository(client, sessions).activateLinkedSchoolAccount(incoming)
+
+        assertThat(activated.accessToken).isEqualTo("old-access")
+        assertThat(activated.refreshToken).isEqualTo("old-refresh")
+        assertThat(activated.linkedAccountDisplayName).isEqualTo("Canonical name")
+        assertThat(activated.linkedAccountSchoolName).isEqualTo("Canonical school")
+        assertThat(client.loginCalls).isEqualTo(0)
+        assertThat(sessions.load()).isEqualTo(activated)
+    }
+
+    @Test
+    fun `activation of another linked account mints a device Bakalari token family`() = runTest {
+        val incoming = validSession().copy(
+            accessToken = "cloud-poller-access",
+            refreshToken = "cloud-poller-refresh",
+            linkedAccountID = "account-2",
+            linkedAccountDisplayName = "Second student",
+            linkedAccountSchoolName = "Second school",
+            bakalari = BakalariCredentials("second-student", "second-secret"),
+        )
+        val client = FakeBakalariClient()
+        val sessions = InMemorySchoolSessionStorage(validSession().copy(linkedAccountID = "account-1"))
+
+        val activated = repository(client, sessions).activateLinkedSchoolAccount(incoming)
+
+        assertThat(client.loginCalls).isEqualTo(1)
+        assertThat(client.lastLoginUsername).isEqualTo("second-student")
+        assertThat(client.lastLoginPassword).isEqualTo("second-secret")
+        assertThat(activated.accessToken).isEqualTo("login-access")
+        assertThat(activated.refreshToken).isEqualTo("login-refresh")
+        assertThat(activated.linkedAccountID).isEqualTo("account-2")
+        assertThat(sessions.load()).isEqualTo(activated)
+    }
+
+    @Test
+    fun `associating a newly linked account keeps current school credentials and tokens`() = runTest {
+        val current = validSession()
+        val sessions = InMemorySchoolSessionStorage(current)
+        val linked = LinkedSchoolAccount(
+            id = "linked-account",
+            provider = LinkedAccountProvider.BAKALARI,
+            displayName = "Student",
+            schoolName = "School",
+        )
+
+        val associated = repository(FakeBakalariClient(), sessions).associateCurrentSession(linked)
+
+        assertThat(associated.accessToken).isEqualTo(current.accessToken)
+        assertThat(associated.bakalari).isEqualTo(current.bakalari)
+        assertThat(associated.linkedAccountID).isEqualTo("linked-account")
+        assertThat(associated.linkedAccountDisplayName).isEqualTo("Student")
+        assertThat(associated.linkedAccountSchoolName).isEqualTo("School")
+    }
+
+    @Test
+    fun `unlinking the active cloud account detaches metadata but keeps local school access`() = runTest {
+        val current = validSession().copy(
+            linkedAccountID = "linked-account",
+            linkedAccountDisplayName = "Student",
+            linkedAccountSchoolName = "School",
+        )
+        val sessions = InMemorySchoolSessionStorage(current)
+
+        val local = repository(FakeBakalariClient(), sessions)
+            .disassociateCurrentSession("linked-account")
+
+        assertThat(local?.accessToken).isEqualTo(current.accessToken)
+        assertThat(local?.bakalari).isEqualTo(current.bakalari)
+        assertThat(local?.linkedAccountID).isNull()
+        assertThat(local?.linkedAccountDisplayName).isNull()
+        assertThat(local?.linkedAccountSchoolName).isNull()
+        assertThat(sessions.load()).isEqualTo(local)
     }
 
     @Test
@@ -403,6 +494,7 @@ private class FakeBakalariClient : BakalariClient {
     var loginCalls = 0
     var marksCalls = 0
     var lastLoginUsername: String? = null
+    var lastLoginPassword: String? = null
 
     var loginResult: suspend (String, String, String) -> LoginResponse = { _, _, _ ->
         LoginResponse("login-access", "login-refresh", "Bearer", 3_600)
@@ -416,6 +508,7 @@ private class FakeBakalariClient : BakalariClient {
     override suspend fun login(baseURL: String, username: String, password: String): LoginResponse {
         loginCalls += 1
         lastLoginUsername = username
+        lastLoginPassword = password
         return loginResult(baseURL, username, password)
     }
 

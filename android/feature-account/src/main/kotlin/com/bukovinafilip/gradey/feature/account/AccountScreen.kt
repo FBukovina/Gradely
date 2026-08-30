@@ -1,18 +1,22 @@
 package com.bukovinafilip.gradey.feature.account
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Button
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -23,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import com.bukovinafilip.gradey.model.AgeAttestationKind
 import com.bukovinafilip.gradey.model.GradeyAccount
 import com.bukovinafilip.gradey.model.LinkedSchoolAccount
+import com.bukovinafilip.gradey.model.LinkedAccountStatus
 import com.bukovinafilip.gradey.ui.GradeyHero
 import com.bukovinafilip.gradey.ui.GradeyScreen
 import com.bukovinafilip.gradey.ui.GradeySectionCard
@@ -33,17 +38,27 @@ import com.bukovinafilip.gradey.ui.MetadataRow
 fun AccountScreen(
     account: GradeyAccount?,
     linkedAccounts: List<LinkedSchoolAccount>,
+    activeLinkedAccountID: String? = null,
     ageAttestationKind: AgeAttestationKind? = null,
     isGuestMode: Boolean = false,
     isGradeyIdAvailable: Boolean = true,
     isUpdatingFullName: Boolean = false,
     profileErrorMessage: String? = null,
+    linkedAccountErrorMessage: String? = null,
+    isRefreshingLinkedAccounts: Boolean = false,
+    mutatingLinkedAccountID: String? = null,
     onUpdateFullName: (String) -> Unit = {},
     onConnectGradeyId: () -> Unit = {},
+    onRefreshLinkedAccounts: () -> Unit = {},
+    onActivateLinkedAccount: (LinkedSchoolAccount) -> Unit = {},
+    onReconnectLinkedAccount: (LinkedSchoolAccount) -> Unit = {},
+    onToggleLinkedNotifications: (LinkedSchoolAccount, Boolean) -> Unit = { _, _ -> },
+    onUnlinkLinkedAccount: (LinkedSchoolAccount) -> Unit = {},
     onSignOut: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var notifications by remember { mutableStateOf(true) }
+    var pendingUnlink by remember { mutableStateOf<LinkedSchoolAccount?>(null) }
     var fullNameDraft by remember(account?.id, account?.fullName) {
         mutableStateOf(account?.fullName.orEmpty())
     }
@@ -51,7 +66,7 @@ fun AccountScreen(
     val isNameValid = normalizedFullName.length in 1..80
     val hasNameChanged = normalizedFullName != account?.fullName?.trim().orEmpty()
 
-    GradeyScreen(modifier = modifier) {
+    GradeyScreen(modifier = modifier.verticalScroll(rememberScrollState())) {
         GradeyHero("Account", account?.fullName ?: "Local-only mode")
         GradeySectionCard(title = "Profile") {
             Icon(Icons.Default.Person, contentDescription = null)
@@ -104,6 +119,25 @@ fun AccountScreen(
                 Switch(checked = notifications, onCheckedChange = { notifications = it })
             }
         }
+        if (account != null) {
+            GradeySectionCard(title = "Connected schools") {
+                Text(
+                    "Your linked Bakaláři accounts are encrypted by Gradey and available on your signed-in devices.",
+                )
+                Button(
+                    onClick = onRefreshLinkedAccounts,
+                    enabled = !isRefreshingLinkedAccounts && mutatingLinkedAccountID == null,
+                ) {
+                    Text(if (isRefreshingLinkedAccounts) "Refreshing…" else "Refresh accounts")
+                }
+                if (!linkedAccountErrorMessage.isNullOrBlank()) {
+                    Text(linkedAccountErrorMessage)
+                }
+                if (linkedAccounts.isEmpty() && !isRefreshingLinkedAccounts) {
+                    Text("No school account is linked to this Gradey ID yet.")
+                }
+            }
+        }
         GradeySectionCard(title = "Privacy & data") {
             MetadataRow(
                 "Age",
@@ -117,18 +151,96 @@ fun AccountScreen(
             )
             Text("Gradey asks for age confirmation before school data, support chat, or AI leave the device for our servers.")
         }
-        LazyColumn(
-            verticalArrangement = Arrangement.spacedBy(GradeySpacing.md),
-            modifier = Modifier.padding(bottom = 8.dp),
-        ) {
-            items(linkedAccounts, key = { it.id }) { linked ->
-                GradeySectionCard {
-                    Text(linked.displayName)
-                    MetadataRow("Provider", linked.provider.displayName)
-                    MetadataRow("School", linked.schoolName ?: "-")
-                    MetadataRow("Status", linked.status)
+        if (account != null) {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(GradeySpacing.md),
+                modifier = Modifier.padding(bottom = 8.dp),
+            ) {
+                linkedAccounts.forEach { linked ->
+                    val isMutating = mutatingLinkedAccountID == linked.id
+                    val isActive = activeLinkedAccountID == linked.id
+                    GradeySectionCard {
+                        Text(linked.displayName)
+                        MetadataRow("Provider", linked.provider.displayName)
+                        MetadataRow("School", linked.schoolName ?: "-")
+                        MetadataRow("Status", linked.status.displayName())
+                        MetadataRow("On this device", if (isActive) "Active" else "Not active")
+                        linked.actionRequiredReason?.takeIf(String::isNotBlank)?.let { reason ->
+                            Text(reason)
+                        }
+                        if (
+                            linked.provider.isSupportedSchoolProvider &&
+                            linked.status == LinkedAccountStatus.ACTION_REQUIRED
+                        ) {
+                            Button(
+                                onClick = { onReconnectLinkedAccount(linked) },
+                                enabled = !isMutating,
+                            ) {
+                                Text("Reconnect")
+                            }
+                        } else if (
+                            linked.provider.isSupportedSchoolProvider &&
+                            !isActive &&
+                            linked.status == LinkedAccountStatus.ACTIVE
+                        ) {
+                            Button(
+                                onClick = { onActivateLinkedAccount(linked) },
+                                enabled = !isMutating && mutatingLinkedAccountID == null,
+                            ) {
+                                Text(if (isMutating) "Switching…" else "Use this school")
+                            }
+                        }
+                        if (linked.provider.isSupportedSchoolProvider) {
+                            MetadataRow(
+                                "New-mark notifications",
+                                if (linked.notificationsEnabled) "Enabled" else "Disabled",
+                            )
+                            Switch(
+                                checked = linked.notificationsEnabled,
+                                onCheckedChange = { onToggleLinkedNotifications(linked, it) },
+                                enabled = !isMutating && mutatingLinkedAccountID == null,
+                            )
+                        } else {
+                            Text("Manage this provider from Gradey on iPhone for now.")
+                        }
+                        OutlinedButton(
+                            onClick = { pendingUnlink = linked },
+                            enabled = !isMutating && mutatingLinkedAccountID == null,
+                        ) {
+                            Text("Unlink")
+                        }
+                    }
                 }
             }
         }
     }
+
+    pendingUnlink?.let { linked ->
+        AlertDialog(
+            onDismissRequest = { pendingUnlink = null },
+            title = { Text("Unlink ${linked.displayName}?") },
+            text = {
+                Text("This removes the school from your Gradey ID. It does not delete the Bakaláři account at your school.")
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        pendingUnlink = null
+                        onUnlinkLinkedAccount(linked)
+                    },
+                ) { Text("Unlink") }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingUnlink = null }) { Text("Cancel") }
+            },
+        )
+    }
+}
+
+private fun LinkedAccountStatus.displayName(): String = when (this) {
+    LinkedAccountStatus.ACTIVE -> "Active"
+    LinkedAccountStatus.ACTION_REQUIRED -> "Action required"
+    LinkedAccountStatus.PAUSED -> "Paused"
+    LinkedAccountStatus.LINKING -> "Linking"
+    LinkedAccountStatus.FAILED -> "Failed"
 }

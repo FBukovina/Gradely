@@ -76,6 +76,8 @@ import com.bukovinafilip.gradey.domain.TimetableDates
 import com.bukovinafilip.gradey.domain.WearPayloadBuilder
 import com.bukovinafilip.gradey.domain.reconcileOnboardingProgress
 import com.bukovinafilip.gradey.domain.selectGradeyStartupDestination
+import com.bukovinafilip.gradey.domain.selectRestorableSchoolAccount
+import com.bukovinafilip.gradey.domain.selectSchoolAccountRequiringReconnect
 import com.bukovinafilip.gradey.model.AbsenceResponse
 import com.bukovinafilip.gradey.model.AgeAttestationKind
 import com.bukovinafilip.gradey.model.DashboardData
@@ -150,6 +152,12 @@ private fun GradeyApp(
     var onboardingProgress by remember { mutableStateOf<OnboardingProgress?>(null) }
     var account by remember { mutableStateOf<GradeyAccount?>(null) }
     var linkedAccounts by remember { mutableStateOf<List<LinkedSchoolAccount>>(emptyList()) }
+    var activeLinkedAccountID by remember { mutableStateOf<String?>(null) }
+    var reconnectLinkedAccount by remember { mutableStateOf<LinkedSchoolAccount?>(null) }
+    var reconnectSchoolURL by remember { mutableStateOf("") }
+    var linkedAccountError by remember { mutableStateOf<String?>(null) }
+    var isRefreshingLinkedAccounts by remember { mutableStateOf(false) }
+    var mutatingLinkedAccountID by remember { mutableStateOf<String?>(null) }
     var directorySchools by remember { mutableStateOf<List<SchoolDirectorySchool>>(emptyList()) }
     var isSchoolDirectoryLoading by remember { mutableStateOf(false) }
     var hasLoadedSchoolDirectory by remember { mutableStateOf(false) }
@@ -177,6 +185,7 @@ private fun GradeyApp(
     }
 
     suspend fun loadCachedSignedInData() {
+        activeLinkedAccountID = graph.schoolRepository.currentStoredSession()?.linkedAccountID
         graph.schoolRepository.loadCachedDashboard()?.let { dashboard = it }
         graph.schoolRepository.loadCachedAbsence()?.let { absence = it }
         graph.schoolRepository.loadCachedTimetable(TimetableDates.todayString())?.let { timetable = it }
@@ -254,6 +263,8 @@ private fun GradeyApp(
         absence = null
         timetable = null
         stravaMenu = null
+        activeLinkedAccountID = null
+        reconnectLinkedAccount = null
         selectedTab = AppTab.TODAY
         dataError = null
         schoolLoginError = "Your Bakaláři session expired. Please reconnect your school account."
@@ -290,6 +301,8 @@ private fun GradeyApp(
         absence = null
         timetable = null
         stravaMenu = null
+        activeLinkedAccountID = null
+        reconnectLinkedAccount = null
         selectedTab = AppTab.TODAY
         dataError = null
         schoolLoginError = null
@@ -304,6 +317,146 @@ private fun GradeyApp(
             // A damaged optional linked-account snapshot must not block local Bakaláři use.
         }
         linkedAccounts = emptyList()
+        activeLinkedAccountID = null
+    }
+
+    suspend fun refreshLinkedAccountSnapshot() {
+        linkedAccounts = runCatching { graph.linkedAccountRepository.localAccounts() }
+            .getOrDefault(linkedAccounts)
+        if (account == null || isGuestMode || !graph.isGradeyCloudConfigured) return
+
+        isRefreshingLinkedAccounts = true
+        linkedAccountError = null
+        try {
+            linkedAccounts = graph.linkedAccountRepository.refreshAccounts().linkedAccounts
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: GradeySessionExpiredException) {
+            account = null
+            authError = error.userFacingMessage()
+            phase = AppPhase.SIGNED_OUT
+        } catch (error: Throwable) {
+            linkedAccountError = error.userFacingMessage()
+        } finally {
+            isRefreshingLinkedAccounts = false
+        }
+    }
+
+    suspend fun linkCurrentSchoolIfNeeded(): Boolean {
+        if (account == null || isGuestMode || !graph.isGradeyCloudConfigured) return true
+        val session = graph.schoolRepository.currentStoredSession() ?: return false
+        val cachedAccounts = graph.linkedAccountRepository.localAccounts()
+        if (session.linkedAccountID != null && cachedAccounts.any { it.id == session.linkedAccountID }) {
+            activeLinkedAccountID = session.linkedAccountID
+            linkedAccounts = cachedAccounts
+            linkedAccountError = null
+            return true
+        }
+
+        return try {
+            val linked = graph.linkedAccountRepository.linkSchoolAccount(session, dashboard?.user)
+            graph.schoolRepository.associateCurrentSession(linked)
+            activeLinkedAccountID = linked.id
+            linkedAccounts = graph.linkedAccountRepository.localAccounts()
+            linkedAccountError = null
+            true
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: GradeySessionExpiredException) {
+            account = null
+            authError = error.userFacingMessage()
+            phase = AppPhase.SIGNED_OUT
+            false
+        } catch (error: Throwable) {
+            linkedAccountError = error.userFacingMessage()
+            false
+        }
+    }
+
+    suspend fun reconnectCurrentSchool(linked: LinkedSchoolAccount): Boolean {
+        val session = graph.schoolRepository.currentStoredSession() ?: return false
+        return try {
+            val updated = graph.linkedAccountRepository.reconnectSchoolAccount(
+                linked.id,
+                session,
+                dashboard?.user,
+            )
+            graph.schoolRepository.associateCurrentSession(updated)
+            activeLinkedAccountID = updated.id
+            linkedAccounts = graph.linkedAccountRepository.localAccounts()
+            reconnectLinkedAccount = null
+            reconnectSchoolURL = ""
+            linkedAccountError = null
+            true
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Throwable) {
+            linkedAccountError = error.userFacingMessage()
+            false
+        }
+    }
+
+    suspend fun activateLinkedAccount(linked: LinkedSchoolAccount): Boolean {
+        if (mutatingLinkedAccountID != null) return false
+        mutatingLinkedAccountID = linked.id
+        linkedAccountError = null
+        try {
+            val activation = graph.linkedAccountRepository.activateSchoolAccount(linked.id)
+            graph.schoolRepository.activateLinkedSchoolAccount(
+                activation.tokenPayload.makeStoredSession(activation.account),
+            )
+            dashboard = null
+            absence = null
+            timetable = null
+            stravaMenu = null
+            activeLinkedAccountID = activation.account.id
+            selectedTab = AppTab.TODAY
+            loadCachedSignedInData()
+            return true
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Throwable) {
+            linkedAccountError = error.userFacingMessage()
+            return false
+        } finally {
+            mutatingLinkedAccountID = null
+        }
+    }
+
+    suspend fun updateLinkedAccountNotifications(linked: LinkedSchoolAccount, enabled: Boolean) {
+        if (mutatingLinkedAccountID != null) return
+        mutatingLinkedAccountID = linked.id
+        linkedAccountError = null
+        try {
+            graph.linkedAccountRepository.updateNotificationsEnabled(linked.id, enabled)
+            linkedAccounts = graph.linkedAccountRepository.localAccounts()
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Throwable) {
+            linkedAccountError = error.userFacingMessage()
+        } finally {
+            mutatingLinkedAccountID = null
+        }
+    }
+
+    suspend fun unlinkLinkedAccount(linked: LinkedSchoolAccount) {
+        if (mutatingLinkedAccountID != null) return
+        mutatingLinkedAccountID = linked.id
+        linkedAccountError = null
+        try {
+            graph.linkedAccountRepository.unlinkAccount(linked.id)
+            if (activeLinkedAccountID == linked.id) {
+                graph.schoolRepository.disassociateCurrentSession(linked.id)
+                activeLinkedAccountID = null
+            }
+            linkedAccounts = graph.linkedAccountRepository.localAccounts()
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Throwable) {
+            linkedAccountError = error.userFacingMessage()
+        } finally {
+            mutatingLinkedAccountID = null
+        }
     }
 
     suspend fun refreshSignedInData(forceRefresh: Boolean = false) {
@@ -340,7 +493,7 @@ private fun GradeyApp(
             runCatching { graph.stravaCZRepository.loadMenu(forceRefresh = forceRefresh).second }
                 .onSuccess { stravaMenu = it }
         }
-        linkedAccounts = runCatching { graph.linkedAccountRepository.localAccounts() }.getOrDefault(emptyList())
+        refreshLinkedAccountSnapshot()
         dataError = failures.firstOrNull()?.userFacingMessage()
     }
 
@@ -363,6 +516,15 @@ private fun GradeyApp(
     suspend fun advanceOnboardingAfterAccountChoice() {
         val current = onboardingProgress ?: return
         val hasSchool = graph.schoolRepository.bootstrapSession() != null
+        if (hasSchool && account != null && !isGuestMode) {
+            graph.schoolRepository.loadCachedDashboard()?.let { dashboard = it }
+            if (dashboard == null) {
+                dashboard = runCatching {
+                    graph.schoolRepository.loadDashboard(forceRefresh = false)
+                }.getOrNull()
+            }
+            linkCurrentSchoolIfNeeded()
+        }
         persistOnboarding(
             reconcileOnboardingProgress(
                 progress = current.copy(step = OnboardingStep.ACCOUNT),
@@ -458,13 +620,47 @@ private fun GradeyApp(
             null
         }
         account = authSession?.account
-        val schoolSession = try {
+        var schoolSession = try {
             graph.schoolRepository.bootstrapSession()
         } catch (error: CancellationException) {
             throw error
         } catch (_: Throwable) {
             null
         }
+        if (authSession != null && !isGuestMode) {
+            val snapshot = try {
+                graph.linkedAccountRepository.refreshAccounts()
+            } catch (error: CancellationException) {
+                throw error
+            } catch (_: Throwable) {
+                null
+            }
+            if (snapshot != null) linkedAccounts = snapshot.linkedAccounts
+            if (schoolSession == null) {
+                val preferred = selectRestorableSchoolAccount(
+                    accounts = snapshot?.linkedAccounts ?: linkedAccounts,
+                    preferredAccountID = snapshot?.activeSchoolAccountID,
+                )
+                if (preferred != null) {
+                    schoolSession = try {
+                        val activation = graph.linkedAccountRepository.activateSchoolAccount(preferred.id)
+                        graph.schoolRepository.activateLinkedSchoolAccount(
+                            activation.tokenPayload.makeStoredSession(activation.account),
+                        )
+                    } catch (error: CancellationException) {
+                        throw error
+                    } catch (_: Throwable) {
+                        null
+                    }
+                } else {
+                    reconnectLinkedAccount = selectSchoolAccountRequiringReconnect(
+                        accounts = snapshot?.linkedAccounts.orEmpty(),
+                        preferredAccountID = snapshot?.activeSchoolAccountID,
+                    )
+                }
+            }
+        }
+        activeLinkedAccountID = schoolSession?.linkedAccountID
         phase = when (
             selectGradeyStartupDestination(
                 isCloudConfigured = graph.isGradeyCloudConfigured,
@@ -599,6 +795,10 @@ private fun GradeyApp(
                             schoolLoginError = null
                             try {
                                 graph.schoolRepository.login(school, username, password)
+                                dashboard = runCatching {
+                                    graph.schoolRepository.loadDashboard(forceRefresh = false)
+                                }.getOrNull()
+                                linkCurrentSchoolIfNeeded()
                                 phase = AppPhase.SIGNED_IN
                                 advanceOnboardingAfterSchoolConnection()
                             } catch (error: CancellationException) {
@@ -655,6 +855,18 @@ private fun GradeyApp(
 
                 OnboardingStep.SUPPORT -> OnboardingUpgradeSupportScreen(
                     isGuestMode = isGuestMode,
+                    cloudLinkErrorMessage = linkedAccountError,
+                    isRetryingCloudLink = isLoading,
+                    onRetryCloudLink = {
+                        scope.launch {
+                            isLoading = true
+                            try {
+                                linkCurrentSchoolIfNeeded()
+                            } finally {
+                                isLoading = false
+                            }
+                        }
+                    },
                     onFinish = {
                         scope.launch {
                             isLoading = true
@@ -690,6 +902,15 @@ private fun GradeyApp(
                         ).account
                         graph.guestModeStore.isEnabled = false
                         isGuestMode = false
+                        if (graph.schoolRepository.currentStoredSession() != null) {
+                            graph.schoolRepository.loadCachedDashboard()?.let { dashboard = it }
+                            if (dashboard == null) {
+                                dashboard = runCatching {
+                                    graph.schoolRepository.loadDashboard(forceRefresh = false)
+                                }.getOrNull()
+                            }
+                            linkCurrentSchoolIfNeeded()
+                        }
                         openStoredSchoolOrLogin()
                     } catch (error: CancellationException) {
                         throw error
@@ -724,6 +945,13 @@ private fun GradeyApp(
 
         AppPhase.NEEDS_SCHOOL -> SchoolLoginScreen(
             isLoading = isLoading,
+            initialSchoolURL = reconnectSchoolURL,
+            title = if (reconnectLinkedAccount == null) "Connect Bakaláři" else "Reconnect ${reconnectLinkedAccount?.displayName}",
+            subtitle = if (reconnectLinkedAccount == null) {
+                "Sign in with the same school address, username, and password you use for Bakaláři."
+            } else {
+                "Enter the Bakaláři credentials for this exact linked school account. Gradey will reject credentials for a different student."
+            },
             errorMessage = schoolLoginError,
             directorySchools = directorySchools,
             isDirectoryLoading = isSchoolDirectoryLoading,
@@ -736,14 +964,37 @@ private fun GradeyApp(
                     schoolLoginError = null
                     try {
                         graph.schoolRepository.login(school, username, password)
+                        dashboard = runCatching {
+                            graph.schoolRepository.loadDashboard(forceRefresh = false)
+                        }.getOrNull()
+                        val reconnectTarget = reconnectLinkedAccount
+                        if (reconnectTarget != null && !reconnectCurrentSchool(reconnectTarget)) {
+                            schoolLoginError = linkedAccountError
+                                ?: "Gradey could not reconnect this school account. Please try again."
+                            return@launch
+                        }
+                        if (reconnectTarget == null) linkCurrentSchoolIfNeeded()
                         phase = AppPhase.SIGNED_IN
                         loadCachedSignedInData()
                         refreshSignedInData()
+                    } catch (error: CancellationException) {
+                        throw error
                     } catch (error: Throwable) {
                         schoolLoginError = error.userFacingMessage()
                     } finally {
                         isLoading = false
                     }
+                }
+            },
+            onBack = if (reconnectLinkedAccount == null) {
+                null
+            } else {
+                {
+                    reconnectLinkedAccount = null
+                    reconnectSchoolURL = ""
+                    schoolLoginError = null
+                    phase = AppPhase.SIGNED_IN
+                    selectedTab = AppTab.ACCOUNT
                 }
             },
         )
@@ -893,11 +1144,15 @@ private fun GradeyApp(
                 AppTab.ACCOUNT -> AccountScreen(
                     account = account,
                     linkedAccounts = linkedAccounts,
+                    activeLinkedAccountID = activeLinkedAccountID,
                     ageAttestationKind = ageAttestationKind,
                     isGuestMode = isGuestMode,
                     isGradeyIdAvailable = graph.isGradeyCloudConfigured,
                     isUpdatingFullName = isUpdatingProfile,
                     profileErrorMessage = profileError,
+                    linkedAccountErrorMessage = linkedAccountError,
+                    isRefreshingLinkedAccounts = isRefreshingLinkedAccounts,
+                    mutatingLinkedAccountID = mutatingLinkedAccountID,
                     onUpdateFullName = { fullName ->
                         scope.launch {
                             isUpdatingProfile = true
@@ -926,6 +1181,31 @@ private fun GradeyApp(
                         profileError = null
                         selectedTab = AppTab.TODAY
                         phase = AppPhase.SIGNED_OUT
+                    },
+                    onRefreshLinkedAccounts = {
+                        scope.launch { refreshLinkedAccountSnapshot() }
+                    },
+                    onActivateLinkedAccount = { linked ->
+                        scope.launch {
+                            if (activateLinkedAccount(linked)) refreshSignedInData()
+                        }
+                    },
+                    onReconnectLinkedAccount = { linked ->
+                        scope.launch {
+                            reconnectLinkedAccount = linked
+                            reconnectSchoolURL = graph.schoolRepository.currentStoredSession()
+                                ?.takeIf { it.linkedAccountID == linked.id || linkedAccounts.size == 1 }
+                                ?.baseURL
+                                .orEmpty()
+                            schoolLoginError = null
+                            phase = AppPhase.NEEDS_SCHOOL
+                        }
+                    },
+                    onToggleLinkedNotifications = { linked, enabled ->
+                        scope.launch { updateLinkedAccountNotifications(linked, enabled) }
+                    },
+                    onUnlinkLinkedAccount = { linked ->
+                        scope.launch { unlinkLinkedAccount(linked) }
                     },
                     onSignOut = {
                         scope.launch {

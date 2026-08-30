@@ -8,7 +8,10 @@ import com.bukovinafilip.gradey.domain.LinkedAccountRepository
 import com.bukovinafilip.gradey.domain.StravaCZRepository
 import com.bukovinafilip.gradey.model.GradeyAuthSession
 import com.bukovinafilip.gradey.model.GradeyAccount
+import com.bukovinafilip.gradey.model.GradeyAccountSettingsSnapshot
 import com.bukovinafilip.gradey.model.LinkedSchoolAccount
+import com.bukovinafilip.gradey.model.LinkedAccountProvider
+import com.bukovinafilip.gradey.model.LinkedSchoolAccountActivation
 import com.bukovinafilip.gradey.model.NotificationPreferences
 import com.bukovinafilip.gradey.model.StoredSession
 import com.bukovinafilip.gradey.model.StravaCZMeal
@@ -47,18 +50,49 @@ class LocalLinkedAccountRepository(
     private val serializer = ListSerializer(LinkedSchoolAccount.serializer())
 
     override suspend fun localAccounts(): List<LinkedSchoolAccount> =
-        store.load(KEY, serializer).orEmpty()
+        localAccountsBlocking()
 
-    override suspend fun linkSchoolAccount(session: StoredSession, displayName: String): LinkedSchoolAccount {
+    override suspend fun refreshAccounts(): GradeyAccountSettingsSnapshot =
+        GradeyAccountSettingsSnapshot(linkedAccounts = localAccounts())
+
+    override suspend fun linkSchoolAccount(
+        session: StoredSession,
+        user: com.bukovinafilip.gradey.model.UserResponse?,
+    ): LinkedSchoolAccount {
         val account = LinkedSchoolAccount(
             id = session.linkedAccountID ?: UUID.randomUUID().toString(),
-            provider = session.provider,
-            displayName = displayName,
-            schoolName = session.linkedAccountSchoolName,
+            provider = LinkedAccountProvider.from(session.provider),
+            providerUserID = user?.userUID,
+            displayName = user?.fullName ?: session.linkedAccountDisplayName ?: session.provider.displayName,
+            schoolName = user?.displaySchoolName ?: session.linkedAccountSchoolName,
         )
-        val updated = localAccounts().filterNot { it.id == account.id } + account
-        store.save(KEY, updated, serializer)
+        saveUpsert(account)
         return account
+    }
+
+    override suspend fun activateSchoolAccount(accountID: String): LinkedSchoolAccountActivation =
+        throw FeatureUnavailableException("School account switching requires Gradey ID configuration.")
+
+    override suspend fun reconnectSchoolAccount(
+        accountID: String,
+        session: StoredSession,
+        user: com.bukovinafilip.gradey.model.UserResponse?,
+    ): LinkedSchoolAccount {
+        val existing = localAccounts().firstOrNull { it.id == accountID }
+            ?: throw IllegalArgumentException("Linked school account was not found.")
+        val updated = existing.copy(
+            providerUserID = user?.userUID ?: existing.providerUserID,
+            displayName = user?.fullName ?: existing.displayName,
+            schoolName = user?.displaySchoolName ?: existing.schoolName,
+        )
+        saveUpsert(updated)
+        return updated
+    }
+
+    override suspend fun updateNotificationsEnabled(accountID: String, enabled: Boolean): LinkedSchoolAccount {
+        val existing = localAccounts().firstOrNull { it.id == accountID }
+            ?: throw IllegalArgumentException("Linked school account was not found.")
+        return existing.copy(notificationsEnabled = enabled).also(::saveUpsert)
     }
 
     override suspend fun unlinkAccount(accountID: String) {
@@ -69,8 +103,20 @@ class LocalLinkedAccountRepository(
         store.clear(KEY)
     }
 
+    private fun saveUpsert(account: LinkedSchoolAccount) {
+        val updated = localAccountsBlocking().filterNot { it.id == account.id } + account
+        store.save(KEY, updated, serializer)
+    }
+
+    private fun localAccountsBlocking(): List<LinkedSchoolAccount> =
+        store.load(KEY, serializer) ?: store.load(LEGACY_KEY, serializer)?.also { accounts ->
+            store.save(KEY, accounts, serializer)
+            store.clear(LEGACY_KEY)
+        }.orEmpty()
+
     private companion object {
-        const val KEY = "linked.accounts.v1"
+        const val KEY = "gradey.linkedAccounts.v1"
+        const val LEGACY_KEY = "linked.accounts.v1"
     }
 }
 

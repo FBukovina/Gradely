@@ -5,7 +5,9 @@ import com.bukovinafilip.gradey.model.CachedSchoolDirectory
 import com.bukovinafilip.gradey.model.DashboardData
 import com.bukovinafilip.gradey.model.GradeyAccount
 import com.bukovinafilip.gradey.model.GradeyAuthSession
+import com.bukovinafilip.gradey.model.GradeyAccountSettingsSnapshot
 import com.bukovinafilip.gradey.model.LinkedSchoolAccount
+import com.bukovinafilip.gradey.model.LinkedSchoolAccountActivation
 import com.bukovinafilip.gradey.model.MarksResponse
 import com.bukovinafilip.gradey.model.NotificationPreferences
 import com.bukovinafilip.gradey.model.SchoolProvider
@@ -43,6 +45,8 @@ interface SchoolRepository {
     suspend fun currentStoredSession(): StoredSession?
     suspend fun login(schoolURL: String, username: String, password: String): StoredSession
     suspend fun activateLinkedSchoolAccount(session: StoredSession): StoredSession
+    suspend fun associateCurrentSession(account: LinkedSchoolAccount): StoredSession
+    suspend fun disassociateCurrentSession(accountID: String): StoredSession?
     suspend fun logout()
     suspend fun loadCachedDashboard(): DashboardData?
     suspend fun loadCachedAbsence(): AbsenceResponse?
@@ -78,7 +82,15 @@ interface GradeyAuthRepository {
 
 interface LinkedAccountRepository {
     suspend fun localAccounts(): List<LinkedSchoolAccount>
-    suspend fun linkSchoolAccount(session: StoredSession, displayName: String): LinkedSchoolAccount
+    suspend fun refreshAccounts(): GradeyAccountSettingsSnapshot
+    suspend fun linkSchoolAccount(session: StoredSession, user: com.bukovinafilip.gradey.model.UserResponse?): LinkedSchoolAccount
+    suspend fun activateSchoolAccount(accountID: String): LinkedSchoolAccountActivation
+    suspend fun reconnectSchoolAccount(
+        accountID: String,
+        session: StoredSession,
+        user: com.bukovinafilip.gradey.model.UserResponse?,
+    ): LinkedSchoolAccount
+    suspend fun updateNotificationsEnabled(accountID: String, enabled: Boolean): LinkedSchoolAccount
     suspend fun unlinkAccount(accountID: String)
     suspend fun clearLocalAccounts()
 }

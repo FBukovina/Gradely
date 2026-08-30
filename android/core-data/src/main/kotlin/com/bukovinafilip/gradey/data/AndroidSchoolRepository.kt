@@ -10,6 +10,8 @@ import com.bukovinafilip.gradey.domain.TimetableMapper
 import com.bukovinafilip.gradey.model.AbsenceResponse
 import com.bukovinafilip.gradey.model.BakalariCredentials
 import com.bukovinafilip.gradey.model.DashboardData
+import com.bukovinafilip.gradey.model.LinkedSchoolAccount
+import com.bukovinafilip.gradey.model.LinkedAccountProvider
 import com.bukovinafilip.gradey.model.SchoolProvider
 import com.bukovinafilip.gradey.model.StoredSession
 import com.bukovinafilip.gradey.model.StoredSchoolSessionEnvelope
@@ -55,8 +57,68 @@ class AndroidSchoolRepository(
     }
 
     override suspend fun activateLinkedSchoolAccount(session: StoredSession): StoredSession {
-        sessionStore.save(session)
-        return session
+        val existing = sessionStore.load()
+        if (
+            existing != null &&
+            existing.provider == session.provider &&
+            existing.baseURL == session.baseURL &&
+            existing.linkedAccountID != null &&
+            existing.linkedAccountID == session.linkedAccountID
+        ) {
+            val preserved = existing.copy(
+                bakalari = existing.bakalari ?: session.bakalari,
+                linkedAccountID = session.linkedAccountID,
+                linkedAccountDisplayName = session.linkedAccountDisplayName,
+                linkedAccountSchoolName = session.linkedAccountSchoolName,
+            )
+            sessionStore.save(preserved)
+            return preserved
+        }
+
+        val credentials = session.bakalari
+        val activated = if (credentials != null) {
+            val response = bakalariClient.login(
+                session.baseURL,
+                credentials.username,
+                credentials.password,
+            )
+            session.copy(
+                accessToken = response.accessToken,
+                refreshToken = response.refreshToken,
+                tokenType = response.tokenType,
+                expiresAtEpochMillis = System.currentTimeMillis() + response.expiresIn * 1_000L,
+            )
+        } else {
+            session
+        }
+        sessionStore.save(activated)
+        return activated
+    }
+
+    override suspend fun associateCurrentSession(account: LinkedSchoolAccount): StoredSession {
+        val current = sessionStore.load() ?: throw SchoolSessionExpiredException()
+        require(account.provider == LinkedAccountProvider.from(current.provider)) {
+            "The linked account provider does not match the current school session."
+        }
+        val associated = current.copy(
+            linkedAccountID = account.id,
+            linkedAccountDisplayName = account.displayName,
+            linkedAccountSchoolName = account.schoolName,
+        )
+        sessionStore.save(associated)
+        return associated
+    }
+
+    override suspend fun disassociateCurrentSession(accountID: String): StoredSession? {
+        val current = sessionStore.load() ?: return null
+        if (current.linkedAccountID != accountID) return current
+        val local = current.copy(
+            linkedAccountID = null,
+            linkedAccountDisplayName = null,
+            linkedAccountSchoolName = null,
+        )
+        sessionStore.save(local)
+        return local
     }
 
     override suspend fun logout() {

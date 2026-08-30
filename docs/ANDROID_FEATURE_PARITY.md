@@ -44,7 +44,7 @@ Last source audit: 2026-08-30 on `codex/android-monorepo`.
 - [x] Show a branded checking/splash state while local Gradey ID and school sessions are restored.
 - [x] Reproduce the current iOS age-attestation gate, persisted choice, under-16 parent/guardian confirmation (including under 13), privacy link, and Settings summary.
 - [ ] Reproduce current new-user onboarding: welcome/benefits, language, Gradey ID or local guest choice, school discovery/credentials, notification permission, readiness summary, and resumable progress.
-- [ ] Reproduce upgrade onboarding for existing school sessions, including local connection migration and cloud-link warning/retry states.
+- [x] Reproduce upgrade onboarding for existing school sessions, including local connection migration and cloud-link warning/retry states.
 - [x] Persist onboarding progress and completion without restart loops.
 - [ ] Implement system language, English, Czech, and Chronically Online variants using Android resources.
 - [ ] Apply locale changes throughout the running app and persist them.
@@ -52,7 +52,7 @@ Last source audit: 2026-08-30 on `codex/android-monorepo`.
 
 Age-gate verification (2026-08-30): Android uses the same three self-attestation categories and persisted `gradey.ageAttestation.v1` values as current iOS. Until a valid value exists, the age chooser precedes auth/school bootstrap. The 13–15 and under-13 paths both require an affirmative parent/guardian checkbox, matching the current EU/GDPR iOS implementation; the 16+ path confirms directly. The gate links to Gradey's privacy policy and Account shows the saved age summary. Model and store tests cover every cross-platform storage value, unknown-value fail-closed behavior, parental-consent classification, persistence, and restoration.
 
-Onboarding verification (2026-08-30): restoration now uses a dedicated Gradey splash instead of a disabled login form. Android persists the current iOS `newUser`/`upgrade` journey and welcome/account/school/notifications/ready/support step values under `onboarding.progress.v2`, records completion separately, repairs the legacy step-only/meals format, clears corrupt progress, and does not recreate progress after completion. Route-policy tests rebuild interrupted flows from durable guest, Gradey ID, and Bakaláři state. The implemented flow includes benefits, the real Google/local choice, live school discovery and credentials, Android 13+ notification permission, a readiness summary, and a non-destructive existing-session upgrade route. The full onboarding row remains open until real in-flow language selection and cloud-link warning/retry behavior are complete.
+Onboarding verification (2026-08-30): restoration now uses a dedicated Gradey splash instead of a disabled login form. Android persists the current iOS `newUser`/`upgrade` journey and welcome/account/school/notifications/ready/support step values under `onboarding.progress.v2`, records completion separately, repairs the legacy step-only/meals format, clears corrupt progress, and does not recreate progress after completion. Route-policy tests rebuild interrupted flows from durable guest, Gradey ID, and Bakaláři state. The implemented new-user flow includes benefits, the real Google/local choice, live school discovery and credentials, Android 13+ notification permission, a readiness summary, and resumable progress; its row remains open only until real in-flow language selection is complete. The upgrade journey preserves the existing device session, attempts its cloud migration, displays a truthful non-destructive warning when linking fails, and offers an explicit retry before finishing.
 
 ## Gradey ID and guest mode
 
@@ -93,11 +93,13 @@ Verification evidence (2026-08-30): Android decoded the live Bakaláři municipa
 - [x] Fall back from a rejected refresh token to credential login only under the same conditions as iOS.
 - [x] Clear an unrecoverable expired session and route to reconnect without discarding unrelated local preferences.
 - [x] Scope caches by provider/server/user/linked-account identity so accounts cannot see each other’s data.
-- [ ] Implement local linked-account persistence, cloud account linking, activation, reconnect, unlink, status, and per-account notification setting with real repositories.
-- [ ] Implement safe school account switching and reset all visible feature state after activation.
+- [x] Implement local linked-account persistence, cloud account linking, activation, reconnect, unlink, status, and per-account notification setting with real repositories.
+- [x] Implement safe school account switching and reset all visible feature state after activation.
 - [x] Preserve the local school session when a Gradey cloud call is temporarily unavailable.
 
 Verification evidence (2026-08-30): school tokens and fallback credentials remain in Android Keystore-backed encrypted preferences. The session store now writes a versioned `v2` envelope, migrates the prior raw `v1` Bakaláři record without signing the user out, rejects unknown future versions safely, clears both keys on explicit logout, and restores the saved session without making a Bakaláři request.
+
+Linked-account verification (2026-08-30): Android now calls the same `account-settings`, `link-school-account`, `activate-school-account`, `relink-school-account`, `update-linked-account-preferences`, and `unlink-account` Supabase functions as Swift, with a cache-first encrypted local snapshot and the same request field names and Bakaláři credential payload. Failed refreshes and mutations retain the prior snapshot; server errors are bounded and raw HTML is not surfaced. Android decodes and preserves Strava.cz and legacy EduPage records created on iOS but only offers activation/reconnect for supported Bakaláři accounts. Startup restores the backend-preferred active school, or an unambiguous single active school, and never guesses among multiple accounts or activates an action-required/unsupported record. Switching clears all visible feature state before loading the target account's scoped caches. Activation keeps the device's existing token family for the same linked account and mints a separate Bakaláři token family from encrypted credentials for another account, avoiding refresh-token races with Gradey's cloud poller. Tests cover exact requests, settings decode, provider compatibility, activation, reconnect, preference updates, unlink cache safety, session association/detachment, and restoration selection.
 
 ## Bakaláři HTTP, parsing, and compatibility
 

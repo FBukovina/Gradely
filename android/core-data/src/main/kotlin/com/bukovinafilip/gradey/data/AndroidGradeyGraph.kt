@@ -16,6 +16,8 @@ import com.bukovinafilip.gradey.network.GradeyJson
 import com.bukovinafilip.gradey.network.SupabaseConfiguration
 import com.bukovinafilip.gradey.network.SupabaseDevicePushTokenClient
 import com.bukovinafilip.gradey.network.SupabaseGradeyAuthRepository
+import com.bukovinafilip.gradey.network.SupabaseLinkedAccountRepository
+import kotlinx.serialization.builtins.ListSerializer
 
 data class AndroidGradeyConfig(
     val supabaseUrl: String,
@@ -74,6 +76,46 @@ class AndroidGradeyGraph private constructor(
             } else {
                 LocalOnlyGradeyAuthRepository()
             }
+            val linkedAccountSerializer = ListSerializer(
+                com.bukovinafilip.gradey.model.LinkedSchoolAccount.serializer(),
+            )
+            val linkedAccountRepository = if (supabase.isConfigured) {
+                SupabaseLinkedAccountRepository(
+                    configuration = supabase,
+                    authRepository = authRepository,
+                    accountStore = { accounts ->
+                        if (accounts == null) {
+                            linkedAccountStore.clear("gradey.linkedAccounts.v1")
+                            linkedAccountStore.clear("linked.accounts.v1")
+                        } else {
+                            linkedAccountStore.save(
+                                "gradey.linkedAccounts.v1",
+                                accounts,
+                                linkedAccountSerializer,
+                            )
+                            linkedAccountStore.clear("linked.accounts.v1")
+                        }
+                    },
+                    accountLoader = {
+                        linkedAccountStore.loadOrClearInvalid(
+                            "gradey.linkedAccounts.v1",
+                            linkedAccountSerializer,
+                        ) ?: linkedAccountStore.loadOrClearInvalid(
+                            "linked.accounts.v1",
+                            linkedAccountSerializer,
+                        )?.also { accounts ->
+                            linkedAccountStore.save(
+                                "gradey.linkedAccounts.v1",
+                                accounts,
+                                linkedAccountSerializer,
+                            )
+                            linkedAccountStore.clear("linked.accounts.v1")
+                        }.orEmpty()
+                    },
+                )
+            } else {
+                LocalLinkedAccountRepository(linkedAccountStore)
+            }
 
             return AndroidGradeyGraph(
                 schoolRepository = AndroidSchoolRepository(
@@ -86,7 +128,7 @@ class AndroidGradeyGraph private constructor(
                     storage = RoomSchoolDirectoryStorage(cache),
                 ),
                 gradeyAuthRepository = authRepository,
-                linkedAccountRepository = LocalLinkedAccountRepository(linkedAccountStore),
+                linkedAccountRepository = linkedAccountRepository,
                 historyRepository = EmptyGradeyHistoryRepository(),
                 devicePushTokenClient = if (supabase.isConfigured) {
                     SupabaseDevicePushTokenClient(supabase)

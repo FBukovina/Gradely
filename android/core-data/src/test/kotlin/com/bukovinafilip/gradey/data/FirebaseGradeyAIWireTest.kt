@@ -46,6 +46,27 @@ class FirebaseGradeyAIWireTest {
     }
 
     @Test
+    fun `conversation list without a collection is malformed instead of empty`() {
+        val error = assertThrows(GradeyAIException::class.java) {
+            FirebaseGradeyAIWire.decodeConversations(mapOf("status" to emptyMap<String, Any>()))
+        }
+
+        assertThat(error.kind).isEqualTo(GradeyAIErrorKind.MALFORMED_RESPONSE)
+    }
+
+    @Test
+    fun `mutations require an explicit successful confirmation`() {
+        FirebaseGradeyAIWire.requireSuccessfulMutation(mapOf("success" to true), "consent revocation")
+
+        listOf<Any?>(null, "invalid", emptyMap<String, Any>(), mapOf("success" to false)).forEach { payload ->
+            val error = assertThrows(GradeyAIException::class.java) {
+                FirebaseGradeyAIWire.requireSuccessfulMutation(payload, "consent revocation")
+            }
+            assertThat(error.kind).isEqualTo(GradeyAIErrorKind.MALFORMED_RESPONSE)
+        }
+    }
+
+    @Test
     fun `detail decodes aliases statuses and sorts messages`() {
         val detail = FirebaseGradeyAIWire.decodeConversationDetail(
             payload = mapOf(

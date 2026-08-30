@@ -27,6 +27,8 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.reactive.asFlow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.tasks.await
 
 class FirebaseGradeyAIRepository(
@@ -34,6 +36,7 @@ class FirebaseGradeyAIRepository(
     private val gradeyAuthRepository: GradeyAuthRepository,
 ) : GradeyAIRepository {
     private val applicationContext = context.applicationContext
+    private val identityCoordinator = FirebaseGradeyAIIdentityCoordinator()
 
     override val isConfigured: Boolean
         get() = FirebaseApp.getApps(applicationContext).isNotEmpty()
@@ -67,6 +70,7 @@ class FirebaseGradeyAIRepository(
             name = "gradeyAIRevokeConsent",
             payload = accountPayload(),
         )
+        FirebaseGradeyAIWire.requireSuccessfulMutation(response, "consent revocation")
         if ((response as? Map<*, *>)?.boolean("anonymousIdentityDeleted", "anonymous_identity_deleted") == true) {
             FirebaseAuth.getInstance(firebaseApp()).signOut()
         }
@@ -101,14 +105,16 @@ class FirebaseGradeyAIRepository(
         )
 
     override suspend fun deleteConversation(id: String) {
-        requireSuccessfulDeletion(
-            call(name = "gradeyAIDeleteChat", payload = conversationPayload(id)),
+        FirebaseGradeyAIWire.requireSuccessfulMutation(
+            payload = call(name = "gradeyAIDeleteChat", payload = conversationPayload(id)),
+            operation = "conversation deletion",
         )
     }
 
     override suspend fun deleteAllConversations(schoolScope: String) {
-        requireSuccessfulDeletion(
-            call(name = "gradeyAIDeleteAll", payload = schoolScopePayload(schoolScope)),
+        FirebaseGradeyAIWire.requireSuccessfulMutation(
+            payload = call(name = "gradeyAIDeleteAll", payload = schoolScopePayload(schoolScope)),
+            operation = "conversation deletion",
         )
     }
 
@@ -186,19 +192,21 @@ class FirebaseGradeyAIRepository(
     }
 
     private suspend fun ensureIdentity(app: FirebaseApp) {
-        val auth = FirebaseAuth.getInstance(app)
-        val currentUser = auth.currentUser
-        if (currentUser != null) {
-            try {
-                currentUser.getIdToken(false).await()
-                return
-            } catch (error: CancellationException) {
-                throw error
-            } catch (_: Throwable) {
-                auth.signOut()
+        identityCoordinator.serialized {
+            val auth = FirebaseAuth.getInstance(app)
+            val currentUser = auth.currentUser
+            if (currentUser != null) {
+                try {
+                    currentUser.getIdToken(false).await()
+                    return@serialized
+                } catch (error: CancellationException) {
+                    throw error
+                } catch (_: Throwable) {
+                    auth.signOut()
+                }
             }
+            auth.signInAnonymously().await()
         }
-        auth.signInAnonymously().await()
     }
 
     private suspend fun accountPayload(): Map<String, Any?> = buildMap {
@@ -228,16 +236,6 @@ class FirebaseGradeyAIRepository(
         null
     }
 
-    private fun requireSuccessfulDeletion(payload: Any?) {
-        val success = (payload as? Map<*, *>)?.boolean("success")
-        if (success != true) {
-            throw GradeyAIException(
-                GradeyAIErrorKind.MALFORMED_RESPONSE,
-                "Gradey AI did not confirm the deletion.",
-            )
-        }
-    }
-
     private fun firebaseApp(): FirebaseApp = FirebaseApp.getApps(applicationContext).firstOrNull()
         ?: throw GradeyAIException(
             GradeyAIErrorKind.NOT_CONFIGURED,
@@ -248,6 +246,12 @@ class FirebaseGradeyAIRepository(
         const val Region = "europe-west1"
         const val CallableTimeoutSeconds = 120L
     }
+}
+
+internal class FirebaseGradeyAIIdentityCoordinator {
+    private val mutex = Mutex()
+
+    suspend fun <T> serialized(block: suspend () -> T): T = mutex.withLock { block() }
 }
 
 internal object FirebaseGradeyAIErrorMapper {

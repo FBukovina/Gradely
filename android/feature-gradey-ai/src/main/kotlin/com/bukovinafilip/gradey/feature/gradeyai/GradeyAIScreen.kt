@@ -93,7 +93,7 @@ fun GradeyAIScreen(
     BackHandler {
         if (controller.currentConversation != null) controller.closeConversation() else onClose()
     }
-    DisposableEffect(controller) { onDispose(controller::stop) }
+    DisposableEffect(controller) { onDispose(controller::cancelOperations) }
     LaunchedEffect(controller, supportTier) { controller.applySupportTier(supportTier) }
     LaunchedEffect(controller, entryState) {
         if (entryState == GradeyAIEntryState.SERVICE) controller.bootstrap()
@@ -211,7 +211,7 @@ private fun GradeyAIServiceContent(
             title = controller.currentConversation?.title ?: stringResource(R.string.gradey_ai_title),
             showBack = controller.currentConversation != null,
             showOptions = controller.hasConsent,
-            optionsEnabled = !controller.isStreaming,
+            optionsEnabled = !controller.isSending && !controller.isPerformingDestructiveOperation,
             hasConversations = controller.conversations.isNotEmpty(),
             onBack = controller::closeConversation,
             onClose = onClose,
@@ -378,7 +378,10 @@ private fun GradeyAIConversationList(
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { scope.launch { controller.open(conversation) } },
+                        .clickable(
+                            enabled = !controller.isPerformingDestructiveOperation,
+                            onClick = { scope.launch { controller.open(conversation) } },
+                        ),
                 ) {
                     Row(
                         modifier = Modifier.padding(GradeySpacing.md),
@@ -399,7 +402,10 @@ private fun GradeyAIConversationList(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
-                        IconButton(onClick = { onDelete(conversation) }) {
+                        IconButton(
+                            enabled = !controller.isPerformingDestructiveOperation,
+                            onClick = { onDelete(conversation) },
+                        ) {
                             Icon(
                                 GradeyIcons.Delete,
                                 contentDescription = stringResource(R.string.gradey_ai_delete_chat_action),
@@ -496,15 +502,15 @@ private fun GradeyAIComposer(controller: GradeyAIController) {
                 maxLines = 4,
             )
             IconButton(
-                enabled = controller.isStreaming || controller.canSend,
+                enabled = controller.isSending || controller.canSend,
                 onClick = {
-                    if (controller.isStreaming) controller.stop() else scope.launch { controller.send() }
+                    if (controller.isSending) controller.stop() else scope.launch { controller.send() }
                 },
             ) {
                 Icon(
-                    if (controller.isStreaming) GradeyIcons.Stop else GradeyIcons.ArrowUp,
+                    if (controller.isSending) GradeyIcons.Stop else GradeyIcons.ArrowUp,
                     contentDescription = stringResource(
-                        if (controller.isStreaming) R.string.gradey_ai_stop else R.string.gradey_ai_send,
+                        if (controller.isSending) R.string.gradey_ai_stop else R.string.gradey_ai_send,
                     ),
                     tint = GradeyColors.Primary,
                 )
@@ -616,7 +622,9 @@ private fun GradeyAIStarterPrompts(controller: GradeyAIController) {
             }
             OutlinedButton(
                 modifier = Modifier.fillMaxWidth(),
-                enabled = !controller.isStreaming && controller.status?.canSend == true,
+                enabled = !controller.isSending &&
+                    !controller.isPerformingDestructiveOperation &&
+                    controller.status?.canSend == true,
                 onClick = { scope.launch { controller.send(text) } },
             ) {
                 Icon(GradeyIcons.Sparkles, contentDescription = null)
@@ -654,18 +662,25 @@ private fun GradeyAIContextCard(controller: GradeyAIController, modifier: Modifi
             )
             Column(Modifier.weight(1f)) {
                 Text(title, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodySmall)
-                controller.contextFailure?.let {
+                val contextFailure = controller.contextFailure
+                if (contextFailure != null) {
                     Text(
-                        failureText(it),
+                        failureText(contextFailure),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                     )
+                } else if (snapshot != null) {
+                    Text(
+                        relativeTime(snapshot.generatedAtEpochMillis),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
             }
             IconButton(
-                enabled = !controller.isRefreshingContext && !controller.isStreaming,
+                enabled = !controller.isRefreshingContext && !controller.isSending,
                 onClick = { scope.launch { controller.refreshContext() } },
             ) {
                 if (controller.isRefreshingContext) {
@@ -975,13 +990,15 @@ private fun failureText(failure: GradeyAIFailure): String = when (failure.kind) 
 
 private fun relativeConversationTime(conversation: GradeyAIConversation): String {
     val timestamp = conversation.lastMessageAtEpochMillis ?: conversation.updatedAtEpochMillis
-    return DateUtils.getRelativeTimeSpanString(
+    return relativeTime(timestamp)
+}
+
+private fun relativeTime(timestamp: Long): String = DateUtils.getRelativeTimeSpanString(
         timestamp,
         System.currentTimeMillis(),
         DateUtils.MINUTE_IN_MILLIS,
         DateUtils.FORMAT_ABBREV_RELATIVE,
     ).toString()
-}
 
 private fun formattedResetTime(epochMillis: Long): String = DateTimeFormatter
     .ofLocalizedTime(FormatStyle.SHORT)

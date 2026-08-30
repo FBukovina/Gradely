@@ -20,14 +20,13 @@ import com.bukovinafilip.gradey.model.GradeySupportTier
 import java.util.Locale
 import java.util.UUID
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
 
 internal data class GradeyAIFailure(
@@ -70,13 +69,19 @@ internal class GradeyAIController(
         private set
     var isStreaming by mutableStateOf(false)
         private set
+    var isSending by mutableStateOf(false)
+        private set
     var isRefreshingContext by mutableStateOf(false)
         private set
     var isOpeningConversation by mutableStateOf(false)
         private set
+    var isPerformingDestructiveOperation by mutableStateOf(false)
+        private set
 
-    private var streamJob: Job? = null
-    private var activeStreamToken: String? = null
+    private var sendJob: Job? = null
+    private var activeSendToken: String? = null
+    private var openJob: Job? = null
+    private var activeOpenToken: String? = null
     private var activeSchoolScope: String? = null
     private var lastFailedRequest: FailedRequest? = null
     private var draftConversationID: String? = null
@@ -91,11 +96,12 @@ internal class GradeyAIController(
     val canSend: Boolean
         get() {
             val text = draft.trim()
-            return !isStreaming && text.isNotEmpty() && text.length <= MaximumPromptLength &&
+            return !isSending && !isOpeningConversation && !isPerformingDestructiveOperation &&
+                text.isNotEmpty() && text.length <= MaximumPromptLength &&
                 contextSnapshot != null && status?.canSend == true
         }
     val canStartNewChat: Boolean
-        get() = status?.canSend == true && !isStreaming
+        get() = status?.canSend == true && !isSending && !isPerformingDestructiveOperation
 
     fun applySupportTier(value: GradeySupportTier) {
         // The server limit remains authoritative while the support catalog is unresolved.
@@ -105,6 +111,7 @@ internal class GradeyAIController(
     }
 
     suspend fun bootstrap() {
+        cancelOpen()
         stop()
         failure = null
         contextFailure = null
@@ -180,6 +187,7 @@ internal class GradeyAIController(
     }
 
     suspend fun acceptConsent() {
+        if (isPerformingDestructiveOperation) return
         failure = null
         isLoading = true
         try {
@@ -204,11 +212,14 @@ internal class GradeyAIController(
     }
 
     suspend fun revokeConsent() {
-        stop()
+        if (isPerformingDestructiveOperation) return
+        isPerformingDestructiveOperation = true
+        cancelOperations()
         failure = null
         isLoading = true
         try {
             repository.revokeConsent()
+            cancelOperations()
             conversations = emptyList()
             messages = emptyList()
             currentConversation = null
@@ -225,10 +236,13 @@ internal class GradeyAIController(
             failure = failure(error)
         } finally {
             isLoading = false
+            isPerformingDestructiveOperation = false
         }
     }
 
     fun beginDraftChat(localizedTitle: String) {
+        if (isPerformingDestructiveOperation) return
+        cancelOpen()
         stop()
         failure = null
         val schoolScope = activeSchoolScope
@@ -252,28 +266,50 @@ internal class GradeyAIController(
     }
 
     suspend fun open(conversation: GradeyAIConversation) {
+        if (isPerformingDestructiveOperation) return
         stop()
+        cancelOpen()
         failure = null
         draftConversationID = null
         currentConversation = conversation
         messages = emptyList()
         lastFailedRequest = null
         isOpeningConversation = true
+        val token = idProvider()
+        activeOpenToken = token
+        val operation = scope.launch(start = CoroutineStart.LAZY) {
+            try {
+                val detail = repository.loadConversation(conversation.id)
+                if (activeOpenToken != token) return@launch
+                currentConversation = detail.conversation
+                messages = detail.messages
+                upsert(detail.conversation)
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Throwable) {
+                if (activeOpenToken == token) failure = failure(error)
+            } finally {
+                if (activeOpenToken == token) {
+                    activeOpenToken = null
+                    openJob = null
+                    isOpeningConversation = false
+                }
+            }
+        }
+        openJob = operation
+        operation.start()
         try {
-            val detail = repository.loadConversation(conversation.id)
-            currentConversation = detail.conversation
-            messages = detail.messages
-            upsert(detail.conversation)
+            operation.join()
         } catch (error: CancellationException) {
+            // The list subtree leaves composition as soon as the optimistic selection is set.
+            // Its awaiting coroutine may be cancelled, but the controller owns this operation;
+            // explicit Back/close/disposal cancels it through cancelOpen/cancelOperations.
             throw error
-        } catch (error: Throwable) {
-            failure = failure(error)
-        } finally {
-            isOpeningConversation = false
         }
     }
 
     fun closeConversation() {
+        cancelOpen()
         stop()
         draftConversationID?.let { draftID ->
             conversations = conversations.filterNot { it.id == draftID }
@@ -286,7 +322,7 @@ internal class GradeyAIController(
     }
 
     suspend fun send(proposedText: String = draft) {
-        if (isStreaming) return
+        if (isSending || isOpeningConversation || isPerformingDestructiveOperation) return
         val text = proposedText.trim()
         when {
             text.isEmpty() || text.length > MaximumPromptLength -> {
@@ -307,53 +343,11 @@ internal class GradeyAIController(
             }
         }
 
-        if (contextSnapshot == null) refreshContext()
-        val context = contextSnapshot
-        if (context == null) {
-            failure = contextFailure ?: GradeyAIFailure(GradeyAIErrorKind.NO_CONTEXT)
-            return
-        }
-
-        draft = ""
-        failure = null
-        val clientMessageID = idProvider()
-        var conversation = currentConversation
-        val needsServerCreate = conversation == null || isDraftChat
-        val userMessage = GradeyAIMessage(
-            id = clientMessageID,
-            conversationID = conversation?.id ?: clientMessageID,
-            clientMessageID = clientMessageID,
-            role = GradeyAIMessageRole.USER,
-            content = text,
-            status = GradeyAIMessageStatus.COMPLETE,
-            createdAtEpochMillis = nowEpochMillis(),
-            contextGeneratedAtEpochMillis = context.generatedAtEpochMillis,
-        )
-        messages = messages + userMessage
-        lastFailedRequest = null
-
-        if (needsServerCreate) {
-            val draftID = draftConversationID
-            conversation = create(title(text), replacingCurrentChat = false)
-            if (conversation != null) {
-                messages = messages.map { message ->
-                    if (message.id == clientMessageID) message.copy(conversationID = conversation.id) else message
-                }
-            }
-            if (draftID != null) conversations = conversations.filterNot { it.id == draftID }
-        }
-        if (conversation == null) {
-            messages = messages.filterNot { it.id == clientMessageID }
-            draft = text
-            return
-        }
-
-        updateConversationAfterMessage(conversation, title(text))
-        startStream(conversation, text, clientMessageID, context)
+        launchSendOperation { token -> performSend(token, text) }
     }
 
     suspend fun retry() {
-        if (isStreaming) return
+        if (isSending || isOpeningConversation || isPerformingDestructiveOperation) return
         val failed = lastFailedRequest ?: return
         val conversation = currentConversation?.takeIf { it.id == failed.conversationID } ?: run {
             lastFailedRequest = null
@@ -367,7 +361,10 @@ internal class GradeyAIController(
                 it.createdAtEpochMillis >= failed.startedAtEpochMillis
         }
         failure = null
-        startStream(conversation, failed.text, failed.clientMessageID, context)
+        lastFailedRequest = null
+        launchSendOperation { token ->
+            startStream(token, conversation, failed.text, failed.clientMessageID, context)
+        }
     }
 
     fun canRetry(message: GradeyAIMessage): Boolean {
@@ -375,58 +372,80 @@ internal class GradeyAIController(
         return message.role == GradeyAIMessageRole.ASSISTANT &&
             message.status == GradeyAIMessageStatus.FAILED &&
             currentConversation?.id == failed.conversationID &&
+            !isPerformingDestructiveOperation &&
             status?.canSend == true &&
             message.createdAtEpochMillis >= failed.startedAtEpochMillis
     }
 
     fun stop() {
-        if (streamJob == null && !isStreaming) return
-        activeStreamToken = null
-        streamJob?.cancel()
-        streamJob = null
+        if (sendJob == null && !isSending) return
+        val wasStreaming = isStreaming
+        activeSendToken = null
+        sendJob?.cancel()
+        sendJob = null
+        isSending = false
         isStreaming = false
+        val streamingMessageIndex = messages.indexOfLast {
+            it.role == GradeyAIMessageRole.ASSISTANT && it.status == GradeyAIMessageStatus.STREAMING
+        }
         messages = messages.mapIndexed { index, message ->
-            if (index == messages.indexOfLast {
-                    it.role == GradeyAIMessageRole.ASSISTANT && it.status == GradeyAIMessageStatus.STREAMING
-                }
-            ) {
+            if (index == streamingMessageIndex) {
                 message.copy(status = GradeyAIMessageStatus.CANCELLED)
             } else {
                 message
             }
         }
         lastFailedRequest = null
-        scope.launch {
-            delay(750)
-            runCatchingSuspend { repository.loadStatus() }.onSuccess(::ingestStatus)
+        if (wasStreaming) {
+            scope.launch {
+                delay(750)
+                runCatchingSuspend { repository.loadStatus() }.onSuccess(::ingestStatus)
+            }
         }
     }
 
+    fun cancelOperations() {
+        cancelOpen()
+        stop()
+    }
+
     suspend fun delete(conversation: GradeyAIConversation) {
-        if (currentConversation?.id == conversation.id) stop()
+        if (isPerformingDestructiveOperation) return
+        isPerformingDestructiveOperation = true
+        if (currentConversation?.id == conversation.id) {
+            cancelOpen()
+            stop()
+        }
         failure = null
         if (conversation.id == draftConversationID) {
             closeConversation()
+            isPerformingDestructiveOperation = false
             return
         }
         try {
             repository.deleteConversation(conversation.id)
+            cancelOperations()
             conversations = conversations.filterNot { it.id == conversation.id }
             if (currentConversation?.id == conversation.id) closeConversation()
         } catch (error: CancellationException) {
             throw error
         } catch (error: Throwable) {
             failure = failure(error)
+        } finally {
+            isPerformingDestructiveOperation = false
         }
     }
 
     suspend fun deleteAll() {
-        stop()
+        if (isPerformingDestructiveOperation) return
+        isPerformingDestructiveOperation = true
+        cancelOperations()
         failure = null
         try {
             val schoolScope = activeSchoolScope ?: contextBuilder?.currentSchoolScope()
                 ?: throw GradeyAIException(GradeyAIErrorKind.NO_CONTEXT, "")
             repository.deleteAllConversations(schoolScope)
+            cancelOperations()
             conversations = emptyList()
             messages = emptyList()
             currentConversation = null
@@ -436,6 +455,8 @@ internal class GradeyAIController(
             throw error
         } catch (error: Throwable) {
             failure = failure(error)
+        } finally {
+            isPerformingDestructiveOperation = false
         }
     }
 
@@ -476,36 +497,112 @@ internal class GradeyAIController(
         return result.take(3)
     }
 
-    private suspend fun create(title: String?, replacingCurrentChat: Boolean): GradeyAIConversation? {
+    private suspend fun launchSendOperation(block: suspend (String) -> Unit) {
+        if (isSending) return
+        val token = idProvider()
+        activeSendToken = token
+        isSending = true
+        val operation = scope.launch(start = CoroutineStart.LAZY) {
+            try {
+                block(token)
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Throwable) {
+                if (activeSendToken == token) failure = failure(error)
+            } finally {
+                if (activeSendToken == token) {
+                    activeSendToken = null
+                    sendJob = null
+                    isSending = false
+                    isStreaming = false
+                }
+            }
+        }
+        sendJob = operation
+        operation.start()
+        try {
+            operation.join()
+        } catch (error: CancellationException) {
+            // Starter-prompt/composer subtrees can leave composition while this controller-owned
+            // operation continues. Explicit Stop/Back/disposal remains the cancellation boundary.
+            throw error
+        }
+    }
+
+    private suspend fun performSend(token: String, text: String) {
+        if (contextSnapshot == null) refreshContext()
+        if (activeSendToken != token) return
+        val context = contextSnapshot
+        if (context == null) {
+            failure = contextFailure ?: GradeyAIFailure(GradeyAIErrorKind.NO_CONTEXT)
+            return
+        }
+
+        draft = ""
+        failure = null
+        val clientMessageID = idProvider()
+        var conversation = currentConversation
+        val needsServerCreate = conversation == null || isDraftChat
+        val userMessage = GradeyAIMessage(
+            id = clientMessageID,
+            conversationID = conversation?.id ?: clientMessageID,
+            clientMessageID = clientMessageID,
+            role = GradeyAIMessageRole.USER,
+            content = text,
+            status = GradeyAIMessageStatus.COMPLETE,
+            createdAtEpochMillis = nowEpochMillis(),
+            contextGeneratedAtEpochMillis = context.generatedAtEpochMillis,
+        )
+        messages = messages + userMessage
+        lastFailedRequest = null
+
+        if (needsServerCreate) {
+            val draftID = draftConversationID
+            conversation = createForSend(token, title(text))
+            if (activeSendToken != token) return
+            if (conversation != null) {
+                messages = messages.map { message ->
+                    if (message.id == clientMessageID) message.copy(conversationID = conversation.id) else message
+                }
+            }
+            if (draftID != null) conversations = conversations.filterNot { it.id == draftID }
+        }
+        if (conversation == null) {
+            messages = messages.filterNot { it.id == clientMessageID }
+            draft = text
+            return
+        }
+
+        updateConversationAfterMessage(conversation, title(text))
+        startStream(token, conversation, text, clientMessageID, context)
+    }
+
+    private suspend fun createForSend(token: String, title: String?): GradeyAIConversation? {
         return try {
             val schoolScope = activeSchoolScope ?: contextBuilder?.currentSchoolScope()
                 ?: throw GradeyAIException(GradeyAIErrorKind.NO_CONTEXT, "")
             val conversation = repository.createConversation(schoolScope, title)
+            if (activeSendToken != token) return null
             upsert(conversation)
             currentConversation = conversation
             draftConversationID = null
-            if (replacingCurrentChat) {
-                messages = emptyList()
-                lastFailedRequest = null
-            }
             conversation
         } catch (error: CancellationException) {
             throw error
         } catch (error: Throwable) {
-            failure = failure(error)
+            if (activeSendToken == token) failure = failure(error)
             null
         }
     }
 
     private suspend fun startStream(
+        token: String,
         conversation: GradeyAIConversation,
         text: String,
         clientMessageID: String,
         context: GradeyAIContextSnapshot,
     ) {
-        val token = idProvider()
-        activeStreamToken = token
-        streamJob = currentCoroutineContext().job
+        if (activeSendToken != token) return
         isStreaming = true
         val startedAt = nowEpochMillis()
         var assistantMessageID: String? = null
@@ -518,7 +615,7 @@ internal class GradeyAIController(
                 context = context,
                 locale = localeProvider().toLanguageTag(),
             ).collect { event ->
-                if (activeStreamToken != token) return@collect
+                if (activeSendToken != token) return@collect
                 when (event) {
                     is GradeyAIStreamEvent.Start -> {
                         assistantMessageID = event.assistantMessageID
@@ -570,46 +667,44 @@ internal class GradeyAIController(
                             event.retryable,
                         )
                         failure = failure(mapped)
-                        if (mapped.retryable) {
-                            lastFailedRequest = FailedRequest(
+                        lastFailedRequest = if (mapped.retryable) {
+                            FailedRequest(
                                 conversation.id,
                                 clientMessageID,
                                 text,
                                 startedAt,
                             )
+                        } else {
+                            null
                         }
                     }
                 }
             }
-            if (!receivedTerminalEvent && activeStreamToken == token) {
+            if (!receivedTerminalEvent && activeSendToken == token) {
                 throw GradeyAIException(
                     GradeyAIErrorKind.MALFORMED_RESPONSE,
                     "Gradey AI ended the reply before returning a result.",
                 )
             }
-        } catch (_: CancellationException) {
-            assistantMessageID?.let { id ->
-                messages = messages.map {
-                    if (it.id == id) it.copy(status = GradeyAIMessageStatus.CANCELLED) else it
-                }
-            }
+        } catch (error: CancellationException) {
+            throw error
         } catch (error: Throwable) {
-            if (activeStreamToken != token) return
+            if (activeSendToken != token) return
             markAssistantFailed(assistantMessageID, conversation.id, context.generatedAtEpochMillis)
             val mapped = failure(error)
             failure = mapped
-            if (mapped.retryable) {
-                lastFailedRequest = FailedRequest(
+            lastFailedRequest = if (mapped.retryable) {
+                FailedRequest(
                     conversation.id,
                     clientMessageID,
                     text,
                     startedAt,
                 )
+            } else {
+                null
             }
         } finally {
-            if (activeStreamToken == token) {
-                activeStreamToken = null
-                streamJob = null
+            if (activeSendToken == token) {
                 isStreaming = false
             }
         }
@@ -657,13 +752,9 @@ internal class GradeyAIController(
 
     private fun ingestContext(snapshot: GradeyAIContextSnapshot) {
         contextSnapshot = snapshot
-        contextFailure = if (snapshot.unavailableSections.isEmpty()) {
-            null
-        } else {
-            GradeyAIFailure(
-                GradeyAIErrorKind.NO_CONTEXT,
-            )
-        }
+        // A partial snapshot is still usable. The UI labels it as incomplete instead of
+        // incorrectly claiming that no marks or timetable are available.
+        contextFailure = null
     }
 
     private fun updateConversationAfterMessage(conversation: GradeyAIConversation, title: String?) {
@@ -683,6 +774,7 @@ internal class GradeyAIController(
     }
 
     private fun clearSchoolState() {
+        cancelOpen()
         conversations = emptyList()
         messages = emptyList()
         currentConversation = null
@@ -693,6 +785,13 @@ internal class GradeyAIController(
         reportedUsed = 0
         lastFailedRequest = null
         contextSnapshot = null
+    }
+
+    private fun cancelOpen() {
+        activeOpenToken = null
+        openJob?.cancel()
+        openJob = null
+        isOpeningConversation = false
     }
 
     private fun failure(error: Throwable): GradeyAIFailure = when (error) {

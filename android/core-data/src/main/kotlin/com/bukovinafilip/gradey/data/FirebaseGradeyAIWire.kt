@@ -22,9 +22,16 @@ internal object FirebaseGradeyAIWire {
     fun decodeConversations(payload: Any?): List<GradeyAIConversation> {
         val envelope = payload.objectValue("conversation list")
         val values = envelope.value("chats", "conversations", "items")
-            ?: return emptyList()
+            ?: throw malformed("Gradey AI returned a conversation list without conversations.")
         return values.objectList("conversation list").map(::decodeConversation)
             .sortedByDescending { it.lastMessageAtEpochMillis ?: it.updatedAtEpochMillis }
+    }
+
+    fun requireSuccessfulMutation(payload: Any?, operation: String) {
+        val values = payload.objectValue(operation)
+        if (values.boolean("success") != true) {
+            throw malformed("Gradey AI did not confirm $operation.")
+        }
     }
 
     fun decodeConversationEnvelope(payload: Any?): GradeyAIConversation {

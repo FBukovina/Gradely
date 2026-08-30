@@ -84,6 +84,7 @@ import androidx.core.view.WindowCompat
 import com.bukovinafilip.gradey.domain.AbsenceRiskSummary
 import com.bukovinafilip.gradey.domain.GradeBand
 import com.bukovinafilip.gradey.domain.GradeMath
+import com.bukovinafilip.gradey.domain.MarkDateParser
 import com.bukovinafilip.gradey.domain.MarkPredictionInput
 import com.bukovinafilip.gradey.domain.SubjectDirectorySearch
 import com.bukovinafilip.gradey.model.AbsenceResponse
@@ -739,7 +740,7 @@ private fun SubjectDetail(
                 item { EmptyMarksCard() }
             } else {
                 items(
-                    items = subject.marks.sortedByDescending { parseMarkDate(it.markDate) },
+                    items = MarkDateParser.newestFirst(subject.marks, PragueZone, Mark::markDate),
                     key = Mark::id,
                 ) { mark ->
                     MarkCard(subject = subject, mark = mark)
@@ -1329,8 +1330,7 @@ private fun Mark.gradeColors(): Pair<Color, Color> = when (GradeMath.band(this))
 }
 
 private fun parseMarkDate(raw: String?): LocalDate? {
-    val value = raw?.trim()?.takeIf(String::isNotEmpty) ?: return null
-    return runCatching { LocalDate.parse(value.substringBefore('T')) }.getOrNull()
+    return MarkDateParser.localDate(raw, PragueZone)
 }
 
 private fun relativeDate(date: LocalDate?): String {

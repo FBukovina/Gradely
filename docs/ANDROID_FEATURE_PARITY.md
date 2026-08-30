@@ -168,7 +168,7 @@ Subject search verification (2026-08-30): the Marks overview keeps its full unfi
 
 - [ ] Show the subject average hero, absence percentage, subject/temporary notes, and complete mark list.
 - [ ] Show mark caption/theme/date/type/type note/weight/points/new-state with optional-field fallbacks.
-- [ ] Match iOS mark date parsing and ordering for multiple Bakaláři formats.
+- [x] Match iOS mark date parsing and ordering for multiple Bakaláři formats.
 - [ ] Implement average-history chart with cloud/local source indication and empty state.
 - [ ] Implement grade-history loading by active linked account and time range.
 - [x] Implement mark-input validation and weight controls from 1 through 10.
@@ -176,6 +176,8 @@ Subject search verification (2026-08-30): the Marks overview keeps its full unfi
 - [ ] Show better/same/worse predicted result and retain current subject data if prediction fails.
 
 Calculator-input verification (2026-08-30): Android now follows the iOS three-character mark-input limit, treats empty input as neutral, accepts every value supported by the shared grade parser (including plus/minus and decimal/comma forms), and surfaces localized guidance for non-empty invalid input. The decrement/increment controls remain disabled at their visible boundaries and the shared policy clamps every transition to the inclusive 1...10 range. JVM tests cover neutral, invalid, valid plus-mark, length-limit, and both weight boundaries.
+
+Mark-date verification (2026-08-30): Subject Detail now orders marks using the full parsed timestamp rather than discarding its time and timezone. The shared parser matches the iOS sequence of ISO internet timestamps (fractional or whole seconds, offset or `Z`) followed by a `yyyy-MM-dd` fallback, converts dates in the app's Prague display timezone, and keeps malformed values after valid marks without destabilizing their source order. JVM tests cover every accepted form, timezone day rollover, fallback behavior, malformed values, and full-instant ordering.
 
 ## Absence
 

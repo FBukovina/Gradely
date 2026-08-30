@@ -66,7 +66,7 @@ Language verification (2026-08-30): Android uses the same persisted `settings.ap
 - [x] Implement “continue without account” guest mode and preserve local Bakaláři use without requiring Supabase configuration.
 - [x] Make unavailable cloud configuration an honest Gradey ID capability state, never a switch to mock repositories.
 - [x] Implement guest-to-Gradey-ID upgrade without losing the local school session.
-- [x] Implement complete sign-out and school-only sign-out semantics matching iOS.
+- [ ] Match iOS destructive confirmation before Gradey ID sign-out and local school disconnect.
 - [x] DIFFERENT — Android uses Google sign-in; Sign in with Apple UI is not copied from iOS.
 
 Verification evidence (2026-08-30): Android uses Credential Manager's Google ID-token credential and exchanges it with Supabase; no demo token path remains. Gradey ID sessions restore from Keystore-backed encrypted preferences with corrupt-record cleanup, refresh within a 60-second expiry window, serialize concurrent refresh/sign-out mutations, retain rotated or omitted refresh-token fields safely, and clear only on explicit 400/401 refresh rejection or missing refresh credentials. MockWebServer tests cover one-request refresh fan-in, rejected refreshes, transient 5xx and transport failures, profile GET/PUT authorization, 1...80-character trimmed name validation, credential exchange, and a delayed-refresh/sign-out race. Startup keeps the restored account and Bakaláři session through temporary cloud/profile outages, while Account exposes canonical profile refresh and validated name editing. Builds without cloud configuration display a local-only capability state and use unavailable repositories rather than mocks.
@@ -79,7 +79,8 @@ Guest verification (2026-08-30): the sign-in gate offers an explicit local-only 
 - [x] Show cached school search immediately and refresh it only when stale or on retry.
 - [x] Implement diacritic-insensitive searchable school selection, no-results, loading, and retained partial-cache states.
 - [x] Verify the visible initial lookup-error and retry interaction end to end with the directory unavailable.
-- [x] Retain a clearly explained manual school URL path.
+- [ ] Match the iOS manual-school-URL disclosure with its four explanatory steps and example.
+- [ ] Expose pre-authentication support help and the standalone GitHub link in school selection/login and reconnect flows.
 - [x] Bakaláři base URL normalization and validation logic has JVM coverage for scheme, host, path, and insecure/invalid inputs.
 - [x] Match iOS credential validation, password visibility, loading, cancellation, retry, readable server error, and demo-account behavior.
 - [x] Never prefill production login fields with demo credentials.
@@ -99,7 +100,7 @@ Credential verification (2026-08-30): the login form now validates the school UR
 - [x] Fall back from a rejected refresh token to credential login only under the same conditions as iOS.
 - [x] Clear an unrecoverable expired session and route to reconnect without discarding unrelated local preferences.
 - [x] Scope caches by provider/server/user/linked-account identity so accounts cannot see each other’s data.
-- [x] Implement local linked-account persistence, cloud account linking, activation, reconnect, unlink, status, and per-account notification setting with real repositories.
+- [ ] Complete linked-account recovery for both action-required and failed Bakaláři accounts.
 - [x] Implement safe school account switching and reset all visible feature state after activation.
 - [x] Preserve the local school session when a Gradey cloud call is temporarily unavailable.
 
@@ -292,8 +293,8 @@ Entry-point evidence (2026-08-31): the Today, Subjects, Absence, Timetable, and 
 ## Settings and account hub
 
 - [ ] Implement an adaptive settings overview with Account, Connected services, Notifications, Privacy & data, App preferences, and Support & about destinations.
-- [x] Implement profile/avatar summary, full-name edit, Gradey ID/local status, and session sign-out actions.
-- [x] Implement Bakaláři account list/status, add another, activate, reconnect, per-account alerts, unlink confirmation, and sync metadata.
+- [ ] Load the connected profile avatar URL with an initials fallback, while retaining full-name editing and account identity.
+- [ ] Disable per-school alert switches whenever the global new-mark notification setting is off.
 - [x] Implement Strava.cz connection status, link, retry cloud link, and unlink.
 - [x] Implement device notification permission status/action and lock-screen detail choices.
 - [x] Implement quiet hours, start/end, timezone display, persistence, and cloud update rollback/error handling.
@@ -301,7 +302,8 @@ Entry-point evidence (2026-08-31): the Today, Subjects, Absence, Timetable, and 
 - [x] Implement data export creation/share state and two-stage account deletion confirmation.
 - [x] Implement language, Chronically Online, and Show Meals tab preferences.
 - [x] Implement support chat/equivalent, support purchase screen, contact email, GitHub, privacy, terms, credits, version, and build rows.
-- [x] Preserve the hidden version-tap debug unlock and provide safe Android debug actions or mark individual actions `N/A`.
+- [ ] Persist the hidden debug unlock and port diagnostics/copy, separate new-user and upgrade restarts, sign-out, reset-as-new-user, cache clear, and disable actions, or explicitly classify each unsupported action `N/A`.
+- [ ] Add the developer Instagram action to Credits alongside the existing OpenSide, email, GitHub, and Bakaláři attribution.
 - [ ] Make every visible row/action functional; no dead routes or explanatory placeholder controls.
 
 Account-hub implementation evidence (2026-08-30): the profile surface now includes a visual initials avatar with connected-photo state, email/account identity, validated full-name editing, Gradey ID versus local-only status, and the existing complete sign-out path. Connected services can add another Bakaláři account with a cancelable return to Account, activate or reconnect an account, change per-school alerts, show action-required reasons plus last-polled/last-synced timestamps, and confirm unlinking. The same surface reports local Strava.cz state, opens the real Meals connect/manage flow, retries a failed Gradey ID cloud link with progress/error state, and uses the existing unlink path that clears local Strava data. Privacy shows the durable age attestation and locale-appropriate privacy/terms links. The existing language picker covers system/English/Czech plus the Chronically Online voice toggle, while Show Meals persists independently. App compilation and feature lint verify the production wiring and all four resource configurations.
@@ -386,10 +388,12 @@ Wear presentation evidence (2026-08-31): the watch derives a today-only current/
 - [ ] Search production sources for demo fallbacks, placeholders, TODOs, dead routes, hard-coded secrets, EduPage, and Material icon substitutions; resolve every finding.
 - [ ] Perform a clean install and upgrade install on representative phone/tablet API levels.
 - [ ] Verify startup, auth/session restoration, real Bakaláři data, offline use, refresh, sign-out/reconnect, account switch, rotation, process death, and deep links end to end.
-- [ ] Perform a second independent iOS audit and add any missed functionality to this tracker.
+- [x] Perform a second independent iOS audit and add any missed functionality to this tracker.
 - [ ] Perform the final visual parity audit after functional parity is complete.
 - [ ] Confirm every non-`N/A` row above is checked before declaring Android parity complete.
 
 Automated contract evidence (2026-08-31): `AndroidSchoolRepositoryTest` directly covers normalized login and persisted credentials, shared refresh concurrency, access-token retry versus non-authentication failure classification, rejected-refresh credential fallback and terminal expiry, school-scoped cache isolation/retention, account activation/switching, and logout teardown. `BakalariNetworkClientTest` uses MockWebServer to assert the password and refresh grants plus the authenticated marks, absence, user, timetable, and what-if routes; fixtures cover compatible response variants, and tests exercise invalid response, HTTP, authentication, decoding, timeout, offline, transport, and cancellation behavior without exposing server bodies.
 
 Persistence evidence (2026-08-31): Room now exports schema 2 and applies an explicit 1-to-2 migration that retains cache rows while adding the cache-age index. Because the database contains reproducible cache only, unknown schemas and corrupt SQLite files recover by rebuilding without affecting encrypted credentials or sessions. Four `GradeyPersistenceInstrumentedTest` cases passed on an API 37 phone emulator via `:core-data:connectedDebugAndroidTest`: v1 row retention/index creation, corrupt-cache recovery and subsequent writes, encrypted v1-to-v2 session-envelope migration, and malformed-current-session clearing without a crash.
+
+Second iOS audit evidence (2026-08-31): an independent source comparison rechecked Login, Account, linked-account recovery, notification controls, profile rendering, Debug, Credits, widgets, Watch, and complications. It added or reopened the concrete rows above for pre-auth help/GitHub, the four-step manual-URL disclosure, destructive sign-out confirmation, failed-account reconnect, globally disabled per-school alerts, remote-avatar loading, the complete persistent debug surface or explicit classifications, and the developer Instagram credit. The watch/widget review found no additional untracked category: direct refresh, phone sync, states, complications, support tier, and Watch AI are already represented by checked, open, or explicit `N/A` rows.

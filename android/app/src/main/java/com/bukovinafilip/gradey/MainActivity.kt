@@ -97,6 +97,7 @@ import com.bukovinafilip.gradey.domain.TodayPresentationState
 import com.bukovinafilip.gradey.domain.TodayPresentationStates
 import com.bukovinafilip.gradey.domain.RetainedStravaCloudLinkResult
 import com.bukovinafilip.gradey.domain.WearPayloadBuilder
+import com.bukovinafilip.gradey.domain.canFinishUpgradeOnboarding
 import com.bukovinafilip.gradey.domain.linkRetainedStravaSession
 import com.bukovinafilip.gradey.domain.refreshRetainingContent
 import com.bukovinafilip.gradey.domain.reconcileOnboardingProgress
@@ -2695,15 +2696,19 @@ private fun GradeyApp(
                 )
 
                 OnboardingStep.SUPPORT -> {
-                    val hasRecordedUpgradeMigration =
-                        onboardingUpgradeSchoolCloudLinkState !=
-                            OnboardingUpgradeCloudLinkState.PENDING &&
-                            onboardingUpgradeMealsCloudLinkState !=
-                            OnboardingUpgradeCloudLinkState.PENDING
-                    val canFinishUpgrade = isGuestMode ||
-                        (account != null && hasRecordedUpgradeMigration)
                     val upgradeCloudLinkWorking =
                         isOnboardingUpgradeCloudLinkWorking || isLoading
+                    val canFinishUpgrade = canFinishUpgradeOnboarding(
+                        isGuestMode = isGuestMode,
+                        hasGradeySession = account != null,
+                        hasRecordedSchoolMigration =
+                            onboardingUpgradeSchoolCloudLinkState !=
+                            OnboardingUpgradeCloudLinkState.PENDING,
+                        hasRecordedMealsMigration =
+                            onboardingUpgradeMealsCloudLinkState !=
+                            OnboardingUpgradeCloudLinkState.PENDING,
+                        isWorking = upgradeCloudLinkWorking,
+                    )
                     OnboardingUpgradeSupportScreen(
                         schoolCloudLinkFailed =
                             onboardingUpgradeSchoolCloudLinkState ==

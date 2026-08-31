@@ -28,6 +28,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.font.FontWeight
@@ -42,6 +43,9 @@ import com.bukovinafilip.gradey.ui.GradeyHero
 import com.bukovinafilip.gradey.ui.GradeyScreen
 import com.bukovinafilip.gradey.ui.GradeySectionCard
 import com.bukovinafilip.gradey.ui.GradeySpacing
+
+internal const val ONBOARDING_UPGRADE_SCHOOL_RETRY_TEST_TAG = "onboardingUpgradeSchoolRetry"
+internal const val ONBOARDING_UPGRADE_MEALS_RETRY_TEST_TAG = "onboardingUpgradeMealsRetry"
 
 @Composable
 fun GradeyCheckingScreen(modifier: Modifier = Modifier) {
@@ -375,6 +379,7 @@ fun OnboardingUpgradeSupportScreen(
                 errorMessage = schoolCloudLinkErrorMessage,
                 isWorking = isWorking,
                 isRetrying = isRetryingSchoolCloudLink,
+                retryTestTag = ONBOARDING_UPGRADE_SCHOOL_RETRY_TEST_TAG,
                 onRetry = onRetrySchoolCloudLink,
             )
         }
@@ -384,6 +389,7 @@ fun OnboardingUpgradeSupportScreen(
                 errorMessage = mealsCloudLinkErrorMessage,
                 isWorking = isWorking,
                 isRetrying = isRetryingMealsCloudLink,
+                retryTestTag = ONBOARDING_UPGRADE_MEALS_RETRY_TEST_TAG,
                 onRetry = onRetryMealsCloudLink,
             )
         }
@@ -409,6 +415,7 @@ private fun OnboardingUpgradeConnectionWarning(
     errorMessage: String?,
     isWorking: Boolean,
     isRetrying: Boolean,
+    retryTestTag: String,
     onRetry: (() -> Unit)?,
 ) {
     GradeySectionCard(title = stringResource(R.string.onboarding_sync_warning_title)) {
@@ -425,7 +432,9 @@ private fun OnboardingUpgradeConnectionWarning(
         }
         if (onRetry != null) {
             Button(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag(retryTestTag),
                 enabled = !isWorking,
                 onClick = onRetry,
             ) {

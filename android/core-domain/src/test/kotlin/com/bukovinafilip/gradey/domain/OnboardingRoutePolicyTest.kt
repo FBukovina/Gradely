@@ -91,8 +91,38 @@ class OnboardingRoutePolicyTest {
         assertThat(isCurrentSchoolCloudLinked(null, listOf(current))).isFalse()
     }
 
+    @Test
+    fun `upgrade finish requires both migration outcomes for a Gradey account`() {
+        assertThat(canFinishUpgrade(false, true, school = false, meals = false)).isFalse()
+        assertThat(canFinishUpgrade(false, true, school = true, meals = false)).isFalse()
+        assertThat(canFinishUpgrade(false, true, school = false, meals = true)).isFalse()
+        assertThat(canFinishUpgrade(false, true, school = true, meals = true)).isTrue()
+        assertThat(canFinishUpgrade(false, false, school = true, meals = true)).isFalse()
+    }
+
+    @Test
+    fun `guest can finish upgrade unless work is active`() {
+        assertThat(canFinishUpgrade(true, false, school = false, meals = false)).isTrue()
+        assertThat(canFinishUpgrade(true, false, school = false, meals = false, working = true)).isFalse()
+        assertThat(canFinishUpgrade(false, true, school = true, meals = true, working = true)).isFalse()
+    }
+
     private fun progress(journey: OnboardingJourney, step: OnboardingStep) =
         OnboardingProgress(journey, step)
+
+    private fun canFinishUpgrade(
+        guest: Boolean,
+        auth: Boolean,
+        school: Boolean,
+        meals: Boolean,
+        working: Boolean = false,
+    ) = canFinishUpgradeOnboarding(
+        isGuestMode = guest,
+        hasGradeySession = auth,
+        hasRecordedSchoolMigration = school,
+        hasRecordedMealsMigration = meals,
+        isWorking = working,
+    )
 
     private fun linkedAccount(
         id: String,

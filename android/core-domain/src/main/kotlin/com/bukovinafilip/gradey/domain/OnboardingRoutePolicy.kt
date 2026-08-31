@@ -81,3 +81,18 @@ fun isCurrentSchoolCloudLinked(
             account.status == LinkedAccountStatus.ACTIVE
     } ?: true
 }
+
+fun canFinishUpgradeOnboarding(
+    isGuestMode: Boolean,
+    hasGradeySession: Boolean,
+    hasRecordedSchoolMigration: Boolean,
+    hasRecordedMealsMigration: Boolean,
+    isWorking: Boolean,
+): Boolean {
+    if (isWorking) return false
+    val hasCompleteGradeyMigration =
+        hasGradeySession &&
+            hasRecordedSchoolMigration &&
+            hasRecordedMealsMigration
+    return isGuestMode || hasCompleteGradeyMigration
+}

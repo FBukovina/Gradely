@@ -135,6 +135,8 @@ private val DangerRed = Color(0xFFD95461)
 private val PragueZone = ZoneId.of("Europe/Prague")
 
 internal const val SUBJECT_SORT_TEST_TAG_PREFIX = "subjectSort:"
+internal const val SUBJECT_ROW_TEST_TAG_PREFIX = "subjectRow:"
+internal const val SUBJECT_DETAIL_BACK_TEST_TAG = "subjectDetailBack"
 internal const val SUBJECT_STEPPER_DECREASE_TEST_TAG = "subjectStepperDecrease"
 internal const val SUBJECT_STEPPER_INCREASE_TEST_TAG = "subjectStepperIncrease"
 
@@ -815,7 +817,8 @@ private fun SubjectRow(
         modifier = Modifier
             .fillMaxWidth()
             .height(68.dp)
-            .clickable(onClick = onClick)
+            .testTag(SUBJECT_ROW_TEST_TAG_PREFIX + subject.id)
+            .clickable(role = Role.Button, onClick = onClick)
             .padding(start = 12.dp, end = 7.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -1204,22 +1207,32 @@ private fun SubjectDetailHeader(
             .height(64.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Surface(
+        val backDescription = stringResource(R.string.subject_back)
+        Box(
             modifier = Modifier
                 .align(Alignment.CenterStart)
-                .size(44.dp),
-            onClick = onBack,
-            shape = CircleShape,
-            color = if (isScrolled) Color(0xFFA3E3E6) else MaterialTheme.colorScheme.surfaceContainer,
-            shadowElevation = 2.dp,
+                .offset(x = (-2).dp)
+                .size(48.dp)
+                .clip(CircleShape)
+                .testTag(SUBJECT_DETAIL_BACK_TEST_TAG)
+                .semantics { contentDescription = backDescription }
+                .clickable(role = Role.Button, onClick = onBack),
+            contentAlignment = Alignment.Center,
         ) {
-            Box(contentAlignment = Alignment.Center) {
-                Icon(
-                    imageVector = GradeyIcons.ArrowLeft,
-                    contentDescription = stringResource(R.string.subject_back),
-                    tint = if (isScrolled) Color(0xFF061C1B) else MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.size(28.dp),
-                )
+            Surface(
+                modifier = Modifier.size(44.dp),
+                shape = CircleShape,
+                color = if (isScrolled) Color(0xFFA3E3E6) else MaterialTheme.colorScheme.surfaceContainer,
+                shadowElevation = 2.dp,
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = GradeyIcons.ArrowLeft,
+                        contentDescription = null,
+                        tint = if (isScrolled) Color(0xFF061C1B) else MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.size(28.dp),
+                    )
+                }
             }
         }
         Text(

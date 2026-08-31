@@ -77,7 +77,7 @@ Guest verification (2026-08-30): the sign-in gate offers an explicit local-only 
 
 Destructive-action verification (2026-08-31): Account now presents a localized confirmation dialog before either Gradey ID sign-out or local-only Bakaláři disconnect. Cancellation leaves all state untouched; confirmation invokes the existing complete teardown path for the active account mode.
 
-Account-deletion interaction evidence (2026-08-31): deleting a Gradey ID remains a deliberately separate two-stage destructive flow. Four API 37 tests prove that entering the flow never deletes, Cancel and Android system Back at either confirmation stage leave state untouched, only the final confirmation invokes deletion exactly once, and both export and delete actions stay disabled while either operation is active. All 19 Account device tests pass together.
+Account-deletion interaction evidence (2026-08-31): deleting a Gradey ID remains a deliberately separate two-stage destructive flow. Four API 37 tests prove that entering the flow never deletes, Cancel and Android system Back at either confirmation stage leave state untouched, only the final confirmation invokes deletion exactly once, and the delete entry stays disabled while either export or deletion is active. Production also disables export while either operation is active. All 19 Account device tests pass together.
 
 ## School discovery and Bakaláři login
 
@@ -297,7 +297,7 @@ Strava.cz verification (2026-08-30): Android now uses the same public Strava.cz 
 
 Strava.cz credential-restoration evidence (2026-08-31): the canteen number and username remain saveable form context, but the raw password and its visibility state now use composition-only state and are cleared/hidden after Activity or process restoration, matching the iOS form and the existing Bakaláři login policy. Two API 37 Compose tests verify that restoration preserves only the non-secret fields, disables Connect, and invokes no callback, while a normal valid submission forwards the exact credential tuple exactly once.
 
-Strava.cz meal-interaction evidence (2026-08-31): six API 37 menu tests verify direct-order arguments and cancellation, replacement-dialog Cancel/Back/confirm behavior, disconnect Cancel/Back/confirm behavior, and exact-once mutation callbacks. Meal ordering, replacement confirmation, and disconnect are globally disabled while any meal submission or refresh is active, including when a refresh starts after a stale-replacement dialog opened. All 11 Strava.cz device tests pass together.
+Strava.cz meal-interaction evidence (2026-08-31): six API 37 menu tests verify direct-order arguments and cancellation, replacement-dialog Cancel/Back/confirm behavior, disconnect Cancel/Back/confirm behavior, and exact-once mutation callbacks. They also prove that every meal row is disabled during any submission or refresh and that replacement confirmation becomes disabled if a refresh starts after its dialog opened. Production applies the same global busy lock to replacement and disconnect confirmation. All 11 Strava.cz device tests pass together.
 
 ## Gradey AI
 

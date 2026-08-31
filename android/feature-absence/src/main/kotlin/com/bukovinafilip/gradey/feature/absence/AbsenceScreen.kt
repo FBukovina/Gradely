@@ -69,6 +69,7 @@ import com.bukovinafilip.gradey.domain.AbsenceMonthSummary
 import com.bukovinafilip.gradey.domain.AbsenceManualSelectionPolicy
 import com.bukovinafilip.gradey.domain.AbsencePartialDayCandidate
 import com.bukovinafilip.gradey.ui.GradeyIcons
+import com.bukovinafilip.gradey.ui.GradeySectionHeader
 import com.bukovinafilip.gradey.ui.StatusChip
 import com.bukovinafilip.gradey.domain.AbsencePrediction
 import com.bukovinafilip.gradey.domain.AbsencePredictionResult
@@ -362,7 +363,7 @@ fun AbsenceScreen(
                 AbsenceMode.Months -> {
                     if (timeline.months.size >= 2) {
                         item { Spacer(Modifier.height(8.dp)) }
-                        item { SectionHeading(stringResource(R.string.absence_months_chart).uppercase(locale)) }
+                        item { GradeySectionHeader(stringResource(R.string.absence_months_chart)) }
                         item { Spacer(Modifier.height(8.dp)) }
                         item { MonthsChartCard(timeline.months, locale) }
                         item { Spacer(Modifier.height(9.dp)) }
@@ -1558,18 +1559,6 @@ private fun CompactCountPills(counts: AbsenceCounts) {
         categories.take(4).forEach { kind -> CountPill(kind, kind.value(counts)) }
         if (categories.size > 4) OverflowPill(categories.size - 4)
     }
-}
-
-@Composable
-private fun SectionHeading(text: String) {
-    Text(
-        text = text,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        fontSize = 14.sp,
-        lineHeight = 18.sp,
-        fontWeight = FontWeight.Bold,
-        letterSpacing = 0.6.sp,
-    )
 }
 
 @Composable

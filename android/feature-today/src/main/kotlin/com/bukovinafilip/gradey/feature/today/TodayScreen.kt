@@ -110,6 +110,7 @@ import com.bukovinafilip.gradey.model.TimetableWeek
 import com.bukovinafilip.gradey.ui.GradeyAbsenceRiskRing
 import com.bukovinafilip.gradey.ui.GradeyColors
 import com.bukovinafilip.gradey.ui.GradeyAuroraBackground
+import com.bukovinafilip.gradey.ui.GradeySectionHeader
 import com.bukovinafilip.gradey.ui.gradeyBrandGradient
 import com.bukovinafilip.gradey.ui.riskColor
 import java.time.LocalDate
@@ -743,7 +744,12 @@ private fun LunchCard(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                SectionHeading(stringResource(R.string.today_lunch).uppercase(Locale.getDefault()))
+                GradeySectionHeader(
+                    text = stringResource(R.string.today_lunch),
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(end = 8.dp),
+                )
                 ActionPill(text = stringResource(R.string.today_open), onClick = onOpenMeals)
             }
             Spacer(Modifier.height(12.dp))
@@ -1188,7 +1194,7 @@ private fun NowAndNextCard(
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 14.dp),
         ) {
-            SectionHeading(stringResource(R.string.today_now_and_next).uppercase(Locale.getDefault()))
+            GradeySectionHeader(stringResource(R.string.today_now_and_next))
             Spacer(Modifier.height(9.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 IconTile(background = iconBackground, size = 32.dp) {
@@ -1304,7 +1310,12 @@ private fun AbsenceRiskCard(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                SectionHeading(stringResource(R.string.today_absence_risk).uppercase(Locale.getDefault()))
+                GradeySectionHeader(
+                    text = stringResource(R.string.today_absence_risk),
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(end = 8.dp),
+                )
                 ActionPill(text = stringResource(R.string.today_open), onClick = onOpenAbsence)
             }
             Spacer(Modifier.height(5.dp))
@@ -1424,7 +1435,12 @@ private fun AbsencePredictorCard(onPlanAbsence: () -> Unit) {
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                SectionHeading(stringResource(R.string.today_absence_predictor))
+                GradeySectionHeader(
+                    text = stringResource(R.string.today_absence_predictor),
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(end = 8.dp),
+                )
                 ActionPill(text = stringResource(R.string.today_plan_absence), onClick = onPlanAbsence)
             }
             Spacer(Modifier.height(13.dp))
@@ -1483,8 +1499,11 @@ private fun NewMarksAndTrendsCard(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                SectionHeading(
-                    stringResource(R.string.today_new_marks_and_trends).uppercase(Locale.getDefault()),
+                GradeySectionHeader(
+                    text = stringResource(R.string.today_new_marks_and_trends),
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(end = 8.dp),
                 )
                 ActionPill(text = stringResource(R.string.today_view_all), onClick = onOpenTrends)
             }
@@ -1943,18 +1962,6 @@ private fun DashboardSurface(
             content = content,
         )
     }
-}
-
-@Composable
-private fun SectionHeading(text: String) {
-    Text(
-        text = text,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        fontSize = 13.sp,
-        lineHeight = 18.sp,
-        letterSpacing = 0.65.sp,
-        fontWeight = FontWeight.Bold,
-    )
 }
 
 @Composable

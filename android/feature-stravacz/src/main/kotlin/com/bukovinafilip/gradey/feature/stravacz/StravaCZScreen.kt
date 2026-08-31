@@ -39,6 +39,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -72,6 +73,12 @@ import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import java.util.Currency
 import java.util.Locale
+
+internal const val STRAVACZ_CANTEEN_FIELD_TEST_TAG = "stravaCZCanteenField"
+internal const val STRAVACZ_USERNAME_FIELD_TEST_TAG = "stravaCZUsernameField"
+internal const val STRAVACZ_PASSWORD_FIELD_TEST_TAG = "stravaCZPasswordField"
+internal const val STRAVACZ_PASSWORD_VISIBILITY_TEST_TAG = "stravaCZPasswordVisibility"
+internal const val STRAVACZ_CONNECT_BUTTON_TEST_TAG = "stravaCZConnectButton"
 
 @Composable
 fun StravaCZScreen(
@@ -284,8 +291,8 @@ private fun ConnectContent(
 ) {
     var canteenNumber by rememberSaveable { mutableStateOf("") }
     var username by rememberSaveable { mutableStateOf("") }
-    var password by rememberSaveable { mutableStateOf("") }
-    var passwordVisible by rememberSaveable { mutableStateOf(false) }
+    var password by remember { mutableStateOf("") }
+    var passwordVisible by remember { mutableStateOf(false) }
     val valid = canteenNumber.isNotBlank() && username.isNotBlank() && password.isNotEmpty()
     LazyColumn(
         modifier = modifier.fillMaxWidth(),
@@ -303,7 +310,9 @@ private fun ConnectContent(
                 OutlinedTextField(
                     value = canteenNumber,
                     onValueChange = { canteenNumber = it },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag(STRAVACZ_CANTEEN_FIELD_TEST_TAG),
                     enabled = !isLoading,
                     singleLine = true,
                     label = { Text(stringResource(R.string.stravacz_canteen_number)) },
@@ -312,7 +321,9 @@ private fun ConnectContent(
                 OutlinedTextField(
                     value = username,
                     onValueChange = { username = it },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag(STRAVACZ_USERNAME_FIELD_TEST_TAG),
                     enabled = !isLoading,
                     singleLine = true,
                     label = { Text(stringResource(R.string.stravacz_username)) },
@@ -321,14 +332,19 @@ private fun ConnectContent(
                 OutlinedTextField(
                     value = password,
                     onValueChange = { password = it },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag(STRAVACZ_PASSWORD_FIELD_TEST_TAG),
                     enabled = !isLoading,
                     singleLine = true,
                     label = { Text(stringResource(R.string.stravacz_password)) },
                     visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
                     trailingIcon = {
-                        IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                        IconButton(
+                            onClick = { passwordVisible = !passwordVisible },
+                            modifier = Modifier.testTag(STRAVACZ_PASSWORD_VISIBILITY_TEST_TAG),
+                        ) {
                             Icon(
                                 if (passwordVisible) GradeyIcons.ViewOff else GradeyIcons.View,
                                 contentDescription = stringResource(
@@ -341,6 +357,7 @@ private fun ConnectContent(
                 ErrorText(errorMessage)
                 GradeyPrimaryButton(
                     onClick = { onConnect(canteenNumber, username, password) },
+                    modifier = Modifier.testTag(STRAVACZ_CONNECT_BUTTON_TEST_TAG),
                     enabled = valid && !isLoading,
                 ) {
                     if (isLoading) {

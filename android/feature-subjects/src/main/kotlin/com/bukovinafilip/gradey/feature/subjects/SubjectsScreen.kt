@@ -107,6 +107,7 @@ import com.bukovinafilip.gradey.model.Mark
 import com.bukovinafilip.gradey.model.Subject
 import com.bukovinafilip.gradey.ui.GradeyAuroraBackground
 import com.bukovinafilip.gradey.ui.GradeyGradeBadge
+import com.bukovinafilip.gradey.ui.GradeySectionHeader
 import com.bukovinafilip.gradey.ui.color
 import com.bukovinafilip.gradey.ui.softColor
 import kotlinx.coroutines.CancellationException
@@ -611,7 +612,7 @@ internal fun SubjectsSectionHeader(
         val stackControls = maxWidth < 300.dp || LocalDensity.current.fontScale >= 1.5f
         if (stackControls) {
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                SectionHeading(stringResource(R.string.marks_subjects_section))
+                GradeySectionHeader(stringResource(R.string.marks_subjects_section))
                 SubjectSortPicker(
                     sortMode = sortMode,
                     onSortModeChange = onSortModeChange,
@@ -626,7 +627,12 @@ internal fun SubjectsSectionHeader(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                SectionHeading(stringResource(R.string.marks_subjects_section))
+                GradeySectionHeader(
+                    text = stringResource(R.string.marks_subjects_section),
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(end = 8.dp),
+                )
                 SubjectSortPicker(
                     sortMode = sortMode,
                     onSortModeChange = onSortModeChange,
@@ -916,7 +922,12 @@ private fun GradeMovementSection(trends: List<SubjectGradeTrend>) {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            SectionHeading(stringResource(R.string.marks_trends_section))
+            GradeySectionHeader(
+                text = stringResource(R.string.marks_trends_section),
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(end = 8.dp),
+            )
             Text(
                 text = stringResource(R.string.marks_trends_range),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -1117,16 +1128,16 @@ private fun SubjectDetail(
             }
             if (notes.hasContent) {
                 item { Spacer(Modifier.height(16.dp)) }
-                item { SectionHeading(stringResource(R.string.subject_notes_section)) }
+                item { GradeySectionHeader(stringResource(R.string.subject_notes_section)) }
                 item { Spacer(Modifier.height(10.dp)) }
                 item { SubjectNotesCard(notes) }
             }
             item { Spacer(Modifier.height(16.dp)) }
-            item { SectionHeading(stringResource(R.string.subject_history_section)) }
+            item { GradeySectionHeader(stringResource(R.string.subject_history_section)) }
             item { Spacer(Modifier.height(18.dp)) }
             item { AverageChartCard(historyChart) }
             item { Spacer(Modifier.height(10.dp)) }
-            item { SectionHeading(stringResource(R.string.subject_prediction_section)) }
+            item { GradeySectionHeader(stringResource(R.string.subject_prediction_section)) }
             item { Spacer(Modifier.height(24.dp)) }
             item {
                 TryMarkCard(
@@ -1144,7 +1155,7 @@ private fun SubjectDetail(
                 )
             }
             item { Spacer(Modifier.height(8.dp)) }
-            item { SectionHeading(stringResource(R.string.subject_marks_section)) }
+            item { GradeySectionHeader(stringResource(R.string.subject_marks_section)) }
             item { Spacer(Modifier.height(25.dp)) }
             if (subject.marks.isEmpty()) {
                 item { EmptyMarksCard() }
@@ -1952,18 +1963,6 @@ private fun TagPill(text: String, color: Color, textColor: Color) {
             )
         }
     }
-}
-
-@Composable
-private fun SectionHeading(text: String) {
-    Text(
-        text = text,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        fontSize = 14.sp,
-        lineHeight = 18.sp,
-        letterSpacing = 0.7.sp,
-        fontWeight = FontWeight.Bold,
-    )
 }
 
 @Composable

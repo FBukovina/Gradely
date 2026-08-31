@@ -48,6 +48,7 @@ internal class GradeyAIController(
     private val nowEpochMillis: () -> Long = System::currentTimeMillis,
     private val idProvider: () -> String = { UUID.randomUUID().toString() },
     private val localeProvider: () -> Locale = Locale::getDefault,
+    initiallyForegrounded: Boolean = true,
 ) {
     var conversations by mutableStateOf<List<GradeyAIConversation>>(emptyList())
         private set
@@ -76,7 +77,9 @@ internal class GradeyAIController(
         private set
     var isPerformingDestructiveOperation by mutableStateOf(false)
         private set
-    var isAppForegrounded by mutableStateOf(true)
+    var isAcceptingConsent by mutableStateOf(false)
+        private set
+    var isAppForegrounded by mutableStateOf(initiallyForegrounded)
         private set
 
     private var sendJob: Job? = null
@@ -85,6 +88,10 @@ internal class GradeyAIController(
     private var activeOpenToken: String? = null
     private var activeContextRefreshToken: String? = null
     private var foregroundGeneration = 0
+    private var conversationDetailNeedsReloadID: String? = null
+    private var pendingPromptReconciliation: PendingPromptReconciliation? = null
+    private var activeOptimisticSend: ActiveOptimisticSend? = null
+    private var consentReconciliationRequired = false
     private var activeSchoolScope: String? = null
     private var lastFailedRequest: FailedRequest? = null
     private var draftConversationID: String? = null
@@ -114,9 +121,13 @@ internal class GradeyAIController(
         foregroundGeneration += 1
         activeContextRefreshToken = null
         isRefreshingContext = false
+        if (isOpeningConversation) {
+            conversationDetailNeedsReloadID = currentConversation?.id
+        }
+        prepareUnstartedSendForForegroundReconciliation()
         cancelOpen()
-        stop(reconcileStatus = false)
-        if (!isPerformingDestructiveOperation) isLoading = false
+        cancelSend(reconcileStatus = false)
+        if (!isPerformingDestructiveOperation && !isAcceptingConsent) isLoading = false
     }
 
     /** Returns true only for the first foreground transition after a background event. */
@@ -137,7 +148,7 @@ internal class GradeyAIController(
         if (!isAppForegrounded || isPerformingDestructiveOperation) return
         val generation = foregroundGeneration
         cancelOpen()
-        stop()
+        cancelSend(reconcileStatus = true)
         failure = null
         contextFailure = null
         val builder = contextBuilder
@@ -161,7 +172,7 @@ internal class GradeyAIController(
                 if (!isCurrentForegroundOperation(generation)) return
                 contextSnapshot = cachedContext
             }
-            isLoading = status == null
+            isLoading = status == null || isAcceptingConsent
 
             coroutineScope {
                 val statusAttempt = async { runCatchingSuspend { repository.loadStatus() } }
@@ -178,6 +189,9 @@ internal class GradeyAIController(
                 loadedStatus.fold(
                     onSuccess = { loaded ->
                         ingestStatus(loaded)
+                        if (consentReconciliationRequired && !loaded.consentRequired) {
+                            consentReconciliationRequired = false
+                        }
                         if (loaded.consentRequired) {
                             conversations = emptyList()
                             if (!isDraftChat) closeConversation()
@@ -204,6 +218,9 @@ internal class GradeyAIController(
                     onFailure = { contextFailure = failure(it) },
                 )
             }
+            if (isCurrentForegroundOperation(generation)) {
+                reconcileSelectedConversationDetail(generation)
+            }
         } catch (error: CancellationException) {
             throw error
         } catch (error: Throwable) {
@@ -213,7 +230,7 @@ internal class GradeyAIController(
                 contextFailure = mapped
             }
         } finally {
-            if (isCurrentForegroundOperation(generation)) isLoading = false
+            if (isCurrentForegroundOperation(generation)) isLoading = isAcceptingConsent
         }
     }
 
@@ -226,34 +243,24 @@ internal class GradeyAIController(
     }
 
     suspend fun acceptConsent() {
-        if (!isAppForegrounded || isPerformingDestructiveOperation) return
-        val generation = foregroundGeneration
+        if (!isAppForegrounded || isPerformingDestructiveOperation || isAcceptingConsent) return
+        isAcceptingConsent = true
         failure = null
         isLoading = true
         try {
             repository.acceptConsent()
-            if (!isCurrentForegroundOperation(generation)) return
-            val loadedStatus = repository.loadStatus()
-            if (!isCurrentForegroundOperation(generation)) return
-            ingestStatus(loadedStatus)
-            if (status?.consentRequired == false) {
-                    val schoolScope = contextBuilder?.currentSchoolScope()
-                        ?: throw GradeyAIException(
-                            GradeyAIErrorKind.NO_CONTEXT,
-                            "",
-                        )
-                if (!isCurrentForegroundOperation(generation)) return
-                val loadedConversations = repository.listConversations(schoolScope)
-                if (!isCurrentForegroundOperation(generation)) return
-                conversations = loadedConversations
-                    .sortedByDescending(::conversationDate)
-            }
+            // Any bootstrap that captured the pre-consent status must not overwrite the
+            // authoritative post-mutation reconciliation below.
+            foregroundGeneration += 1
+            consentReconciliationRequired = true
+            if (isAppForegrounded) reconcileAcceptedConsent()
         } catch (error: CancellationException) {
             throw error
         } catch (error: Throwable) {
-            if (isCurrentForegroundOperation(generation)) failure = failure(error)
+            if (isAppForegrounded) failure = failure(error)
         } finally {
-            if (isCurrentForegroundOperation(generation)) isLoading = false
+            isAcceptingConsent = false
+            isLoading = false
         }
     }
 
@@ -289,7 +296,9 @@ internal class GradeyAIController(
     fun beginDraftChat(localizedTitle: String) {
         if (!isAppForegrounded || isPerformingDestructiveOperation) return
         cancelOpen()
-        stop()
+        cancelSend(reconcileStatus = true)
+        conversationDetailNeedsReloadID = null
+        pendingPromptReconciliation = null
         failure = null
         val schoolScope = activeSchoolScope
         if (schoolScope == null) {
@@ -313,8 +322,10 @@ internal class GradeyAIController(
 
     suspend fun open(conversation: GradeyAIConversation) {
         if (!isAppForegrounded || isPerformingDestructiveOperation) return
-        stop()
+        cancelSend(reconcileStatus = true)
         cancelOpen()
+        conversationDetailNeedsReloadID = null
+        pendingPromptReconciliation = null
         failure = null
         draftConversationID = null
         currentConversation = conversation
@@ -356,7 +367,9 @@ internal class GradeyAIController(
 
     fun closeConversation() {
         cancelOpen()
-        stop()
+        cancelSend(reconcileStatus = true)
+        conversationDetailNeedsReloadID = null
+        pendingPromptReconciliation = null
         draftConversationID?.let { draftID ->
             conversations = conversations.filterNot { it.id == draftID }
         }
@@ -428,9 +441,16 @@ internal class GradeyAIController(
             message.createdAtEpochMillis >= failed.startedAtEpochMillis
     }
 
-    fun stop() = stop(reconcileStatus = true)
+    fun stop() {
+        val shouldReloadConversation = prepareUnstartedSendForForegroundReconciliation()
+        cancelSend(reconcileStatus = true)
+        if (shouldReloadConversation && isAppForegrounded) {
+            val generation = foregroundGeneration
+            scope.launch { reconcileSelectedConversationDetail(generation) }
+        }
+    }
 
-    private fun stop(reconcileStatus: Boolean) {
+    private fun cancelSend(reconcileStatus: Boolean) {
         if (sendJob == null && !isSending) return
         val wasStreaming = isStreaming
         activeSendToken = null
@@ -438,6 +458,7 @@ internal class GradeyAIController(
         sendJob = null
         isSending = false
         isStreaming = false
+        activeOptimisticSend = null
         val streamingMessageIndex = messages.indexOfLast {
             it.role == GradeyAIMessageRole.ASSISTANT && it.status == GradeyAIMessageStatus.STREAMING
         }
@@ -461,7 +482,7 @@ internal class GradeyAIController(
 
     fun cancelOperations() {
         cancelOpen()
-        stop()
+        cancelSend(reconcileStatus = true)
     }
 
     suspend fun delete(conversation: GradeyAIConversation) {
@@ -469,7 +490,7 @@ internal class GradeyAIController(
         isPerformingDestructiveOperation = true
         if (currentConversation?.id == conversation.id) {
             cancelOpen()
-            stop()
+            cancelSend(reconcileStatus = true)
         }
         failure = null
         if (conversation.id == draftConversationID) {
@@ -576,6 +597,7 @@ internal class GradeyAIController(
             } catch (error: Throwable) {
                 if (activeSendToken == token) failure = failure(error)
             } finally {
+                if (activeOptimisticSend?.token == token) activeOptimisticSend = null
                 if (activeSendToken == token) {
                     activeSendToken = null
                     sendJob = null
@@ -620,6 +642,11 @@ internal class GradeyAIController(
             contextGeneratedAtEpochMillis = context.generatedAtEpochMillis,
         )
         messages = messages + userMessage
+        activeOptimisticSend = ActiveOptimisticSend(
+            token = token,
+            text = text,
+            clientMessageID = clientMessageID,
+        )
         lastFailedRequest = null
 
         if (needsServerCreate) {
@@ -639,6 +666,9 @@ internal class GradeyAIController(
             return
         }
 
+        activeOptimisticSend = activeOptimisticSend
+            ?.takeIf { it.token == token }
+            ?.copy(conversationID = conversation.id)
         updateConversationAfterMessage(conversation, title(text))
         startStream(token, conversation, text, clientMessageID, context)
     }
@@ -684,6 +714,9 @@ internal class GradeyAIController(
                 if (activeSendToken != token) return@collect
                 when (event) {
                     is GradeyAIStreamEvent.Start -> {
+                        activeOptimisticSend = activeOptimisticSend
+                            ?.takeIf { it.token == token }
+                            ?.copy(assistantStarted = true)
                         assistantMessageID = event.assistantMessageID
                         updateRemaining(event.remaining)
                         messages = messages + GradeyAIMessage(
@@ -851,6 +884,101 @@ internal class GradeyAIController(
         reportedUsed = 0
         lastFailedRequest = null
         contextSnapshot = null
+        conversationDetailNeedsReloadID = null
+        pendingPromptReconciliation = null
+        activeOptimisticSend = null
+        consentReconciliationRequired = false
+    }
+
+    private fun prepareUnstartedSendForForegroundReconciliation(): Boolean {
+        val pending = activeOptimisticSend ?: return false
+        activeOptimisticSend = null
+        if (pending.assistantStarted) return false
+
+        messages = messages.filterNot { it.id == pending.clientMessageID }
+        val conversationID = pending.conversationID
+        if (conversationID == null || currentConversation?.id != conversationID) {
+            restoreDraftIfEmpty(pending.text)
+            return false
+        }
+        pendingPromptReconciliation = PendingPromptReconciliation(
+            conversationID = conversationID,
+            clientMessageID = pending.clientMessageID,
+            text = pending.text,
+        )
+        conversationDetailNeedsReloadID = conversationID
+        return true
+    }
+
+    private suspend fun reconcileSelectedConversationDetail(generation: Int) {
+        val conversationID = conversationDetailNeedsReloadID ?: return
+        if (currentConversation?.id != conversationID) {
+            pendingPromptReconciliation
+                ?.takeIf { it.conversationID == conversationID }
+                ?.let { restoreDraftIfEmpty(it.text) }
+            pendingPromptReconciliation = null
+            conversationDetailNeedsReloadID = null
+            return
+        }
+        if (status?.consentRequired != false) return
+
+        val token = idProvider()
+        activeOpenToken = token
+        isOpeningConversation = true
+        try {
+            val result = runCatchingSuspend { repository.loadConversation(conversationID) }
+            if (
+                activeOpenToken != token ||
+                !isCurrentForegroundOperation(generation) ||
+                currentConversation?.id != conversationID ||
+                conversationDetailNeedsReloadID != conversationID
+            ) return
+
+            result.fold(
+                onSuccess = { detail ->
+                    currentConversation = detail.conversation
+                    messages = detail.messages
+                    upsert(detail.conversation)
+                    pendingPromptReconciliation
+                        ?.takeIf { it.conversationID == conversationID }
+                        ?.let { pending ->
+                            val wasPersisted = detail.messages.any { message ->
+                                message.clientMessageID == pending.clientMessageID ||
+                                    message.id == pending.clientMessageID
+                            }
+                            if (!wasPersisted) restoreDraftIfEmpty(pending.text)
+                        }
+                    pendingPromptReconciliation = null
+                    conversationDetailNeedsReloadID = null
+                },
+                onFailure = { failure = failure(it) },
+            )
+        } finally {
+            if (activeOpenToken == token) {
+                activeOpenToken = null
+                isOpeningConversation = false
+            }
+        }
+    }
+
+    private suspend fun reconcileAcceptedConsent() {
+        val generation = foregroundGeneration
+        val loadedStatus = repository.loadStatus()
+        if (!isCurrentForegroundOperation(generation)) return
+        ingestStatus(loadedStatus)
+        if (loadedStatus.consentRequired) return
+
+        val schoolScope = contextBuilder?.currentSchoolScope()
+            ?: throw GradeyAIException(GradeyAIErrorKind.NO_CONTEXT, "")
+        if (!isCurrentForegroundOperation(generation)) return
+        val loadedConversations = repository.listConversations(schoolScope)
+        if (!isCurrentForegroundOperation(generation)) return
+        conversations = loadedConversations.sortedByDescending(::conversationDate)
+        consentReconciliationRequired = false
+    }
+
+    private fun restoreDraftIfEmpty(text: String) {
+        if (draft.isBlank()) draft = text
     }
 
     private fun cancelOpen() {
@@ -893,6 +1021,20 @@ internal class GradeyAIController(
         val clientMessageID: String,
         val text: String,
         val startedAtEpochMillis: Long,
+    )
+
+    private data class ActiveOptimisticSend(
+        val token: String,
+        val text: String,
+        val clientMessageID: String,
+        val conversationID: String? = null,
+        val assistantStarted: Boolean = false,
+    )
+
+    private data class PendingPromptReconciliation(
+        val conversationID: String,
+        val clientMessageID: String,
+        val text: String,
     )
 
     private companion object {

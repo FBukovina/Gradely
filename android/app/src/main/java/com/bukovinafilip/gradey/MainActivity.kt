@@ -62,6 +62,7 @@ import com.bukovinafilip.gradey.feature.absence.AbsenceScreen
 import com.bukovinafilip.gradey.feature.absence.AbsenceStateScreen
 import com.bukovinafilip.gradey.feature.absence.R as AbsenceR
 import com.bukovinafilip.gradey.feature.account.AccountScreen
+import com.bukovinafilip.gradey.feature.account.AccountSettingsDestination
 import com.bukovinafilip.gradey.feature.account.SupportScreen
 import com.bukovinafilip.gradey.feature.auth.AgeAttestationScreen
 import com.bukovinafilip.gradey.feature.auth.GradeyCheckingScreen
@@ -268,6 +269,9 @@ private fun GradeyApp(
     var isGuestMode by remember { mutableStateOf(graph.guestModeStore.isEnabled) }
     var onboardingProgress by remember { mutableStateOf<OnboardingProgress?>(null) }
     var account by remember { mutableStateOf<GradeyAccount?>(null) }
+    var accountSettingsDestination by rememberSaveable(account?.id, isGuestMode) {
+        mutableStateOf<AccountSettingsDestination?>(null)
+    }
     var linkedAccounts by remember { mutableStateOf<List<LinkedSchoolAccount>>(emptyList()) }
     var activeLinkedAccountID by remember { mutableStateOf<String?>(null) }
     var currentSchoolBaseURL by remember { mutableStateOf("") }
@@ -2432,6 +2436,8 @@ private fun GradeyApp(
                     AccountScreen(
                     account = account,
                     linkedAccounts = linkedAccounts,
+                    selectedDestination = accountSettingsDestination,
+                    hasBakalariConnectionOnDevice = currentSchoolBaseURL.isNotBlank(),
                     appLanguage = appLanguage,
                     activeLinkedAccountID = activeLinkedAccountID,
                     ageAttestationKind = ageAttestationKind,
@@ -2472,6 +2478,7 @@ private fun GradeyApp(
                             }
                         }
                     },
+                    onSelectedDestinationChange = { accountSettingsDestination = it },
                     onConnectGradeyId = {
                         graph.guestModeStore.isEnabled = false
                         isGuestMode = false

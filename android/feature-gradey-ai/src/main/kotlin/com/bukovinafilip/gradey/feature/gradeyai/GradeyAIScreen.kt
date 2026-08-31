@@ -89,7 +89,14 @@ fun GradeyAIScreen(
     val coroutineScope = rememberCoroutineScope()
     val lifecycleOwner = LocalLifecycleOwner.current
     val controller = remember(repository, contextBuilder) {
-        GradeyAIController(repository, contextBuilder, coroutineScope)
+        GradeyAIController(
+            repository = repository,
+            contextBuilder = contextBuilder,
+            scope = coroutineScope,
+            initiallyForegrounded = GradeyAILifecyclePolicy.isForeground(
+                lifecycleOwner.lifecycle.currentState,
+            ),
+        )
     }
     val entryState = GradeyAIEntryPolicy.resolve(isGuestMode, repository.isConfigured)
     val currentEntryState by rememberUpdatedState(entryState)
@@ -100,6 +107,14 @@ fun GradeyAIScreen(
         if (controller.currentConversation != null) controller.closeConversation() else onClose()
     }
     DisposableEffect(controller, lifecycleOwner) {
+        val lifecycle = lifecycleOwner.lifecycle
+        if (GradeyAILifecyclePolicy.isForeground(lifecycle.currentState)) {
+            if (controller.onAppForegrounded() && currentEntryState == GradeyAIEntryState.SERVICE) {
+                coroutineScope.launch { controller.bootstrap() }
+            }
+        } else {
+            controller.onAppBackgrounded()
+        }
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
                 Lifecycle.Event.ON_STOP -> controller.onAppBackgrounded()
@@ -111,9 +126,9 @@ fun GradeyAIScreen(
                 else -> Unit
             }
         }
-        lifecycleOwner.lifecycle.addObserver(observer)
+        lifecycle.addObserver(observer)
         onDispose {
-            lifecycleOwner.lifecycle.removeObserver(observer)
+            lifecycle.removeObserver(observer)
             controller.onAppBackgrounded()
         }
     }

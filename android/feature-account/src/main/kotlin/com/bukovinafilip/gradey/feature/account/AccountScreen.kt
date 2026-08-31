@@ -36,7 +36,6 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
@@ -78,6 +77,8 @@ import java.util.Locale
 fun AccountScreen(
     account: GradeyAccount?,
     linkedAccounts: List<LinkedSchoolAccount>,
+    selectedDestination: AccountSettingsDestination?,
+    hasBakalariConnectionOnDevice: Boolean,
     appLanguage: AppLanguage = AppLanguage.SYSTEM,
     activeLinkedAccountID: String? = null,
     ageAttestationKind: AgeAttestationKind? = null,
@@ -99,6 +100,7 @@ fun AccountScreen(
     isDeletingAccount: Boolean = false,
     privacyDataErrorMessage: String? = null,
     onUpdateFullName: (String) -> Unit,
+    onSelectedDestinationChange: (AccountSettingsDestination?) -> Unit,
     onConnectGradeyId: () -> Unit,
     onRefreshLinkedAccounts: () -> Unit,
     onAddSchool: () -> Unit,
@@ -130,10 +132,11 @@ fun AccountScreen(
     val normalizedFullName = fullNameDraft.trim()
     val isNameValid = normalizedFullName.length in 1..80
     val hasNameChanged = normalizedFullName != account?.fullName?.trim().orEmpty()
-    val notificationControlsEnabled = account != null && !isUpdatingNotificationPreferences
-    var selectedDestination by rememberSaveable {
-        mutableStateOf<AccountSettingsDestination?>(null)
+    val hasCloudSchool = linkedAccounts.any {
+        it.provider.isSupportedSchoolProvider && it.status == LinkedAccountStatus.ACTIVE
     }
+    val notificationsAvailable = account != null && hasCloudSchool
+    val notificationControlsEnabled = notificationsAvailable && !isUpdatingNotificationPreferences
 
     fun showTimePicker(minuteOfDay: Int, onChange: (Int) -> Unit) {
         TimePickerDialog(
@@ -151,7 +154,7 @@ fun AccountScreen(
         BackHandler(
             enabled = paneMode == AccountSettingsPaneMode.COMPACT && selectedDestination != null,
         ) {
-            selectedDestination = null
+            onSelectedDestinationChange(null)
         }
         Row(modifier = Modifier.fillMaxSize()) {
             if (paneMode == AccountSettingsPaneMode.EXPANDED || effectiveDestination == null) {
@@ -160,8 +163,12 @@ fun AccountScreen(
                     linkedAccounts = linkedAccounts,
                     notificationPreferences = notificationPreferences,
                     isStravaConnectedOnDevice = isStravaConnectedOnDevice,
+                    hasBakalariConnectionOnDevice = hasBakalariConnectionOnDevice,
+                    activeLinkedAccountID = activeLinkedAccountID,
+                    notificationPermissionGranted = notificationPermissionGranted,
+                    notificationsAvailable = notificationsAvailable,
                     selectedDestination = effectiveDestination,
-                    onSelect = { selectedDestination = it },
+                    onSelect = onSelectedDestinationChange,
                     modifier = if (paneMode == AccountSettingsPaneMode.EXPANDED) {
                         Modifier.weight(0.42f).fillMaxHeight()
                     } else {
@@ -187,7 +194,7 @@ fun AccountScreen(
                         }).verticalScroll(rememberScrollState()),
                     ) {
                         if (paneMode == AccountSettingsPaneMode.COMPACT) {
-                            TextButton(onClick = { selectedDestination = null }) {
+                            TextButton(onClick = { onSelectedDestinationChange(null) }) {
                                 Icon(GradeyIcons.ArrowLeft, contentDescription = null)
                                 Text(stringResource(R.string.settings_back))
                             }
@@ -394,19 +401,20 @@ fun AccountScreen(
             Switch(checked = showMealsTab, onCheckedChange = onShowMealsTabChange)
                             }
                         }
-                        if (
-                            effectiveDestination == AccountSettingsDestination.CONNECTED_SERVICES &&
-                            account != null
-                        ) {
+                        if (effectiveDestination == AccountSettingsDestination.CONNECTED_SERVICES) {
             GradeySectionCard(title = stringResource(R.string.account_connected_services)) {
                 Text(
                     stringResource(R.string.account_connected_services_body),
                 )
-                Button(
-                    onClick = onAddSchool,
-                    enabled = mutatingLinkedAccountID == null,
-                ) {
-                    Text(stringResource(R.string.connected_add_school))
+                if (account != null) {
+                    Button(
+                        onClick = onAddSchool,
+                        enabled = mutatingLinkedAccountID == null,
+                    ) {
+                        Text(stringResource(R.string.connected_add_school))
+                    }
+                } else {
+                    Text(stringResource(R.string.connected_cloud_requires_gradey_id))
                 }
                 MetadataRow(
                     stringResource(R.string.connected_strava_device),
@@ -425,6 +433,7 @@ fun AccountScreen(
                     it.provider == LinkedAccountProvider.STRAVA_CZ
                 }
                 if (
+                    account != null &&
                     isStravaConnectedOnDevice &&
                     (cloudStrava == null || cloudStrava.status != LinkedAccountStatus.ACTIVE)
                 ) {
@@ -443,25 +452,27 @@ fun AccountScreen(
                         )
                     }
                 }
-                Button(
-                    onClick = onRefreshLinkedAccounts,
-                    enabled = !isRefreshingLinkedAccounts && mutatingLinkedAccountID == null,
-                ) {
-                    Text(
-                        stringResource(
-                            if (isRefreshingLinkedAccounts) {
-                                R.string.account_refreshing
-                            } else {
-                                R.string.account_refresh_accounts
-                            },
-                        ),
-                    )
-                }
-                if (!linkedAccountErrorMessage.isNullOrBlank()) {
-                    Text(linkedAccountErrorMessage)
-                }
-                if (linkedAccounts.isEmpty() && !isRefreshingLinkedAccounts) {
-                    Text(stringResource(R.string.account_no_linked_school))
+                if (account != null) {
+                    Button(
+                        onClick = onRefreshLinkedAccounts,
+                        enabled = !isRefreshingLinkedAccounts && mutatingLinkedAccountID == null,
+                    ) {
+                        Text(
+                            stringResource(
+                                if (isRefreshingLinkedAccounts) {
+                                    R.string.account_refreshing
+                                } else {
+                                    R.string.account_refresh_accounts
+                                },
+                            ),
+                        )
+                    }
+                    if (!linkedAccountErrorMessage.isNullOrBlank()) {
+                        Text(linkedAccountErrorMessage)
+                    }
+                    if (linkedAccounts.isEmpty() && !isRefreshingLinkedAccounts) {
+                        Text(stringResource(R.string.account_no_linked_school))
+                    }
                 }
             }
                         }
@@ -765,10 +776,35 @@ private fun AccountSettingsOverview(
     linkedAccounts: List<LinkedSchoolAccount>,
     notificationPreferences: NotificationPreferences,
     isStravaConnectedOnDevice: Boolean,
+    hasBakalariConnectionOnDevice: Boolean,
+    activeLinkedAccountID: String?,
+    notificationPermissionGranted: Boolean,
+    notificationsAvailable: Boolean,
     selectedDestination: AccountSettingsDestination?,
     onSelect: (AccountSettingsDestination) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val schoolAccounts = linkedAccounts.filter { it.provider.isSupportedSchoolProvider }
+    val stravaAccounts = linkedAccounts.filter { it.provider == LinkedAccountProvider.STRAVA_CZ }
+    val servicesOverview = accountSettingsServicesOverview(
+        hasBakalariConnection = hasBakalariConnectionOnDevice ||
+            activeLinkedAccountID != null ||
+            schoolAccounts.any { it.status == LinkedAccountStatus.ACTIVE },
+        bakalariNeedsAttention = schoolAccounts.any {
+            it.status == LinkedAccountStatus.ACTION_REQUIRED || it.status == LinkedAccountStatus.FAILED
+        },
+        hasStravaConnection = isStravaConnectedOnDevice ||
+            stravaAccounts.any { it.status == LinkedAccountStatus.ACTIVE },
+        stravaNeedsAttention = stravaAccounts.any {
+            it.status == LinkedAccountStatus.ACTION_REQUIRED || it.status == LinkedAccountStatus.FAILED
+        },
+    )
+    val notificationStatus = accountSettingsNotificationStatus(
+        isAvailable = notificationsAvailable,
+        isEnabled = notificationPreferences.newMarksEnabled,
+        isPermissionGranted = notificationPermissionGranted,
+        isQuietHoursEnabled = notificationPreferences.quietHoursEnabled,
+    )
     GradeyScreen(modifier = modifier.verticalScroll(rememberScrollState())) {
         GradeyHero(
             stringResource(R.string.settings_overview_title),
@@ -776,33 +812,18 @@ private fun AccountSettingsOverview(
         )
         AccountSettingsDestination.entries.forEach { destination ->
             val hasAttention = destination == AccountSettingsDestination.CONNECTED_SERVICES &&
-                linkedAccounts.any {
-                    it.status == LinkedAccountStatus.ACTION_REQUIRED ||
-                        it.status == LinkedAccountStatus.FAILED
-                }
+                (
+                    servicesOverview.bakalari == AccountSettingsServiceStatus.ACTION_REQUIRED ||
+                        servicesOverview.strava == AccountSettingsServiceStatus.ACTION_REQUIRED
+                )
             val subtitle = when (destination) {
                 AccountSettingsDestination.ACCOUNT -> account?.email
                     ?: stringResource(R.string.account_local_only_mode)
-                AccountSettingsDestination.NOTIFICATIONS -> {
-                    val status = stringResource(
-                        if (account != null && notificationPreferences.newMarksEnabled) {
-                            R.string.notifications_enabled
-                        } else {
-                            R.string.notifications_disabled
-                        },
-                    )
-                    "${stringResource(destination.subtitleResource)} · $status"
-                }
-                AccountSettingsDestination.CONNECTED_SERVICES -> {
-                    val mealsStatus = stringResource(
-                        if (isStravaConnectedOnDevice) {
-                            R.string.connected_status_connected
-                        } else {
-                            R.string.connected_status_not_connected
-                        },
-                    )
-                    "${stringResource(destination.subtitleResource)} · $mealsStatus"
-                }
+                AccountSettingsDestination.NOTIFICATIONS -> notificationOverviewText(
+                    status = notificationStatus,
+                    quietHoursEndMinute = notificationPreferences.quietHoursEndMinute,
+                )
+                AccountSettingsDestination.CONNECTED_SERVICES -> servicesOverviewText(servicesOverview)
                 else -> stringResource(destination.subtitleResource)
             }
             Surface(
@@ -847,7 +868,11 @@ private fun AccountSettingsOverview(
                     }
                     Icon(
                         imageVector = if (hasAttention) GradeyIcons.ErrorCircle else GradeyIcons.ArrowRight,
-                        contentDescription = null,
+                        contentDescription = if (hasAttention) {
+                            stringResource(R.string.account_status_action_required)
+                        } else {
+                            null
+                        },
                         tint = if (hasAttention) {
                             MaterialTheme.colorScheme.error
                         } else {
@@ -859,6 +884,46 @@ private fun AccountSettingsOverview(
             }
         }
     }
+}
+
+@Composable
+private fun servicesOverviewText(overview: AccountSettingsServicesOverview): String = stringResource(
+    R.string.settings_overview_services_summary,
+    stringResource(overview.bakalari.bakalariStatusResource),
+    stringResource(overview.strava.stravaStatusResource),
+)
+
+private val AccountSettingsServiceStatus.bakalariStatusResource: Int
+    get() = when (this) {
+        AccountSettingsServiceStatus.CONNECTED -> R.string.settings_overview_bakalari_connected
+        AccountSettingsServiceStatus.NOT_CONNECTED -> R.string.settings_overview_bakalari_not_connected
+        AccountSettingsServiceStatus.ACTION_REQUIRED -> R.string.settings_overview_bakalari_action_required
+    }
+
+private val AccountSettingsServiceStatus.stravaStatusResource: Int
+    get() = when (this) {
+        AccountSettingsServiceStatus.CONNECTED -> R.string.settings_overview_strava_connected
+        AccountSettingsServiceStatus.NOT_CONNECTED -> R.string.settings_overview_strava_not_connected
+        AccountSettingsServiceStatus.ACTION_REQUIRED -> R.string.settings_overview_strava_action_required
+    }
+
+@Composable
+private fun notificationOverviewText(
+    status: AccountSettingsNotificationStatus,
+    quietHoursEndMinute: Int,
+): String = when (status) {
+    AccountSettingsNotificationStatus.UNAVAILABLE ->
+        stringResource(R.string.settings_overview_notifications_unavailable)
+    AccountSettingsNotificationStatus.OFF ->
+        stringResource(R.string.settings_overview_notifications_off)
+    AccountSettingsNotificationStatus.PERMISSION_REQUIRED ->
+        stringResource(R.string.settings_overview_notifications_permission_required)
+    AccountSettingsNotificationStatus.QUIET_HOURS -> stringResource(
+        R.string.settings_overview_notifications_quiet_until,
+        formatMinute(quietHoursEndMinute),
+    )
+    AccountSettingsNotificationStatus.ON ->
+        stringResource(R.string.settings_overview_notifications_on)
 }
 
 private val AccountSettingsDestination.icon: ImageVector

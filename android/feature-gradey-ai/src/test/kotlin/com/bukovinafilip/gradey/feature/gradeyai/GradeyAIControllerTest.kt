@@ -34,6 +34,25 @@ import org.junit.Test
 @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 class GradeyAIControllerTest {
     @Test
+    fun `controller initialized below started blocks bootstrap until foregrounded`() = runTest {
+        val repository = FakeRepository()
+        val controller = controller(
+            repository = repository,
+            scope = this,
+            initiallyForegrounded = false,
+        )
+
+        controller.bootstrap()
+
+        assertThat(controller.isAppForegrounded).isFalse()
+        assertThat(controller.status).isNull()
+        assertThat(repository.statusLoadCalls).isEqualTo(0)
+        assertThat(controller.onAppForegrounded()).isTrue()
+        controller.bootstrap()
+        assertThat(repository.statusLoadCalls).isEqualTo(1)
+    }
+
+    @Test
     fun `bootstrap loads scoped conversations context and support-adjusted limits`() = runTest {
         val conversation = conversation("existing", "Existing chat")
         val repository = FakeRepository(conversations = mutableListOf(conversation))
@@ -171,6 +190,59 @@ class GradeyAIControllerTest {
     }
 
     @Test
+    fun `manual stop during chat creation restores prompt without an orphan bubble`() = runTest {
+        val repository = FakeRepository().apply { holdCreate = true }
+        val controller = controller(repository = repository, scope = this)
+        controller.bootstrap()
+        controller.beginDraftChat("New chat")
+        val send = launch { controller.send("Keep this prompt") }
+        runCurrent()
+
+        controller.stop()
+
+        assertThat(controller.messages).isEmpty()
+        assertThat(controller.draft).isEqualTo("Keep this prompt")
+        repository.releaseCreate()
+        advanceUntilIdle()
+
+        assertThat(controller.messages).isEmpty()
+        assertThat(controller.draft).isEqualTo("Keep this prompt")
+        assertThat(repository.streamRequests).isEmpty()
+        send.join()
+    }
+
+    @Test
+    fun `manual stop before stream start reloads history and restores missing prompt`() = runTest {
+        var beforeStart: Continuation<Unit>? = null
+        val existing = conversation("existing", "Existing")
+        val repository = FakeRepository(conversations = mutableListOf(existing)).apply {
+            streams += flow {
+                suspendCoroutine { beforeStart = it }
+                emit(GradeyAIStreamEvent.Start("assistant", 2))
+                emit(GradeyAIStreamEvent.Done("stop", 2, null, null, null))
+            }
+        }
+        val controller = controller(repository = repository, scope = this)
+        controller.bootstrap()
+        controller.open(existing)
+        val send = launch { controller.send("Restore after stop") }
+        runCurrent()
+
+        controller.stop()
+        runCurrent()
+
+        assertThat(controller.messages).isEmpty()
+        assertThat(controller.draft).isEqualTo("Restore after stop")
+        assertThat(repository.loadedIDs).containsExactly("existing", "existing")
+        beforeStart?.resume(Unit)
+        advanceUntilIdle()
+
+        assertThat(controller.messages).isEmpty()
+        assertThat(controller.draft).isEqualTo("Restore after stop")
+        send.join()
+    }
+
+    @Test
     fun `background cancels a stream and late events cannot repopulate foreground state`() = runTest {
         var lateStreamContinuation: Continuation<Unit>? = null
         val repository = FakeRepository().apply {
@@ -206,6 +278,106 @@ class GradeyAIControllerTest {
 
         assertThat(controller.messages.last().content).isEqualTo("Visible")
         assertThat(controller.messages.last().status).isEqualTo(GradeyAIMessageStatus.CANCELLED)
+        send.join()
+    }
+
+    @Test
+    fun `background during chat creation restores the prompt without an orphan bubble`() = runTest {
+        val repository = FakeRepository().apply { holdCreate = true }
+        val controller = controller(repository = repository, scope = this)
+        controller.bootstrap()
+        controller.beginDraftChat("New chat")
+        val send = launch { controller.send("Help me") }
+        runCurrent()
+
+        assertThat(controller.messages.single().content).isEqualTo("Help me")
+        controller.onAppBackgrounded()
+
+        assertThat(controller.messages).isEmpty()
+        assertThat(controller.draft).isEqualTo("Help me")
+        assertThat(controller.onAppForegrounded()).isTrue()
+        controller.bootstrap()
+        repository.releaseCreate()
+        advanceUntilIdle()
+
+        assertThat(controller.messages).isEmpty()
+        assertThat(controller.draft).isEqualTo("Help me")
+        assertThat(repository.streamRequests).isEmpty()
+        send.join()
+    }
+
+    @Test
+    fun `background before stream start reloads persisted prompt instead of duplicating it`() = runTest {
+        var beforeStart: Continuation<Unit>? = null
+        val existing = conversation("existing", "Existing")
+        val repository = FakeRepository(conversations = mutableListOf(existing)).apply {
+            streams += flow {
+                suspendCoroutine { beforeStart = it }
+                emit(GradeyAIStreamEvent.Start("assistant", 2))
+                emit(GradeyAIStreamEvent.Done("stop", 2, null, null, null))
+            }
+        }
+        val controller = controller(repository = repository, scope = this)
+        controller.bootstrap()
+        controller.open(existing)
+        val send = launch { controller.send("Persist once") }
+        runCurrent()
+        val request = repository.streamRequests.single()
+        repository.loadedMessagesByID[existing.id] = listOf(
+            GradeyAIMessage(
+                id = "persisted-user",
+                conversationID = existing.id,
+                clientMessageID = request.clientMessageID,
+                role = GradeyAIMessageRole.USER,
+                content = request.text,
+                status = GradeyAIMessageStatus.COMPLETE,
+                createdAtEpochMillis = 1_700_000_000_000,
+            ),
+        )
+
+        controller.onAppBackgrounded()
+        assertThat(controller.messages).isEmpty()
+        assertThat(controller.onAppForegrounded()).isTrue()
+        controller.bootstrap()
+
+        assertThat(controller.messages.single().id).isEqualTo("persisted-user")
+        assertThat(controller.draft).isEmpty()
+        assertThat(repository.loadedIDs).containsExactly("existing", "existing")
+        beforeStart?.resume(Unit)
+        advanceUntilIdle()
+
+        assertThat(controller.messages.single().id).isEqualTo("persisted-user")
+        send.join()
+    }
+
+    @Test
+    fun `background before stream start restores prompt when server history is unchanged`() = runTest {
+        var beforeStart: Continuation<Unit>? = null
+        val existing = conversation("existing", "Existing")
+        val repository = FakeRepository(conversations = mutableListOf(existing)).apply {
+            streams += flow {
+                suspendCoroutine { beforeStart = it }
+                emit(GradeyAIStreamEvent.Start("assistant", 2))
+                emit(GradeyAIStreamEvent.Done("stop", 2, null, null, null))
+            }
+        }
+        val controller = controller(repository = repository, scope = this)
+        controller.bootstrap()
+        controller.open(existing)
+        val send = launch { controller.send("Try again safely") }
+        runCurrent()
+
+        controller.onAppBackgrounded()
+        assertThat(controller.onAppForegrounded()).isTrue()
+        controller.bootstrap()
+
+        assertThat(controller.messages).isEmpty()
+        assertThat(controller.draft).isEqualTo("Try again safely")
+        beforeStart?.resume(Unit)
+        advanceUntilIdle()
+
+        assertThat(controller.messages).isEmpty()
+        assertThat(controller.draft).isEqualTo("Try again safely")
         send.join()
     }
 
@@ -360,7 +532,7 @@ class GradeyAIControllerTest {
     }
 
     @Test
-    fun `background invalidates an opening conversation before its late detail arrives`() = runTest {
+    fun `foreground bootstrap reloads a conversation whose opening was interrupted`() = runTest {
         val existing = conversation("existing", "Existing")
         val staleMessage = message(
             id = "stale",
@@ -379,13 +551,17 @@ class GradeyAIControllerTest {
 
         assertThat(controller.isOpeningConversation).isTrue()
         controller.onAppBackgrounded()
-        assertThat(controller.onAppForegrounded()).isTrue()
         repository.releaseLoad("existing")
         advanceUntilIdle()
 
+        assertThat(controller.messages).isEmpty()
+        assertThat(controller.onAppForegrounded()).isTrue()
+        controller.bootstrap()
+
         assertThat(controller.isOpeningConversation).isFalse()
         assertThat(controller.currentConversation?.id).isEqualTo("existing")
-        assertThat(controller.messages).isEmpty()
+        assertThat(controller.messages).containsExactly(staleMessage)
+        assertThat(repository.loadedIDs).containsExactly("existing", "existing")
         opening.join()
     }
 
@@ -508,6 +684,46 @@ class GradeyAIControllerTest {
     }
 
     @Test
+    fun `held consent acceptance reconciles after a stale foreground bootstrap`() = runTest {
+        val repository = FakeRepository(
+            status = status().copy(consentRequired = true),
+        ).apply {
+            holdAccept = true
+        }
+        val contextBuilder = FakeContextBuilder()
+        val controller = controller(
+            repository = repository,
+            contextBuilder = contextBuilder,
+            scope = this,
+        )
+        controller.bootstrap()
+        val accept = launch { controller.acceptConsent() }
+        runCurrent()
+
+        assertThat(controller.isAcceptingConsent).isTrue()
+        controller.onAppBackgrounded()
+        assertThat(controller.onAppForegrounded()).isTrue()
+        contextBuilder.holdRefresh = true
+        val staleBootstrap = launch { controller.bootstrap() }
+        runCurrent()
+        assertThat(controller.status?.consentRequired).isTrue()
+
+        repository.releaseAccept()
+        runCurrent()
+
+        assertThat(controller.status?.consentRequired).isFalse()
+        assertThat(controller.isAcceptingConsent).isFalse()
+        assertThat(repository.acceptCalls).isEqualTo(1)
+        assertThat(repository.statusLoadCalls).isAtLeast(3)
+        contextBuilder.releaseRefresh()
+        advanceUntilIdle()
+
+        assertThat(controller.status?.consentRequired).isFalse()
+        accept.join()
+        staleBootstrap.join()
+    }
+
+    @Test
     fun `consent revocation blocks new AI work and leaves cleared state`() = runTest {
         val existing = conversation("existing", "Existing")
         val repository = FakeRepository(conversations = mutableListOf(existing)).apply {
@@ -546,6 +762,7 @@ class GradeyAIControllerTest {
         repository: FakeRepository = FakeRepository(),
         contextBuilder: FakeContextBuilder = FakeContextBuilder(),
         scope: kotlinx.coroutines.CoroutineScope? = null,
+        initiallyForegrounded: Boolean = true,
     ): GradeyAIController {
         var nextID = 0
         val resolvedScope = scope ?: kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Unconfined)
@@ -556,6 +773,7 @@ class GradeyAIControllerTest {
             nowEpochMillis = { 1_700_000_000_000 + nextID },
             idProvider = { "id-${nextID++}" },
             localeProvider = { Locale.US },
+            initiallyForegrounded = initiallyForegrounded,
         )
     }
 
@@ -594,6 +812,10 @@ class GradeyAIControllerTest {
         val streamRequests = mutableListOf<StreamRequest>()
         val streams = ArrayDeque<Flow<GradeyAIStreamEvent>>()
         val loadedMessagesByID = mutableMapOf<String, List<GradeyAIMessage>>()
+        var statusLoadCalls = 0
+        var acceptCalls = 0
+        var holdAccept = false
+        private var acceptContinuation: Continuation<Unit>? = null
         var holdCreate = false
         private var createContinuation: Continuation<Unit>? = null
         var holdRevoke = false
@@ -605,6 +827,12 @@ class GradeyAIControllerTest {
             holdCreate = false
             createContinuation?.resume(Unit)
             createContinuation = null
+        }
+
+        fun releaseAccept() {
+            holdAccept = false
+            acceptContinuation?.resume(Unit)
+            acceptContinuation = null
         }
 
         fun holdLoad(id: String) {
@@ -622,8 +850,13 @@ class GradeyAIControllerTest {
             revokeContinuation = null
         }
 
-        override suspend fun loadStatus(): GradeyAIStatus = status
+        override suspend fun loadStatus(): GradeyAIStatus {
+            statusLoadCalls += 1
+            return status
+        }
         override suspend fun acceptConsent(): GradeyAIConsent {
+            acceptCalls += 1
+            if (holdAccept) suspendCoroutine { acceptContinuation = it }
             status = status.copy(consentRequired = false)
             return GradeyAIConsent(true, status.termsVersion)
         }

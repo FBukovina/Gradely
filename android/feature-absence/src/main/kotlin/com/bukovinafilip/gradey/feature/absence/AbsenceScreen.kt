@@ -67,6 +67,7 @@ import com.bukovinafilip.gradey.domain.AbsenceMonthSummary
 import com.bukovinafilip.gradey.domain.AbsenceManualSelectionPolicy
 import com.bukovinafilip.gradey.domain.AbsencePartialDayCandidate
 import com.bukovinafilip.gradey.ui.GradeyIcons
+import com.bukovinafilip.gradey.ui.StatusChip
 import com.bukovinafilip.gradey.domain.AbsencePrediction
 import com.bukovinafilip.gradey.domain.AbsencePredictionResult
 import com.bukovinafilip.gradey.domain.AbsencePredictionSubjectRow
@@ -918,16 +919,7 @@ private fun AbsencePredictionSubjectRow(
             )
             Text(detail, color = warningColor, fontSize = 13.sp, lineHeight = 18.sp)
         }
-        Surface(shape = RoundedCornerShape(50), color = warningColor.copy(alpha = 0.12f)) {
-            Text(
-                status,
-                modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
-                color = warningColor,
-                fontSize = 12.sp,
-                lineHeight = 15.sp,
-                fontWeight = FontWeight.SemiBold,
-            )
-        }
+        StatusChip(text = status, color = warningColor)
     }
 }
 

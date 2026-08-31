@@ -95,6 +95,8 @@ import com.bukovinafilip.gradey.domain.SubjectAttentionScore
 import com.bukovinafilip.gradey.model.AbsenceResponse
 import com.bukovinafilip.gradey.model.Mark
 import com.bukovinafilip.gradey.model.Subject
+import com.bukovinafilip.gradey.ui.color
+import com.bukovinafilip.gradey.ui.softColor
 import kotlinx.coroutines.CancellationException
 import java.text.Collator
 import java.text.Normalizer
@@ -1855,21 +1857,9 @@ private fun MarksBackgroundGlow() {
     }
 }
 
-private fun Mark.gradeColors(): Pair<Color, Color> = when (GradeMath.band(this)) {
-    GradeBand.EXCELLENT -> SoftMint to ExcellentGreen
-    GradeBand.GOOD -> SoftTeal to Color(0xFF108A94)
-    GradeBand.AVERAGE -> Color(0xFFFFF0D7) to WarningOrange
-    GradeBand.POOR -> Color(0xFFFFE5E8) to DangerRed
-    GradeBand.NEUTRAL -> SoftGray to MutedText
-}
+private fun Mark.gradeColors(): Pair<Color, Color> = GradeMath.band(this).subjectColors()
 
-private fun GradeBand.subjectColors(): Pair<Color, Color> = when (this) {
-    GradeBand.EXCELLENT -> SoftMint to ExcellentGreen
-    GradeBand.GOOD -> SoftTeal to Color(0xFF108A94)
-    GradeBand.AVERAGE -> Color(0xFFFFF0D7) to WarningOrange
-    GradeBand.POOR -> Color(0xFFFFE5E8) to DangerRed
-    GradeBand.NEUTRAL -> SoftGray to MutedText
-}
+private fun GradeBand.subjectColors(): Pair<Color, Color> = softColor() to color()
 
 private fun parseMarkDate(raw: String?): LocalDate? {
     return MarkDateParser.localDate(raw, PragueZone)

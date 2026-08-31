@@ -30,6 +30,7 @@
     <string name="connected_strava_device">Strava.cz na tomto zařízení</string>
     <string name="connected_status_connected">připojeno</string>
     <string name="connected_status_not_connected">nepřipojeno</string>
+    <string name="connected_cloud_requires_gradey_id">pro synchronizaci a správu cloudově propojených školních účtů je potřeba Gradey ID. Strava.cz na tomhle zařízení zůstává dostupná níže.</string>
     <string name="connected_manage_strava">připojit nebo spravovat Strava.cz</string>
     <string name="connected_retry_strava">zopakovat propojení s Gradey ID</string>
     <string name="connected_retrying_strava">opakování propojení…</string>
@@ -143,6 +144,18 @@
     <string name="settings_destination_preferences_subtitle">jazyk a viditelný karty</string>
     <string name="settings_destination_support">podpora a info</string>
     <string name="settings_destination_support_subtitle">plány podpory, odkazy, autoři a info o appce</string>
+    <string name="settings_overview_services_summary">%1$s · %2$s</string>
+    <string name="settings_overview_bakalari_connected">Bakaláři: připojeno</string>
+    <string name="settings_overview_bakalari_not_connected">Bakaláři: nepřipojeno</string>
+    <string name="settings_overview_bakalari_action_required">Bakaláři: potřebují pozornost</string>
+    <string name="settings_overview_strava_connected">Strava.cz: připojeno</string>
+    <string name="settings_overview_strava_not_connected">Strava.cz: nepřipojeno</string>
+    <string name="settings_overview_strava_action_required">Strava.cz: potřebuje pozornost</string>
+    <string name="settings_overview_notifications_unavailable">notifikace nejsou dostupný</string>
+    <string name="settings_overview_notifications_off">notifikace jsou vypnutý</string>
+    <string name="settings_overview_notifications_permission_required">povol notifikace v nastavení systému</string>
+    <string name="settings_overview_notifications_quiet_until">doba klidu do %1$s</string>
+    <string name="settings_overview_notifications_on">notifikace jsou zapnutý</string>
     <string name="account_local_only_mode">jen v zařízení</string>
     <string name="account_profile">profil</string>
     <string name="account_email">e-mail</string>

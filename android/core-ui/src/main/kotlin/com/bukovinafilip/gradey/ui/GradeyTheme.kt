@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -35,11 +36,12 @@ import com.bukovinafilip.gradey.domain.GradeBand
 object GradeyColors {
     val Primary = Color(0xFF17A185)
     val Secondary = Color(0xFF1DA565)
-    val OnAccent = Color(0xFF041816)
+    val OnAccent = Color(0xFF041814)
     val Excellent = Color(0xFF1E9F69)
     val Good = Color(0xFF108A94)
     val Average = Color(0xFFD98F10)
     val Poor = Color(0xFFD83E4F)
+    val SystemPurple = Color(0xFFAF52DE)
     val LightGroupedBackground = Color(0xFFF2F2F7)
     val LightGroupedSurface = Color(0xFFFFFFFF)
     val DarkGroupedBackground = Color(0xFF080B0A)
@@ -189,6 +191,28 @@ fun GradeySectionCard(
             }
             content()
         }
+    }
+}
+
+@Composable
+fun StatusChip(
+    text: String,
+    color: Color = MaterialTheme.colorScheme.onSurfaceVariant,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier,
+        shape = CircleShape,
+        color = color.copy(alpha = 0.14f),
+        contentColor = color,
+    ) {
+        Text(
+            text = text,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+            color = color,
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.SemiBold,
+        )
     }
 }
 

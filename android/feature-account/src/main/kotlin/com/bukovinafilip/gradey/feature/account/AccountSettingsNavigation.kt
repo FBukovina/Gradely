@@ -2,9 +2,9 @@ package com.bukovinafilip.gradey.feature.account
 
 import androidx.annotation.StringRes
 
-internal enum class AccountSettingsDestination(
-    @get:StringRes val titleResource: Int,
-    @get:StringRes val subtitleResource: Int,
+enum class AccountSettingsDestination(
+    @get:StringRes internal val titleResource: Int,
+    @get:StringRes internal val subtitleResource: Int,
 ) {
     ACCOUNT(R.string.settings_destination_account, R.string.settings_destination_account_subtitle),
     CONNECTED_SERVICES(
@@ -44,3 +44,54 @@ internal fun resolvedAccountSettingsDestination(
 }
 
 internal const val ACCOUNT_SETTINGS_EXPANDED_WIDTH_DP = 840f
+
+internal enum class AccountSettingsServiceStatus {
+    CONNECTED,
+    NOT_CONNECTED,
+    ACTION_REQUIRED,
+}
+
+internal data class AccountSettingsServicesOverview(
+    val bakalari: AccountSettingsServiceStatus,
+    val strava: AccountSettingsServiceStatus,
+)
+
+internal fun accountSettingsServicesOverview(
+    hasBakalariConnection: Boolean,
+    bakalariNeedsAttention: Boolean,
+    hasStravaConnection: Boolean,
+    stravaNeedsAttention: Boolean,
+): AccountSettingsServicesOverview = AccountSettingsServicesOverview(
+    bakalari = accountSettingsServiceStatus(hasBakalariConnection, bakalariNeedsAttention),
+    strava = accountSettingsServiceStatus(hasStravaConnection, stravaNeedsAttention),
+)
+
+private fun accountSettingsServiceStatus(
+    isConnected: Boolean,
+    needsAttention: Boolean,
+): AccountSettingsServiceStatus = when {
+    needsAttention -> AccountSettingsServiceStatus.ACTION_REQUIRED
+    isConnected -> AccountSettingsServiceStatus.CONNECTED
+    else -> AccountSettingsServiceStatus.NOT_CONNECTED
+}
+
+internal enum class AccountSettingsNotificationStatus {
+    UNAVAILABLE,
+    OFF,
+    PERMISSION_REQUIRED,
+    QUIET_HOURS,
+    ON,
+}
+
+internal fun accountSettingsNotificationStatus(
+    isAvailable: Boolean,
+    isEnabled: Boolean,
+    isPermissionGranted: Boolean,
+    isQuietHoursEnabled: Boolean,
+): AccountSettingsNotificationStatus = when {
+    !isAvailable -> AccountSettingsNotificationStatus.UNAVAILABLE
+    !isEnabled -> AccountSettingsNotificationStatus.OFF
+    !isPermissionGranted -> AccountSettingsNotificationStatus.PERMISSION_REQUIRED
+    isQuietHoursEnabled -> AccountSettingsNotificationStatus.QUIET_HOURS
+    else -> AccountSettingsNotificationStatus.ON
+}

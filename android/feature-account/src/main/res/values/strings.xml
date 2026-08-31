@@ -30,6 +30,7 @@
     <string name="connected_strava_device">Strava.cz on this device</string>
     <string name="connected_status_connected">Connected</string>
     <string name="connected_status_not_connected">Not connected</string>
+    <string name="connected_cloud_requires_gradey_id">A Gradey ID is required to sync and manage cloud-linked school accounts. Strava.cz on this device remains available below.</string>
     <string name="connected_manage_strava">Connect or manage Strava.cz</string>
     <string name="connected_retry_strava">Retry Gradey ID link</string>
     <string name="connected_retrying_strava">Retrying link…</string>
@@ -143,6 +144,18 @@
     <string name="settings_destination_preferences_subtitle">Language and visible tabs</string>
     <string name="settings_destination_support">Support &amp; about</string>
     <string name="settings_destination_support_subtitle">Support plans, links, credits, and app information</string>
+    <string name="settings_overview_services_summary">%1$s · %2$s</string>
+    <string name="settings_overview_bakalari_connected">Bakaláři: connected</string>
+    <string name="settings_overview_bakalari_not_connected">Bakaláři: not connected</string>
+    <string name="settings_overview_bakalari_action_required">Bakaláři: needs attention</string>
+    <string name="settings_overview_strava_connected">Strava.cz: connected</string>
+    <string name="settings_overview_strava_not_connected">Strava.cz: not connected</string>
+    <string name="settings_overview_strava_action_required">Strava.cz: needs attention</string>
+    <string name="settings_overview_notifications_unavailable">Notifications unavailable</string>
+    <string name="settings_overview_notifications_off">Notifications off</string>
+    <string name="settings_overview_notifications_permission_required">Allow notifications in system settings</string>
+    <string name="settings_overview_notifications_quiet_until">Quiet hours until %1$s</string>
+    <string name="settings_overview_notifications_on">Notifications on</string>
     <string name="account_local_only_mode">Local-only mode</string>
     <string name="account_profile">Profile</string>
     <string name="account_email">Email</string>

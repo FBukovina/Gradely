@@ -64,7 +64,9 @@ import com.bukovinafilip.gradey.domain.TodayTimetableSummaries
 import com.bukovinafilip.gradey.domain.TodayTimetableSummary
 import com.bukovinafilip.gradey.model.LessonChangeKind
 import com.bukovinafilip.gradey.model.ScheduledDay
+import com.bukovinafilip.gradey.ui.GradeyColors
 import com.bukovinafilip.gradey.ui.GradeyIcons
+import com.bukovinafilip.gradey.ui.StatusChip
 import com.bukovinafilip.gradey.model.ScheduledLesson
 import com.bukovinafilip.gradey.model.TimetableWeek
 import java.time.LocalDate
@@ -712,13 +714,13 @@ private fun LessonRow(
                     if (lesson.changeKind != LessonChangeKind.NONE || lesson.hasHomework) {
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             if (lesson.changeKind != LessonChangeKind.NONE) {
-                                LessonStatusChip(
+                                StatusChip(
                                     text = lesson.localizedChangeLabel(),
                                     color = lesson.changeKind.color(),
                                 )
                             }
                             if (lesson.hasHomework) {
-                                LessonStatusChip(
+                                StatusChip(
                                     text = stringResource(R.string.timetable_detail_homework),
                                     color = AccentTeal,
                                 )
@@ -728,20 +730,6 @@ private fun LessonRow(
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun LessonStatusChip(text: String, color: Color) {
-    Surface(shape = RoundedCornerShape(50), color = color.copy(alpha = 0.12f)) {
-        Text(
-            text = text,
-            modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp),
-            color = color,
-            fontSize = 11.sp,
-            lineHeight = 14.sp,
-            fontWeight = FontWeight.SemiBold,
-        )
     }
 }
 
@@ -1073,10 +1061,10 @@ private fun ScheduledLesson.localizedChangeLabel(): String = when (changeKind) {
 
 private fun LessonChangeKind.color(): Color = when (this) {
     LessonChangeKind.NONE -> AccentTeal
-    LessonChangeKind.CANCELED -> Color(0xFFD95461)
-    LessonChangeKind.SUBSTITUTION -> Color(0xFFD98F10)
-    LessonChangeKind.ROOM_CHANGED -> Color(0xFF3578C7)
-    LessonChangeKind.ADDED -> Color(0xFF1DA565)
+    LessonChangeKind.CANCELED -> GradeyColors.Poor
+    LessonChangeKind.SUBSTITUTION -> GradeyColors.Average
+    LessonChangeKind.ROOM_CHANGED -> GradeyColors.Good
+    LessonChangeKind.ADDED -> GradeyColors.SystemPurple
 }
 
 private fun ScheduledLesson.formattedTimeRange(): String =

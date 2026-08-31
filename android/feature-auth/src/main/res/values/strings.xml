@@ -19,6 +19,7 @@
     <string name="onboarding_account_login_title">Log in to Gradey</string>
     <string name="onboarding_account_login_body">Sign in with the same Google account you used to create Gradey ID. There is no separate password.</string>
     <string name="onboarding_upgrade_continue">Review account options</string>
+    <string name="onboarding_upgrade_account_continue_without">Continue without Gradey ID</string>
     <string name="auth_restoring_account">Restoring your account…</string>
     <string name="auth_back">Back</string>
     <string name="onboarding_notifications_title">Stay up to date</string>
@@ -52,6 +53,14 @@
     <string name="onboarding_upgrade_retry">Retry cloud link</string>
     <string name="onboarding_upgrade_linked">Your Bakaláři account is linked to Gradey ID.</string>
     <string name="onboarding_continue_to_gradey">Continue to Gradey</string>
+    <string name="onboarding_upgrade_support_title">Support Gradey’s next chapter</string>
+    <string name="onboarding_upgrade_support_body">Thank you for using Gradey. Building and running it has real costs; cloud and API services alone have already cost more than $700. Supporting us is optional — with a one-time tip, or with recurring support that raises the Gradey AI daily limit and unlocks early access. You can keep using Gradey either way.</string>
+    <string name="onboarding_upgrade_support_continue">Continue to Gradey</string>
+    <string name="onboarding_sync_warning_title">Some connections are only on this device</string>
+    <string name="onboarding_sync_warning_school">Your school is connected on this device, but could not be linked to Gradey ID.</string>
+    <string name="onboarding_sync_warning_meals">Strava.cz is connected on this device, but could not be linked to Gradey ID.</string>
+    <string name="onboarding_sync_warning_retry">Try again</string>
+    <string name="onboarding_sync_warning_retrying">Retrying…</string>
     <string name="age_title">Confirm your age</string>
     <string name="age_body">Gradey handles school records, optional AI, and support chat. If you are under 16, a parent or guardian must agree (GDPR).</string>
     <string name="age_choose_option">Choose the option that applies</string>

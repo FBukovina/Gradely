@@ -94,7 +94,6 @@ fun SupportScreen(
     val debugModeStore = remember(context.applicationContext) {
         GradeyDebugModeStore(context.applicationContext)
     }
-    var selectedInterval by remember { mutableStateOf(SupportBillingInterval.MONTHLY) }
     var showCredits by remember { mutableStateOf(false) }
     var versionTapCount by remember { mutableIntStateOf(0) }
     var debugUnlocked by remember { mutableStateOf(debugModeStore.isEnabled) }
@@ -137,157 +136,23 @@ fun SupportScreen(
                 )
             }
 
-            when {
-                isLoading && catalog == null -> item {
-                    GradeySectionCard {
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(GradeySpacing.md),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            CircularProgressIndicator()
-                            Text(stringResource(R.string.support_loading))
-                        }
-                    }
-                }
-
-                catalog == null -> item {
-                    GradeySectionCard(title = stringResource(R.string.support_unavailable_title)) {
-                        Text(
-                            if (isConfigured) {
-                                message ?: stringResource(R.string.support_unavailable_message)
-                            } else {
-                                stringResource(R.string.support_not_configured)
-                            },
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Button(onClick = onReload, enabled = !isLoading) {
-                            Text(stringResource(R.string.support_retry))
-                        }
-                    }
-                }
-
-                else -> {
-                    val loadedCatalog = catalog
-                    if (loadedCatalog.entitlement.tier != GradeySupportTier.NONE) {
-                        item {
-                            ActiveSupportCard(
-                                catalog = loadedCatalog,
-                                onManageSubscription = onManageSubscription,
-                            )
-                        }
-                    }
-
-                    if (loadedCatalog.plans.isNotEmpty()) {
-                        item {
-                            GradeySectionCard(title = stringResource(R.string.support_plans_title)) {
-                                if (!isSignedIn) {
-                                    Text(
-                                        stringResource(R.string.support_sign_in_required),
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
-                                Row(horizontalArrangement = Arrangement.spacedBy(GradeySpacing.sm)) {
-                                    SupportBillingInterval.entries.forEach { interval ->
-                                        FilterChip(
-                                            selected = selectedInterval == interval,
-                                            onClick = { selectedInterval = interval },
-                                            label = {
-                                                Text(
-                                                    stringResource(
-                                                        if (interval == SupportBillingInterval.MONTHLY) {
-                                                            R.string.support_monthly
-                                                        } else {
-                                                            R.string.support_yearly
-                                                        },
-                                                    ),
-                                                )
-                                            },
-                                        )
-                                    }
-                                }
-                                if (selectedInterval == SupportBillingInterval.YEARLY) {
-                                    Text(
-                                        stringResource(R.string.support_yearly_savings),
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
-                                loadedCatalog.plans
-                                    .filter { it.interval == selectedInterval }
-                                    .sortedBy { it.tier.ordinal }
-                                    .forEach { plan ->
-                                        SupportPlanButton(
-                                            plan = plan,
-                                            catalog = loadedCatalog,
-                                            isSignedIn = isSignedIn,
-                                            isBusy = purchasingOptionID != null || isRestoring,
-                                            isPurchasing = purchasingOptionID == plan.id,
-                                            onPurchase = { onPurchasePlan(plan) },
-                                        )
-                                    }
-                            }
-                        }
-                    }
-
-                    if (loadedCatalog.tips.isNotEmpty()) {
-                        item {
-                            GradeySectionCard(title = stringResource(R.string.support_tips_title)) {
-                                Text(
-                                    stringResource(R.string.support_tips_message),
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                                loadedCatalog.tips.forEach { tip ->
-                                    OutlinedButton(
-                                        onClick = { onPurchaseTip(tip.id) },
-                                        modifier = Modifier.fillMaxWidth(),
-                                        enabled = purchasingOptionID == null && !isRestoring,
-                                    ) {
-                                        if (purchasingOptionID == tip.id) {
-                                            CircularProgressIndicator(
-                                                modifier = Modifier.padding(end = GradeySpacing.sm),
-                                            )
-                                        }
-                                        Text("${tip.title} · ${tip.localizedPrice}")
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    item {
-                        GradeySectionCard {
-                            Button(
-                                onClick = onRestore,
-                                modifier = Modifier.fillMaxWidth(),
-                                enabled = isSignedIn && purchasingOptionID == null && !isRestoring,
-                            ) {
-                                if (isRestoring) {
-                                    CircularProgressIndicator(
-                                        modifier = Modifier.padding(end = GradeySpacing.sm),
-                                    )
-                                }
-                                Text(stringResource(R.string.support_restore))
-                            }
-                            if (loadedCatalog.plans.isNotEmpty()) {
-                                Text(
-                                    stringResource(R.string.support_renewal_legal),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                            Row(horizontalArrangement = Arrangement.spacedBy(GradeySpacing.md)) {
-                                TextButton(onClick = onOpenPrivacyPolicy) {
-                                    Text(stringResource(R.string.privacy_policy))
-                                }
-                                TextButton(onClick = onOpenTermsOfUse) {
-                                    Text(stringResource(R.string.terms_of_use))
-                                }
-                            }
-                            if (!message.isNullOrBlank()) {
-                                Text(message, color = MaterialTheme.colorScheme.primary)
-                            }
-                        }
-                    }
-                }
+            item {
+                OnboardingSupportOptionsContent(
+                    catalog = catalog,
+                    isSignedIn = isSignedIn,
+                    isConfigured = isConfigured,
+                    isLoading = isLoading,
+                    purchasingOptionID = purchasingOptionID,
+                    isRestoring = isRestoring,
+                    message = message,
+                    onReload = onReload,
+                    onPurchasePlan = onPurchasePlan,
+                    onPurchaseTip = onPurchaseTip,
+                    onRestore = onRestore,
+                    onManageSubscription = onManageSubscription,
+                    onOpenPrivacyPolicy = onOpenPrivacyPolicy,
+                    onOpenTermsOfUse = onOpenTermsOfUse,
+                )
             }
 
             item {
@@ -538,6 +403,184 @@ fun SupportScreen(
     }
 }
 
+/**
+ * The Google Play support catalog content shared by the account screen and upgrade onboarding.
+ */
+@Composable
+fun OnboardingSupportOptionsContent(
+    catalog: SupportCatalog?,
+    isSignedIn: Boolean,
+    isConfigured: Boolean,
+    isLoading: Boolean,
+    purchasingOptionID: String?,
+    isRestoring: Boolean,
+    message: String?,
+    onReload: () -> Unit,
+    onPurchasePlan: (SupportPlanOption) -> Unit,
+    onPurchaseTip: (String) -> Unit,
+    onRestore: () -> Unit,
+    onManageSubscription: () -> Unit,
+    onOpenPrivacyPolicy: () -> Unit,
+    onOpenTermsOfUse: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+) {
+    var selectedInterval by remember { mutableStateOf(SupportBillingInterval.MONTHLY) }
+    val actionsEnabled = enabled && !isLoading && purchasingOptionID == null && !isRestoring
+
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(GradeySpacing.lg),
+    ) {
+        when {
+            isLoading && catalog == null -> {
+                GradeySectionCard {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(GradeySpacing.md),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        CircularProgressIndicator()
+                        Text(stringResource(R.string.support_loading))
+                    }
+                }
+            }
+
+            catalog == null -> {
+                GradeySectionCard(title = stringResource(R.string.support_unavailable_title)) {
+                    Text(
+                        if (isConfigured) {
+                            message ?: stringResource(R.string.support_unavailable_message)
+                        } else {
+                            stringResource(R.string.support_not_configured)
+                        },
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Button(onClick = onReload, enabled = enabled && !isLoading) {
+                        Text(stringResource(R.string.support_retry))
+                    }
+                }
+            }
+
+            else -> {
+                val loadedCatalog = catalog
+                if (loadedCatalog.entitlement.tier != GradeySupportTier.NONE) {
+                    ActiveSupportCard(
+                        catalog = loadedCatalog,
+                        enabled = actionsEnabled,
+                        onManageSubscription = onManageSubscription,
+                    )
+                }
+
+                if (loadedCatalog.plans.isNotEmpty()) {
+                    GradeySectionCard(title = stringResource(R.string.support_plans_title)) {
+                        if (!isSignedIn) {
+                            Text(
+                                stringResource(R.string.support_sign_in_required),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(GradeySpacing.sm)) {
+                            SupportBillingInterval.entries.forEach { interval ->
+                                FilterChip(
+                                    selected = selectedInterval == interval,
+                                    onClick = { selectedInterval = interval },
+                                    label = {
+                                        Text(
+                                            stringResource(
+                                                if (interval == SupportBillingInterval.MONTHLY) {
+                                                    R.string.support_monthly
+                                                } else {
+                                                    R.string.support_yearly
+                                                },
+                                            ),
+                                        )
+                                    },
+                                    enabled = actionsEnabled,
+                                )
+                            }
+                        }
+                        if (selectedInterval == SupportBillingInterval.YEARLY) {
+                            Text(
+                                stringResource(R.string.support_yearly_savings),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        loadedCatalog.plans
+                            .filter { it.interval == selectedInterval }
+                            .sortedBy { it.tier.ordinal }
+                            .forEach { plan ->
+                                SupportPlanButton(
+                                    plan = plan,
+                                    catalog = loadedCatalog,
+                                    isSignedIn = isSignedIn,
+                                    isBusy = !actionsEnabled,
+                                    isPurchasing = purchasingOptionID == plan.id,
+                                    onPurchase = { onPurchasePlan(plan) },
+                                )
+                            }
+                    }
+                }
+
+                if (loadedCatalog.tips.isNotEmpty()) {
+                    GradeySectionCard(title = stringResource(R.string.support_tips_title)) {
+                        Text(
+                            stringResource(R.string.support_tips_message),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        loadedCatalog.tips.forEach { tip ->
+                            OutlinedButton(
+                                onClick = { onPurchaseTip(tip.id) },
+                                modifier = Modifier.fillMaxWidth(),
+                                enabled = actionsEnabled,
+                            ) {
+                                if (purchasingOptionID == tip.id) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.padding(end = GradeySpacing.sm),
+                                    )
+                                }
+                                Text("${tip.title} · ${tip.localizedPrice}")
+                            }
+                        }
+                    }
+                }
+
+                GradeySectionCard {
+                    Button(
+                        onClick = onRestore,
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = isSignedIn && actionsEnabled,
+                    ) {
+                        if (isRestoring) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.padding(end = GradeySpacing.sm),
+                            )
+                        }
+                        Text(stringResource(R.string.support_restore))
+                    }
+                    if (loadedCatalog.plans.isNotEmpty()) {
+                        Text(
+                            stringResource(R.string.support_renewal_legal),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(GradeySpacing.md)) {
+                        TextButton(onClick = onOpenPrivacyPolicy, enabled = enabled) {
+                            Text(stringResource(R.string.privacy_policy))
+                        }
+                        TextButton(onClick = onOpenTermsOfUse, enabled = enabled) {
+                            Text(stringResource(R.string.terms_of_use))
+                        }
+                    }
+                    if (!message.isNullOrBlank()) {
+                        Text(message, color = MaterialTheme.colorScheme.primary)
+                    }
+                }
+            }
+        }
+    }
+}
+
 @Composable
 private fun DebugCopyableValue(
     label: String,
@@ -573,7 +616,11 @@ private fun debugBooleanValue(value: Boolean?): String = when (value) {
 }
 
 @Composable
-private fun ActiveSupportCard(catalog: SupportCatalog, onManageSubscription: () -> Unit) {
+private fun ActiveSupportCard(
+    catalog: SupportCatalog,
+    enabled: Boolean,
+    onManageSubscription: () -> Unit,
+) {
     val entitlement = catalog.entitlement
     GradeySectionCard(title = stringResource(R.string.support_active_title)) {
         Icon(GradeyIcons.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
@@ -591,7 +638,7 @@ private fun ActiveSupportCard(catalog: SupportCatalog, onManageSubscription: () 
             } ?: stringResource(R.string.support_active),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        Button(onClick = onManageSubscription) {
+        Button(onClick = onManageSubscription, enabled = enabled) {
             Text(stringResource(R.string.support_manage))
         }
     }

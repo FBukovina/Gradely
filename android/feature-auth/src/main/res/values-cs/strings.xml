@@ -19,6 +19,7 @@
     <string name="onboarding_account_login_title">Přihlaste se do Gradey</string>
     <string name="onboarding_account_login_body">Přihlaste se stejným účtem Google, který jste použili při vytváření Gradey ID. Další heslo nepotřebujete.</string>
     <string name="onboarding_upgrade_continue">Zkontrolovat možnosti účtu</string>
+    <string name="onboarding_upgrade_account_continue_without">Pokračovat bez Gradey ID</string>
     <string name="auth_restoring_account">Obnovování účtu…</string>
     <string name="auth_back">Zpět</string>
     <string name="onboarding_notifications_title">Mějte přehled</string>
@@ -52,6 +53,14 @@
     <string name="onboarding_upgrade_retry">Zopakovat propojení s cloudem</string>
     <string name="onboarding_upgrade_linked">Váš účet Bakaláři je propojený s Gradey ID.</string>
     <string name="onboarding_continue_to_gradey">Pokračovat do Gradey</string>
+    <string name="onboarding_upgrade_support_title">Podpoř další kapitolu Gradey</string>
+    <string name="onboarding_upgrade_support_body">Děkujeme, že Gradey používáte. Vývoj i provoz něco stojí; jen cloudové a API služby nás dosud vyšly na více než 700 dolarů. Podpora je dobrovolná — jednorázovým příspěvkem, nebo pravidelnou podporou, která zvedne denní limit Gradey AI a otevře přednostní přístup k novinkám. Gradey můžeš dál používat bez ohledu na své rozhodnutí.</string>
+    <string name="onboarding_upgrade_support_continue">Pokračovat do Gradey</string>
+    <string name="onboarding_sync_warning_title">Některá připojení jsou pouze v zařízení</string>
+    <string name="onboarding_sync_warning_school">Škola je v tomto zařízení připojená, ale nepodařilo se ji propojit s Gradey ID.</string>
+    <string name="onboarding_sync_warning_meals">Strava.cz je v tomto zařízení připojená, ale nepodařilo se ji propojit s Gradey ID.</string>
+    <string name="onboarding_sync_warning_retry">Zkusit znovu</string>
+    <string name="onboarding_sync_warning_retrying">Probíhá další pokus…</string>
     <string name="age_title">Potvrďte svůj věk</string>
     <string name="age_body">Gradey pracuje se školními záznamy, volitelnou AI a chatem podpory. Pokud vám není 16 let, musí souhlasit rodič nebo zákonný zástupce (GDPR).</string>
     <string name="age_choose_option">Vyberte odpovídající možnost</string>

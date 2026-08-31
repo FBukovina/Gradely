@@ -35,7 +35,6 @@ import androidx.compose.ui.unit.sp
 import com.bukovinafilip.gradey.model.AgeAttestationKind
 import com.bukovinafilip.gradey.model.AppLanguage
 import com.bukovinafilip.gradey.model.OnboardingAccountIntent
-import com.bukovinafilip.gradey.model.OnboardingJourney
 import com.bukovinafilip.gradey.ui.AppLanguagePicker
 import com.bukovinafilip.gradey.ui.GradeyColors
 import com.bukovinafilip.gradey.ui.GradeyIcons
@@ -81,7 +80,6 @@ fun GradeyCheckingScreen(modifier: Modifier = Modifier) {
 
 @Composable
 fun OnboardingWelcomeScreen(
-    journey: OnboardingJourney,
     appLanguage: AppLanguage,
     onAppLanguageChange: (AppLanguage) -> Unit,
     onContinue: () -> Unit,
@@ -90,18 +88,8 @@ fun OnboardingWelcomeScreen(
 ) {
     GradeyScreen(modifier = modifier.statusBarsPadding().verticalScroll(rememberScrollState())) {
         GradeyHero(
-            title = stringResource(
-                if (journey == OnboardingJourney.UPGRADE) {
-                    R.string.onboarding_upgrade_welcome_title
-                } else {
-                    R.string.onboarding_welcome_title
-                },
-            ),
-            subtitle = if (journey == OnboardingJourney.UPGRADE) {
-                stringResource(R.string.onboarding_upgrade_welcome_body)
-            } else {
-                stringResource(R.string.onboarding_welcome_body)
-            },
+            title = stringResource(R.string.onboarding_welcome_title),
+            subtitle = stringResource(R.string.onboarding_welcome_body),
         )
         GradeySectionCard(title = stringResource(R.string.onboarding_benefits_title)) {
             OnboardingBenefit(
@@ -127,15 +115,7 @@ fun OnboardingWelcomeScreen(
             modifier = Modifier.fillMaxWidth(),
             onClick = onContinue,
         ) {
-            Text(
-                stringResource(
-                    if (journey == OnboardingJourney.UPGRADE) {
-                        R.string.onboarding_upgrade_continue
-                    } else {
-                        R.string.onboarding_get_started
-                    },
-                ),
-            )
+            Text(stringResource(R.string.onboarding_get_started))
         }
         if (onLogIn != null) {
             OutlinedButton(
@@ -365,62 +345,100 @@ fun OnboardingReadyScreen(
 
 @Composable
 fun OnboardingUpgradeSupportScreen(
-    isGuestMode: Boolean,
-    onRetryCloudLink: () -> Unit,
     onFinish: () -> Unit,
-    onBack: () -> Unit,
     modifier: Modifier = Modifier,
-    cloudLinkErrorMessage: String? = null,
-    isRetryingCloudLink: Boolean = false,
+    schoolCloudLinkFailed: Boolean = false,
+    schoolCloudLinkErrorMessage: String? = null,
+    mealsCloudLinkFailed: Boolean = false,
+    mealsCloudLinkErrorMessage: String? = null,
+    isWorking: Boolean = false,
+    isRetryingSchoolCloudLink: Boolean = false,
+    isRetryingMealsCloudLink: Boolean = false,
+    canFinish: Boolean = true,
+    onRetrySchoolCloudLink: (() -> Unit)? = null,
+    onRetryMealsCloudLink: (() -> Unit)? = null,
     progressPosition: Int? = null,
     progressCount: Int? = null,
+    supportOptionsContent: @Composable () -> Unit = {},
 ) {
     GradeyScreen(modifier = modifier.statusBarsPadding().verticalScroll(rememberScrollState())) {
         if (progressPosition != null && progressCount != null) {
-            OnboardingProgressHeader(progressPosition, progressCount, onBack)
-        } else {
-            TextButton(onClick = onBack) { Text(stringResource(R.string.auth_back)) }
+            OnboardingProgressHeader(progressPosition, progressCount, onBack = null)
         }
         GradeyHero(
-            title = stringResource(R.string.onboarding_upgrade_ready_title),
-            subtitle = stringResource(R.string.onboarding_upgrade_ready_body),
+            title = stringResource(R.string.onboarding_upgrade_support_title),
+            subtitle = stringResource(R.string.onboarding_upgrade_support_body),
         )
-        GradeySectionCard(title = stringResource(R.string.onboarding_upgrade_account_mode)) {
-            Text(
-                stringResource(
-                    if (isGuestMode) {
-                        R.string.onboarding_upgrade_local_mode
-                    } else {
-                        R.string.onboarding_upgrade_gradey_id_mode
-                    },
-                ),
+        if (schoolCloudLinkFailed) {
+            OnboardingUpgradeConnectionWarning(
+                bodyResource = R.string.onboarding_sync_warning_school,
+                errorMessage = schoolCloudLinkErrorMessage,
+                isWorking = isWorking,
+                isRetrying = isRetryingSchoolCloudLink,
+                onRetry = onRetrySchoolCloudLink,
             )
-            if (!isGuestMode && cloudLinkErrorMessage != null) {
-                Text(
-                    stringResource(R.string.onboarding_upgrade_link_error, cloudLinkErrorMessage),
-                    color = MaterialTheme.colorScheme.error,
-                )
-                Button(
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = !isRetryingCloudLink,
-                    onClick = onRetryCloudLink,
-                ) {
-                    Text(
-                        stringResource(
-                            if (isRetryingCloudLink) {
-                                R.string.onboarding_upgrade_retrying
-                            } else {
-                                R.string.onboarding_upgrade_retry
-                            },
-                        ),
-                    )
-                }
-            } else if (!isGuestMode) {
-                Text(stringResource(R.string.onboarding_upgrade_linked))
+        }
+        if (mealsCloudLinkFailed) {
+            OnboardingUpgradeConnectionWarning(
+                bodyResource = R.string.onboarding_sync_warning_meals,
+                errorMessage = mealsCloudLinkErrorMessage,
+                isWorking = isWorking,
+                isRetrying = isRetryingMealsCloudLink,
+                onRetry = onRetryMealsCloudLink,
+            )
+        }
+        if (isWorking) {
+            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
             }
         }
-        Button(modifier = Modifier.fillMaxWidth(), onClick = onFinish) {
-            Text(stringResource(R.string.onboarding_continue_to_gradey))
+        supportOptionsContent()
+        Button(
+            modifier = Modifier.fillMaxWidth(),
+            enabled = canFinish && !isWorking,
+            onClick = onFinish,
+        ) {
+            Text(stringResource(R.string.onboarding_upgrade_support_continue))
+        }
+    }
+}
+
+@Composable
+private fun OnboardingUpgradeConnectionWarning(
+    bodyResource: Int,
+    errorMessage: String?,
+    isWorking: Boolean,
+    isRetrying: Boolean,
+    onRetry: (() -> Unit)?,
+) {
+    GradeySectionCard(title = stringResource(R.string.onboarding_sync_warning_title)) {
+        Text(
+            text = stringResource(bodyResource),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        if (!errorMessage.isNullOrBlank()) {
+            Text(
+                text = errorMessage,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
+        if (onRetry != null) {
+            Button(
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !isWorking,
+                onClick = onRetry,
+            ) {
+                Text(
+                    stringResource(
+                        if (isRetrying) {
+                            R.string.onboarding_sync_warning_retrying
+                        } else {
+                            R.string.onboarding_sync_warning_retry
+                        },
+                    ),
+                )
+            }
         }
     }
 }
@@ -541,6 +559,7 @@ fun GradeyIdLoginScreen(
     modifier: Modifier = Modifier,
     errorMessage: String? = null,
     isGoogleSignInAvailable: Boolean = true,
+    isUpgradeJourney: Boolean = false,
     accountIntent: OnboardingAccountIntent? = null,
     progressPosition: Int? = null,
     progressCount: Int? = null,
@@ -608,7 +627,15 @@ fun GradeyIdLoginScreen(
                     enabled = !isLoading,
                     onClick = onContinueWithoutAccount,
                 ) {
-                    Text(stringResource(R.string.gradey_id_continue_without_account))
+                    Text(
+                        stringResource(
+                            if (isUpgradeJourney) {
+                                R.string.onboarding_upgrade_account_continue_without
+                            } else {
+                                R.string.gradey_id_continue_without_account
+                            },
+                        ),
+                    )
                 }
                 Text(
                     stringResource(R.string.gradey_id_local_body),

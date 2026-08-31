@@ -66,6 +66,7 @@ import com.bukovinafilip.gradey.feature.absence.AbsenceStateScreen
 import com.bukovinafilip.gradey.feature.absence.R as AbsenceR
 import com.bukovinafilip.gradey.feature.account.AccountScreen
 import com.bukovinafilip.gradey.feature.account.AccountSettingsDestination
+import com.bukovinafilip.gradey.feature.account.OnboardingSupportOptionsContent
 import com.bukovinafilip.gradey.feature.account.SupportScreen
 import com.bukovinafilip.gradey.feature.auth.AgeAttestationScreen
 import com.bukovinafilip.gradey.feature.auth.GradeyCheckingScreen
@@ -94,7 +95,9 @@ import com.bukovinafilip.gradey.domain.SchoolSessionExpiredException
 import com.bukovinafilip.gradey.domain.TimetableDates
 import com.bukovinafilip.gradey.domain.TodayPresentationState
 import com.bukovinafilip.gradey.domain.TodayPresentationStates
+import com.bukovinafilip.gradey.domain.RetainedStravaCloudLinkResult
 import com.bukovinafilip.gradey.domain.WearPayloadBuilder
+import com.bukovinafilip.gradey.domain.linkRetainedStravaSession
 import com.bukovinafilip.gradey.domain.refreshRetainingContent
 import com.bukovinafilip.gradey.domain.reconcileOnboardingProgress
 import com.bukovinafilip.gradey.domain.isCurrentSchoolCloudLinked
@@ -203,6 +206,18 @@ private enum class AppPhase {
     SIGNED_IN,
 }
 
+private enum class OnboardingUpgradeCloudLinkState {
+    PENDING,
+    NOT_ATTEMPTED,
+    LINKED,
+    FAILED,
+}
+
+private enum class OnboardingUpgradeRetryTarget {
+    SCHOOL,
+    MEALS,
+}
+
 private enum class AppTab(@StringRes val labelRes: Int) {
     TODAY(R.string.tab_today),
     SUBJECTS(R.string.tab_marks),
@@ -280,6 +295,53 @@ private fun GradeyApp(
         mutableStateOf(OnboardingAccountIntent.GET_STARTED)
     }
     var account by remember { mutableStateOf<GradeyAccount?>(null) }
+    val onboardingUpgradeIdentityKey = when {
+        isGuestMode -> "guest"
+        account != null -> "account:${account?.id}"
+        else -> "signed-out"
+    }
+    var onboardingUpgradeSchoolCloudLinkState by remember(
+        onboardingProgress?.journey,
+        onboardingUpgradeIdentityKey,
+    ) {
+        mutableStateOf(OnboardingUpgradeCloudLinkState.PENDING)
+    }
+    var onboardingUpgradeMealsCloudLinkState by remember(
+        onboardingProgress?.journey,
+        onboardingUpgradeIdentityKey,
+    ) {
+        mutableStateOf(OnboardingUpgradeCloudLinkState.PENDING)
+    }
+    var onboardingUpgradeSchoolCloudLinkError by remember(
+        onboardingProgress?.journey,
+        onboardingUpgradeIdentityKey,
+    ) {
+        mutableStateOf<String?>(null)
+    }
+    var onboardingUpgradeMealsCloudLinkError by remember(
+        onboardingProgress?.journey,
+        onboardingUpgradeIdentityKey,
+    ) {
+        mutableStateOf<String?>(null)
+    }
+    var onboardingUpgradeCloudLinkAttempt by remember(
+        onboardingProgress?.journey,
+        onboardingUpgradeIdentityKey,
+    ) {
+        mutableIntStateOf(0)
+    }
+    var isOnboardingUpgradeCloudLinkWorking by remember(
+        onboardingProgress?.journey,
+        onboardingUpgradeIdentityKey,
+    ) {
+        mutableStateOf(false)
+    }
+    var onboardingUpgradeRetryTarget by remember(
+        onboardingProgress?.journey,
+        onboardingUpgradeIdentityKey,
+    ) {
+        mutableStateOf<OnboardingUpgradeRetryTarget?>(null)
+    }
     var accountSettingsDestination by rememberSaveable(account?.id, isGuestMode) {
         mutableStateOf<AccountSettingsDestination?>(null)
     }
@@ -1093,11 +1155,12 @@ private fun GradeyApp(
         gradeHistoryRefreshError = refresh.failure?.userFacingMessage(context)
     }
 
-    suspend fun linkCurrentSchoolIfNeeded(): Boolean {
+    suspend fun linkCurrentSchoolIfNeeded(trustCachedAssociation: Boolean = true): Boolean {
         if (account == null || isGuestMode || !graph.isGradeyCloudConfigured) return true
         val session = graph.schoolRepository.currentStoredSession() ?: return false
         val cachedAccounts = graph.linkedAccountRepository.localAccounts()
         if (
+            trustCachedAssociation &&
             session.linkedAccountID != null &&
             cachedAccounts.any {
                 it.id == session.linkedAccountID &&
@@ -1376,9 +1439,321 @@ private fun GradeyApp(
         onboardingProgress = progress
     }
 
+    fun isCurrentUpgradeSupportAttempt(ownerAccountID: String, attempt: Int): Boolean =
+        attempt == onboardingUpgradeCloudLinkAttempt &&
+            account?.id == ownerAccountID &&
+            !isGuestMode &&
+            onboardingProgress?.journey == OnboardingJourney.UPGRADE &&
+            onboardingProgress?.step == OnboardingStep.SUPPORT
+
+    fun returnUpgradeToAccountAfterExpiredIdentity(ownerAccountID: String) {
+        val current = onboardingProgress ?: return
+        if (
+            account == null &&
+            !isGuestMode &&
+            ownerAccountID.isNotBlank() &&
+            current.journey == OnboardingJourney.UPGRADE &&
+            current.step == OnboardingStep.SUPPORT
+        ) {
+            persistOnboarding(current.copy(step = OnboardingStep.ACCOUNT))
+        }
+    }
+
+    suspend fun migrateOnboardingUpgradeConnections(ownerAccountID: String) {
+        if (
+            isOnboardingUpgradeCloudLinkWorking ||
+            account?.id != ownerAccountID ||
+            isGuestMode ||
+            onboardingProgress?.journey != OnboardingJourney.UPGRADE ||
+            onboardingProgress?.step != OnboardingStep.SUPPORT ||
+            onboardingUpgradeSchoolCloudLinkState != OnboardingUpgradeCloudLinkState.PENDING ||
+            onboardingUpgradeMealsCloudLinkState != OnboardingUpgradeCloudLinkState.PENDING
+        ) {
+            return
+        }
+
+        val attempt = onboardingUpgradeCloudLinkAttempt + 1
+        onboardingUpgradeCloudLinkAttempt = attempt
+        isOnboardingUpgradeCloudLinkWorking = true
+        onboardingUpgradeRetryTarget = null
+        try {
+            val existingAccounts = try {
+                val snapshot = graph.linkedAccountRepository.refreshAccounts()
+                linkedAccounts = snapshot.linkedAccounts
+                notificationPreferences = snapshot.notificationPreferences
+                graph.notificationPreferencesStore.preferences = snapshot.notificationPreferences
+                snapshot.linkedAccounts
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: GradeySessionExpiredException) {
+                expireGradeyIdentity(error)
+                returnUpgradeToAccountAfterExpiredIdentity(ownerAccountID)
+                return
+            } catch (_: Throwable) {
+                // Never trust an unscoped on-device cloud snapshot after reauthentication.
+                // Offline migration safely attempts the retained sessions instead.
+                emptyList()
+            }
+
+            var schoolState: OnboardingUpgradeCloudLinkState
+            var schoolError: String? = null
+            // Match iOS migration semantics: a current-owner cloud record for the provider
+            // is already migrated; otherwise copy the current on-device session below.
+            if (existingAccounts.any { it.provider.isSupportedSchoolProvider }) {
+                schoolState = OnboardingUpgradeCloudLinkState.LINKED
+            } else {
+                val schoolSession = try {
+                    graph.schoolRepository.bootstrapSession()
+                } catch (error: CancellationException) {
+                    throw error
+                } catch (_: Throwable) {
+                    null
+                }
+                if (schoolSession == null) {
+                    schoolState = OnboardingUpgradeCloudLinkState.NOT_ATTEMPTED
+                } else {
+                    try {
+                        graph.schoolRepository.loadCachedDashboard()?.let { dashboard = it }
+                    } catch (error: CancellationException) {
+                        throw error
+                    } catch (_: Throwable) {
+                        // The retained school session is sufficient for the cloud-link attempt.
+                    }
+                    val linked = linkCurrentSchoolIfNeeded(trustCachedAssociation = false)
+                    if (account?.id != ownerAccountID) {
+                        returnUpgradeToAccountAfterExpiredIdentity(ownerAccountID)
+                        return
+                    }
+                    schoolState = if (linked) {
+                        OnboardingUpgradeCloudLinkState.LINKED
+                    } else {
+                        OnboardingUpgradeCloudLinkState.FAILED
+                    }
+                    schoolError = linkedAccountError
+                        .takeIf { schoolState == OnboardingUpgradeCloudLinkState.FAILED }
+                        ?: context.getString(R.string.error_linked_account)
+                            .takeIf { schoolState == OnboardingUpgradeCloudLinkState.FAILED }
+                }
+            }
+
+            if (!isCurrentUpgradeSupportAttempt(ownerAccountID, attempt)) return
+
+            var mealsState: OnboardingUpgradeCloudLinkState
+            var mealsError: String? = null
+            var retainedMealsSession: StravaCZStoredSession? = null
+            var refreshedAccounts: List<LinkedSchoolAccount>? = null
+            // iOS likewise treats an existing Strava.cz provider record as migrated.
+            if (existingAccounts.any { it.provider == LinkedAccountProvider.STRAVA_CZ }) {
+                mealsState = OnboardingUpgradeCloudLinkState.LINKED
+            } else {
+                val result = linkRetainedStravaSession(
+                    loadSession = {
+                        try {
+                            graph.stravaCZRepository.bootstrapSession()
+                        } catch (error: CancellationException) {
+                            throw error
+                        } catch (_: Throwable) {
+                            null
+                        }
+                    },
+                    linkSession = { session ->
+                        val linked = graph.linkedAccountRepository.linkStravaCZAccount(session)
+                        check(
+                            linked.provider == LinkedAccountProvider.STRAVA_CZ &&
+                                linked.status == LinkedAccountStatus.ACTIVE,
+                        ) {
+                            context.getString(R.string.error_linked_account)
+                        }
+                    },
+                )
+                when (result) {
+                    RetainedStravaCloudLinkResult.NoLocalSession -> {
+                        mealsState = OnboardingUpgradeCloudLinkState.NOT_ATTEMPTED
+                    }
+                    is RetainedStravaCloudLinkResult.Linked -> {
+                        mealsState = OnboardingUpgradeCloudLinkState.LINKED
+                        retainedMealsSession = result.session
+                        refreshedAccounts = try {
+                            graph.linkedAccountRepository.localAccounts()
+                        } catch (error: CancellationException) {
+                            throw error
+                        } catch (_: Throwable) {
+                            null
+                        }
+                    }
+                    is RetainedStravaCloudLinkResult.Failed -> {
+                        val cause = result.cause
+                        if (cause is GradeySessionExpiredException) {
+                            expireGradeyIdentity(cause)
+                            returnUpgradeToAccountAfterExpiredIdentity(ownerAccountID)
+                            return
+                        }
+                        mealsState = OnboardingUpgradeCloudLinkState.FAILED
+                        mealsError = cause.userFacingMessage(context)
+                        retainedMealsSession = result.session
+                    }
+                }
+            }
+
+            if (!isCurrentUpgradeSupportAttempt(ownerAccountID, attempt)) return
+            onboardingUpgradeSchoolCloudLinkState = schoolState
+            onboardingUpgradeSchoolCloudLinkError = schoolError
+            onboardingUpgradeMealsCloudLinkState = mealsState
+            onboardingUpgradeMealsCloudLinkError = mealsError
+            retainedMealsSession?.let { stravaSession = it }
+            refreshedAccounts?.let { linkedAccounts = it }
+        } finally {
+            if (attempt == onboardingUpgradeCloudLinkAttempt) {
+                isOnboardingUpgradeCloudLinkWorking = false
+                onboardingUpgradeRetryTarget = null
+            }
+        }
+    }
+
+    suspend fun retryOnboardingUpgradeSchoolCloudLink(ownerAccountID: String) {
+        if (
+            isOnboardingUpgradeCloudLinkWorking ||
+            account?.id != ownerAccountID ||
+            isGuestMode ||
+            onboardingProgress?.journey != OnboardingJourney.UPGRADE ||
+            onboardingProgress?.step != OnboardingStep.SUPPORT
+        ) {
+            return
+        }
+        val hasRetainedSession = try {
+            graph.schoolRepository.bootstrapSession()
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: Throwable) {
+            null
+        } != null
+        if (!hasRetainedSession) return
+
+        val attempt = onboardingUpgradeCloudLinkAttempt + 1
+        onboardingUpgradeCloudLinkAttempt = attempt
+        isOnboardingUpgradeCloudLinkWorking = true
+        onboardingUpgradeRetryTarget = OnboardingUpgradeRetryTarget.SCHOOL
+        try {
+            try {
+                graph.schoolRepository.loadCachedDashboard()?.let { dashboard = it }
+            } catch (error: CancellationException) {
+                throw error
+            } catch (_: Throwable) {
+                // Retry with the retained session even when optional cached profile data is unavailable.
+            }
+            val linked = linkCurrentSchoolIfNeeded(trustCachedAssociation = false)
+            if (account?.id != ownerAccountID) {
+                returnUpgradeToAccountAfterExpiredIdentity(ownerAccountID)
+                return
+            }
+            if (!isCurrentUpgradeSupportAttempt(ownerAccountID, attempt)) return
+            onboardingUpgradeSchoolCloudLinkState = if (linked) {
+                OnboardingUpgradeCloudLinkState.LINKED
+            } else {
+                OnboardingUpgradeCloudLinkState.FAILED
+            }
+            onboardingUpgradeSchoolCloudLinkError = if (linked) {
+                null
+            } else {
+                linkedAccountError ?: context.getString(R.string.error_linked_account)
+            }
+        } finally {
+            if (attempt == onboardingUpgradeCloudLinkAttempt) {
+                isOnboardingUpgradeCloudLinkWorking = false
+                onboardingUpgradeRetryTarget = null
+            }
+        }
+    }
+
+    suspend fun retryOnboardingUpgradeMealsCloudLink(ownerAccountID: String) {
+        if (
+            isOnboardingUpgradeCloudLinkWorking ||
+            account?.id != ownerAccountID ||
+            isGuestMode ||
+            onboardingProgress?.journey != OnboardingJourney.UPGRADE ||
+            onboardingProgress?.step != OnboardingStep.SUPPORT
+        ) {
+            return
+        }
+
+        val attempt = onboardingUpgradeCloudLinkAttempt + 1
+        onboardingUpgradeCloudLinkAttempt = attempt
+        isOnboardingUpgradeCloudLinkWorking = true
+        onboardingUpgradeRetryTarget = OnboardingUpgradeRetryTarget.MEALS
+        try {
+            val result = linkRetainedStravaSession(
+                loadSession = {
+                    try {
+                        graph.stravaCZRepository.bootstrapSession()
+                    } catch (error: CancellationException) {
+                        throw error
+                    } catch (_: Throwable) {
+                        null
+                    }
+                },
+                linkSession = { session ->
+                    val linked = graph.linkedAccountRepository.linkStravaCZAccount(session)
+                    check(
+                        linked.provider == LinkedAccountProvider.STRAVA_CZ &&
+                            linked.status == LinkedAccountStatus.ACTIVE,
+                    ) {
+                        context.getString(R.string.error_linked_account)
+                    }
+                },
+            )
+            if (result is RetainedStravaCloudLinkResult.Failed) {
+                val cause = result.cause
+                if (cause is GradeySessionExpiredException) {
+                    expireGradeyIdentity(cause)
+                    returnUpgradeToAccountAfterExpiredIdentity(ownerAccountID)
+                    return
+                }
+            }
+            if (!isCurrentUpgradeSupportAttempt(ownerAccountID, attempt)) return
+            when (result) {
+                // A retry cannot recreate a session that disappeared outside this flow;
+                // retain the warning so the user is not told that the failed link succeeded.
+                RetainedStravaCloudLinkResult.NoLocalSession -> Unit
+                is RetainedStravaCloudLinkResult.Linked -> {
+                    stravaSession = result.session
+                    onboardingUpgradeMealsCloudLinkState = OnboardingUpgradeCloudLinkState.LINKED
+                    onboardingUpgradeMealsCloudLinkError = null
+                    linkedAccounts = try {
+                        graph.linkedAccountRepository.localAccounts()
+                    } catch (error: CancellationException) {
+                        throw error
+                    } catch (_: Throwable) {
+                        linkedAccounts
+                    }
+                }
+                is RetainedStravaCloudLinkResult.Failed -> {
+                    stravaSession = result.session
+                    onboardingUpgradeMealsCloudLinkState = OnboardingUpgradeCloudLinkState.FAILED
+                    onboardingUpgradeMealsCloudLinkError = result.cause.userFacingMessage(context)
+                }
+            }
+        } finally {
+            if (attempt == onboardingUpgradeCloudLinkAttempt) {
+                isOnboardingUpgradeCloudLinkWorking = false
+                onboardingUpgradeRetryTarget = null
+            }
+        }
+    }
+
     suspend fun advanceOnboardingAfterAccountChoice() {
         val current = onboardingProgress ?: return
         val hasSchool = graph.schoolRepository.bootstrapSession() != null
+        if (current.journey == OnboardingJourney.UPGRADE) {
+            persistOnboarding(
+                reconcileOnboardingProgress(
+                    progress = current.copy(step = OnboardingStep.ACCOUNT),
+                    isGuestMode = isGuestMode,
+                    hasGradeySession = account != null,
+                    hasSchoolSession = hasSchool,
+                ),
+            )
+            return
+        }
         var isSchoolCloudLinked = true
         if (hasSchool && account != null && !isGuestMode) {
             graph.schoolRepository.loadCachedDashboard()?.let { dashboard = it }
@@ -1709,6 +2084,34 @@ private fun GradeyApp(
         }
     }
 
+    LaunchedEffect(
+        onboardingProgress?.journey,
+        onboardingProgress?.step,
+        account?.id,
+        isGuestMode,
+    ) {
+        if (
+            onboardingProgress?.journey == OnboardingJourney.UPGRADE &&
+            onboardingProgress?.step == OnboardingStep.SUPPORT &&
+            !isGuestMode
+        ) {
+            account?.id?.let { migrateOnboardingUpgradeConnections(it) }
+        }
+    }
+
+    LaunchedEffect(
+        onboardingProgress?.journey,
+        onboardingProgress?.step,
+        onboardingUpgradeIdentityKey,
+    ) {
+        if (
+            onboardingProgress?.journey == OnboardingJourney.UPGRADE &&
+            onboardingProgress?.step == OnboardingStep.SUPPORT
+        ) {
+            loadSupportCatalog()
+        }
+    }
+
     LaunchedEffect(ageAttestationKind) {
         if (ageAttestationKind == null) return@LaunchedEffect
         if (isGuestMode) {
@@ -1964,7 +2367,6 @@ private fun GradeyApp(
         val progress = onboardingProgress ?: return
         when (progress.step) {
                 OnboardingStep.WELCOME -> OnboardingWelcomeScreen(
-                    journey = progress.journey,
                     appLanguage = appLanguage,
                     onAppLanguageChange = onAppLanguageChange,
                     onContinue = {
@@ -1985,6 +2387,7 @@ private fun GradeyApp(
                     isLoading = isLoading,
                     errorMessage = authError,
                     isGoogleSignInAvailable = graph.isGradeyCloudConfigured,
+                    isUpgradeJourney = progress.journey == OnboardingJourney.UPGRADE,
                     accountIntent = onboardingAccountIntent,
                     progressPosition = 1,
                     progressCount = if (progress.journey == OnboardingJourney.UPGRADE) 2 else 4,
@@ -2291,39 +2694,127 @@ private fun GradeyApp(
                     modifier = Modifier.fillMaxSize(),
                 )
 
-                OnboardingStep.SUPPORT -> OnboardingUpgradeSupportScreen(
-                    isGuestMode = isGuestMode,
-                    cloudLinkErrorMessage = linkedAccountError,
-                    isRetryingCloudLink = isLoading,
-                    onRetryCloudLink = {
-                        scope.launch {
-                            isLoading = true
-                            try {
-                                linkCurrentSchoolIfNeeded()
-                            } finally {
-                                isLoading = false
+                OnboardingStep.SUPPORT -> {
+                    val hasRecordedUpgradeMigration =
+                        onboardingUpgradeSchoolCloudLinkState !=
+                            OnboardingUpgradeCloudLinkState.PENDING &&
+                            onboardingUpgradeMealsCloudLinkState !=
+                            OnboardingUpgradeCloudLinkState.PENDING
+                    val canFinishUpgrade = isGuestMode ||
+                        (account != null && hasRecordedUpgradeMigration)
+                    val upgradeCloudLinkWorking =
+                        isOnboardingUpgradeCloudLinkWorking || isLoading
+                    OnboardingUpgradeSupportScreen(
+                        schoolCloudLinkFailed =
+                            onboardingUpgradeSchoolCloudLinkState ==
+                            OnboardingUpgradeCloudLinkState.FAILED,
+                        schoolCloudLinkErrorMessage = onboardingUpgradeSchoolCloudLinkError,
+                        mealsCloudLinkFailed =
+                            onboardingUpgradeMealsCloudLinkState ==
+                            OnboardingUpgradeCloudLinkState.FAILED,
+                        mealsCloudLinkErrorMessage = onboardingUpgradeMealsCloudLinkError,
+                        isWorking = upgradeCloudLinkWorking,
+                        isRetryingSchoolCloudLink =
+                            onboardingUpgradeRetryTarget == OnboardingUpgradeRetryTarget.SCHOOL,
+                        isRetryingMealsCloudLink =
+                            onboardingUpgradeRetryTarget == OnboardingUpgradeRetryTarget.MEALS,
+                        canFinish = canFinishUpgrade,
+                        onRetrySchoolCloudLink = account?.id?.let { ownerAccountID ->
+                            {
+                                if (!isOnboardingUpgradeCloudLinkWorking && !isLoading) {
+                                    scope.launch {
+                                        retryOnboardingUpgradeSchoolCloudLink(ownerAccountID)
+                                    }
+                                }
                             }
-                        }
-                    },
-                    onFinish = {
-                        scope.launch {
-                            isLoading = true
-                            try {
-                                finishOnboarding()
-                            } catch (error: CancellationException) {
-                                throw error
-                            } catch (error: Throwable) {
-                                dataError = error.userFacingMessage(context)
-                            } finally {
-                                isLoading = false
+                        },
+                        onRetryMealsCloudLink = account?.id?.let { ownerAccountID ->
+                            {
+                                if (!isOnboardingUpgradeCloudLinkWorking && !isLoading) {
+                                    scope.launch {
+                                        retryOnboardingUpgradeMealsCloudLink(ownerAccountID)
+                                    }
+                                }
                             }
-                        }
-                    },
-                    onBack = ::goBackInOnboarding,
-                    progressPosition = 2,
-                    progressCount = 2,
-                    modifier = Modifier.fillMaxSize(),
-                )
+                        },
+                        onFinish = {
+                            if (canFinishUpgrade && !upgradeCloudLinkWorking) {
+                                scope.launch {
+                                    isLoading = true
+                                    try {
+                                        finishOnboarding()
+                                    } catch (error: CancellationException) {
+                                        throw error
+                                    } catch (error: Throwable) {
+                                        dataError = error.userFacingMessage(context)
+                                    } finally {
+                                        isLoading = false
+                                    }
+                                }
+                            }
+                        },
+                        progressPosition = 2,
+                        progressCount = 2,
+                        supportOptionsContent = {
+                            OnboardingSupportOptionsContent(
+                                catalog = supportCatalog,
+                                isSignedIn = account != null && !isGuestMode,
+                                isConfigured = supportService.isConfigured,
+                                isLoading = isSupportLoading,
+                                purchasingOptionID = purchasingSupportOptionID,
+                                isRestoring = isRestoringSupport,
+                                message = supportMessage,
+                                onReload = { scope.launch { loadSupportCatalog() } },
+                                onPurchasePlan = { plan: SupportPlanOption ->
+                                    scope.launch {
+                                        purchaseSupportOption(plan.id, requiresGradeyID = true)
+                                    }
+                                },
+                                onPurchaseTip = { optionID ->
+                                    scope.launch {
+                                        purchaseSupportOption(optionID, requiresGradeyID = false)
+                                    }
+                                },
+                                onRestore = { scope.launch { restoreSupportPurchases() } },
+                                onManageSubscription = {
+                                    val url = supportCatalog?.managementURL
+                                        ?: "https://play.google.com/store/account/subscriptions?package=${activity.packageName}"
+                                    runCatching {
+                                        activity.startActivity(
+                                            Intent(Intent.ACTION_VIEW, Uri.parse(url)),
+                                        )
+                                    }
+                                },
+                                onOpenPrivacyPolicy = {
+                                    runCatching {
+                                        activity.startActivity(
+                                            Intent(
+                                                Intent.ACTION_VIEW,
+                                                Uri.parse(privacyPolicyUrl(activeLanguageCode)),
+                                            ),
+                                        )
+                                    }
+                                },
+                                onOpenTermsOfUse = {
+                                    val language = helpCenterLanguageCode(activeLanguageCode)
+                                    runCatching {
+                                        activity.startActivity(
+                                            Intent(
+                                                Intent.ACTION_VIEW,
+                                                Uri.parse(
+                                                    "https://help.bukovinafilip.com/" +
+                                                        "$language/articles/11-terms-and-conditions",
+                                                ),
+                                            ),
+                                        )
+                                    }
+                                },
+                                enabled = !upgradeCloudLinkWorking,
+                            )
+                        },
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }
         }
     } else when (phase) {
         AppPhase.CHECKING -> GradeyCheckingScreen()

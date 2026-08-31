@@ -12,6 +12,7 @@ import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
+import com.bukovinafilip.gradey.FCM_DEEP_LINK_URL_EXTRA
 import com.bukovinafilip.gradey.GradeyApplication
 import com.bukovinafilip.gradey.MainActivity
 import com.bukovinafilip.gradey.R
@@ -45,7 +46,7 @@ class GradeyMessagingService : FirebaseMessagingService() {
             PackageManager.PERMISSION_GRANTED
         ) return
 
-        val target = canonicalGradeyDeepLink(message.data["url"]) ?: "gradey://marks"
+        val target = canonicalGradeyDeepLink(message.data[FCM_DEEP_LINK_URL_EXTRA]) ?: "gradey://marks"
         val intent = Intent(Intent.ACTION_VIEW, Uri.parse(target), this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
         }

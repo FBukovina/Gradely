@@ -207,7 +207,10 @@ class MainActivity : ComponentActivity() {
 
     private fun acceptDeepLink(intent: Intent?) {
         deepLinkSequence += 1
-        deepLinkRequests.value = DeepLinkRequest(deepLinkSequence, intent?.dataString)
+        deepLinkRequests.value = DeepLinkRequest(
+            sequence = deepLinkSequence,
+            rawUri = intent.resolvedGradeyLaunchDeepLink(),
+        )
     }
 }
 

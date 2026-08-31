@@ -1,6 +1,9 @@
 package com.bukovinafilip.gradey
 
+import android.content.Intent
 import java.net.URI
+
+internal const val FCM_DEEP_LINK_URL_EXTRA = "url"
 
 internal enum class DeepLinkDestination {
     SUBJECTS,
@@ -41,3 +44,30 @@ internal fun canonicalGradeyDeepLink(rawUri: String?): String? =
         DeepLinkDestination.TIMETABLE -> "gradey://timetable"
         null -> null
     }
+
+/**
+ * Resolves the two launch channels used by Gradey.
+ *
+ * Explicit VIEW intent data owns the request whenever it is present. If that value is unsupported,
+ * the request fails closed instead of mixing it with an unrelated extra. Background FCM
+ * notification taps have no explicit data URI and deliver their data payload through the launcher
+ * Activity extras, so only then is the backend's `url` extra considered. Both channels are reduced
+ * to a recognized canonical destination before they cross into navigation state.
+ */
+internal fun resolveGradeyLaunchDeepLink(
+    explicitIntentData: String?,
+    notificationUrlExtra: String?,
+): String? {
+    val explicit = explicitIntentData?.trim()?.takeIf(String::isNotEmpty)
+    return if (explicit != null) {
+        canonicalGradeyDeepLink(explicit)
+    } else {
+        canonicalGradeyDeepLink(notificationUrlExtra)
+    }
+}
+
+internal fun Intent?.resolvedGradeyLaunchDeepLink(): String? =
+    resolveGradeyLaunchDeepLink(
+        explicitIntentData = this?.dataString,
+        notificationUrlExtra = this?.getStringExtra(FCM_DEEP_LINK_URL_EXTRA),
+    )

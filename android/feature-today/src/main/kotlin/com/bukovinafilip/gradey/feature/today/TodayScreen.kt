@@ -203,7 +203,10 @@ fun TodayStateScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center,
                         )
-                        Button(onClick = onRetry) {
+                        Button(
+                            onClick = onRetry,
+                            modifier = Modifier.heightIn(min = 48.dp),
+                        ) {
                             Text(stringResource(R.string.today_retry))
                         }
                     }

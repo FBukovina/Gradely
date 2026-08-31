@@ -40,6 +40,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -96,6 +97,43 @@ import kotlin.math.max
 private val RiskOrange = Color(0xFFFF8D28)
 private val LateOrange = Color(0xFFD98F10)
 private val MissedRed = Color(0xFFD95461)
+private const val ManualDraftsSaveVersion = "manual-drafts-v1"
+
+private val ManualDraftsSaver = listSaver<Map<String, Set<String>>, String>(
+    save = { drafts ->
+        buildList {
+            add(ManualDraftsSaveVersion)
+            drafts.toSortedMap().forEach { (dateKey, lessonIDs) ->
+                add(dateKey)
+                add(lessonIDs.size.toString())
+                addAll(lessonIDs.sorted())
+            }
+        }
+    },
+    restore = ::restoreManualDrafts,
+)
+
+private fun restoreManualDrafts(saved: List<String>): Map<String, Set<String>> {
+    if (saved.firstOrNull() != ManualDraftsSaveVersion) return emptyMap()
+    val restored = linkedMapOf<String, Set<String>>()
+    var index = 1
+    while (index < saved.size) {
+        val dateKey = saved[index++]
+        val lessonCount = saved.getOrNull(index++)?.toIntOrNull() ?: return emptyMap()
+        if (lessonCount < 0 || lessonCount > saved.size - index) return emptyMap()
+        restored[dateKey] = saved.subList(index, index + lessonCount).toSet()
+        index += lessonCount
+    }
+    return restored
+}
+
+private fun reconcileManualDrafts(
+    days: List<AbsencePartialDayCandidate>,
+    drafts: Map<String, Set<String>>,
+): Map<String, Set<String>> = days.associate { day ->
+    val currentLessonIDs = day.lessons.mapTo(hashSetOf()) { it.id }
+    day.dateKey to drafts[day.dateKey].orEmpty().filterTo(linkedSetOf()) { it in currentLessonIDs }
+}
 
 private enum class AbsenceMode {
     Subjects,
@@ -206,17 +244,27 @@ fun AbsenceScreen(
     modifier: Modifier = Modifier,
 ) {
     var mode by rememberSaveable { mutableStateOf(AbsenceMode.Subjects) }
-    var isManualSheetPresented by rememberSaveable { mutableStateOf(false) }
-    var manualDrafts by remember { mutableStateOf<Map<String, Set<String>>>(emptyMap()) }
-    var manualSelectionError by remember { mutableStateOf<String?>(null) }
-    var isSavingManualSelections by remember { mutableStateOf(false) }
-    var isPredictionSheetPresented by rememberSaveable(predictorScopeKey) { mutableStateOf(false) }
+    var savedInteractionScopeKey by rememberSaveable { mutableStateOf(predictorScopeKey) }
+    var savedManualSheetPresented by rememberSaveable(predictorScopeKey) { mutableStateOf(false) }
+    var manualDrafts by rememberSaveable(predictorScopeKey, stateSaver = ManualDraftsSaver) {
+        mutableStateOf<Map<String, Set<String>>>(emptyMap())
+    }
+    var manualSelectionError by remember(predictorScopeKey) { mutableStateOf<String?>(null) }
+    var isSavingManualSelections by remember(predictorScopeKey) { mutableStateOf(false) }
+    var savedPredictionSheetPresented by rememberSaveable(predictorScopeKey) { mutableStateOf(false) }
     var predictionSelectedDate by remember(predictorScopeKey) { mutableStateOf(TimetableDates.today()) }
     var predictionSelectedLessons by remember(predictorScopeKey) {
         mutableStateOf<List<AbsenceLessonCandidate>>(emptyList())
     }
     val scope = rememberCoroutineScope()
     val locale = LocalConfiguration.current.locales[0]
+    val isCurrentInteractionScope = savedInteractionScopeKey == predictorScopeKey
+    val currentManualDrafts = remember(manualDrafts, unresolvedPartialDays, isCurrentInteractionScope) {
+        reconcileManualDrafts(
+            unresolvedPartialDays,
+            if (isCurrentInteractionScope) manualDrafts else emptyMap(),
+        )
+    }
     val timeline = remember(response) { AbsenceTimeline.make(response) }
     val riskSummary = remember(response) {
         AbsenceRiskSummary.make(response, response.absencesPerSubject)
@@ -228,6 +276,14 @@ fun AbsenceScreen(
             selectedLessons = predictionSelectedLessons,
             threshold = response.percentageThreshold,
         )
+    }
+    LaunchedEffect(predictorScopeKey) {
+        if (savedInteractionScopeKey != predictorScopeKey) {
+            savedInteractionScopeKey = predictorScopeKey
+            savedManualSheetPresented = false
+            savedPredictionSheetPresented = false
+            manualDrafts = emptyMap()
+        }
     }
 
     Box(
@@ -264,7 +320,10 @@ fun AbsenceScreen(
                 AbsencePredictorCard(
                     result = predictionResult,
                     locale = locale,
-                    onOpen = { isPredictionSheetPresented = true },
+                    onOpen = {
+                        savedInteractionScopeKey = predictorScopeKey
+                        savedPredictionSheetPresented = true
+                    },
                     onClear = { predictionSelectedLessons = emptyList() },
                 )
             }
@@ -284,11 +343,12 @@ fun AbsenceScreen(
                             unresolvedPartialDays = unresolvedPartialDays,
                             onRetry = onRetrySubjectResolution,
                             onChooseLessons = {
+                                savedInteractionScopeKey = predictorScopeKey
                                 manualDrafts = unresolvedPartialDays.associate { day ->
                                     day.dateKey to day.selectedLessonIDs.toSet()
                                 }
                                 manualSelectionError = null
-                                isManualSheetPresented = true
+                                savedManualSheetPresented = true
                             },
                         )
                     }
@@ -315,10 +375,10 @@ fun AbsenceScreen(
         }
     }
 
-    if (isManualSheetPresented) {
+    if (isCurrentInteractionScope && savedManualSheetPresented) {
         ManualAbsenceLessonSelectionSheet(
             days = unresolvedPartialDays,
-            drafts = manualDrafts,
+            drafts = currentManualDrafts,
             locale = locale,
             errorMessage = manualSelectionError,
             isSaving = isSavingManualSelections,
@@ -326,47 +386,47 @@ fun AbsenceScreen(
                 val day = unresolvedPartialDays.firstOrNull { it.dateKey == dateKey }
                     ?: return@ManualAbsenceLessonSelectionSheet
                 val selected = AbsenceManualSelectionPolicy.toggle(
-                    current = manualDrafts[dateKey].orEmpty(),
+                    current = currentManualDrafts[dateKey].orEmpty(),
                     lessonID = lessonID,
                     requiredSelectionCount = day.requiredSelectionCount,
                 )
-                manualDrafts = manualDrafts + (dateKey to selected)
+                manualDrafts = currentManualDrafts + (dateKey to selected)
             },
             onDismiss = {
                 if (!isSavingManualSelections) {
                     manualSelectionError = null
-                    isManualSheetPresented = false
+                    savedManualSheetPresented = false
                 }
             },
             onSave = {
                 scope.launch {
                     isSavingManualSelections = true
                     manualSelectionError = try {
-                        onSaveManualSelections(manualDrafts)
+                        onSaveManualSelections(currentManualDrafts)
                     } finally {
                         isSavingManualSelections = false
                     }
                     if (manualSelectionError == null) {
                         manualDrafts = emptyMap()
-                        isManualSheetPresented = false
+                        savedManualSheetPresented = false
                     }
                 }
             },
         )
     }
 
-    if (isPredictionSheetPresented) {
+    if (isCurrentInteractionScope && savedPredictionSheetPresented) {
         AbsencePredictionSheet(
             initialDate = predictionSelectedDate,
             minimumDate = TimetableDates.today(),
             initialSelectedLessons = predictionSelectedLessons,
             locale = locale,
             onLoadLessons = onLoadPredictionLessons,
-            onDismiss = { isPredictionSheetPresented = false },
+            onDismiss = { savedPredictionSheetPresented = false },
             onDone = { selectedDate, lessons ->
                 predictionSelectedDate = selectedDate
                 predictionSelectedLessons = lessons
-                isPredictionSheetPresented = false
+                savedPredictionSheetPresented = false
             },
         )
     }

@@ -73,7 +73,6 @@ import com.bukovinafilip.gradey.domain.AbsencePrediction
 import com.bukovinafilip.gradey.domain.AbsencePredictionResult
 import com.bukovinafilip.gradey.domain.AbsencePredictionSubjectRow
 import com.bukovinafilip.gradey.domain.AbsencePresentationState
-import com.bukovinafilip.gradey.domain.AbsenceRiskLevel
 import com.bukovinafilip.gradey.domain.AbsenceRiskSummary
 import com.bukovinafilip.gradey.domain.AbsenceSubjectResolutionProgress
 import com.bukovinafilip.gradey.domain.AbsenceSubjectSummary
@@ -84,6 +83,8 @@ import com.bukovinafilip.gradey.model.AbsenceCounts
 import com.bukovinafilip.gradey.model.AbsenceResponse
 import com.bukovinafilip.gradey.ui.GradeyAuroraBackground
 import com.bukovinafilip.gradey.ui.GradeyColors
+import com.bukovinafilip.gradey.ui.GradeyRiskCapsuleBar
+import com.bukovinafilip.gradey.ui.riskColor
 import java.time.format.FormatStyle
 import java.time.format.DateTimeFormatter
 import java.time.LocalDate
@@ -95,7 +96,6 @@ import kotlin.math.max
 private val RiskOrange = Color(0xFFFF8D28)
 private val LateOrange = Color(0xFFD98F10)
 private val MissedRed = Color(0xFFD95461)
-private val RiskWatchOrange = Color(0xFFFF9500)
 
 private enum class AbsenceMode {
     Subjects,
@@ -1382,10 +1382,10 @@ private fun SubjectRow(subject: AbsenceSubjectSummary, locale: java.util.Locale)
             )
         }
         Spacer(Modifier.height(5.dp))
-        RiskCapsuleBar(
+        GradeyRiskCapsuleBar(
             percentage = subject.absencePercentage,
             threshold = subject.threshold,
-            color = color,
+            level = subject.level,
         )
         Spacer(Modifier.height(6.dp))
         Text(
@@ -1402,56 +1402,6 @@ private fun SubjectRow(subject: AbsenceSubjectSummary, locale: java.util.Locale)
             maxLines = 1,
         )
     }
-}
-
-@Composable
-private fun RiskCapsuleBar(
-    percentage: Double,
-    threshold: Double?,
-    color: Color,
-) {
-    val fraction = (
-        if (threshold != null && threshold > 0.0) {
-            percentage / threshold
-        } else {
-            percentage / 100.0
-        }
-    ).coerceIn(0.0, 1.0).toFloat()
-    val fillColor = if (threshold == null) {
-        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-    } else {
-        color
-    }
-    val railColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.12f)
-
-    Canvas(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(6.dp),
-    ) {
-        val cornerRadius = CornerRadius(size.height / 2f)
-        drawRoundRect(
-            color = railColor,
-            size = size,
-            cornerRadius = cornerRadius,
-        )
-        if (fraction > 0f) {
-            val fillWidth = max(size.width * fraction, minOf(6.dp.toPx(), size.width))
-            drawRoundRect(
-                color = fillColor,
-                size = Size(fillWidth, size.height),
-                cornerRadius = cornerRadius,
-            )
-        }
-    }
-}
-
-@Composable
-private fun AbsenceRiskLevel.riskColor(): Color = when (this) {
-    AbsenceRiskLevel.SAFE -> MaterialTheme.colorScheme.primary
-    AbsenceRiskLevel.WATCH -> RiskWatchOrange
-    AbsenceRiskLevel.HIGH, AbsenceRiskLevel.OVER_LIMIT -> GradeyColors.Poor
-    AbsenceRiskLevel.UNAVAILABLE -> MaterialTheme.colorScheme.onSurfaceVariant
 }
 
 @Composable
@@ -1814,7 +1764,7 @@ private fun AttendanceKind.foregroundColor(): Color = when (this) {
     AttendanceKind.DistanceTeaching -> MaterialTheme.colorScheme.secondary
     AttendanceKind.Missed -> MissedRed
     AttendanceKind.Late -> LateOrange
-    AttendanceKind.Early -> RiskWatchOrange
+    AttendanceKind.Early -> GradeyColors.SystemOrange
 }
 
 @Composable

@@ -52,7 +52,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.graphics.Color
@@ -104,9 +103,11 @@ import com.bukovinafilip.gradey.model.NewMarkEvent
 import com.bukovinafilip.gradey.model.ScheduledLesson
 import com.bukovinafilip.gradey.model.StravaCZMenu
 import com.bukovinafilip.gradey.model.TimetableWeek
+import com.bukovinafilip.gradey.ui.GradeyAbsenceRiskRing
 import com.bukovinafilip.gradey.ui.GradeyColors
 import com.bukovinafilip.gradey.ui.GradeyAuroraBackground
 import com.bukovinafilip.gradey.ui.gradeyBrandGradient
+import com.bukovinafilip.gradey.ui.riskColor
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -118,7 +119,6 @@ import kotlin.math.roundToInt
 
 private val WarningOrange = Color(0xFFFF8D28)
 private val DangerRed = Color(0xFFE5545D)
-private val RiskWatchOrange = Color(0xFFFF9500)
 private val PragueZone = ZoneId.of("Europe/Prague")
 
 @Composable
@@ -1324,7 +1324,6 @@ private fun AbsenceRiskCard(
                 }
             } else {
                 rows.forEach { row ->
-                    val color = row.level.riskColor()
                     RiskRow(
                         subjectName = row.subjectName,
                         missedLessons = row.base,
@@ -1332,7 +1331,7 @@ private fun AbsenceRiskCard(
                         percentage = row.absencePercentage,
                         threshold = row.threshold,
                         missesUntilLimit = row.missesUntilLimit,
-                        color = color,
+                        level = row.level,
                     )
                 }
                 if (isThresholdUnavailable) {
@@ -1357,8 +1356,9 @@ private fun RiskRow(
     percentage: Double,
     threshold: Double?,
     missesUntilLimit: Int?,
-    color: Color,
+    level: AbsenceRiskLevel,
 ) {
+    val color = level.riskColor()
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -1366,10 +1366,10 @@ private fun RiskRow(
             .padding(start = 6.dp, end = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        RiskRing(
+        GradeyAbsenceRiskRing(
             percentage = percentage,
             threshold = threshold,
-            color = color,
+            level = level,
         )
         Spacer(Modifier.width(3.dp))
         Column(modifier = Modifier.widthIn(max = 214.dp)) {
@@ -1400,54 +1400,6 @@ private fun RiskRow(
             lineHeight = 23.sp,
             fontWeight = FontWeight.Medium,
             textAlign = TextAlign.End,
-        )
-    }
-}
-
-@Composable
-private fun RiskRing(
-    percentage: Double,
-    threshold: Double?,
-    color: Color,
-) {
-    val progress = (
-        if (threshold != null && threshold > 0.0) {
-            percentage / threshold
-        } else {
-            percentage / 100.0
-        }
-    ).coerceIn(0.0, 1.0)
-    val fillColor = if (threshold == null) {
-        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-    } else {
-        color
-    }
-    val railColor = fillColor.copy(alpha = fillColor.alpha * 0.22f)
-
-    Canvas(modifier = Modifier.size(38.dp)) {
-        val strokeWidth = 4.5.dp.toPx()
-        val strokeInset = strokeWidth / 2f
-        val arcSize = Size(
-            width = size.width - strokeWidth,
-            height = size.height - strokeWidth,
-        )
-        drawArc(
-            color = railColor,
-            startAngle = -90f,
-            sweepAngle = 360f,
-            useCenter = false,
-            topLeft = Offset(strokeInset, strokeInset),
-            size = arcSize,
-            style = Stroke(width = strokeWidth, cap = StrokeCap.Round),
-        )
-        drawArc(
-            color = fillColor,
-            startAngle = -90f,
-            sweepAngle = (progress * 360.0).toFloat(),
-            useCenter = false,
-            topLeft = Offset(strokeInset, strokeInset),
-            size = arcSize,
-            style = Stroke(width = strokeWidth, cap = StrokeCap.Round),
         )
     }
 }
@@ -2007,14 +1959,6 @@ private fun ScheduledLesson.displayTitle(fallback: String): String =
 
 private fun ScheduledLesson.details(): String =
     listOf(timeRange.takeIf { it.isNotBlank() }, roomTitle).filterNotNull().joinToString(" · ")
-
-@Composable
-private fun AbsenceRiskLevel.riskColor(): Color = when (this) {
-    AbsenceRiskLevel.SAFE -> MaterialTheme.colorScheme.primary
-    AbsenceRiskLevel.WATCH -> RiskWatchOrange
-    AbsenceRiskLevel.HIGH, AbsenceRiskLevel.OVER_LIMIT -> GradeyColors.Poor
-    AbsenceRiskLevel.UNAVAILABLE -> MaterialTheme.colorScheme.onSurfaceVariant
-}
 
 @Composable
 private fun absenceLimitDescription(

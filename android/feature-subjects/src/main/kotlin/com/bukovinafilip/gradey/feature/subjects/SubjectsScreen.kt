@@ -100,6 +100,7 @@ import com.bukovinafilip.gradey.model.AbsenceResponse
 import com.bukovinafilip.gradey.model.Mark
 import com.bukovinafilip.gradey.model.Subject
 import com.bukovinafilip.gradey.ui.GradeyAuroraBackground
+import com.bukovinafilip.gradey.ui.GradeyGradeBadge
 import com.bukovinafilip.gradey.ui.color
 import com.bukovinafilip.gradey.ui.softColor
 import kotlinx.coroutines.CancellationException
@@ -780,7 +781,7 @@ private fun SubjectRow(
                 )
                 latestMark?.let {
                     Spacer(Modifier.width(8.dp))
-                    GradePill(mark = it, compact = true)
+                    InlineMarkPill(mark = it)
                 }
                 trendDelta?.let { delta ->
                     Spacer(Modifier.width(6.dp))
@@ -1783,7 +1784,10 @@ private fun MarkCard(subject: Subject, mark: Mark) {
                     }
                 }
             }
-            GradePill(mark = mark, compact = false)
+            GradeyGradeBadge(
+                text = mark.markText,
+                band = GradeMath.band(mark),
+            )
         }
     }
 }
@@ -1809,22 +1813,22 @@ private fun EmptyMarksCard() {
 }
 
 @Composable
-private fun GradePill(mark: Mark, compact: Boolean) {
+private fun InlineMarkPill(mark: Mark) {
     val (background, foreground) = mark.gradeColors()
     Surface(
-        modifier = if (compact) Modifier.height(23.dp) else Modifier.size(width = 76.dp, height = 39.dp),
-        shape = RoundedCornerShape(if (compact) 12.dp else 16.dp),
+        modifier = Modifier.height(23.dp),
+        shape = RoundedCornerShape(12.dp),
         color = background,
     ) {
         Box(
-            modifier = if (compact) Modifier.padding(horizontal = 10.dp) else Modifier,
+            modifier = Modifier.padding(horizontal = 10.dp),
             contentAlignment = Alignment.Center,
         ) {
             Text(
                 text = mark.markText,
                 color = foreground,
-                fontSize = if (compact) 14.sp else 22.sp,
-                lineHeight = if (compact) 17.sp else 26.sp,
+                fontSize = 14.sp,
+                lineHeight = 17.sp,
                 fontWeight = FontWeight.Bold,
             )
         }

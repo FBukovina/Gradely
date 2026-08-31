@@ -45,6 +45,7 @@ object GradeyColors {
     val Good = Color(0xFF108A94)
     val Average = Color(0xFFD98F10)
     val Poor = Color(0xFFD83E4F)
+    val SystemOrange = Color(0xFFFF9500)
     val SystemPurple = Color(0xFFAF52DE)
     val LightGroupedBackground = Color(0xFFF2F2F7)
     val LightGroupedSurface = Color(0xFFFFFFFF)

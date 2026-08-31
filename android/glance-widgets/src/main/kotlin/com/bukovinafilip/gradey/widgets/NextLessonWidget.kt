@@ -1,5 +1,6 @@
 package com.bukovinafilip.gradey.widgets
 
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -51,6 +52,7 @@ class NextLessonWidget : GlanceAppWidget() {
             NextLessonWidgetContent(
                 selection = NextLessonSelector.select(snapshot),
                 strings = strings,
+                launchIntent = nextLessonWidgetLaunchSpec(context.packageName).asIntent(),
             )
         }
     }
@@ -64,6 +66,7 @@ suspend fun updateNextLessonWidgets(context: Context) {
 private fun NextLessonWidgetContent(
     selection: NextLessonWidgetSelection,
     strings: WidgetStrings,
+    launchIntent: Intent,
 ) {
     val localizedLessonStatus = (selection as? NextLessonWidgetSelection.Lesson)?.let {
         lessonStatus(strings, it)
@@ -77,7 +80,7 @@ private fun NextLessonWidgetContent(
     Column(
         modifier = GlanceModifier
             .fillMaxSize()
-            .clickable(actionStartActivity(Intent(Intent.ACTION_VIEW, Uri.parse("gradey://timetable"))))
+            .clickable(actionStartActivity(launchIntent))
             .background(WidgetColors.background)
             .cornerRadius(16.dp)
             .padding(14.dp),
@@ -107,6 +110,24 @@ private fun NextLessonWidgetContent(
         }
     }
 }
+
+internal data class NextLessonWidgetLaunchSpec(
+    val action: String,
+    val uri: String,
+    val packageName: String,
+    val activityClassName: String,
+) {
+    fun asIntent(): Intent = Intent(action, Uri.parse(uri)).setComponent(
+        ComponentName(packageName, activityClassName),
+    )
+}
+
+internal fun nextLessonWidgetLaunchSpec(packageName: String) = NextLessonWidgetLaunchSpec(
+    action = Intent.ACTION_VIEW,
+    uri = "gradey://timetable",
+    packageName = packageName,
+    activityClassName = "com.bukovinafilip.gradey.MainActivity",
+)
 
 private fun lessonStatus(strings: WidgetStrings, selection: NextLessonWidgetSelection.Lesson): String {
     val timing = if (selection.timing == NextLessonWidgetTiming.CURRENT) strings.now else strings.next

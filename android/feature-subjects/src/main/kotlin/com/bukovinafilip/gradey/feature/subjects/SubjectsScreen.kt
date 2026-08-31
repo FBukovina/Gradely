@@ -107,7 +107,9 @@ import com.bukovinafilip.gradey.model.Mark
 import com.bukovinafilip.gradey.model.Subject
 import com.bukovinafilip.gradey.ui.GradeyAuroraBackground
 import com.bukovinafilip.gradey.ui.GradeyGradeBadge
+import com.bukovinafilip.gradey.ui.GradeyRadius
 import com.bukovinafilip.gradey.ui.GradeySectionHeader
+import com.bukovinafilip.gradey.ui.GradeySpacing
 import com.bukovinafilip.gradey.ui.color
 import com.bukovinafilip.gradey.ui.softColor
 import kotlinx.coroutines.CancellationException
@@ -553,14 +555,14 @@ private fun OverallAverageCard(subjects: List<Subject>) {
         modifier = Modifier
             .fillMaxWidth()
             .height(124.dp),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(GradeyRadius.card),
         color = Color.Transparent,
         shadowElevation = 2.dp,
     ) {
         Row(
             modifier = Modifier
                 .background(Brush.horizontalGradient(listOf(HeroStart, HeroEnd)))
-                .padding(horizontal = 24.dp, vertical = 20.dp),
+                .padding(horizontal = GradeySpacing.xl, vertical = 20.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.Top,
         ) {
@@ -1243,14 +1245,14 @@ private fun SubjectAverageHero(
         modifier = Modifier
             .fillMaxWidth()
             .height(194.dp),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(GradeyRadius.card),
         color = Color.Transparent,
         shadowElevation = 2.dp,
     ) {
         Column(
             modifier = Modifier
                 .background(Brush.horizontalGradient(listOf(DetailHeroStart, DetailHeroEnd)))
-                .padding(top = 24.dp, bottom = 20.dp),
+                .padding(top = GradeySpacing.xl, bottom = 20.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
@@ -1272,7 +1274,7 @@ private fun SubjectAverageHero(
             )
             Spacer(Modifier.height(18.dp))
             Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(GradeySpacing.sm),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 DetailChip(

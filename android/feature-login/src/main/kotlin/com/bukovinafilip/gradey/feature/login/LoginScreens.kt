@@ -39,6 +39,7 @@ import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
@@ -220,7 +221,11 @@ private fun SchoolLoginScreenContent(
                                 Column(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .clickable(enabled = !isLoading) {
+                                        .testTag("$SCHOOL_LOGIN_RESULT_TEST_TAG_PREFIX${result.id}")
+                                        .clickable(
+                                            enabled = !isLoading,
+                                            role = Role.Button,
+                                        ) {
                                             schoolSearch = result.trimmedName
                                             school = result.trimmedSchoolURL
                                             isSchoolSearchActive = false
@@ -463,3 +468,4 @@ internal const val SCHOOL_LOGIN_USERNAME_FIELD_TEST_TAG = "school-login-username
 internal const val SCHOOL_LOGIN_PASSWORD_FIELD_TEST_TAG = "school-login-password-field"
 internal const val SCHOOL_LOGIN_PASSWORD_VISIBILITY_TEST_TAG = "school-login-password-visibility"
 internal const val SCHOOL_LOGIN_CONNECT_BUTTON_TEST_TAG = "school-login-connect-button"
+internal const val SCHOOL_LOGIN_RESULT_TEST_TAG_PREFIX = "school-login-result:"

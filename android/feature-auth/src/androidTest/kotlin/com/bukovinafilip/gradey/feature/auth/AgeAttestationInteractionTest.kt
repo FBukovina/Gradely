@@ -7,6 +7,7 @@ import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertHeightIsAtLeast
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -18,6 +19,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.bukovinafilip.gradey.model.AgeAttestationKind
 import com.bukovinafilip.gradey.ui.GradeyTheme
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -47,6 +49,56 @@ class AgeAttestationInteractionTest {
             choiceText = context.getString(R.string.age_under_thirteen),
             expectedKind = AgeAttestationKind.UNDER_THIRTEEN,
         )
+    }
+
+    @Test
+    fun parentalReviewSecondaryActionsOpenPrivacyAndReturnToChooserWithoutConfirming() {
+        val confirmedKind = AtomicReference<AgeAttestationKind?>()
+        val privacyOpenCount = AtomicInteger(0)
+        composeRule.setContent {
+            GradeyTheme {
+                AgeAttestationScreen(
+                    onConfirm = confirmedKind::set,
+                    onOpenPrivacyPolicy = { privacyOpenCount.incrementAndGet() },
+                )
+            }
+        }
+
+        composeRule.onNodeWithText(context.getString(R.string.age_thirteen_to_fifteen))
+            .performScrollTo()
+            .performClick()
+
+        composeRule.onNodeWithText(context.getString(R.string.age_privacy_policy))
+            .performScrollTo()
+            .assertIsDisplayed()
+            .performClick()
+        composeRule.runOnIdle {
+            assertEquals(1, privacyOpenCount.get())
+            assertNull(confirmedKind.get())
+        }
+
+        composeRule.onNodeWithText(context.getString(R.string.age_parent_agreement))
+            .performScrollTo()
+            .performClick()
+            .assert(checkedMatcher)
+        composeRule.runOnIdle { assertNull(confirmedKind.get()) }
+
+        composeRule.onNodeWithText(context.getString(R.string.age_choose_different))
+            .performScrollTo()
+            .assertIsDisplayed()
+            .performClick()
+
+        composeRule.onNodeWithText(context.getString(R.string.age_choose_option))
+            .performScrollTo()
+            .assertIsDisplayed()
+        composeRule.onNodeWithText(context.getString(R.string.age_parent_agreement))
+            .assertDoesNotExist()
+        composeRule.onNodeWithText(context.getString(R.string.age_choose_different))
+            .assertDoesNotExist()
+        composeRule.runOnIdle {
+            assertEquals(1, privacyOpenCount.get())
+            assertNull(confirmedKind.get())
+        }
     }
 
     private fun assertParentAgreementFlow(

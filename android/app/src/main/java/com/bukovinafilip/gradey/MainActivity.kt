@@ -114,7 +114,6 @@ import com.bukovinafilip.gradey.domain.SubjectGradeTrend
 import com.bukovinafilip.gradey.model.AbsenceResponse
 import com.bukovinafilip.gradey.model.AgeAttestationKind
 import com.bukovinafilip.gradey.model.AppLanguage
-import com.bukovinafilip.gradey.model.DashboardData
 import com.bukovinafilip.gradey.model.GradeyAccount
 import com.bukovinafilip.gradey.model.GradeySupportTier
 import com.bukovinafilip.gradey.model.LinkedAccountProvider
@@ -264,6 +263,9 @@ private fun GradeyApp(
     val signedInNavController = rememberNavController()
     val navigationViewModel: MainNavigationViewModel = viewModel()
     val pendingNavigationRoute by navigationViewModel.pendingDestinationRoute.collectAsStateWithLifecycle()
+    val dashboardViewModel: SignedInDashboardViewModel = viewModel()
+    val dashboardState by dashboardViewModel.state.collectAsStateWithLifecycle()
+    val marksRefreshError = dashboardState.failure?.userFacingMessage(context)
     val signedInBackStackEntry by signedInNavController.currentBackStackEntryAsState()
     val currentMainDestination = MainDestination.fromRoute(
         signedInBackStackEntry?.destination?.route,
@@ -275,7 +277,6 @@ private fun GradeyApp(
     var schoolLoginError by remember { mutableStateOf<String?>(null) }
     var schoolDirectoryError by remember { mutableStateOf<String?>(null) }
     var dataError by remember { mutableStateOf<String?>(null) }
-    var marksRefreshError by remember { mutableStateOf<String?>(null) }
     var absenceRefreshError by remember { mutableStateOf<String?>(null) }
     var profileError by remember { mutableStateOf<String?>(null) }
     var isUpdatingProfile by remember { mutableStateOf(false) }
@@ -394,7 +395,6 @@ private fun GradeyApp(
     } catch (_: Throwable) {
         null
     }
-    var dashboard by remember { mutableStateOf<DashboardData?>(null) }
     var absence by remember { mutableStateOf<AbsenceResponse?>(null) }
     var absenceSourceResponse by remember { mutableStateOf<AbsenceResponse?>(null) }
     var isResolvingAbsenceSubjects by remember { mutableStateOf(false) }
@@ -762,9 +762,8 @@ private fun GradeyApp(
         timetableError = null
     }
 
-    fun clearSchoolPresentationAfterAccountChange() {
-        dashboard = null
-        marksRefreshError = null
+    fun clearSchoolPresentationAfterAccountChange(scopeKey: String? = null) {
+        dashboardViewModel.switchScope(scopeKey)
         absence = null
         resetAbsenceSubjectResolution()
         absenceRefreshError = null
@@ -835,7 +834,10 @@ private fun GradeyApp(
         val storedSession = graph.schoolRepository.currentStoredSession()
         activeLinkedAccountID = storedSession?.linkedAccountID
         currentSchoolBaseURL = storedSession?.baseURL.orEmpty()
-        graph.schoolRepository.loadCachedDashboard()?.let { dashboard = it }
+        dashboardViewModel.loadCached(
+            scopeKey = storedSession?.cacheScope,
+            load = graph.schoolRepository::loadCachedDashboard,
+        )
         graph.schoolRepository.loadCachedAbsence()?.let(::startAbsenceSubjectResolution)
         graph.schoolRepository.loadCachedTimetable(timetableRequestedWeek)?.let {
             timetable = it
@@ -1019,7 +1021,7 @@ private fun GradeyApp(
         try {
             PhoneWearSyncPublisher.publish(
                 context.applicationContext,
-                WearPayloadBuilder.signedIn(loaded, dashboard?.user, supportTier),
+                WearPayloadBuilder.signedIn(loaded, dashboardViewModel.currentDashboard?.user, supportTier),
             )
         } catch (error: CancellationException) {
             throw error
@@ -1052,7 +1054,7 @@ private fun GradeyApp(
         val previousScope = graph.schoolRepository.currentStoredSession()?.cacheScope
         val session = graph.schoolRepository.login(schoolURL, username, password)
         if (previousScope != session.cacheScope) {
-            clearSchoolPresentationAfterAccountChange()
+            clearSchoolPresentationAfterAccountChange(session.cacheScope)
             clearSchoolPlatformProjectionsAfterAccountChange()
         }
         return session
@@ -1088,7 +1090,7 @@ private fun GradeyApp(
     }
 
     fun routeToSchoolReconnect() {
-        dashboard = null
+        dashboardViewModel.expireSession()
         absence = null
         resetAbsenceSubjectResolution()
         resetTimetableState()
@@ -1102,7 +1104,6 @@ private fun GradeyApp(
         isAddingSchool = false
         resetSignedInNavigation()
         dataError = null
-        marksRefreshError = null
         absenceRefreshError = null
         schoolLoginError = context.getString(R.string.school_session_expired)
         phase = AppPhase.NEEDS_SCHOOL
@@ -1128,7 +1129,7 @@ private fun GradeyApp(
         } catch (_: Throwable) {
             // The school session and cached widget data are already cleared.
         }
-        dashboard = null
+        dashboardViewModel.clear()
         absence = null
         resetAbsenceSubjectResolution()
         resetTimetableState()
@@ -1142,7 +1143,6 @@ private fun GradeyApp(
         isAddingSchool = false
         resetSignedInNavigation()
         dataError = null
-        marksRefreshError = null
         absenceRefreshError = null
         schoolLoginError = null
     }
@@ -1266,7 +1266,10 @@ private fun GradeyApp(
         }
 
         return try {
-            val linked = graph.linkedAccountRepository.linkSchoolAccount(session, dashboard?.user)
+            val linked = graph.linkedAccountRepository.linkSchoolAccount(
+                session,
+                dashboardViewModel.currentDashboard?.user,
+            )
             if (
                 !linked.provider.isSupportedSchoolProvider ||
                 linked.status != LinkedAccountStatus.ACTIVE
@@ -1275,7 +1278,8 @@ private fun GradeyApp(
                 linkedAccountError = context.getString(R.string.error_linked_account)
                 return false
             }
-            graph.schoolRepository.associateCurrentSession(linked)
+            val associatedSession = graph.schoolRepository.associateCurrentSession(linked)
+            dashboardViewModel.adoptScope(associatedSession.cacheScope)
             activeLinkedAccountID = linked.id
             linkedAccounts = graph.linkedAccountRepository.localAccounts()
             linkedAccountError = null
@@ -1328,8 +1332,8 @@ private fun GradeyApp(
             )
             val associatedSession = graph.schoolRepository.associateCurrentSession(updated)
             reconnectCommitted = true
-            clearSchoolPresentationAfterAccountChange()
-            dashboard = candidateDashboard
+            clearSchoolPresentationAfterAccountChange(associatedSession.cacheScope)
+            dashboardViewModel.replaceDashboard(candidateDashboard, associatedSession.cacheScope)
             activeLinkedAccountID = updated.id
             currentSchoolBaseURL = associatedSession.baseURL
             linkedAccounts = linkedAccounts
@@ -1366,7 +1370,7 @@ private fun GradeyApp(
             val activatedSession = graph.schoolRepository.activateLinkedSchoolAccount(
                 activation.tokenPayload.makeStoredSession(activation.account),
             )
-            clearSchoolPresentationAfterAccountChange()
+            clearSchoolPresentationAfterAccountChange(activatedSession.cacheScope)
             activeLinkedAccountID = activation.account.id
             resetSignedInNavigation()
             if (previousSchoolScope != activatedSession.cacheScope) {
@@ -1413,7 +1417,8 @@ private fun GradeyApp(
                 stravaError = null
                 submittingStravaMealID = null
             } else if (activeLinkedAccountID == linked.id) {
-                graph.schoolRepository.disassociateCurrentSession(linked.id)
+                val localSession = graph.schoolRepository.disassociateCurrentSession(linked.id)
+                dashboardViewModel.adoptScope(localSession?.cacheScope)
                 graph.historyRepository.clearCachedGradeHistory(linked.id)
                 gradeHistorySnapshot = null
                 gradeHistoryRefreshError = null
@@ -1431,16 +1436,18 @@ private fun GradeyApp(
 
     suspend fun refreshSignedInData(forceRefresh: Boolean = false) {
         dataError = null
-        marksRefreshError = null
         absenceRefreshError = null
         timetableError = null
         stravaError = null
         val failures = mutableListOf<Throwable>()
-        val dashboardRefresh = refreshRetainingContent(dashboard) {
-            graph.schoolRepository.loadDashboard(forceRefresh = forceRefresh)
-        }
-        dashboard = dashboardRefresh.value
-        when (val error = dashboardRefresh.failure) {
+        val dashboardScope = graph.schoolRepository.currentStoredSession()?.cacheScope
+        when (
+            val error = dashboardViewModel.refresh(
+                scopeKey = dashboardScope,
+                forceRefresh = forceRefresh,
+                load = graph.schoolRepository::loadDashboard,
+            )
+        ) {
             is SchoolSessionExpiredException -> {
                 routeToSchoolReconnect()
                 return
@@ -1449,7 +1456,6 @@ private fun GradeyApp(
             null -> Unit
             else -> {
                 failures += error
-                marksRefreshError = error.userFacingMessage(context)
             }
         }
         val absenceRefresh = refreshRetainingContent(absence) {
@@ -1604,7 +1610,10 @@ private fun GradeyApp(
                     schoolState = OnboardingUpgradeCloudLinkState.NOT_ATTEMPTED
                 } else {
                     try {
-                        graph.schoolRepository.loadCachedDashboard()?.let { dashboard = it }
+                        dashboardViewModel.loadCached(
+                            scopeKey = schoolSession.cacheScope,
+                            load = graph.schoolRepository::loadCachedDashboard,
+                        )
                     } catch (error: CancellationException) {
                         throw error
                     } catch (_: Throwable) {
@@ -1726,7 +1735,10 @@ private fun GradeyApp(
         onboardingUpgradeRetryTarget = OnboardingUpgradeRetryTarget.SCHOOL
         try {
             try {
-                graph.schoolRepository.loadCachedDashboard()?.let { dashboard = it }
+                dashboardViewModel.loadCached(
+                    scopeKey = graph.schoolRepository.currentStoredSession()?.cacheScope,
+                    load = graph.schoolRepository::loadCachedDashboard,
+                )
             } catch (error: CancellationException) {
                 throw error
             } catch (_: Throwable) {
@@ -1847,11 +1859,17 @@ private fun GradeyApp(
         }
         var isSchoolCloudLinked = true
         if (hasSchool && account != null && !isGuestMode) {
-            graph.schoolRepository.loadCachedDashboard()?.let { dashboard = it }
-            if (dashboard == null) {
-                dashboard = runCatching {
-                    graph.schoolRepository.loadDashboard(forceRefresh = false)
-                }.getOrNull()
+            val schoolScope = graph.schoolRepository.currentStoredSession()?.cacheScope
+            dashboardViewModel.loadCached(
+                scopeKey = schoolScope,
+                load = graph.schoolRepository::loadCachedDashboard,
+            )
+            if (dashboardViewModel.currentDashboard == null) {
+                dashboardViewModel.refresh(
+                    scopeKey = schoolScope,
+                    forceRefresh = false,
+                    load = graph.schoolRepository::loadDashboard,
+                )
             }
             isSchoolCloudLinked = linkCurrentSchoolIfNeeded()
         }
@@ -2051,7 +2069,11 @@ private fun GradeyApp(
         try {
             PhoneWearSyncPublisher.publish(
                 context.applicationContext,
-                WearPayloadBuilder.signedIn(currentTimetable, dashboard?.user, supportTier),
+                WearPayloadBuilder.signedIn(
+                    currentTimetable,
+                    dashboardViewModel.currentDashboard?.user,
+                    supportTier,
+                ),
             )
         } catch (error: CancellationException) {
             throw error
@@ -2605,10 +2627,12 @@ private fun GradeyApp(
                     },
                     onLogin = { school, username, password ->
                         launchSchoolLogin {
-                            loginReplacingSchoolSession(school, username, password)
-                            dashboard = runCatching {
-                                graph.schoolRepository.loadDashboard(forceRefresh = false)
-                            }.getOrNull()
+                            val schoolSession = loginReplacingSchoolSession(school, username, password)
+                            dashboardViewModel.refresh(
+                                scopeKey = schoolSession.cacheScope,
+                                forceRefresh = false,
+                                load = graph.schoolRepository::loadDashboard,
+                            )
                             val isSchoolCloudLinked = linkCurrentSchoolIfNeeded()
                             phase = AppPhase.SIGNED_IN
                             advanceOnboardingAfterSchoolConnection(isSchoolCloudLinked)
@@ -2960,12 +2984,18 @@ private fun GradeyApp(
                         ).account
                         graph.guestModeStore.isEnabled = false
                         isGuestMode = false
-                        if (graph.schoolRepository.currentStoredSession() != null) {
-                            graph.schoolRepository.loadCachedDashboard()?.let { dashboard = it }
-                            if (dashboard == null) {
-                                dashboard = runCatching {
-                                    graph.schoolRepository.loadDashboard(forceRefresh = false)
-                                }.getOrNull()
+                        val schoolSession = graph.schoolRepository.currentStoredSession()
+                        if (schoolSession != null) {
+                            dashboardViewModel.loadCached(
+                                scopeKey = schoolSession.cacheScope,
+                                load = graph.schoolRepository::loadCachedDashboard,
+                            )
+                            if (dashboardViewModel.currentDashboard == null) {
+                                dashboardViewModel.refresh(
+                                    scopeKey = schoolSession.cacheScope,
+                                    forceRefresh = false,
+                                    load = graph.schoolRepository::loadDashboard,
+                                )
                             }
                             linkCurrentSchoolIfNeeded()
                         }
@@ -3084,10 +3114,12 @@ private fun GradeyApp(
                             refreshSignedInData()
                         }
                     } else {
-                        loginReplacingSchoolSession(school, username, password)
-                        dashboard = runCatching {
-                            graph.schoolRepository.loadDashboard(forceRefresh = false)
-                        }.getOrNull()
+                        val schoolSession = loginReplacingSchoolSession(school, username, password)
+                        dashboardViewModel.refresh(
+                            scopeKey = schoolSession.cacheScope,
+                            forceRefresh = false,
+                            load = graph.schoolRepository::loadDashboard,
+                        )
                         linkCurrentSchoolIfNeeded()
                         isAddingSchool = false
                         reconnectLinkedAccountID = null
@@ -3124,16 +3156,17 @@ private fun GradeyApp(
                 .fillMaxSize()
                 .statusBarsPadding()
                 .padding(bottom = 96.dp)
-            val currentDashboard = dashboard
+            val currentDashboard = dashboardState.dashboard
             val currentAbsence = absence
             val effectiveAbsence = currentAbsence ?: currentDashboard?.let {
                 AbsenceResponse(absencesPerSubject = it.absencesPerSubject)
             }
+            val isDashboardLoading = isLoading || dashboardState.isLoading
             val todayPresentationState = TodayPresentationStates.resolve(
                 hasDashboard = currentDashboard != null,
                 hasSubjects = currentDashboard?.marksResponse?.subjects?.isNotEmpty() == true,
-                isLoading = isLoading,
-                hasError = dataError != null,
+                isLoading = isDashboardLoading,
+                hasError = dataError != null || dashboardState.failure != null,
             )
             val absencePresentationState = AbsencePresentationStates.resolve(
                 hasResponse = currentAbsence != null,
@@ -3248,7 +3281,7 @@ private fun GradeyApp(
                         graph.schoolRepository.predictSubjectAverage(subject, markText, weight)
                     },
                     refreshErrorMessage = marksRefreshError,
-                    isRefreshing = isLoading,
+                    isRefreshing = isDashboardLoading,
                     onRefresh = {
                         if (!isLoading) {
                             scope.launch {
@@ -3270,7 +3303,7 @@ private fun GradeyApp(
                     modifier = Modifier.fillMaxSize(),
                 ) else CoreDataUnavailableScreen(
                     title = context.getString(R.string.tab_marks),
-                    isLoading = isLoading,
+                    isLoading = isDashboardLoading,
                     errorMessage = dataError,
                     onRetry = { scope.launch { runWithLoading { refreshSignedInData(true) } } },
                     modifier = standardScreenModifier,
@@ -3517,8 +3550,11 @@ private fun GradeyApp(
                         },
                         onClearCache = {
                             scope.launch {
+                                val retainedSchoolScope = graph.schoolRepository
+                                    .currentStoredSession()
+                                    ?.cacheScope
                                 graph.cache?.clearAll()
-                                dashboard = null
+                                dashboardViewModel.clear(scopeKey = retainedSchoolScope)
                                 absence = null
                                 resetAbsenceSubjectResolution()
                                 resetTimetableState()

@@ -435,6 +435,68 @@ class BakalariNetworkClientTest {
     }
 
     @Test
+    fun optionalScalarNullsUseIOSCompatibleDefaults() = runTest {
+        server.enqueue(
+            jsonResponse(
+                """
+                {
+                  "Subjects":[{
+                    "Marks":[{
+                      "MarkText":null,
+                      "SubjectId":null,
+                      "IsNew":null,
+                      "IsPoints":null
+                    }],
+                    "Subject":{"Id":"math","Abbrev":null,"Name":null},
+                    "PointsOnly":null,
+                    "MarkPredictionEnabled":null
+                  }]
+                }
+                """.trimIndent(),
+            ),
+        )
+        server.enqueue(
+            jsonResponse(
+                """
+                {
+                  "Hours":[{"Id":null,"Caption":null,"BeginTime":null,"EndTime":null}],
+                  "Days":[{
+                    "Atoms":[{"HourId":null}],
+                    "DayOfWeek":null,
+                    "Date":null,
+                    "DayDescription":null,
+                    "DayType":null
+                  }]
+                }
+                """.trimIndent(),
+            ),
+        )
+
+        val subject = client.fetchMarks(baseURL(), "token").subjects.single()
+        val mark = subject.marks.single()
+        val timetable = client.fetchTimetable(baseURL(), "token", "2026-08-24")
+
+        assertThat(subject.subjectInfo.id).isEqualTo("math")
+        assertThat(subject.subjectInfo.abbrev).isEmpty()
+        assertThat(subject.subjectInfo.name).isEmpty()
+        assertThat(subject.pointsOnly).isFalse()
+        assertThat(subject.markPredictionEnabled).isFalse()
+        assertThat(mark.markText).isEmpty()
+        assertThat(mark.subjectID).isEmpty()
+        assertThat(mark.isNew).isFalse()
+        assertThat(mark.isPoints).isFalse()
+        assertThat(timetable.hours.single().id).isEmpty()
+        assertThat(timetable.hours.single().caption).isEmpty()
+        assertThat(timetable.hours.single().beginTime).isEmpty()
+        assertThat(timetable.hours.single().endTime).isEmpty()
+        assertThat(timetable.days.single().atoms.single().hourID).isEmpty()
+        assertThat(timetable.days.single().dayOfWeek).isEqualTo(0)
+        assertThat(timetable.days.single().date).isEmpty()
+        assertThat(timetable.days.single().dayDescription).isEmpty()
+        assertThat(timetable.days.single().dayType).isEqualTo("WorkDay")
+    }
+
+    @Test
     fun absenceTreatsExplicitNullCollectionsAsEmptyDefaults() = runTest {
         server.enqueue(
             jsonResponse(
@@ -521,6 +583,7 @@ class BakalariNetworkClientTest {
             """{"Subjects":[{"Marks":{},"Subject":{"Id":"math","Abbrev":"M","Name":"Mathematics"}}]}""",
             """{"Subjects":[{"Marks":[],"Subject":null}]}""",
             """{"Subjects":[{"Marks":null,"Subject":{"Id":null,"Abbrev":"M","Name":"Mathematics"}}]}""",
+            """{"Subjects":[{"Marks":[{"MarkText":{}}],"Subject":{"Id":"math"}}]}""",
         ).forEach { responseBody ->
             server.enqueue(jsonResponse(responseBody))
 

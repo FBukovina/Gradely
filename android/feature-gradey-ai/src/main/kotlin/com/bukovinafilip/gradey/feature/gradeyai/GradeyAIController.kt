@@ -121,7 +121,10 @@ internal class GradeyAIController(
         foregroundGeneration += 1
         activeContextRefreshToken = null
         isRefreshingContext = false
-        if (isOpeningConversation) {
+        // Callable cancellation can race server-side persistence after a stream starts.
+        // Reload the selected detail on foreground instead of leaving a local partial reply
+        // as the permanent history for that conversation.
+        if (isOpeningConversation || isStreaming) {
             conversationDetailNeedsReloadID = currentConversation?.id
         }
         prepareUnstartedSendForForegroundReconciliation()

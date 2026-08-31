@@ -282,6 +282,55 @@ class GradeyAIControllerTest {
     }
 
     @Test
+    fun `foreground reloads authoritative history after a started stream is cancelled`() = runTest {
+        val existing = conversation("existing", "Existing")
+        val repository = FakeRepository(conversations = mutableListOf(existing)).apply {
+            streams += flow {
+                emit(GradeyAIStreamEvent.Start("assistant", 2))
+                emit(GradeyAIStreamEvent.Delta("Partial"))
+                awaitCancellation()
+            }
+        }
+        val controller = controller(repository = repository, scope = this)
+        controller.bootstrap()
+        controller.open(existing)
+        val send = launch { controller.send("Persisted prompt") }
+        runCurrent()
+        val request = repository.streamRequests.single()
+        val authoritativeMessages = listOf(
+            GradeyAIMessage(
+                id = "persisted-user",
+                conversationID = existing.id,
+                clientMessageID = request.clientMessageID,
+                role = GradeyAIMessageRole.USER,
+                content = request.text,
+                status = GradeyAIMessageStatus.COMPLETE,
+                createdAtEpochMillis = 1_700_000_000_000,
+            ),
+            GradeyAIMessage(
+                id = "assistant",
+                conversationID = existing.id,
+                role = GradeyAIMessageRole.ASSISTANT,
+                content = "Authoritative reply",
+                status = GradeyAIMessageStatus.COMPLETE,
+                createdAtEpochMillis = 1_700_000_000_001,
+            ),
+        )
+        repository.loadedMessagesByID[existing.id] = authoritativeMessages
+
+        controller.onAppBackgrounded()
+
+        assertThat(controller.messages.last().content).isEqualTo("Partial")
+        assertThat(controller.messages.last().status).isEqualTo(GradeyAIMessageStatus.CANCELLED)
+        assertThat(controller.onAppForegrounded()).isTrue()
+        controller.bootstrap()
+
+        assertThat(repository.loadedIDs).containsExactly("existing", "existing").inOrder()
+        assertThat(controller.messages).containsExactlyElementsIn(authoritativeMessages).inOrder()
+        send.join()
+    }
+
+    @Test
     fun `background during chat creation restores the prompt without an orphan bubble`() = runTest {
         val repository = FakeRepository().apply { holdCreate = true }
         val controller = controller(repository = repository, scope = this)

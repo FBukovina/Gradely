@@ -178,7 +178,7 @@ data class Subject(
 @Serializable
 data class SubjectInfo(
     @SerialName("Id")
-    val id: String = "",
+    val id: String,
     @SerialName("Abbrev")
     val abbrev: String = "",
     @SerialName("Name")

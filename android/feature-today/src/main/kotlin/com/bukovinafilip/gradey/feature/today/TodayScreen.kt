@@ -6,6 +6,8 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -54,6 +56,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
@@ -120,6 +124,9 @@ import kotlin.math.roundToInt
 private val WarningOrange = Color(0xFFFF8D28)
 private val DangerRed = Color(0xFFE5545D)
 private val PragueZone = ZoneId.of("Europe/Prague")
+
+internal const val TODAY_TRENDS_BACK_TEST_TAG = "todayTrendsBack"
+internal const val TODAY_RANGE_TEST_TAG_PREFIX = "todayTrendRange:"
 
 @Composable
 fun TodayStateScreen(
@@ -1599,78 +1606,119 @@ private fun GradeTrendsScreen(
 }
 
 @Composable
-private fun GradeTrendsHeader(onBack: () -> Unit) {
-    Box(
+internal fun GradeTrendsHeader(onBack: () -> Unit) {
+    val backDescription = stringResource(R.string.today_back)
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(48.dp),
-        contentAlignment = Alignment.Center,
+            .heightIn(min = 48.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Surface(
+        Box(
             modifier = Modifier
-                .align(Alignment.CenterStart)
-                .size(42.dp),
-            onClick = onBack,
-            shape = CircleShape,
-            color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.92f),
-            shadowElevation = 1.dp,
+                .size(48.dp)
+                .testTag(TODAY_TRENDS_BACK_TEST_TAG)
+                .clip(CircleShape)
+                .semantics { contentDescription = backDescription }
+                .clickable(role = Role.Button, onClick = onBack),
+            contentAlignment = Alignment.Center,
         ) {
-            Box(contentAlignment = Alignment.Center) {
-                Icon(
-                    imageVector = GradeyIcons.ArrowLeft,
-                    contentDescription = stringResource(R.string.today_back),
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(28.dp),
-                )
+            Surface(
+                modifier = Modifier.size(42.dp),
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.92f),
+                shadowElevation = 1.dp,
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = GradeyIcons.ArrowLeft,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(28.dp),
+                    )
+                }
             }
         }
+        Spacer(Modifier.width(8.dp))
         Text(
             text = stringResource(R.string.today_grade_movement),
+            modifier = Modifier.weight(1f),
             color = MaterialTheme.colorScheme.onBackground,
             fontSize = 18.sp,
             lineHeight = 22.sp,
             fontWeight = FontWeight.SemiBold,
+            textAlign = TextAlign.Center,
         )
+        Spacer(Modifier.width(56.dp))
     }
 }
 
 @Composable
-private fun GradeTrendRangePicker(
+internal fun GradeTrendRangePicker(
     selected: GradeTrendRange,
     onSelected: (GradeTrendRange) -> Unit,
 ) {
-    Surface(
+    val useExpandableTrack = LocalDensity.current.fontScale >= 1.5f
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(38.dp),
-        shape = RoundedCornerShape(20.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.92f),
+            .heightIn(min = 48.dp),
+        contentAlignment = Alignment.Center,
     ) {
-        Row(modifier = Modifier.padding(2.dp)) {
+        Surface(
+            modifier = if (useExpandableTrack) {
+                Modifier.matchParentSize()
+            } else {
+                Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 38.dp)
+            },
+            shape = RoundedCornerShape(20.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.92f),
+        ) {}
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 48.dp)
+                .selectableGroup()
+                .padding(horizontal = 2.dp),
+        ) {
             GradeTrendRange.entries.forEach { range ->
-                Surface(
+                Box(
                     modifier = Modifier
                         .weight(1f)
-                        .height(34.dp),
-                    onClick = { onSelected(range) },
-                    shape = RoundedCornerShape(18.dp),
-                    color = if (range == selected) {
-                        MaterialTheme.colorScheme.surfaceContainer
-                    } else {
-                        Color.Transparent
-                    },
-                    shadowElevation = if (range == selected) 1.dp else 0.dp,
+                        .heightIn(min = 48.dp)
+                        .testTag(TODAY_RANGE_TEST_TAG_PREFIX + range.name)
+                        .selectable(
+                            selected = range == selected,
+                            role = Role.Tab,
+                            onClick = { onSelected(range) },
+                        ),
+                    contentAlignment = Alignment.Center,
                 ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Text(
-                            text = trendRangeLabel(range),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            fontSize = 13.sp,
-                            lineHeight = 16.sp,
-                            fontWeight = if (range == selected) FontWeight.Bold else FontWeight.Normal,
-                        )
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 34.dp),
+                        shape = RoundedCornerShape(18.dp),
+                        color = if (range == selected) {
+                            MaterialTheme.colorScheme.surfaceContainer
+                        } else {
+                            Color.Transparent
+                        },
+                        shadowElevation = if (range == selected) 1.dp else 0.dp,
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Text(
+                                text = trendRangeLabel(range),
+                                maxLines = 2,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                fontSize = 13.sp,
+                                lineHeight = 16.sp,
+                                fontWeight = if (range == selected) FontWeight.Bold else FontWeight.Normal,
+                                textAlign = TextAlign.Center,
+                            )
+                        }
                     }
                 }
             }

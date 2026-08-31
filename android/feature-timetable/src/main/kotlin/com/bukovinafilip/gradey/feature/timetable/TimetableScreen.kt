@@ -16,8 +16,10 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -49,12 +51,15 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
@@ -79,6 +84,10 @@ private val AccentTeal = GradeyColors.Primary
 private val HeroStart = GradeyColors.Primary
 private val HeroEnd = GradeyColors.Secondary
 private val NoticeRed = GradeyColors.Poor
+internal const val TIMETABLE_PREVIOUS_WEEK_TEST_TAG = "timetablePreviousWeek"
+internal const val TIMETABLE_NEXT_WEEK_TEST_TAG = "timetableNextWeek"
+internal const val TIMETABLE_TODAY_TEST_TAG = "timetableToday"
+
 private data class TimetableDaySlot(
     val date: LocalDate,
     val day: ScheduledDay?,
@@ -434,7 +443,7 @@ private fun TimetableHeader(
 }
 
 @Composable
-private fun WeekNavigator(
+internal fun WeekNavigator(
     monday: LocalDate,
     locale: Locale,
     enabled: Boolean,
@@ -443,45 +452,62 @@ private fun WeekNavigator(
     onToday: () -> Unit,
 ) {
     val isCurrentWeek = monday == TimetableDates.monday(TimetableDates.today())
-    Box(
+    val todayLabel = stringResource(R.string.timetable_today)
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(if (isCurrentWeek) 40.dp else 52.dp)
+            .heightIn(min = if (isCurrentWeek) 48.dp else 52.dp)
             .padding(horizontal = 16.dp),
-        contentAlignment = Alignment.Center,
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         WeekArrow(
             description = stringResource(R.string.timetable_previous_week),
             enabled = enabled,
             onClick = onPrevious,
-            modifier = Modifier.align(Alignment.CenterStart),
+            modifier = Modifier.testTag(TIMETABLE_PREVIOUS_WEEK_TEST_TAG),
         ) {
             Icon(GradeyIcons.ArrowLeft, contentDescription = null, tint = AccentTeal, modifier = Modifier.size(24.dp))
         }
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .padding(horizontal = 8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
             Text(
                 text = formatWeekRange(monday, locale),
                 color = MaterialTheme.colorScheme.onBackground,
                 fontSize = 18.sp,
                 lineHeight = 22.sp,
                 fontWeight = FontWeight.SemiBold,
+                textAlign = TextAlign.Center,
             )
             if (!isCurrentWeek) {
-                Text(
-                    text = stringResource(R.string.timetable_today),
-                    modifier = Modifier.clickable(enabled = enabled, onClick = onToday),
-                    color = AccentTeal,
-                    fontSize = 12.sp,
-                    lineHeight = 15.sp,
-                    fontWeight = FontWeight.SemiBold,
-                )
+                Box(
+                    modifier = Modifier
+                        .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
+                        .testTag(TIMETABLE_TODAY_TEST_TAG)
+                        .clip(RoundedCornerShape(24.dp))
+                        .semantics { contentDescription = todayLabel }
+                        .clickable(enabled = enabled, role = Role.Button, onClick = onToday),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = todayLabel,
+                        modifier = Modifier.clearAndSetSemantics {},
+                        color = AccentTeal,
+                        fontSize = 12.sp,
+                        lineHeight = 15.sp,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                }
             }
         }
         WeekArrow(
             description = stringResource(R.string.timetable_next_week),
             enabled = enabled,
             onClick = onNext,
-            modifier = Modifier.align(Alignment.CenterEnd),
+            modifier = Modifier.testTag(TIMETABLE_NEXT_WEEK_TEST_TAG),
         ) {
             Icon(GradeyIcons.ArrowRight, contentDescription = null, tint = AccentTeal, modifier = Modifier.size(24.dp))
         }
@@ -496,16 +522,21 @@ private fun WeekArrow(
     modifier: Modifier = Modifier,
     icon: @Composable () -> Unit,
 ) {
-    Surface(
+    Box(
         modifier = modifier
-            .size(40.dp)
-            .semantics { contentDescription = description },
-        onClick = onClick,
-        enabled = enabled,
-        shape = CircleShape,
-        color = MaterialTheme.colorScheme.primary.copy(alpha = if (enabled) 0.16f else 0.08f),
+            .size(48.dp)
+            .clip(CircleShape)
+            .semantics { contentDescription = description }
+            .clickable(enabled = enabled, role = Role.Button, onClick = onClick),
+        contentAlignment = Alignment.Center,
     ) {
-        Box(contentAlignment = Alignment.Center) { icon() }
+        Surface(
+            modifier = Modifier.size(40.dp),
+            shape = CircleShape,
+            color = MaterialTheme.colorScheme.primary.copy(alpha = if (enabled) 0.16f else 0.08f),
+        ) {
+            Box(contentAlignment = Alignment.Center) { icon() }
+        }
     }
 }
 
@@ -1056,7 +1087,7 @@ private fun ScheduledDay.isSchoolDay(): Boolean = when (dayType.trim().lowercase
     else -> true
 }
 
-private fun formatWeekRange(monday: LocalDate, locale: Locale): String {
+internal fun formatWeekRange(monday: LocalDate, locale: Locale): String {
     val friday = monday.plusDays(4)
     val monthFormatter = DateTimeFormatter.ofPattern("MMM", locale)
     return if (monday.month == friday.month) {

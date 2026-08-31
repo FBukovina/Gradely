@@ -6,8 +6,11 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -23,6 +26,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
@@ -63,6 +67,8 @@ import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import com.bukovinafilip.gradey.ui.GradeyIcons
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -125,7 +131,11 @@ private val WarningOrange = Color(0xFFE0921A)
 private val DangerRed = Color(0xFFD95461)
 private val PragueZone = ZoneId.of("Europe/Prague")
 
-private enum class SubjectSortMode {
+internal const val SUBJECT_SORT_TEST_TAG_PREFIX = "subjectSort:"
+internal const val SUBJECT_STEPPER_DECREASE_TEST_TAG = "subjectStepperDecrease"
+internal const val SUBJECT_STEPPER_INCREASE_TEST_TAG = "subjectStepperIncrease"
+
+internal enum class SubjectSortMode {
     Focus,
     Average,
     Alphabetical,
@@ -593,43 +603,34 @@ private fun OverallAverageCard(subjects: List<Subject>) {
 }
 
 @Composable
-private fun SubjectsSectionHeader(
+internal fun SubjectsSectionHeader(
     sortMode: SubjectSortMode,
     onSortModeChange: (SubjectSortMode) -> Unit,
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(31.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween,
-    ) {
-        SectionHeading(stringResource(R.string.marks_subjects_section))
-        Surface(
-            modifier = Modifier
-                .width(173.dp)
-                .height(31.dp),
-            shape = RoundedCornerShape(16.dp),
-            color = MaterialTheme.colorScheme.surfaceVariant,
-        ) {
-            Row(modifier = Modifier.padding(1.dp)) {
-                SortSegment(
-                    modifier = Modifier.width(55.dp),
-                    mode = SubjectSortMode.Focus,
-                    selected = sortMode == SubjectSortMode.Focus,
-                    onClick = { onSortModeChange(SubjectSortMode.Focus) },
+    BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+        val stackControls = maxWidth < 300.dp || LocalDensity.current.fontScale >= 1.5f
+        if (stackControls) {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                SectionHeading(stringResource(R.string.marks_subjects_section))
+                SubjectSortPicker(
+                    sortMode = sortMode,
+                    onSortModeChange = onSortModeChange,
+                    modifier = Modifier.fillMaxWidth(),
                 )
-                SortSegment(
-                    modifier = Modifier.width(73.dp),
-                    mode = SubjectSortMode.Average,
-                    selected = sortMode == SubjectSortMode.Average,
-                    onClick = { onSortModeChange(SubjectSortMode.Average) },
-                )
-                SortSegment(
-                    modifier = Modifier.width(43.dp),
-                    mode = SubjectSortMode.Alphabetical,
-                    selected = sortMode == SubjectSortMode.Alphabetical,
-                    onClick = { onSortModeChange(SubjectSortMode.Alphabetical) },
+            }
+        } else {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 48.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                SectionHeading(stringResource(R.string.marks_subjects_section))
+                SubjectSortPicker(
+                    sortMode = sortMode,
+                    onSortModeChange = onSortModeChange,
+                    modifier = Modifier.width(180.dp),
                 )
             }
         }
@@ -637,36 +638,104 @@ private fun SubjectsSectionHeader(
 }
 
 @Composable
-private fun SortSegment(
+private fun SubjectSortPicker(
+    sortMode: SubjectSortMode,
+    onSortModeChange: (SubjectSortMode) -> Unit,
+    modifier: Modifier,
+) {
+    val useExpandableTrack = LocalDensity.current.fontScale >= 1.5f
+    Box(
+        modifier = modifier.heightIn(min = 48.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Surface(
+            modifier = if (useExpandableTrack) {
+                Modifier.matchParentSize()
+            } else {
+                Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 31.dp)
+            },
+            shape = RoundedCornerShape(16.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant,
+        ) {}
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 48.dp)
+                .selectableGroup()
+                .padding(horizontal = 1.dp),
+        ) {
+            SortSegment(
+                modifier = Modifier
+                    .weight(55f)
+                    .widthIn(min = 48.dp),
+                mode = SubjectSortMode.Focus,
+                selected = sortMode == SubjectSortMode.Focus,
+                onClick = { onSortModeChange(SubjectSortMode.Focus) },
+            )
+            SortSegment(
+                modifier = Modifier
+                    .weight(75f)
+                    .widthIn(min = 48.dp),
+                mode = SubjectSortMode.Average,
+                selected = sortMode == SubjectSortMode.Average,
+                onClick = { onSortModeChange(SubjectSortMode.Average) },
+            )
+            SortSegment(
+                modifier = Modifier
+                    .weight(48f)
+                    .widthIn(min = 48.dp),
+                mode = SubjectSortMode.Alphabetical,
+                selected = sortMode == SubjectSortMode.Alphabetical,
+                onClick = { onSortModeChange(SubjectSortMode.Alphabetical) },
+            )
+        }
+    }
+}
+
+@Composable
+internal fun SortSegment(
     modifier: Modifier,
     mode: SubjectSortMode,
     selected: Boolean,
     onClick: () -> Unit,
 ) {
-    Surface(
-        selected = selected,
-        onClick = onClick,
+    Box(
         modifier = modifier
-            .height(29.dp)
-            .semantics { role = Role.Tab },
-        shape = RoundedCornerShape(15.dp),
-        color = if (selected) MaterialTheme.colorScheme.surface else Color.Transparent,
-        shadowElevation = if (selected) 1.dp else 0.dp,
+            .heightIn(min = 48.dp)
+            .testTag(SUBJECT_SORT_TEST_TAG_PREFIX + mode.name)
+            .selectable(
+                selected = selected,
+                role = Role.Tab,
+                onClick = onClick,
+            ),
+        contentAlignment = Alignment.Center,
     ) {
-        Box(contentAlignment = Alignment.Center) {
-            val label = when (mode) {
-                SubjectSortMode.Focus -> stringResource(R.string.marks_sort_focus)
-                SubjectSortMode.Average -> stringResource(R.string.marks_sort_average)
-                SubjectSortMode.Alphabetical -> stringResource(R.string.marks_sort_name)
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 29.dp),
+            shape = RoundedCornerShape(15.dp),
+            color = if (selected) MaterialTheme.colorScheme.surface else Color.Transparent,
+            shadowElevation = if (selected) 1.dp else 0.dp,
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                val label = when (mode) {
+                    SubjectSortMode.Focus -> stringResource(R.string.marks_sort_focus)
+                    SubjectSortMode.Average -> stringResource(R.string.marks_sort_average)
+                    SubjectSortMode.Alphabetical -> stringResource(R.string.marks_sort_name)
+                }
+                Text(
+                    text = label,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontSize = 14.sp,
+                    lineHeight = 17.sp,
+                    fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+                    maxLines = 2,
+                    textAlign = TextAlign.Center,
+                )
             }
-            Text(
-                text = label,
-                color = MaterialTheme.colorScheme.onSurface,
-                fontSize = 14.sp,
-                lineHeight = 17.sp,
-                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-                maxLines = 1,
-            )
         }
     }
 }
@@ -1551,39 +1620,12 @@ private fun TryMarkCard(
                 )
             }
             Spacer(Modifier.height(14.dp))
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(44.dp)
-                    .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(13.dp))
-                    .padding(horizontal = 8.dp, vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                StepperButton(
-                    enabled = enabled && weight > 1,
-                    onClick = onDecreaseWeight,
-                    contentDescription = stringResource(R.string.subject_prediction_decrease_weight),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f),
-                ) {
-                    Icon(GradeyIcons.Minus, contentDescription = null, modifier = Modifier.size(22.dp))
-                }
-                Text(
-                    text = stringResource(R.string.subject_prediction_weight, weight),
-                    color = MaterialTheme.colorScheme.onSurface,
-                    fontSize = 17.sp,
-                    lineHeight = 21.sp,
-                    fontWeight = FontWeight.Bold,
-                )
-                StepperButton(
-                    enabled = enabled && weight < 10,
-                    onClick = onIncreaseWeight,
-                    contentDescription = stringResource(R.string.subject_prediction_increase_weight),
-                    tint = MaterialTheme.colorScheme.primary,
-                ) {
-                    Icon(GradeyIcons.Add, contentDescription = null, modifier = Modifier.size(27.dp))
-                }
-            }
+            PredictionWeightStepperRow(
+                enabled = enabled,
+                weight = weight,
+                onDecreaseWeight = onDecreaseWeight,
+                onIncreaseWeight = onIncreaseWeight,
+            )
             predictedAverage?.let { predicted ->
                 Spacer(Modifier.height(12.dp))
                 PredictionResultPanel(
@@ -1593,6 +1635,52 @@ private fun TryMarkCard(
                     isExactAverage = isExactAverage,
                 )
             }
+        }
+    }
+}
+
+@Composable
+internal fun PredictionWeightStepperRow(
+    enabled: Boolean,
+    weight: Int,
+    onDecreaseWeight: () -> Unit,
+    onIncreaseWeight: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 48.dp)
+            .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(13.dp))
+            .padding(horizontal = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        StepperButton(
+            enabled = enabled && weight > 1,
+            onClick = onDecreaseWeight,
+            testTag = SUBJECT_STEPPER_DECREASE_TEST_TAG,
+            contentDescription = stringResource(R.string.subject_prediction_decrease_weight),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f),
+        ) {
+            Icon(GradeyIcons.Minus, contentDescription = null, modifier = Modifier.size(22.dp))
+        }
+        Text(
+            text = stringResource(R.string.subject_prediction_weight, weight),
+            modifier = Modifier.weight(1f),
+            color = MaterialTheme.colorScheme.onSurface,
+            fontSize = 17.sp,
+            lineHeight = 21.sp,
+            fontWeight = FontWeight.Bold,
+            maxLines = 2,
+            textAlign = TextAlign.Center,
+        )
+        StepperButton(
+            enabled = enabled && weight < 10,
+            onClick = onIncreaseWeight,
+            testTag = SUBJECT_STEPPER_INCREASE_TEST_TAG,
+            contentDescription = stringResource(R.string.subject_prediction_increase_weight),
+            tint = MaterialTheme.colorScheme.primary,
+        ) {
+            Icon(GradeyIcons.Add, contentDescription = null, modifier = Modifier.size(27.dp))
         }
     }
 }
@@ -1665,25 +1753,33 @@ private fun PredictionResultPanel(
 }
 
 @Composable
-private fun StepperButton(
+internal fun StepperButton(
     enabled: Boolean,
     onClick: () -> Unit,
+    testTag: String,
     contentDescription: String,
     tint: Color,
     content: @Composable () -> Unit,
 ) {
-    Surface(
+    Box(
         modifier = Modifier
-            .width(36.dp)
-            .height(34.dp)
-            .semantics { this.contentDescription = contentDescription },
-        onClick = onClick,
-        enabled = enabled,
-        shape = RoundedCornerShape(9.dp),
-        color = MaterialTheme.colorScheme.surfaceContainer,
-        contentColor = tint,
+            .size(48.dp)
+            .testTag(testTag)
+            .clip(RoundedCornerShape(12.dp))
+            .semantics { this.contentDescription = contentDescription }
+            .clickable(enabled = enabled, role = Role.Button, onClick = onClick),
+        contentAlignment = Alignment.Center,
     ) {
-        Box(contentAlignment = Alignment.Center) { content() }
+        Surface(
+            modifier = Modifier
+                .width(36.dp)
+                .heightIn(min = 34.dp),
+            shape = RoundedCornerShape(9.dp),
+            color = MaterialTheme.colorScheme.surfaceContainer,
+            contentColor = if (enabled) tint else tint.copy(alpha = tint.alpha * 0.38f),
+        ) {
+            Box(contentAlignment = Alignment.Center) { content() }
+        }
     }
 }
 

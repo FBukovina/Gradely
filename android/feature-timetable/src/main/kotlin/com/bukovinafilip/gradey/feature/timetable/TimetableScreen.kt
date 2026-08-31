@@ -73,6 +73,7 @@ import com.bukovinafilip.gradey.model.ScheduledDay
 import com.bukovinafilip.gradey.ui.GradeyAuroraBackground
 import com.bukovinafilip.gradey.ui.GradeyColors
 import com.bukovinafilip.gradey.ui.GradeyIcons
+import com.bukovinafilip.gradey.ui.GradeySpacing
 import com.bukovinafilip.gradey.ui.StatusChip
 import com.bukovinafilip.gradey.model.ScheduledLesson
 import com.bukovinafilip.gradey.model.TimetableWeek
@@ -137,7 +138,7 @@ fun TimetableScreen(
                 onOpenAccount = onOpenAccount,
                 onOpenGradeyTools = onOpenGradeyTools,
             )
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(GradeySpacing.md))
             WeekNavigator(
                 monday = monday,
                 locale = locale,
@@ -146,7 +147,7 @@ fun TimetableScreen(
                 onNext = { onChangeWeek(monday.plusWeeks(1).toString()) },
                 onToday = { onChangeWeek(TimetableDates.todayString()) },
             )
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(GradeySpacing.sm))
             DayStrip(
                 daySlots = daySlots,
                 selectedDate = selectedDate,
@@ -457,7 +458,7 @@ internal fun WeekNavigator(
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(min = if (isCurrentWeek) 48.dp else 52.dp)
-            .padding(horizontal = 16.dp),
+            .padding(horizontal = GradeySpacing.lg),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         WeekArrow(
@@ -555,8 +556,8 @@ private fun DayStrip(
             .fillMaxWidth()
             .height(66.dp)
             .horizontalScroll(rememberScrollState())
-            .padding(start = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+            .padding(start = GradeySpacing.lg),
+        horizontalArrangement = Arrangement.spacedBy(GradeySpacing.sm),
     ) {
         daySlots.forEach { slot ->
             val selected = slot.date.toString() == selectedDate

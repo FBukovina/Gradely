@@ -3,6 +3,9 @@ package com.bukovinafilip.gradey.feature.account
 import android.app.TimePickerDialog
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Arrangement
@@ -13,6 +16,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -42,6 +46,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.font.FontWeight
@@ -137,6 +142,9 @@ fun AccountScreen(
     }
     val notificationsAvailable = account != null && hasCloudSchool
     val notificationControlsEnabled = notificationsAvailable && !isUpdatingNotificationPreferences
+    val quietHoursControlsEnabled = notificationControlsEnabled &&
+        notificationPreferences.newMarksEnabled &&
+        notificationPreferences.quietHoursEnabled
 
     fun showTimePicker(minuteOfDay: Int, onChange: (Int) -> Unit) {
         TimePickerDialog(
@@ -294,13 +302,8 @@ fun AccountScreen(
                     Text(stringResource(R.string.notifications_open_system_settings))
                 }
 
-                MetadataRow(
-                    stringResource(R.string.notifications_new_marks),
-                    stringResource(
-                        if (notificationPreferences.newMarksEnabled) R.string.notifications_enabled else R.string.notifications_disabled,
-                    ),
-                )
-                Switch(
+                SettingsSwitchRow(
+                    label = stringResource(R.string.notifications_new_marks),
                     checked = notificationPreferences.newMarksEnabled,
                     onCheckedChange = {
                         onUpdateNotificationPreferences(notificationPreferences.copy(newMarksEnabled = it))
@@ -309,12 +312,10 @@ fun AccountScreen(
                 )
 
                 Text(stringResource(R.string.notifications_lock_screen_detail))
-                NotificationLockScreenDetail.entries.forEach { detail ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        RadioButton(
+                Column(Modifier.selectableGroup()) {
+                    NotificationLockScreenDetail.entries.forEach { detail ->
+                        SettingsRadioRow(
+                            label = stringResource(detail.labelResource()),
                             selected = notificationPreferences.lockScreenDetail == detail,
                             onClick = {
                                 onUpdateNotificationPreferences(
@@ -323,17 +324,11 @@ fun AccountScreen(
                             },
                             enabled = notificationControlsEnabled && notificationPreferences.newMarksEnabled,
                         )
-                        Text(stringResource(detail.labelResource()))
                     }
                 }
 
-                MetadataRow(
-                    stringResource(R.string.notifications_quiet_hours),
-                    stringResource(
-                        if (notificationPreferences.quietHoursEnabled) R.string.notifications_enabled else R.string.notifications_disabled,
-                    ),
-                )
-                Switch(
+                SettingsSwitchRow(
+                    label = stringResource(R.string.notifications_quiet_hours),
                     checked = notificationPreferences.quietHoursEnabled,
                     onCheckedChange = {
                         onUpdateNotificationPreferences(notificationPreferences.copy(quietHoursEnabled = it))
@@ -348,7 +343,7 @@ fun AccountScreen(
                             )
                         }
                     },
-                    enabled = notificationControlsEnabled && notificationPreferences.quietHoursEnabled,
+                    enabled = quietHoursControlsEnabled,
                 ) {
                     Text(
                         stringResource(
@@ -365,7 +360,7 @@ fun AccountScreen(
                             )
                         }
                     },
-                    enabled = notificationControlsEnabled && notificationPreferences.quietHoursEnabled,
+                    enabled = quietHoursControlsEnabled,
                 ) {
                     Text(
                         stringResource(
@@ -1041,6 +1036,72 @@ private fun NotificationLockScreenDetail.labelResource(): Int = when (this) {
     NotificationLockScreenDetail.PRIVATE_SUMMARY -> R.string.notifications_private_summary
     NotificationLockScreenDetail.MARK_AND_SUBJECT -> R.string.notifications_mark_and_subject
     NotificationLockScreenDetail.FULL_DETAILS -> R.string.notifications_full_details
+}
+
+@Composable
+private fun SettingsSwitchRow(
+    label: String,
+    checked: Boolean,
+    enabled: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .heightIn(min = 48.dp)
+            .toggleable(
+                value = checked,
+                enabled = enabled,
+                role = Role.Switch,
+                onValueChange = onCheckedChange,
+            ),
+        horizontalArrangement = Arrangement.spacedBy(GradeySpacing.sm),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = label,
+            modifier = Modifier.weight(1f),
+        )
+        Switch(
+            checked = checked,
+            onCheckedChange = null,
+            enabled = enabled,
+        )
+    }
+}
+
+@Composable
+private fun SettingsRadioRow(
+    label: String,
+    selected: Boolean,
+    enabled: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .heightIn(min = 48.dp)
+            .selectable(
+                selected = selected,
+                enabled = enabled,
+                role = Role.RadioButton,
+                onClick = onClick,
+            ),
+        horizontalArrangement = Arrangement.spacedBy(GradeySpacing.sm),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        RadioButton(
+            selected = selected,
+            onClick = null,
+            enabled = enabled,
+        )
+        Text(
+            text = label,
+            modifier = Modifier.weight(1f),
+        )
+    }
 }
 
 private fun formatMinute(minuteOfDay: Int): String = String.format(

@@ -16,6 +16,7 @@ import androidx.glance.appwidget.provideContent
 import androidx.glance.appwidget.updateAll
 import androidx.glance.background
 import androidx.glance.action.clickable
+import androidx.glance.color.ColorProvider
 import androidx.glance.layout.Column
 import androidx.glance.layout.Spacer
 import androidx.glance.layout.fillMaxSize
@@ -25,7 +26,6 @@ import androidx.glance.layout.padding
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
-import androidx.glance.unit.ColorProvider
 import com.bukovinafilip.gradey.domain.NextLessonSelector
 import com.bukovinafilip.gradey.data.GradeyCacheOwner
 import com.bukovinafilip.gradey.model.NextLessonWidgetChangeKind
@@ -78,7 +78,7 @@ private fun NextLessonWidgetContent(
         modifier = GlanceModifier
             .fillMaxSize()
             .clickable(actionStartActivity(Intent(Intent.ACTION_VIEW, Uri.parse("gradey://timetable"))))
-            .background(ColorProvider(Color(0xFFEAF8F3)))
+            .background(WidgetColors.background)
             .cornerRadius(16.dp)
             .padding(14.dp),
     ) {
@@ -86,17 +86,17 @@ private fun NextLessonWidgetContent(
             is NextLessonWidgetSelection.Lesson -> {
                 Text(
                     text = localizedLessonStatus.orEmpty(),
-                    style = TextStyle(color = ColorProvider(Color(0xFF137C68)), fontWeight = FontWeight.Bold),
+                    style = TextStyle(color = WidgetColors.accent, fontWeight = FontWeight.Bold),
                 )
                 Spacer(GlanceModifier.height(4.dp))
                 Text(
                     text = selection.lesson.detailTitle ?: strings.lessonFallback,
-                    style = TextStyle(color = ColorProvider(Color(0xFF031F1B)), fontWeight = FontWeight.Bold),
+                    style = TextStyle(color = WidgetColors.primaryText, fontWeight = FontWeight.Bold),
                     modifier = GlanceModifier.fillMaxWidth(),
                 )
                 Text(
                     text = listOfNotNull(selection.lesson.timeRange, selection.lesson.room).joinToString(" - "),
-                    style = TextStyle(color = ColorProvider(Color(0xFF24534B))),
+                    style = TextStyle(color = WidgetColors.secondaryText),
                 )
             }
 
@@ -152,7 +152,26 @@ private data class WidgetStrings(
 
 @Composable
 private fun EmptyWidget(title: String, subtitle: String) {
-    Text(title, style = TextStyle(color = ColorProvider(Color(0xFF031F1B)), fontWeight = FontWeight.Bold))
+    Text(title, style = TextStyle(color = WidgetColors.primaryText, fontWeight = FontWeight.Bold))
     Spacer(GlanceModifier.height(4.dp))
-    Text(subtitle, style = TextStyle(color = ColorProvider(Color(0xFF24534B))))
+    Text(subtitle, style = TextStyle(color = WidgetColors.secondaryText))
+}
+
+private object WidgetColors {
+    val background = ColorProvider(
+        day = Color(0xFFEAF8F3),
+        night = Color(0xFF071C19),
+    )
+    val accent = ColorProvider(
+        day = Color(0xFF137C68),
+        night = Color(0xFF1AFFBE),
+    )
+    val primaryText = ColorProvider(
+        day = Color(0xFF031F1B),
+        night = Color(0xFFF4FAF8),
+    )
+    val secondaryText = ColorProvider(
+        day = Color(0xFF24534B),
+        night = Color(0xFFB9C8C4),
+    )
 }

@@ -2,6 +2,7 @@ package com.bukovinafilip.gradey.feature.gradeyai
 
 import android.text.format.DateUtils
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -14,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
@@ -21,7 +23,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -63,9 +64,10 @@ import com.bukovinafilip.gradey.model.GradeyAIMessage
 import com.bukovinafilip.gradey.model.GradeyAIMessageRole
 import com.bukovinafilip.gradey.model.GradeyAIMessageStatus
 import com.bukovinafilip.gradey.model.GradeySupportTier
-import com.bukovinafilip.gradey.ui.GradeyColors
+import com.bukovinafilip.gradey.ui.GradeyAuroraBackground
 import com.bukovinafilip.gradey.ui.GradeyIcons
 import com.bukovinafilip.gradey.ui.GradeyHero
+import com.bukovinafilip.gradey.ui.GradeyPrimaryButton
 import com.bukovinafilip.gradey.ui.GradeySectionCard
 import com.bukovinafilip.gradey.ui.GradeySpacing
 import java.time.Instant
@@ -137,31 +139,43 @@ fun GradeyAIScreen(
         if (entryState == GradeyAIEntryState.SERVICE) controller.bootstrap()
     }
 
-    Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-        when (entryState) {
-            GradeyAIEntryState.SIGN_IN_REQUIRED -> GradeyAIStaticPage(onClose) {
-                GradeyAIUnavailableCard(
-                    title = stringResource(R.string.gradey_ai_sign_in_title),
-                    message = stringResource(R.string.gradey_ai_sign_in_message),
-                    action = stringResource(R.string.gradey_ai_open_account),
-                    onAction = onOpenAccount,
-                )
+    Surface(
+        modifier = modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background,
+    ) {
+        Box(Modifier.fillMaxSize()) {
+            GradeyAuroraBackground()
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .safeDrawingPadding(),
+            ) {
+                when (entryState) {
+                    GradeyAIEntryState.SIGN_IN_REQUIRED -> GradeyAIStaticPage(onClose) {
+                        GradeyAIUnavailableCard(
+                            title = stringResource(R.string.gradey_ai_sign_in_title),
+                            message = stringResource(R.string.gradey_ai_sign_in_message),
+                            action = stringResource(R.string.gradey_ai_open_account),
+                            onAction = onOpenAccount,
+                        )
+                    }
+                    GradeyAIEntryState.NOT_CONFIGURED -> GradeyAIStaticPage(onClose) {
+                        GradeyAIUnavailableCard(
+                            title = stringResource(R.string.gradey_ai_not_configured_title),
+                            message = stringResource(R.string.gradey_ai_not_configured_message),
+                        )
+                    }
+                    GradeyAIEntryState.SERVICE -> GradeyAIServiceContent(
+                        controller = controller,
+                        supportTier = supportTier,
+                        onOpenSupport = onOpenSupport,
+                        onClose = onClose,
+                        onDelete = { pendingDeletion = it },
+                        onDeleteAll = { dangerousAction = DangerousAction.DELETE_ALL },
+                        onRevoke = { dangerousAction = DangerousAction.REVOKE },
+                    )
+                }
             }
-            GradeyAIEntryState.NOT_CONFIGURED -> GradeyAIStaticPage(onClose) {
-                GradeyAIUnavailableCard(
-                    title = stringResource(R.string.gradey_ai_not_configured_title),
-                    message = stringResource(R.string.gradey_ai_not_configured_message),
-                )
-            }
-            GradeyAIEntryState.SERVICE -> GradeyAIServiceContent(
-                controller = controller,
-                supportTier = supportTier,
-                onOpenSupport = onOpenSupport,
-                onClose = onClose,
-                onDelete = { pendingDeletion = it },
-                onDeleteAll = { dangerousAction = DangerousAction.DELETE_ALL },
-                onRevoke = { dangerousAction = DangerousAction.REVOKE },
-            )
         }
     }
 
@@ -308,57 +322,60 @@ private fun GradeyAITopBar(
     onRevoke: () -> Unit,
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = GradeySpacing.sm, vertical = GradeySpacing.xs),
-        verticalAlignment = Alignment.CenterVertically,
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.94f),
     ) {
-        if (showBack) {
-            IconButton(onClick = onBack) {
-                Icon(GradeyIcons.ArrowLeft, contentDescription = stringResource(R.string.gradey_ai_back))
-            }
-        } else {
-            Spacer(Modifier.size(48.dp))
-        }
-        Text(
-            title,
-            modifier = Modifier.weight(1f),
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-        if (showOptions) {
-            Box {
-                IconButton(enabled = optionsEnabled, onClick = { menuExpanded = true }) {
-                    Icon(GradeyIcons.MoreVertical, contentDescription = stringResource(R.string.gradey_ai_options))
+        Row(
+            modifier = Modifier.padding(horizontal = GradeySpacing.sm, vertical = GradeySpacing.xs),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (showBack) {
+                IconButton(onClick = onBack) {
+                    Icon(GradeyIcons.ArrowLeft, contentDescription = stringResource(R.string.gradey_ai_back))
                 }
-                DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
-                    if (showBack) {
+            } else {
+                Spacer(Modifier.size(48.dp))
+            }
+            Text(
+                title,
+                modifier = Modifier.weight(1f),
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            if (showOptions) {
+                Box {
+                    IconButton(enabled = optionsEnabled, onClick = { menuExpanded = true }) {
+                        Icon(GradeyIcons.MoreVertical, contentDescription = stringResource(R.string.gradey_ai_options))
+                    }
+                    DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
+                        if (showBack) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.gradey_ai_delete_chat_action)) },
+                                leadingIcon = { Icon(GradeyIcons.Delete, contentDescription = null) },
+                                onClick = { menuExpanded = false; onDeleteCurrent() },
+                            )
+                        }
                         DropdownMenuItem(
-                            text = { Text(stringResource(R.string.gradey_ai_delete_chat_action)) },
+                            enabled = hasConversations,
+                            text = { Text(stringResource(R.string.gradey_ai_delete_all_action)) },
                             leadingIcon = { Icon(GradeyIcons.Delete, contentDescription = null) },
-                            onClick = { menuExpanded = false; onDeleteCurrent() },
+                            onClick = { menuExpanded = false; onDeleteAll() },
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.gradey_ai_revoke_action)) },
+                            leadingIcon = { Icon(GradeyIcons.SecurityLock, contentDescription = null) },
+                            onClick = { menuExpanded = false; onRevoke() },
                         )
                     }
-                    DropdownMenuItem(
-                        enabled = hasConversations,
-                        text = { Text(stringResource(R.string.gradey_ai_delete_all_action)) },
-                        leadingIcon = { Icon(GradeyIcons.Delete, contentDescription = null) },
-                        onClick = { menuExpanded = false; onDeleteAll() },
-                    )
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.gradey_ai_revoke_action)) },
-                        leadingIcon = { Icon(GradeyIcons.SecurityLock, contentDescription = null) },
-                        onClick = { menuExpanded = false; onRevoke() },
-                    )
                 }
-            }
-        } else {
-            IconButton(onClick = onClose) {
-                Icon(GradeyIcons.Cancel, contentDescription = stringResource(R.string.gradey_ai_close))
+            } else {
+                IconButton(onClick = onClose) {
+                    Icon(GradeyIcons.Cancel, contentDescription = stringResource(R.string.gradey_ai_close))
+                }
             }
         }
     }
@@ -413,7 +430,7 @@ private fun GradeyAIConversationList(
                 )
             }
             items(controller.conversations, key = GradeyAIConversation::id) { conversation ->
-                Card(
+                GradeySectionCard(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable(
@@ -422,11 +439,23 @@ private fun GradeyAIConversationList(
                         ),
                 ) {
                     Row(
-                        modifier = Modifier.padding(GradeySpacing.md),
+                        modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(GradeySpacing.md),
                     ) {
-                        Icon(GradeyIcons.Message, contentDescription = null, tint = GradeyColors.Primary)
+                        Surface(
+                            modifier = Modifier.size(40.dp),
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f),
+                            shape = MaterialTheme.shapes.small,
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    GradeyIcons.Message,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                )
+                            }
+                        }
                         Column(Modifier.weight(1f)) {
                             Text(
                                 conversation.title.ifBlank { stringResource(R.string.gradey_ai_new_chat) },
@@ -524,48 +553,66 @@ private fun GradeyAIChat(
 @Composable
 private fun GradeyAIComposer(controller: GradeyAIController) {
     val scope = rememberCoroutineScope()
-    Column(
+    Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(GradeySpacing.md),
-        verticalArrangement = Arrangement.spacedBy(GradeySpacing.xs),
+            .padding(
+                start = GradeySpacing.lg,
+                top = GradeySpacing.sm,
+                end = GradeySpacing.lg,
+                bottom = GradeySpacing.md,
+            ),
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        shape = MaterialTheme.shapes.large,
+        border = BorderStroke(
+            1.dp,
+            MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+        ),
     ) {
-        Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(GradeySpacing.sm)) {
-            OutlinedTextField(
-                value = controller.draft,
-                onValueChange = { controller.draft = it },
-                modifier = Modifier.weight(1f),
-                placeholder = { Text(stringResource(R.string.gradey_ai_composer_placeholder)) },
-                minLines = 1,
-                maxLines = 4,
-            )
-            IconButton(
-                enabled = controller.isSending || controller.canSend,
-                onClick = {
-                    if (controller.isSending) controller.stop() else scope.launch { controller.send() }
-                },
+        Column(
+            modifier = Modifier.padding(horizontal = GradeySpacing.md, vertical = GradeySpacing.sm),
+            verticalArrangement = Arrangement.spacedBy(GradeySpacing.xs),
+        ) {
+            Row(
+                verticalAlignment = Alignment.Bottom,
+                horizontalArrangement = Arrangement.spacedBy(GradeySpacing.sm),
             ) {
-                Icon(
-                    if (controller.isSending) GradeyIcons.Stop else GradeyIcons.ArrowUp,
-                    contentDescription = stringResource(
-                        if (controller.isSending) R.string.gradey_ai_stop else R.string.gradey_ai_send,
-                    ),
-                    tint = GradeyColors.Primary,
+                OutlinedTextField(
+                    value = controller.draft,
+                    onValueChange = { controller.draft = it },
+                    modifier = Modifier.weight(1f),
+                    placeholder = { Text(stringResource(R.string.gradey_ai_composer_placeholder)) },
+                    minLines = 1,
+                    maxLines = 4,
                 )
-            }
-        }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            GradeyAILimitText(controller)
-            if (controller.draft.length > 1_800) {
-                Text(
-                    "${controller.draft.length}/2000",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = if (controller.draft.length > 2_000) {
-                        MaterialTheme.colorScheme.error
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
+                IconButton(
+                    enabled = controller.isSending || controller.canSend,
+                    onClick = {
+                        if (controller.isSending) controller.stop() else scope.launch { controller.send() }
                     },
-                )
+                ) {
+                    Icon(
+                        if (controller.isSending) GradeyIcons.Stop else GradeyIcons.ArrowUp,
+                        contentDescription = stringResource(
+                            if (controller.isSending) R.string.gradey_ai_stop else R.string.gradey_ai_send,
+                        ),
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                }
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                GradeyAILimitText(controller)
+                if (controller.draft.length > 1_800) {
+                    Text(
+                        "${controller.draft.length}/2000",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (controller.draft.length > 2_000) {
+                            MaterialTheme.colorScheme.error
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
+                    )
+                }
             }
         }
     }
@@ -583,18 +630,22 @@ private fun GradeyAIMessageBubble(
             Icon(
                 GradeyIcons.Sparkles,
                 contentDescription = null,
-                tint = GradeyColors.Primary,
+                tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.padding(top = GradeySpacing.sm, end = GradeySpacing.sm),
             )
         }
         Surface(
             modifier = Modifier.widthIn(max = 560.dp),
             color = if (message.role == GradeyAIMessageRole.USER) {
-                GradeyColors.Primary.copy(alpha = 0.16f)
+                MaterialTheme.colorScheme.primary.copy(alpha = 0.16f)
             } else {
-                MaterialTheme.colorScheme.surfaceVariant
+                MaterialTheme.colorScheme.surfaceContainer
             },
             shape = MaterialTheme.shapes.medium,
+            border = BorderStroke(
+                1.dp,
+                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f),
+            ),
         ) {
             Column(
                 modifier = Modifier.padding(horizontal = GradeySpacing.md, vertical = GradeySpacing.sm),
@@ -683,9 +734,9 @@ private fun GradeyAIContextCard(controller: GradeyAIController, modifier: Modifi
         snapshot.isPartial || snapshot.isStale -> stringResource(R.string.gradey_ai_context_partial)
         else -> stringResource(R.string.gradey_ai_context_ready)
     }
-    Card(modifier.fillMaxWidth()) {
+    GradeySectionCard(modifier = modifier) {
         Row(
-            modifier = Modifier.padding(GradeySpacing.md),
+            modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(GradeySpacing.sm),
         ) {
@@ -695,7 +746,7 @@ private fun GradeyAIContextCard(controller: GradeyAIController, modifier: Modifi
                 tint = if (snapshot == null || snapshot.isPartial) {
                     MaterialTheme.colorScheme.error
                 } else {
-                    GradeyColors.Primary
+                    MaterialTheme.colorScheme.primary
                 },
             )
             Column(Modifier.weight(1f)) {
@@ -786,14 +837,18 @@ private fun GradeyAISupportUpgrade(
         modifier = modifier
             .fillMaxWidth()
             .then(if (onOpenSupport != null) Modifier.clickable(onClick = onOpenSupport) else Modifier),
-        color = GradeyColors.Primary.copy(alpha = 0.10f),
+        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.10f),
         shape = MaterialTheme.shapes.small,
     ) {
         Row(
             modifier = Modifier.padding(GradeySpacing.sm),
             horizontalArrangement = Arrangement.spacedBy(GradeySpacing.sm),
         ) {
-            Icon(GradeyIcons.Sparkles, contentDescription = null, tint = GradeyColors.Primary)
+            Icon(
+                GradeyIcons.Sparkles,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+            )
             Column {
                 Text(stringResource(R.string.gradey_ai_upgrade_message), fontWeight = FontWeight.SemiBold)
                 Text(
@@ -802,7 +857,7 @@ private fun GradeyAISupportUpgrade(
                     } else {
                         stringResource(R.string.gradey_ai_upgrade_account_hint)
                     },
-                    color = GradeyColors.Primary,
+                    color = MaterialTheme.colorScheme.primary,
                     style = MaterialTheme.typography.bodySmall,
                 )
             }
@@ -885,13 +940,16 @@ private fun GradeyAIConsentContent(
             )
         }
         item {
-            Button(
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !isLoading,
+            GradeyPrimaryButton(
                 onClick = onAccept,
+                enabled = !isLoading,
             ) {
                 if (isLoading) {
-                    CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        strokeWidth = 2.dp,
+                    )
                     Spacer(Modifier.size(GradeySpacing.sm))
                 }
                 Text(stringResource(R.string.gradey_ai_consent_action))
@@ -904,7 +962,7 @@ private fun GradeyAIConsentContent(
 private fun ConsentDetail(icon: ImageVector, title: String, message: String) {
     GradeySectionCard {
         Row(horizontalArrangement = Arrangement.spacedBy(GradeySpacing.md)) {
-            Icon(icon, contentDescription = null, tint = GradeyColors.Primary)
+            Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
             Column {
                 Text(title, fontWeight = FontWeight.Bold)
                 Text(message, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -916,7 +974,11 @@ private fun ConsentDetail(icon: ImageVector, title: String, message: String) {
 @Composable
 private fun GradeyAIPrivacyFootnote() {
     Row(horizontalArrangement = Arrangement.spacedBy(GradeySpacing.sm)) {
-        Icon(GradeyIcons.SecurityLock, contentDescription = null, tint = GradeyColors.Primary)
+        Icon(
+            GradeyIcons.SecurityLock,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+        )
         Text(
             stringResource(R.string.gradey_ai_privacy_footnote),
             style = MaterialTheme.typography.bodySmall,
@@ -950,6 +1012,7 @@ private fun GradeyAIInlineError(message: String, onDismiss: () -> Unit) {
 @Composable
 private fun GradeyAIStaticPage(onClose: () -> Unit, content: @Composable () -> Unit) {
     LazyColumn(
+        modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(GradeySpacing.lg),
         verticalArrangement = Arrangement.spacedBy(GradeySpacing.lg),
     ) {
@@ -977,7 +1040,7 @@ private fun GradeyAILoading(modifier: Modifier = Modifier) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        CircularProgressIndicator(color = GradeyColors.Primary)
+        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
         Spacer(Modifier.height(GradeySpacing.md))
         Text(stringResource(R.string.gradey_ai_loading), color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
@@ -1006,7 +1069,12 @@ private fun GradeyAIUnavailableCard(
     onAction: (() -> Unit)? = null,
 ) {
     GradeySectionCard {
-        Icon(GradeyIcons.Sparkles, contentDescription = null, tint = GradeyColors.Primary, modifier = Modifier.size(36.dp))
+        Icon(
+            GradeyIcons.Sparkles,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(36.dp),
+        )
         Text(title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
         Text(message, color = MaterialTheme.colorScheme.onSurfaceVariant)
         if (action != null && onAction != null) Button(onClick = onAction) { Text(action) }

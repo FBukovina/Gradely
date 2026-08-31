@@ -1,5 +1,6 @@
 package com.bukovinafilip.gradey.feature.login
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -14,7 +15,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -48,6 +48,7 @@ import com.bukovinafilip.gradey.domain.SchoolLoginValidator
 import com.bukovinafilip.gradey.model.SchoolDirectorySchool
 import com.bukovinafilip.gradey.ui.GradeyIcons
 import com.bukovinafilip.gradey.ui.GradeyHero
+import com.bukovinafilip.gradey.ui.GradeyPrimaryButton
 import com.bukovinafilip.gradey.ui.GradeyScreen
 import com.bukovinafilip.gradey.ui.GradeySectionCard
 import com.bukovinafilip.gradey.ui.GradeySpacing
@@ -153,7 +154,11 @@ fun SchoolLoginScreen(
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
                         shape = MaterialTheme.shapes.medium,
-                        color = MaterialTheme.colorScheme.surfaceContainer,
+                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        border = BorderStroke(
+                            width = 1.dp,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f),
+                        ),
                     ) {
                         LazyColumn(modifier = Modifier.heightIn(max = 320.dp)) {
                             items(searchResults, key = SchoolDirectorySchool::id) { result ->
@@ -179,7 +184,7 @@ fun SchoolLoginScreen(
                                         style = MaterialTheme.typography.bodySmall,
                                     )
                                 }
-                                HorizontalDivider()
+                                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                             }
                         }
                     }
@@ -343,7 +348,7 @@ fun SchoolLoginScreen(
                         style = MaterialTheme.typography.bodySmall,
                     )
                 }
-                Button(
+                GradeyPrimaryButton(
                     modifier = Modifier.fillMaxWidth(),
                     enabled = !isLoading,
                     onClick = ::submitLogin,
@@ -372,6 +377,7 @@ fun SchoolLoginScreen(
                 }
                 Text(
                     stringResource(R.string.login_credentials_privacy),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.bodySmall,
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(GradeySpacing.sm)) {

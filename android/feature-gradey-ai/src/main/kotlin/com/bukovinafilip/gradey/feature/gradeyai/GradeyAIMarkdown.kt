@@ -15,7 +15,6 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.bukovinafilip.gradey.ui.GradeyColors
 
 internal sealed interface GradeyAIMarkdownBlock {
     data class Heading(val text: String, val level: Int) : GradeyAIMarkdownBlock
@@ -140,7 +139,11 @@ internal fun GradeyAIMarkdownText(
                 ) {
                     block.items.forEach { item ->
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text("•", color = GradeyColors.Primary, fontWeight = FontWeight.Bold)
+                            Text(
+                                "•",
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.Bold,
+                            )
                             Text(
                                 text = GradeyAIMarkdown.inline(item),
                                 style = MaterialTheme.typography.bodyMedium,

@@ -432,6 +432,8 @@ private class HeldStravaCall {
 private class TestCacheEntryDao : CacheEntryDao {
     private val values = mutableMapOf<String, CacheEntryEntity>()
     override suspend fun load(key: String) = values[key]
+    override suspend fun loadExactPrefix(prefix: String): List<CacheEntryEntity> =
+        values.values.filter { it.key.startsWith(prefix) }
     override suspend fun save(entity: CacheEntryEntity) { values[entity.key] = entity }
     override suspend fun clear(key: String) { values.remove(key) }
     override suspend fun clearPrefix(prefix: String) { values.keys.filter { it.startsWith(prefix) }.forEach(values::remove) }

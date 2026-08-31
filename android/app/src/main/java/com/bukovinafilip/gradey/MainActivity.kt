@@ -726,6 +726,45 @@ private fun GradeyApp(
         onboardingNotificationPushRegistrationPending = false
     }
 
+    suspend fun clearSchoolPlatformProjectionsAfterAccountChange(
+        onlyWhileSignedOut: Boolean = false,
+        isStillCurrent: () -> Boolean = { true },
+    ) = withContext(NonCancellable) {
+        if (!isStillCurrent()) return@withContext
+        val shouldPublishSignedOut = if (onlyWhileSignedOut) {
+            // This check and clear share the repository's session/publication mutex. A replacement
+            // session therefore either prevents the clear or commits after it; old cleanup cannot
+            // delete a newly published widget snapshot.
+            graph.schoolRepository.clearNextLessonSnapshotIfSignedOut()
+        } else {
+            try {
+                graph.cache?.clearNextLessonSnapshot()
+            } catch (_: Throwable) {
+                // A disposable widget-cache failure must not block the authoritative account change.
+            }
+            true
+        }
+        if (!shouldPublishSignedOut || !isStillCurrent()) return@withContext
+        try {
+            updateNextLessonWidgets(context.applicationContext)
+        } catch (_: Throwable) {
+            // A launcher host failure must not undo activation or reconnect routing.
+        }
+        if (!isStillCurrent()) return@withContext
+        try {
+            PhoneWearSyncPublisher.publish(
+                context.applicationContext,
+                com.bukovinafilip.gradey.model.GradeyWearSyncPayload.signedOut(),
+                isStillCurrent = {
+                    isStillCurrent() &&
+                        (!onlyWhileSignedOut || graph.schoolRepository.currentStoredSession() == null)
+                },
+            )
+        } catch (_: Throwable) {
+            // The phone session is authoritative even when no Wear OS device is paired.
+        }
+    }
+
     suspend fun clearGradeyIdentityBoundaryState() {
         val cleared = GradeyIdentityBoundaryState(
             linkedAccounts = linkedAccounts,
@@ -760,12 +799,14 @@ private fun GradeyApp(
         if (schoolInvalidation == null) {
             dashboardViewModel.clear()
             currentSchoolBaseURL = ""
+            clearSchoolPlatformProjectionsAfterAccountChange(onlyWhileSignedOut = true)
         } else {
             val result = schoolInvalidation
             val retainedSession = result.retainedSession
             if (retainedSession == null) {
                 dashboardViewModel.clear()
                 currentSchoolBaseURL = ""
+                clearSchoolPlatformProjectionsAfterAccountChange(onlyWhileSignedOut = true)
             } else {
                 dashboardViewModel.adoptScope(retainedSession.cacheScope)
                 currentSchoolBaseURL = retainedSession.baseURL
@@ -1154,45 +1195,6 @@ private fun GradeyApp(
         resetTimetableState()
         gradeHistorySnapshot = null
         gradeHistoryRefreshError = null
-    }
-
-    suspend fun clearSchoolPlatformProjectionsAfterAccountChange(
-        onlyWhileSignedOut: Boolean = false,
-        isStillCurrent: () -> Boolean = { true },
-    ) = withContext(NonCancellable) {
-        if (!isStillCurrent()) return@withContext
-        val shouldPublishSignedOut = if (onlyWhileSignedOut) {
-            // This check and clear share the repository's session/publication mutex. A replacement
-            // session therefore either prevents the clear or commits after it; old cleanup cannot
-            // delete a newly published widget snapshot.
-            graph.schoolRepository.clearNextLessonSnapshotIfSignedOut()
-        } else {
-            try {
-                graph.cache?.clearNextLessonSnapshot()
-            } catch (_: Throwable) {
-                // A disposable widget-cache failure must not block the authoritative account change.
-            }
-            true
-        }
-        if (!shouldPublishSignedOut || !isStillCurrent()) return@withContext
-        try {
-            updateNextLessonWidgets(context.applicationContext)
-        } catch (_: Throwable) {
-            // A launcher host failure must not undo activation or reconnect routing.
-        }
-        if (!isStillCurrent()) return@withContext
-        try {
-            PhoneWearSyncPublisher.publish(
-                context.applicationContext,
-                com.bukovinafilip.gradey.model.GradeyWearSyncPayload.signedOut(),
-                isStillCurrent = {
-                    isStillCurrent() &&
-                        (!onlyWhileSignedOut || graph.schoolRepository.currentStoredSession() == null)
-                },
-            )
-        } catch (_: Throwable) {
-            // The phone session is authoritative even when no Wear OS device is paired.
-        }
     }
 
     suspend fun routeToSchoolReconnect() {
@@ -2155,23 +2157,47 @@ private fun GradeyApp(
             val cloudMutationToken = graph.schoolRepository.captureSchoolCloudMutationToken()
             mutationOwner.requireCurrent()
             graph.linkedAccountRepository.unlinkAccount(linked.id)
-            mutationOwner.requireCurrent()
-            if (activeLinkedAccountID == linked.id) {
-                val localSession = graph.schoolRepository.disassociateCurrentSession(
-                    linked.id,
-                    cloudMutationToken,
-                )
+            // Once the remote unlink is durable, cancellation must not leave its old cloud
+            // association visible locally. Identity replacement is still allowed to supersede us
+            // through mutationOwner; ordinary navigation/caller cancellation is deferred until
+            // the session, projections, history, and account list agree.
+            withContext(NonCancellable) {
                 mutationOwner.requireCurrent()
-                dashboardViewModel.adoptScope(localSession?.cacheScope)
-                graph.historyRepository.clearCachedGradeHistory(linked.id)
+                if (activeLinkedAccountID == linked.id) {
+                    val localSession = graph.schoolRepository.disassociateCurrentSession(
+                        linked.id,
+                        cloudMutationToken,
+                    )
+                    mutationOwner.requireCurrent()
+                    if (localSession == null) {
+                        clearSchoolPresentationAfterAccountChange()
+                        currentSchoolBaseURL = ""
+                        clearSchoolPlatformProjectionsAfterAccountChange(
+                            onlyWhileSignedOut = true,
+                            isStillCurrent = { mutationOwner.isCurrent() },
+                        )
+                    } else {
+                        dashboardViewModel.adoptScope(localSession.cacheScope)
+                        currentSchoolBaseURL = localSession.baseURL
+                    }
+                    activeLinkedAccountID = null
+                    gradeHistorySnapshot = null
+                    gradeHistoryRefreshError = null
+                    try {
+                        graph.historyRepository.clearCachedGradeHistory(linked.id)
+                    } catch (_: Throwable) {
+                        // The detached identity is already authoritative. A disposable, account-keyed
+                        // cloud-history cache must not interrupt the remaining local teardown.
+                    }
+                }
                 mutationOwner.requireCurrent()
-                gradeHistorySnapshot = null
-                gradeHistoryRefreshError = null
-                activeLinkedAccountID = null
+                linkedAccounts = try {
+                    graph.linkedAccountRepository.localAccounts()
+                } catch (_: Throwable) {
+                    linkedAccounts.filterNot { it.id == linked.id }
+                }
+                mutationOwner.requireCurrent()
             }
-            val refreshedAccounts = graph.linkedAccountRepository.localAccounts()
-            mutationOwner.requireCurrent()
-            linkedAccounts = refreshedAccounts
         } catch (error: GradeyIdentityChangedException) {
             throw error
         } catch (error: CancellationException) {

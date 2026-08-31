@@ -132,6 +132,8 @@ private class HistoryCacheDao : CacheEntryDao {
     private val entries = mutableMapOf<String, CacheEntryEntity>()
 
     override suspend fun load(key: String) = entries[key]
+    override suspend fun loadExactPrefix(prefix: String): List<CacheEntryEntity> =
+        entries.values.filter { it.key.startsWith(prefix) }
     override suspend fun save(entity: CacheEntryEntity) { entries[entity.key] = entity }
     override suspend fun clear(key: String) { entries.remove(key) }
     override suspend fun clearPrefix(prefix: String) {

@@ -7,6 +7,8 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.bukovinafilip.gradey.domain.BakalariDemoAccount
 import com.bukovinafilip.gradey.domain.SchoolDirectoryNameResolver
 import com.bukovinafilip.gradey.model.BakalariCredentials
+import com.bukovinafilip.gradey.model.DashboardData
+import com.bukovinafilip.gradey.model.MarksResponse
 import com.bukovinafilip.gradey.model.SchoolProvider
 import com.bukovinafilip.gradey.model.StoredSchoolSessionEnvelope
 import com.bukovinafilip.gradey.model.StoredSession
@@ -144,6 +146,40 @@ class GradeyPersistenceInstrumentedTest {
             assertThat(
                 SchoolDirectoryNameResolver.displayableName("\u0085Název\u00A0školy\u0085"),
             ).isNull()
+        } finally {
+            database.close()
+        }
+    }
+
+    @Test
+    fun schoolScopeCopyRollsBackEveryDestinationRowWhenOneRoomWriteFails() = runBlocking {
+        val database = buildGradeyDatabase(context, databaseName("scope-copy-rollback"))
+        try {
+            val cache = RoomGradeyCache(database.cacheEntries(), GradeyJson)
+            val source = "linked-account-a"
+            val destination = "bakalari-school.example-local-a"
+            cache.saveDashboard(source, DashboardData(MarksResponse()))
+            cache.saveMarks(source, MarksResponse())
+            database.openHelper.writableDatabase.execSQL(
+                """
+                CREATE TRIGGER fail_scope_copy
+                BEFORE INSERT ON cache_entries
+                WHEN NEW.`key` = 'marks:$destination'
+                BEGIN
+                    SELECT RAISE(ABORT, 'forced scope-copy failure');
+                END
+                """.trimIndent(),
+            )
+
+            val failure = runCatching {
+                cache.copySchoolScope(source, destination)
+            }.exceptionOrNull()
+
+            assertThat(failure).isNotNull()
+            assertThat(cache.loadDashboard(destination)).isNull()
+            assertThat(cache.loadMarks(destination)).isNull()
+            assertThat(cache.loadDashboard(source)).isNotNull()
+            assertThat(cache.loadMarks(source)).isNotNull()
         } finally {
             database.close()
         }

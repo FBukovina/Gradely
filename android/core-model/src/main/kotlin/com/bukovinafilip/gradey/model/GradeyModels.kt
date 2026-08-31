@@ -96,26 +96,81 @@ data class StoredSession(
     var linkedAccountID: String? = null,
     var linkedAccountDisplayName: String? = null,
     var linkedAccountSchoolName: String? = null,
+    /** Stable, opaque identity for the local cache alias after Gradey metadata is detached. */
+    var localCacheIdentity: String? = null,
 ) {
     fun isExpired(nowEpochMillis: Long = System.currentTimeMillis()): Boolean =
         expiresAtEpochMillis <= nowEpochMillis + 60_000
+
+    fun stabilizedLocalCacheIdentity(
+        providerUserID: String? = null,
+        linkedAccountID: String? = this.linkedAccountID,
+    ): StoredSession {
+        val existing = localCacheIdentity
+            ?.trim()
+            ?.lowercase(Locale.ROOT)
+            ?.takeIf { CACHE_IDENTITY_PATTERN.matches(it) }
+        val resolved = existing ?: resolveLocalCacheIdentity(
+            username = bakalari?.username,
+            providerUserID = providerUserID,
+            linkedAccountID = linkedAccountID,
+        )
+        return if (resolved == localCacheIdentity) this else copy(localCacheIdentity = resolved)
+    }
 
     val cacheScope: String
         get() {
             val linked = linkedAccountID?.trim().orEmpty()
             if (linked.isNotEmpty()) return "linked-$linked"
-            val host = baseURL
+            val authorityAndPath = baseURL
                 .removePrefix("https://")
                 .removePrefix("http://")
+                .trimEnd('/')
+            val host = authorityAndPath
                 .substringBefore("/")
                 .lowercase(Locale.ROOT)
                 .ifBlank { baseURL.lowercase(Locale.ROOT) }
+            val path = authorityAndPath.substringAfter("/", missingDelimiterValue = "")
+            val stableIdentity = localCacheIdentity
+                ?.trim()
+                ?.lowercase(Locale.ROOT)
+                ?.takeIf { CACHE_IDENTITY_PATTERN.matches(it) }
+            // A pre-upgrade session has no stable identity marker and must retain its historical
+            // host-only alias until a proven metadata transition can copy it. Stabilized sessions
+            // on path-based installations add a full-server discriminator.
+            val serverScope = if (path.isBlank() || stableIdentity == null) {
+                host
+            } else {
+                "$host-${"$host/$path".sha256Prefix()}"
+            }
             val username = bakalari?.username?.trim()?.lowercase(Locale.ROOT).orEmpty()
-            val userScope = username
-                .takeIf(String::isNotEmpty)
-                ?.sha256Prefix()
+            val userScope = stableIdentity
+                ?: username.takeIf(String::isNotEmpty)?.sha256Prefix()
                 ?: "default"
-            return "bakalari-$host-$userScope"
+            return "bakalari-$serverScope-$userScope"
+        }
+
+    companion object {
+        private val CACHE_IDENTITY_PATTERN = Regex("[0-9a-f]{24}")
+
+        /**
+         * Resolves a durable, non-identifying local cache identity in decreasing order of
+         * provider authority. Username hashing intentionally matches the legacy local scope.
+         */
+        fun resolveLocalCacheIdentity(
+            username: String?,
+            providerUserID: String?,
+            linkedAccountID: String?,
+        ): String? {
+            val normalizedUsername = username?.trim()?.lowercase(Locale.ROOT).orEmpty()
+            if (normalizedUsername.isNotEmpty()) return normalizedUsername.sha256Prefix()
+            val providerIdentity = providerUserID?.trim().orEmpty()
+            if (providerIdentity.isNotEmpty()) return "provider-user:$providerIdentity".sha256Prefix()
+            val linkedIdentity = linkedAccountID?.trim().orEmpty()
+            return linkedIdentity
+                .takeIf(String::isNotEmpty)
+                ?.let { "linked-account:$it".sha256Prefix() }
+        }
     }
 }
 
@@ -743,6 +798,11 @@ data class LinkedSchoolTokenPayload(
         linkedAccountID = account.id,
         linkedAccountDisplayName = account.displayName,
         linkedAccountSchoolName = account.schoolName,
+        localCacheIdentity = StoredSession.resolveLocalCacheIdentity(
+            username = bakalari?.username,
+            providerUserID = account.providerUserID,
+            linkedAccountID = account.id,
+        ),
     )
 
     companion object {

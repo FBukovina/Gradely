@@ -12,8 +12,10 @@ import androidx.room.PrimaryKey
 import androidx.room.Query
 import androidx.room.RoomDatabase
 import androidx.room.Room
+import androidx.room.Transaction
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
+import java.time.LocalDate
 
 @Entity(
     tableName = "cache_entries",
@@ -41,7 +43,37 @@ interface CacheEntryDao {
 
     @Query("delete from cache_entries")
     suspend fun clearAll()
+
+    @Query("select * from cache_entries where substr(`key`, 1, length(:prefix)) = :prefix")
+    suspend fun loadExactPrefix(prefix: String): List<CacheEntryEntity>
+
+    /** Persists the already validated winners of a school-scope copy as one transaction. */
+    @Transaction
+    suspend fun saveEntriesAtomically(entries: List<CacheEntryEntity>) = entries.forEach { save(it) }
+
+    /** Deletes only the exact rows belonging to [scope], without prefix-account collisions. */
+    @Transaction
+    suspend fun clearSchoolScopeEntries(scope: String) {
+        listOf(
+            "dashboard",
+            "marks",
+            "absence",
+            "absence-v2",
+            "absence-lesson-selections-v1",
+        ).forEach { family -> clear("$family:$scope") }
+
+        listOf("timetable-week", "timetable-raw").forEach { family ->
+            val prefix = "$family:$scope-"
+            loadExactPrefix(prefix).forEach { entry ->
+                val weekStart = entry.key.removePrefix(prefix)
+                if (weekStart.isExactIsoLocalDateCacheSuffix()) clear(entry.key)
+            }
+        }
+    }
 }
+
+internal fun String.isExactIsoLocalDateCacheSuffix(): Boolean =
+    length == 10 && runCatching { LocalDate.parse(this) }.isSuccess
 
 @Database(
     entities = [CacheEntryEntity::class],

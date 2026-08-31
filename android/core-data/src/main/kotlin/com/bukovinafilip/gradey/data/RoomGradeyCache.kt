@@ -79,15 +79,54 @@ class RoomGradeyCache(
 
     suspend fun clearNextLessonSnapshot() = dao.clear("next-lesson-widget-snapshot")
 
-    suspend fun clearSchool(scope: String) {
-        dao.clearPrefix("dashboard:$scope")
-        dao.clearPrefix("marks:$scope")
-        dao.clearPrefix("absence:$scope")
-        dao.clearPrefix("absence-v2:$scope")
-        dao.clearPrefix("absence-lesson-selections-v1:$scope")
-        dao.clearPrefix("timetable-week:$scope")
-        dao.clearPrefix("timetable-raw:$scope")
+    /**
+     * Copies all readable school records to a metadata-only alias before the session switches.
+     * The active/source alias always wins a conflict because wall-clock cache timestamps are not
+     * causal and may move backwards. Invalid source JSON never replaces a readable destination.
+     * The caller serializes school writes.
+     */
+    suspend fun copySchoolScope(sourceScope: String, destinationScope: String) {
+        if (sourceScope == destinationScope) return
+        val replacements = mutableListOf<CacheEntryEntity>()
+
+        suspend fun <T> addExactFamily(family: String, serializer: KSerializer<T>) {
+            val sourceKey = "$family:$sourceScope"
+            val destinationKey = "$family:$destinationScope"
+            selectReadableScopeWinner(
+                source = dao.load(sourceKey),
+                destinationKey = destinationKey,
+                serializer = serializer,
+            )?.let(replacements::add)
+        }
+
+        suspend fun <T> addWeekFamily(family: String, serializer: KSerializer<T>) {
+            val sourcePrefix = "$family:$sourceScope-"
+            val destinationPrefix = "$family:$destinationScope-"
+            dao.loadExactPrefix(sourcePrefix).forEach sourceEntries@{ source ->
+                val weekStart = source.key.removePrefix(sourcePrefix)
+                if (!weekStart.isExactIsoLocalDateCacheSuffix()) return@sourceEntries
+                val destinationKey = "$destinationPrefix$weekStart"
+                selectReadableScopeWinner(
+                    source = source,
+                    destinationKey = destinationKey,
+                    serializer = serializer,
+                )?.let(replacements::add)
+            }
+        }
+
+        addExactFamily("dashboard", DashboardData.serializer())
+        addExactFamily("marks", MarksResponse.serializer())
+        // `absence` is the pre-v2 key and used the same wire representation.
+        addExactFamily("absence", AbsenceResponse.serializer())
+        addExactFamily("absence-v2", AbsenceResponse.serializer())
+        addExactFamily("absence-lesson-selections-v1", AbsenceLessonSelections.serializer())
+        addWeekFamily("timetable-week", TimetableWeek.serializer())
+        addWeekFamily("timetable-raw", TimetableResponse.serializer())
+
+        dao.saveEntriesAtomically(replacements)
     }
+
+    suspend fun clearSchool(scope: String) = dao.clearSchoolScopeEntries(scope)
 
     suspend fun clearAllSchoolData() {
         listOf(
@@ -118,6 +157,18 @@ class RoomGradeyCache(
             ),
         )
     }
+
+    private fun <T> selectReadableScopeWinner(
+        source: CacheEntryEntity?,
+        destinationKey: String,
+        serializer: KSerializer<T>,
+    ): CacheEntryEntity? {
+        val readableSource = source?.takeIf { it.isReadable(serializer) } ?: return null
+        return readableSource.copy(key = destinationKey)
+    }
+
+    private fun <T> CacheEntryEntity.isReadable(serializer: KSerializer<T>): Boolean =
+        runCatching { json.decodeFromString(serializer, payload) }.isSuccess
 
     private fun key(prefix: String, scope: String): String = "$prefix:$scope"
 }

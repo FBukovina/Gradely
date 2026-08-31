@@ -127,13 +127,32 @@ class AndroidSchoolRepository(
         require(account.provider == LinkedAccountProvider.from(candidate.session.provider)) {
             "The linked account provider does not match the authenticated school session."
         }
-        val promoted = candidate.session.copy(
+        val current = sessionStore.load()
+        val stableCandidate = candidate.session
+            .stabilizedLocalCacheIdentity(account.providerUserID, account.id)
+        val samePhysicalStudent = current != null &&
+            (current.linkedAccountID == null || current.linkedAccountID == account.id) &&
+            current.isSamePhysicalSchoolStudentAs(
+                stableCandidate,
+                linkedAccountID = account.id,
+                providerUserID = account.providerUserID,
+            )
+        val promoted = stableCandidate.copy(
+            localCacheIdentity = if (samePhysicalStudent) {
+                current?.localCacheIdentity ?: stableCandidate.localCacheIdentity
+            } else {
+                stableCandidate.localCacheIdentity
+            },
             linkedAccountID = account.id,
             linkedAccountDisplayName = account.displayName,
             linkedAccountSchoolName = account.schoolName,
         )
         advanceSessionGeneration()
-        saveReplacingSchoolScope(promoted)
+        if (samePhysicalStudent) {
+            saveMetadataRelabeledSession(checkNotNull(current), promoted)
+        } else {
+            saveReplacingSchoolScope(promoted)
+        }
         promoted
     }
 
@@ -159,7 +178,7 @@ class AndroidSchoolRepository(
             baseURL = baseURL,
             provider = SchoolProvider.BAKALARI,
             bakalari = BakalariCredentials(trimmedUsername, password),
-        )
+        ).stabilizedLocalCacheIdentity()
         sessionMutationMutex.withLock {
             requireCurrentSchoolCloudMutation(cloudMutationToken)
             requireCurrentSessionGeneration(expectedSessionGeneration)
@@ -246,14 +265,21 @@ class AndroidSchoolRepository(
             require(account.provider == LinkedAccountProvider.from(current.provider)) {
                 "The linked account provider does not match the current school session."
             }
-            val associated = current.copy(
-                linkedAccountID = account.id,
-                linkedAccountDisplayName = account.displayName,
-                linkedAccountSchoolName = account.schoolName,
-            )
-            // This only relabels the same provider session; its widget data still belongs to this student.
+            require(current.linkedAccountID == null || current.linkedAccountID == account.id) {
+                "The current school session belongs to a different linked account."
+            }
+            val associated = current
+                .stabilizedLocalCacheIdentity(account.providerUserID, account.id)
+                .copy(
+                    linkedAccountID = account.id,
+                    linkedAccountDisplayName = account.displayName,
+                    linkedAccountSchoolName = account.schoolName,
+                )
+            // This only relabels the same physical student. Copy every scoped record before the
+            // encrypted session becomes visible under its linked alias; the global widget/Wear
+            // projection remains valid and is intentionally left untouched.
             advanceSessionGeneration()
-            sessionStore.save(associated)
+            saveMetadataRelabeledSession(current, associated)
             associated
         }
 
@@ -268,15 +294,24 @@ class AndroidSchoolRepository(
             requireCurrentSchoolCloudMutation(cloudMutationToken)
             val current = sessionStore.load() ?: return@withLock null
             if (current.linkedAccountID != accountID) return@withLock current
-            val local = current.copy(
-                linkedAccountID = null,
-                linkedAccountDisplayName = null,
-                linkedAccountSchoolName = null,
-            )
-            // Detaching cloud metadata does not change the underlying local student.
+            val local = current
+                .stabilizedLocalCacheIdentity(linkedAccountID = accountID)
+                .copy(
+                    linkedAccountID = null,
+                    linkedAccountDisplayName = null,
+                    linkedAccountSchoolName = null,
+                )
+            // Detaching cloud metadata does not change the underlying local student. Rekey the
+            // offline cache before exposing the local alias so cold/offline reads stay immediate.
+            schoolCloudMutationEpoch = nextSchoolCloudMutationEpoch(schoolCloudMutationEpoch)
             advanceSessionGeneration()
-            sessionStore.save(local)
-            local
+            try {
+                saveMetadataRelabeledSession(current, local)
+                local
+            } catch (saveError: Throwable) {
+                clearSessionAfterMetadataRelabelFailure(saveError)
+                null
+            }
         }
 
     override suspend fun captureSchoolCloudMutationToken(): SchoolCloudMutationToken =
@@ -306,28 +341,23 @@ class AndroidSchoolRepository(
                     retainedSession = current,
                 )
             } else {
-                val detached = current.copy(
-                    linkedAccountID = null,
-                    linkedAccountDisplayName = null,
-                    linkedAccountSchoolName = null,
-                )
+                val detached = current
+                    .stabilizedLocalCacheIdentity(linkedAccountID = current.linkedAccountID)
+                    .copy(
+                        linkedAccountID = null,
+                        linkedAccountDisplayName = null,
+                        linkedAccountSchoolName = null,
+                    )
                 // Identity teardown must not discard the retained Bakaláři login or any of its
                 // school-scoped caches and platform projections.
                 try {
-                    sessionStore.save(detached)
+                    saveMetadataRelabeledSession(current, detached)
                     SchoolCloudInvalidationResult(
                         previousLinkedAccountID = current.linkedAccountID,
                         retainedSession = detached,
                     )
                 } catch (saveError: Throwable) {
-                    try {
-                        // A failed encrypted-store rewrite must not leave cloud identity metadata
-                        // durable. Clear only the session; school caches and projections remain.
-                        sessionStore.clear()
-                    } catch (clearError: Throwable) {
-                        saveError.addSuppressed(clearError)
-                        throw saveError
-                    }
+                    clearSessionAfterMetadataRelabelFailure(saveError)
                     SchoolCloudInvalidationResult(
                         previousLinkedAccountID = current.linkedAccountID,
                         retainedSession = null,
@@ -563,6 +593,75 @@ class AndroidSchoolRepository(
             cache.clearNextLessonSnapshot()
         }
         sessionStore.save(session)
+    }
+
+    /**
+     * Persists a metadata-only alias change without creating an offline gap.
+     *
+     * Copy-before-save means a crash sees either the old session with its source rows or the new
+     * session with complete destination rows. Source rows are retained as a same-student alias:
+     * that makes the two independent persistence systems crash-safe in either commit order and
+     * also keeps a later metadata-only round trip readable.
+     */
+    private suspend fun saveMetadataRelabeledSession(
+        current: StoredSession,
+        relabeled: StoredSession,
+    ) {
+        val sourceScope = current.cacheScope
+        val destinationScope = relabeled.cacheScope
+        if (sourceScope == destinationScope) {
+            sessionStore.save(relabeled)
+            return
+        }
+
+        cache.copySchoolScope(sourceScope, destinationScope)
+        sessionStore.save(relabeled)
+    }
+
+    private suspend fun clearSessionAfterMetadataRelabelFailure(saveError: Throwable) {
+        try {
+            // Remote identity changes may already be durable. Cleanup must finish even when the
+            // caller was canceled, but cancellation remains cancellation for repository callers.
+            withContext(NonCancellable) { sessionStore.clear() }
+        } catch (clearError: Throwable) {
+            saveError.addSuppressed(clearError)
+            throw saveError
+        }
+        if (saveError is CancellationException) throw saveError
+    }
+
+    private fun StoredSession.isSamePhysicalSchoolStudentAs(
+        other: StoredSession,
+        linkedAccountID: String,
+        providerUserID: String?,
+    ): Boolean {
+        if (provider != other.provider) return false
+        val thisBaseURL = runCatching { SchoolURLNormalizer.normalizedBaseURL(baseURL) }.getOrNull()
+            ?: return false
+        val otherBaseURL = runCatching { SchoolURLNormalizer.normalizedBaseURL(other.baseURL) }.getOrNull()
+            ?: return false
+        if (thisBaseURL != otherBaseURL) return false
+
+        val thisUsername = bakalari?.username?.trim()?.lowercase(java.util.Locale.ROOT).orEmpty()
+        val otherUsername = other.bakalari?.username?.trim()?.lowercase(java.util.Locale.ROOT).orEmpty()
+        if (thisUsername.isNotEmpty() && thisUsername == otherUsername) return true
+
+        val persistedIdentity = localCacheIdentity?.trim().orEmpty()
+        val accountFallbackIdentity = StoredSession.resolveLocalCacheIdentity(
+            username = null,
+            providerUserID = null,
+            linkedAccountID = linkedAccountID,
+        )
+        val providerFallbackIdentity = StoredSession.resolveLocalCacheIdentity(
+            username = null,
+            providerUserID = providerUserID,
+            linkedAccountID = null,
+        )
+        return persistedIdentity.isNotEmpty() && (
+            persistedIdentity == other.localCacheIdentity?.trim() ||
+                persistedIdentity == accountFallbackIdentity ||
+                persistedIdentity == providerFallbackIdentity
+            )
     }
 
     private fun requireCurrentSchoolCloudMutation(token: SchoolCloudMutationToken) {

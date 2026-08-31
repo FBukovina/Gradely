@@ -354,6 +354,9 @@ private fun MarksRefreshErrorCard(
             )
             Spacer(Modifier.height(8.dp))
             Surface(
+                modifier = Modifier
+                    .heightIn(min = 48.dp)
+                    .semantics { role = Role.Button },
                 onClick = onRetry,
                 enabled = !isRefreshing,
                 shape = RoundedCornerShape(10.dp),

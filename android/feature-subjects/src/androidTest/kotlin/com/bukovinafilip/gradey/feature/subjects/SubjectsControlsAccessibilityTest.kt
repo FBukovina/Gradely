@@ -17,8 +17,10 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertContentDescriptionEquals
+import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsSelected
@@ -27,10 +29,12 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import com.bukovinafilip.gradey.model.AbsenceResponse
 import com.bukovinafilip.gradey.ui.GradeyTheme
 import java.util.concurrent.atomic.AtomicInteger
 import org.junit.Assert.assertEquals
@@ -208,6 +212,36 @@ class SubjectsControlsAccessibilityTest {
         }
     }
 
+    @Test
+    fun retainedRefreshRetryUsesButtonRoleAndMinimumTarget() {
+        val clicks = AtomicInteger(0)
+        setRefreshError(isRefreshing = false) { clicks.incrementAndGet() }
+
+        refreshRetryNode()
+            .assert(buttonRoleMatcher)
+            .assertHasClickAction()
+            .assertIsEnabled()
+            .assertMinimumTarget()
+            .performClick()
+
+        composeRule.runOnIdle { assertEquals(1, clicks.get()) }
+    }
+
+    @Test
+    fun retainedRefreshRetryDisablesAndSuppressesCallbackWhileRefreshing() {
+        val clicks = AtomicInteger(0)
+        setRefreshError(isRefreshing = true) { clicks.incrementAndGet() }
+
+        refreshRetryNode()
+            .assert(buttonRoleMatcher)
+            .assertHasClickAction()
+            .assertIsNotEnabled()
+            .assertMinimumTarget()
+            .performClick()
+
+        composeRule.runOnIdle { assertEquals(0, clicks.get()) }
+    }
+
     private fun setSortHeader(
         fontScale: Float = 1f,
         width: androidx.compose.ui.unit.Dp = 320.dp,
@@ -233,6 +267,30 @@ class SubjectsControlsAccessibilityTest {
             }
         }
     }
+
+    private fun setRefreshError(
+        isRefreshing: Boolean,
+        onRefresh: () -> Unit,
+    ) {
+        composeRule.setContent {
+            GradeyTheme {
+                SubjectsScreen(
+                    subjects = emptyList(),
+                    absence = AbsenceResponse(),
+                    onPredictSubjectAverage = { _, _, _ -> null },
+                    refreshErrorMessage = "offline",
+                    isRefreshing = isRefreshing,
+                    onRefresh = onRefresh,
+                    onOpenAccount = {},
+                    onOpenGradeyTools = {},
+                )
+            }
+        }
+    }
+
+    private fun refreshRetryNode() = composeRule
+        .onNodeWithText(context.getString(R.string.marks_refresh_retry))
+        .performScrollTo()
 
     private fun sortNode(mode: SubjectSortMode) = composeRule.onNodeWithTag(
         SUBJECT_SORT_TEST_TAG_PREFIX + mode.name,

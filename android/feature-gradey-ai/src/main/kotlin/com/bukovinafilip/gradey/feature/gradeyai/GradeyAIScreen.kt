@@ -84,6 +84,8 @@ import kotlinx.coroutines.launch
 fun GradeyAIScreen(
     repository: GradeyAIRepository,
     contextBuilder: GradeyAIContextBuilding? = null,
+    isGradeyCloudConfigured: Boolean,
+    hasGradeyAccount: Boolean,
     isGuestMode: Boolean,
     supportTier: GradeySupportTier = GradeySupportTier.NONE,
     onOpenAccount: () -> Unit,
@@ -103,7 +105,12 @@ fun GradeyAIScreen(
             ),
         )
     }
-    val entryState = GradeyAIEntryPolicy.resolve(isGuestMode, repository.isConfigured)
+    val entryState = GradeyAIEntryPolicy.resolve(
+        isServiceConfigured = repository.isConfigured,
+        isGradeyCloudConfigured = isGradeyCloudConfigured,
+        hasGradeyAccount = hasGradeyAccount,
+        isGuestMode = isGuestMode,
+    )
     val currentEntryState by rememberUpdatedState(entryState)
     var pendingDeletion by remember { mutableStateOf<GradeyAIConversation?>(null) }
     var dangerousAction by remember { mutableStateOf<DangerousAction?>(null) }

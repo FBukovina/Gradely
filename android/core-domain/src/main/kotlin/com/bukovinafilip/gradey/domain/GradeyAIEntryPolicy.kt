@@ -7,9 +7,14 @@ enum class GradeyAIEntryState {
 }
 
 object GradeyAIEntryPolicy {
-    fun resolve(isGuestMode: Boolean, isConfigured: Boolean): GradeyAIEntryState = when {
-        isGuestMode -> GradeyAIEntryState.SIGN_IN_REQUIRED
-        !isConfigured -> GradeyAIEntryState.NOT_CONFIGURED
+    fun resolve(
+        isServiceConfigured: Boolean,
+        isGradeyCloudConfigured: Boolean,
+        hasGradeyAccount: Boolean,
+        isGuestMode: Boolean,
+    ): GradeyAIEntryState = when {
+        !isServiceConfigured || !isGradeyCloudConfigured -> GradeyAIEntryState.NOT_CONFIGURED
+        isGuestMode || !hasGradeyAccount -> GradeyAIEntryState.SIGN_IN_REQUIRED
         else -> GradeyAIEntryState.SERVICE
     }
 }

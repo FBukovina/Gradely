@@ -35,11 +35,14 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
@@ -81,6 +84,70 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import java.util.Locale
+
+internal data class AccountFullNameEditorState(
+    val accountID: String?,
+    val canonicalFullName: String,
+    val draft: String,
+    val isDirty: Boolean,
+) {
+    fun reconciledWith(account: GradeyAccount?): AccountFullNameEditorState {
+        val nextAccountID = account?.id
+        val nextCanonicalFullName = account?.fullName.orEmpty()
+        return when {
+            accountID != nextAccountID -> initial(account)
+            !isDirty -> copy(
+                canonicalFullName = nextCanonicalFullName,
+                draft = nextCanonicalFullName,
+            )
+            canonicalFullName.trim() != nextCanonicalFullName.trim() &&
+                draft.trim() == nextCanonicalFullName.trim() -> copy(
+                canonicalFullName = nextCanonicalFullName,
+                draft = nextCanonicalFullName,
+                isDirty = false,
+            )
+            else -> copy(canonicalFullName = nextCanonicalFullName)
+        }
+    }
+
+    companion object {
+        fun initial(account: GradeyAccount?): AccountFullNameEditorState {
+            val canonicalFullName = account?.fullName.orEmpty()
+            return AccountFullNameEditorState(
+                accountID = account?.id,
+                canonicalFullName = canonicalFullName,
+                draft = canonicalFullName,
+                isDirty = false,
+            )
+        }
+    }
+}
+
+private val AccountFullNameEditorStateSaver = Saver<AccountFullNameEditorState, ArrayList<String>>(
+    save = { state ->
+        arrayListOf(
+            state.accountID.orEmpty(),
+            (state.accountID != null).toString(),
+            state.canonicalFullName,
+            state.draft,
+            state.isDirty.toString(),
+        )
+    },
+    restore = { saved ->
+        val accountIDPresent = saved.getOrNull(1)?.toBooleanStrictOrNull()
+        val isDirty = saved.getOrNull(4)?.toBooleanStrictOrNull()
+        if (saved.size != 5 || accountIDPresent == null || isDirty == null) {
+            null
+        } else {
+            AccountFullNameEditorState(
+                accountID = saved[0].takeIf { accountIDPresent },
+                canonicalFullName = saved[2],
+                draft = saved[3],
+                isDirty = isDirty,
+            )
+        }
+    },
+)
 
 @Composable
 fun AccountScreen(
@@ -135,9 +202,16 @@ fun AccountScreen(
     var pendingUnlink by remember { mutableStateOf<LinkedSchoolAccount?>(null) }
     var showSignOutConfirmation by remember { mutableStateOf(false) }
     var deleteConfirmationStage by remember { mutableIntStateOf(0) }
-    var fullNameDraft by remember(account?.id, account?.fullName) {
-        mutableStateOf(account?.fullName.orEmpty())
+    var savedFullNameEditor by rememberSaveable(stateSaver = AccountFullNameEditorStateSaver) {
+        mutableStateOf(AccountFullNameEditorState.initial(account))
     }
+    val fullNameEditor = savedFullNameEditor.reconciledWith(account)
+    LaunchedEffect(fullNameEditor) {
+        if (savedFullNameEditor != fullNameEditor) {
+            savedFullNameEditor = fullNameEditor
+        }
+    }
+    val fullNameDraft = fullNameEditor.draft
     val normalizedFullName = fullNameDraft.trim()
     val isNameValid = normalizedFullName.length in 1..80
     val hasNameChanged = normalizedFullName != account?.fullName?.trim().orEmpty()
@@ -242,8 +316,15 @@ fun AccountScreen(
             if (account != null) {
                 OutlinedTextField(
                     value = fullNameDraft,
-                    onValueChange = { fullNameDraft = it },
-                    modifier = Modifier.fillMaxWidth(),
+                    onValueChange = {
+                        savedFullNameEditor = fullNameEditor.copy(
+                            draft = it,
+                            isDirty = true,
+                        )
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag(ACCOUNT_FULL_NAME_FIELD_TEST_TAG),
                     enabled = !isUpdatingFullName,
                     singleLine = true,
                     label = { Text(stringResource(R.string.account_full_name)) },
@@ -257,6 +338,7 @@ fun AccountScreen(
                 )
                 Button(
                     onClick = { onUpdateFullName(normalizedFullName) },
+                    modifier = Modifier.testTag(ACCOUNT_SAVE_FULL_NAME_TEST_TAG),
                     enabled = isNameValid && hasNameChanged && !isUpdatingFullName,
                 ) {
                     Text(
@@ -951,7 +1033,7 @@ private val AccountSettingsDestination.icon: ImageVector
         AccountSettingsDestination.CONNECTED_SERVICES -> GradeyIcons.Link
         AccountSettingsDestination.NOTIFICATIONS -> GradeyIcons.Notification
         AccountSettingsDestination.PRIVACY_DATA -> GradeyIcons.SecurityLock
-        AccountSettingsDestination.APP_PREFERENCES -> GradeyIcons.MoreVertical
+        AccountSettingsDestination.APP_PREFERENCES -> GradeyIcons.Settings
         AccountSettingsDestination.SUPPORT_ABOUT -> GradeyIcons.Information
     }
 
@@ -1144,6 +1226,8 @@ private fun formatMinute(minuteOfDay: Int): String = String.format(
 
 internal const val ACCOUNT_LINKED_NOTIFICATIONS_TEST_TAG_PREFIX =
     "account-linked-notifications:"
+internal const val ACCOUNT_FULL_NAME_FIELD_TEST_TAG = "account-full-name-field"
+internal const val ACCOUNT_SAVE_FULL_NAME_TEST_TAG = "account-save-full-name"
 
 private fun formatSyncTimestamp(value: String): String = runCatching {
     DateTimeFormatter.ofLocalizedDateTime(FormatStyle.SHORT)

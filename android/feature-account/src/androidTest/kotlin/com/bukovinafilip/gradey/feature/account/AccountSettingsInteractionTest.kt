@@ -12,17 +12,24 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTextReplacement
+import androidx.compose.ui.text.AnnotatedString
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import com.bukovinafilip.gradey.model.GradeyAccount
 import com.bukovinafilip.gradey.model.NotificationPreferences
 import com.bukovinafilip.gradey.ui.GradeyTheme
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicReference
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -129,20 +136,96 @@ class AccountSettingsInteractionTest {
         destinationNode(AccountSettingsDestination.ACCOUNT).assertIsNotSelected()
     }
 
+    @Test
+    fun editedFullNameSurvivesRestorationAndSubmitsTheExactDraft() {
+        val submittedName = AtomicReference<String>()
+        val restorationTester = StateRestorationTester(composeRule)
+        restorationTester.setContent {
+            GradeyTheme {
+                TestAccountScreen(
+                    account = AccountA,
+                    selectedDestination = AccountSettingsDestination.ACCOUNT,
+                    onSelectedDestinationChange = {},
+                    onUpdateFullName = submittedName::set,
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(ACCOUNT_FULL_NAME_FIELD_TEST_TAG)
+            .performScrollTo()
+            .performTextReplacement(EditedName)
+        restorationTester.emulateSavedInstanceStateRestore()
+
+        assertFullName(EditedName)
+        composeRule.onNodeWithTag(ACCOUNT_SAVE_FULL_NAME_TEST_TAG)
+            .performScrollTo()
+            .assertIsEnabled()
+            .performClick()
+        composeRule.runOnIdle { assertEquals(EditedName, submittedName.get()) }
+    }
+
+    @Test
+    fun restorationIntoAnotherAccountDoesNotLeakThePriorNameDraft() {
+        var account = AccountA
+        val restorationTester = StateRestorationTester(composeRule)
+        restorationTester.setContent {
+            GradeyTheme {
+                TestAccountScreen(
+                    account = account,
+                    selectedDestination = AccountSettingsDestination.ACCOUNT,
+                    onSelectedDestinationChange = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(ACCOUNT_FULL_NAME_FIELD_TEST_TAG)
+            .performScrollTo()
+            .performTextReplacement(EditedName)
+        composeRule.runOnIdle { account = AccountB }
+        restorationTester.emulateSavedInstanceStateRestore()
+
+        assertFullName(AccountB.fullName.orEmpty())
+    }
+
+    @Test
+    fun sameAccountRefreshDoesNotOverwriteAnEditedNameDraft() {
+        var account by mutableStateOf(AccountA)
+        composeRule.setContent {
+            GradeyTheme {
+                TestAccountScreen(
+                    account = account,
+                    selectedDestination = AccountSettingsDestination.ACCOUNT,
+                    onSelectedDestinationChange = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(ACCOUNT_FULL_NAME_FIELD_TEST_TAG)
+            .performScrollTo()
+            .performTextReplacement(EditedName)
+        composeRule.runOnIdle {
+            account = account.copy(fullName = RefreshedCanonicalName)
+        }
+
+        assertFullName(EditedName)
+    }
+
     @Composable
     private fun TestAccountScreen(
+        account: GradeyAccount? = null,
         selectedDestination: AccountSettingsDestination?,
         onSelectedDestinationChange: (AccountSettingsDestination?) -> Unit,
+        onUpdateFullName: (String) -> Unit = {},
         onOpenMeals: () -> Unit = {},
         onOpenSupport: () -> Unit = {},
     ) {
         AccountScreen(
-            account = null,
+            account = account,
             linkedAccounts = emptyList(),
             selectedDestination = selectedDestination,
             hasBakalariConnectionOnDevice = true,
             isGuestMode = true,
-            onUpdateFullName = { _ -> },
+            onUpdateFullName = onUpdateFullName,
             onSelectedDestinationChange = onSelectedDestinationChange,
             onConnectGradeyId = {},
             onRefreshLinkedAccounts = {},
@@ -168,9 +251,32 @@ class AccountSettingsInteractionTest {
 
     private companion object {
         const val ReturnFromSupport = "Return from Support"
+        const val EditedName = "Edited Student"
+        const val RefreshedCanonicalName = "Refreshed Student"
+        val AccountA = GradeyAccount(
+            id = "account-a",
+            email = "a@example.com",
+            fullName = "Student A",
+        )
+        val AccountB = GradeyAccount(
+            id = "account-b",
+            email = "b@example.com",
+            fullName = "Student B",
+        )
         val tabRoleMatcher = SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Tab)
     }
 
     private fun destinationNode(destination: AccountSettingsDestination) =
         composeRule.onNodeWithText(context.getString(destination.titleResource))
+
+    private fun assertFullName(expected: String) {
+        composeRule.onNodeWithTag(ACCOUNT_FULL_NAME_FIELD_TEST_TAG)
+            .performScrollTo()
+            .assert(
+                SemanticsMatcher.expectValue(
+                    SemanticsProperties.EditableText,
+                    AnnotatedString(expected),
+                ),
+            )
+    }
 }

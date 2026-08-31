@@ -9,6 +9,11 @@ import org.junit.Test
 
 class GradeyIconsTest {
     @Test
+    fun settingsUsesTheAuthoritativeSettings02Vector() {
+        assertEquals("Hugeicons Stroke Rounded: settings-02", GradeyIcons.Settings.name)
+    }
+
+    @Test
     fun everyCatalogEntryBuildsAsAUnique24DpVector() {
         val vectors = GradeyIcons::class.java.declaredMethods
             .filter { method ->

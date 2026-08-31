@@ -4000,6 +4000,8 @@ private fun GradeyApp(
                     GradeyAIScreen(
                         repository = graph.gradeyAIRepository,
                         contextBuilder = graph.gradeyAIContextBuilder,
+                        isGradeyCloudConfigured = graph.isGradeyCloudConfigured,
+                        hasGradeyAccount = account != null,
                         isGuestMode = isGuestMode,
                         supportTier = supportTier,
                         onOpenAccount = {

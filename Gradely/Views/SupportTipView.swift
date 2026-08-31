@@ -196,6 +196,7 @@ struct SupportTipOptionsContent: View {
                     }
                 }
             }
+            .accessibilityElement(children: .contain)
             .accessibilityIdentifier("supportPlansList")
 
             if viewModel.isSignedIn {
@@ -373,6 +374,7 @@ struct SupportTipOptionsContent: View {
             .foregroundStyle(Brand.primary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("supportLegalFooter")
     }
 
@@ -487,7 +489,7 @@ private struct SupportPlanRow: View {
                         .fixedSize(horizontal: false, vertical: true)
 
                     HStack(spacing: Spacing.xs) {
-                        Text(plan.localizedPrice)
+                        Text(plan.billingPriceText)
                             .font(.footnote.weight(.semibold))
                             .foregroundStyle(Brand.primary)
                         Text("support.plans.earlyAccess")
@@ -519,11 +521,11 @@ private struct SupportPlanRow: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(accessibilityLabel)
         .accessibilityAddTraits(.isButton)
-        .accessibilityIdentifier("supportPlan-\(plan.tier.rawValue)")
+        .accessibilityIdentifier("supportPlan-\(plan.tier.rawValue)-\(plan.interval.rawValue)")
     }
 
     private var accessibilityLabel: String {
-        var parts = [plan.title, plan.localizedPrice, plan.benefitText]
+        var parts = [plan.title, plan.billingPriceText, plan.benefitText]
         if isCurrent {
             parts.append(AppL10n.string("support.plans.current"))
         }

@@ -84,6 +84,16 @@ struct SupportPlanOption: Identifiable, Equatable, Sendable {
         }
     }
 
+    var billingPriceText: String {
+        let format = switch interval {
+        case .monthly:
+            AppL10n.string("support.plans.price.monthly")
+        case .yearly:
+            AppL10n.string("support.plans.price.yearly")
+        }
+        return String.localizedStringWithFormat(format, localizedPrice)
+    }
+
     var dailyLimit: Int {
         SupportTipCatalog.dailyLimit(for: tier)
     }
@@ -164,6 +174,16 @@ enum SupportTipCatalog {
     static let offeringIdentifier = tipsOfferingIdentifier
 
     static let products = tipProducts
+
+    static func mergingSubscriptionPlans(
+        preferred: [SupportPlanOption],
+        fallback: [SupportPlanOption]
+    ) -> [SupportPlanOption] {
+        subscriptionProducts.compactMap { catalogProduct in
+            preferred.first { $0.productIdentifier == catalogProduct.productIdentifier }
+                ?? fallback.first { $0.productIdentifier == catalogProduct.productIdentifier }
+        }
+    }
 
     static let previewSubscriptionPlans: [SupportPlanOption] = [
         SupportPlanOption(

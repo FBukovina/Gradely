@@ -314,6 +314,127 @@ class BakalariNetworkClientTest {
     }
 
     @Test
+    fun marksTreatExplicitNullCollectionsAsEmptyDefaults() = runTest {
+        server.enqueue(jsonResponse("""{"Subjects":null}"""))
+        server.enqueue(
+            jsonResponse(
+                """
+                {
+                  "Subjects":[{
+                    "Marks":null,
+                    "Subject":{"Id":"math","Abbrev":"M","Name":"Mathematics"}
+                  }]
+                }
+                """.trimIndent(),
+            ),
+        )
+
+        val emptyResponse = client.fetchMarks(baseURL(), "token")
+        val subject = client.fetchMarks(baseURL(), "token").subjects.single()
+
+        assertThat(emptyResponse.subjects).isEmpty()
+        assertThat(subject.subjectInfo.id).isEqualTo("math")
+        assertThat(subject.marks).isEmpty()
+    }
+
+    @Test
+    fun absenceTreatsExplicitNullCollectionsAsEmptyDefaults() = runTest {
+        server.enqueue(
+            jsonResponse(
+                """
+                {
+                  "PercentageThreshold":25.5,
+                  "Absences":null,
+                  "AbsencesPerSubject":null
+                }
+                """.trimIndent(),
+            ),
+        )
+
+        val absence = client.fetchAbsences(baseURL(), "token")
+
+        assertThat(absence.percentageThreshold).isEqualTo(25.5)
+        assertThat(absence.absences).isEmpty()
+        assertThat(absence.absencesPerSubject).isEmpty()
+    }
+
+    @Test
+    fun timetableTreatsExplicitNullTopLevelAndNestedCollectionsAsEmptyDefaults() = runTest {
+        server.enqueue(
+            jsonResponse(
+                """
+                {
+                  "Hours":null,
+                  "Days":null,
+                  "Classes":null,
+                  "Groups":null,
+                  "Subjects":null,
+                  "Teachers":null,
+                  "Rooms":null,
+                  "Cycles":null
+                }
+                """.trimIndent(),
+            ),
+        )
+        server.enqueue(
+            jsonResponse(
+                """
+                {
+                  "Days":[
+                    {"Atoms":null,"DayOfWeek":1,"Date":"2026-08-24"},
+                    {
+                      "Atoms":[
+                        {"HourId":1,"GroupIds":null,"CycleIds":null,"HomeworkIds":null},
+                        {"HourId":2,"CycleIds":["cycle-a"]}
+                      ],
+                      "DayOfWeek":2,
+                      "Date":"2026-08-25"
+                    }
+                  ]
+                }
+                """.trimIndent(),
+            ),
+        )
+
+        val emptyTimetable = client.fetchTimetable(baseURL(), "token", "2026-08-24")
+        val timetable = client.fetchTimetable(baseURL(), "token", "2026-08-24")
+        val nullCollectionAtom = timetable.days[1].atoms[0]
+        val populatedCycleAtom = timetable.days[1].atoms[1]
+
+        assertThat(emptyTimetable.hours).isEmpty()
+        assertThat(emptyTimetable.days).isEmpty()
+        assertThat(emptyTimetable.classes).isEmpty()
+        assertThat(emptyTimetable.groups).isEmpty()
+        assertThat(emptyTimetable.subjects).isEmpty()
+        assertThat(emptyTimetable.teachers).isEmpty()
+        assertThat(emptyTimetable.rooms).isEmpty()
+        assertThat(emptyTimetable.cycles).isEmpty()
+        assertThat(timetable.days[0].atoms).isEmpty()
+        assertThat(nullCollectionAtom.groupIDs).isEmpty()
+        assertThat(nullCollectionAtom.cycleIDs).isEmpty()
+        assertThat(nullCollectionAtom.homeworkIDs).isEmpty()
+        assertThat(populatedCycleAtom.cycleIDs).containsExactly("cycle-a")
+    }
+
+    @Test
+    fun wrongShapedCollectionsNullElementsAndRequiredNullsRemainDecodingErrors() = runTest {
+        listOf(
+            """{"Subjects":{}}""",
+            """{"Subjects":[null]}""",
+            """{"Subjects":[{"Marks":{},"Subject":{"Id":"math","Abbrev":"M","Name":"Mathematics"}}]}""",
+            """{"Subjects":[{"Marks":[],"Subject":null}]}""",
+            """{"Subjects":[{"Marks":null,"Subject":{"Id":null,"Abbrev":"M","Name":"Mathematics"}}]}""",
+        ).forEach { responseBody ->
+            server.enqueue(jsonResponse(responseBody))
+
+            val failure = runCatching { client.fetchMarks(baseURL(), "token") }.exceptionOrNull()
+
+            assertThat(failure).isInstanceOf(BakalariDecodingException::class.java)
+            assertThat((failure as BakalariDecodingException).kind).isEqualTo(BakalariErrorKind.DECODING)
+        }
+    }
+
+    @Test
     fun userDecodesRealClassObjectAndPreferredOrganizationName() = runTest {
         server.enqueue(
             jsonResponse(

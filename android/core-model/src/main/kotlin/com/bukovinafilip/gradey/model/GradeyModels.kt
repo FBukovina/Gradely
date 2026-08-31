@@ -147,12 +147,14 @@ data class LoginResponse(
 @Serializable
 data class MarksResponse(
     @SerialName("Subjects")
+    @Serializable(with = NullAsEmptyListSerializer::class)
     val subjects: List<Subject> = emptyList(),
 )
 
 @Serializable
 data class Subject(
     @SerialName("Marks")
+    @Serializable(with = NullAsEmptyListSerializer::class)
     val marks: List<Mark> = emptyList(),
     @SerialName("Subject")
     val subjectInfo: SubjectInfo,
@@ -268,8 +270,10 @@ data class AbsenceResponse(
     @SerialName("PercentageThreshold")
     val percentageThreshold: Double? = null,
     @SerialName("Absences")
+    @Serializable(with = NullAsEmptyListSerializer::class)
     val absences: List<Absence> = emptyList(),
     @SerialName("AbsencesPerSubject")
+    @Serializable(with = NullAsEmptyListSerializer::class)
     val absencesPerSubject: List<AbsencePerSubject> = emptyList(),
 )
 
@@ -333,20 +337,28 @@ data class AbsenceCounts(
 @Serializable
 data class TimetableResponse(
     @SerialName("Hours")
+    @Serializable(with = NullAsEmptyListSerializer::class)
     val hours: List<TimetableHour> = emptyList(),
     @SerialName("Days")
+    @Serializable(with = NullAsEmptyListSerializer::class)
     val days: List<TimetableDayDTO> = emptyList(),
     @SerialName("Classes")
+    @Serializable(with = NullAsEmptyListSerializer::class)
     val classes: List<TimetableEntity> = emptyList(),
     @SerialName("Groups")
+    @Serializable(with = NullAsEmptyListSerializer::class)
     val groups: List<TimetableGroup> = emptyList(),
     @SerialName("Subjects")
+    @Serializable(with = NullAsEmptyListSerializer::class)
     val subjects: List<TimetableEntity> = emptyList(),
     @SerialName("Teachers")
+    @Serializable(with = NullAsEmptyListSerializer::class)
     val teachers: List<TimetableEntity> = emptyList(),
     @SerialName("Rooms")
+    @Serializable(with = NullAsEmptyListSerializer::class)
     val rooms: List<TimetableEntity> = emptyList(),
     @SerialName("Cycles")
+    @Serializable(with = NullAsEmptyListSerializer::class)
     val cycles: List<TimetableEntity> = emptyList(),
 )
 
@@ -366,6 +378,7 @@ data class TimetableHour(
 @Serializable
 data class TimetableDayDTO(
     @SerialName("Atoms")
+    @Serializable(with = NullAsEmptyListSerializer::class)
     val atoms: List<TimetableAtom> = emptyList(),
     @SerialName("DayOfWeek")
     val dayOfWeek: Int = 0,
@@ -389,10 +402,15 @@ data class TimetableAtom(
     @SerialName("RoomId")
     val roomID: String? = null,
     @SerialName("GroupIds")
+    @Serializable(with = NullAsEmptyListSerializer::class)
     val groupIDs: List<String> = emptyList(),
+    @SerialName("CycleIds")
+    @Serializable(with = NullAsEmptyListSerializer::class)
+    val cycleIDs: List<String> = emptyList(),
     @SerialName("Theme")
     val theme: String? = null,
     @SerialName("HomeworkIds")
+    @Serializable(with = NullAsEmptyListSerializer::class)
     val homeworkIDs: List<String> = emptyList(),
     @SerialName("Change")
     val change: TimetableChange? = null,
@@ -1066,6 +1084,28 @@ object FlexibleStringSerializer : KSerializer<String> {
     }
 
     override fun serialize(encoder: Encoder, value: String) = encoder.encodeString(value)
+}
+
+class NullAsEmptyListSerializer<Element>(
+    elementSerializer: KSerializer<Element>,
+) : KSerializer<List<Element>> {
+    private val delegate = ListSerializer(elementSerializer)
+
+    override val descriptor: SerialDescriptor = delegate.descriptor
+
+    override fun deserialize(decoder: Decoder): List<Element> {
+        val jsonDecoder = decoder as? JsonDecoder ?: return decoder.decodeSerializableValue(delegate)
+        val value = jsonDecoder.decodeJsonElement()
+        return if (value is JsonNull) {
+            emptyList()
+        } else {
+            jsonDecoder.json.decodeFromJsonElement(delegate, value)
+        }
+    }
+
+    override fun serialize(encoder: Encoder, value: List<Element>) {
+        encoder.encodeSerializableValue(delegate, value)
+    }
 }
 
 @OptIn(ExperimentalSerializationApi::class)

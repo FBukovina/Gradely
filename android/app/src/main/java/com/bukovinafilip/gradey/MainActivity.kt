@@ -94,6 +94,8 @@ import com.bukovinafilip.gradey.domain.AbsencePartialDayCandidate
 import com.bukovinafilip.gradey.domain.AbsenceSubjectResolutionFailure
 import com.bukovinafilip.gradey.domain.AbsenceSubjectResolutionProgress
 import com.bukovinafilip.gradey.domain.SchoolSessionExpiredException
+import com.bukovinafilip.gradey.domain.SchoolReconnectPrefill
+import com.bukovinafilip.gradey.domain.SchoolReconnectPrefills
 import com.bukovinafilip.gradey.domain.TimetableDates
 import com.bukovinafilip.gradey.domain.TodayPresentationState
 import com.bukovinafilip.gradey.domain.TodayPresentationStates
@@ -358,7 +360,9 @@ private fun GradeyApp(
     var currentSchoolBaseURL by remember { mutableStateOf("") }
     var reconnectLinkedAccount by remember { mutableStateOf<LinkedSchoolAccount?>(null) }
     var reconnectLinkedAccountID by rememberSaveable { mutableStateOf<String?>(null) }
-    var reconnectSchoolURL by rememberSaveable { mutableStateOf("") }
+    var reconnectSchoolURL by remember { mutableStateOf("") }
+    var reconnectSchoolName by remember { mutableStateOf("") }
+    var reconnectSchoolUsername by remember { mutableStateOf("") }
     var isAddingSchool by rememberSaveable { mutableStateOf(false) }
     var linkedAccountError by remember { mutableStateOf<String?>(null) }
     var onboardingSchoolCloudLinkFailed by rememberSaveable { mutableStateOf(false) }
@@ -372,6 +376,24 @@ private fun GradeyApp(
     var directorySchools by remember { mutableStateOf<List<SchoolDirectorySchool>>(emptyList()) }
     var isSchoolDirectoryLoading by remember { mutableStateOf(false) }
     var hasLoadedSchoolDirectory by remember { mutableStateOf(false) }
+
+    fun applyReconnectPrefill(prefill: SchoolReconnectPrefill?) {
+        reconnectSchoolURL = prefill?.schoolURL.orEmpty()
+        reconnectSchoolName = prefill?.schoolName.orEmpty()
+        reconnectSchoolUsername = prefill?.username.orEmpty()
+    }
+
+    suspend fun reconnectPrefillFor(account: LinkedSchoolAccount): SchoolReconnectPrefill? = try {
+        SchoolReconnectPrefills.resolve(
+            session = graph.schoolRepository.currentStoredSession(),
+            account = account,
+            accounts = linkedAccounts,
+        )
+    } catch (error: CancellationException) {
+        throw error
+    } catch (_: Throwable) {
+        null
+    }
     var dashboard by remember { mutableStateOf<DashboardData?>(null) }
     var absence by remember { mutableStateOf<AbsenceResponse?>(null) }
     var absenceSourceResponse by remember { mutableStateOf<AbsenceResponse?>(null) }
@@ -1076,7 +1098,7 @@ private fun GradeyApp(
         currentSchoolBaseURL = ""
         reconnectLinkedAccount = null
         reconnectLinkedAccountID = null
-        reconnectSchoolURL = ""
+        applyReconnectPrefill(null)
         isAddingSchool = false
         resetSignedInNavigation()
         dataError = null
@@ -1116,7 +1138,7 @@ private fun GradeyApp(
         currentSchoolBaseURL = ""
         reconnectLinkedAccount = null
         reconnectLinkedAccountID = null
-        reconnectSchoolURL = ""
+        applyReconnectPrefill(null)
         isAddingSchool = false
         resetSignedInNavigation()
         dataError = null
@@ -1275,6 +1297,9 @@ private fun GradeyApp(
         username: String,
         password: String,
     ): String? {
+        if (!linked.provider.isSupportedSchoolProvider) {
+            return context.getString(R.string.error_linked_account)
+        }
         if (mutatingLinkedAccountID != null) {
             return context.getString(R.string.school_account_change_in_progress)
         }
@@ -1313,7 +1338,7 @@ private fun GradeyApp(
                 .sortedBy { it.displayName.lowercase() }
             reconnectLinkedAccount = null
             reconnectLinkedAccountID = null
-            reconnectSchoolURL = ""
+            applyReconnectPrefill(null)
             linkedAccountError = null
             resetSignedInNavigation()
             if (previousSession?.cacheScope != associatedSession.cacheScope) {
@@ -2390,27 +2415,36 @@ private fun GradeyApp(
                 isAddingSchool = isAddingSchool,
                 reconnectAccountID = reconnectLinkedAccountID,
                 hasSchoolSession = schoolSession != null,
-                availableLinkedAccountIDs = linkedAccounts.mapTo(mutableSetOf()) { it.id },
+                availableLinkedAccountIDs = linkedAccounts
+                    .filter { it.provider.isSupportedSchoolProvider }
+                    .mapTo(mutableSetOf()) { it.id },
             )
             when (restoredSchoolRoute.destination) {
                 RestoredSchoolDestination.ADD_SCHOOL -> {
                     reconnectLinkedAccount = null
                     reconnectLinkedAccountID = null
+                    applyReconnectPrefill(null)
                     phase = AppPhase.NEEDS_SCHOOL
                 }
                 RestoredSchoolDestination.RECONNECT_SCHOOL -> {
                     isAddingSchool = false
                     reconnectLinkedAccountID = restoredSchoolRoute.reconnectAccountID
                     reconnectLinkedAccount = linkedAccounts.firstOrNull {
-                        it.id == restoredSchoolRoute.reconnectAccountID
+                        it.id == restoredSchoolRoute.reconnectAccountID &&
+                            it.provider.isSupportedSchoolProvider
                     }
+                    applyReconnectPrefill(
+                        reconnectLinkedAccount?.let { account ->
+                            SchoolReconnectPrefills.resolve(schoolSession, account, linkedAccounts)
+                        },
+                    )
                     phase = AppPhase.NEEDS_SCHOOL
                 }
                 RestoredSchoolDestination.NONE -> {
                     if (schoolSession != null) {
                         isAddingSchool = false
                         reconnectLinkedAccountID = null
-                        reconnectSchoolURL = ""
+                        applyReconnectPrefill(null)
                     }
                 }
             }
@@ -2541,6 +2575,7 @@ private fun GradeyApp(
 
                 OnboardingStep.SCHOOL -> SchoolLoginScreen(
                     isLoading = isLoading,
+                    stateScopeKey = "onboarding-school",
                     errorMessage = schoolLoginError,
                     directorySchools = directorySchools,
                     isDirectoryLoading = isSchoolDirectoryLoading,
@@ -2987,6 +3022,13 @@ private fun GradeyApp(
         AppPhase.NEEDS_SCHOOL -> SchoolLoginScreen(
             isLoading = isLoading,
             initialSchoolURL = reconnectSchoolURL,
+            initialSchoolName = reconnectSchoolName,
+            initialUsername = reconnectSchoolUsername,
+            stateScopeKey = when {
+                reconnectLinkedAccountID != null -> "reconnect:${reconnectLinkedAccountID.orEmpty()}"
+                isAddingSchool -> "add-school"
+                else -> "school-login"
+            },
             title = if (reconnectLinkedAccount == null) {
                 context.getString(R.string.connect_bakalari)
             } else {
@@ -3064,7 +3106,7 @@ private fun GradeyApp(
                 {
                     reconnectLinkedAccount = null
                     reconnectLinkedAccountID = null
-                    reconnectSchoolURL = ""
+                    applyReconnectPrefill(null)
                     isAddingSchool = false
                     schoolLoginError = null
                     phase = AppPhase.SIGNED_IN
@@ -3128,7 +3170,6 @@ private fun GradeyApp(
                             linkedSchoolAccounts = linkedAccounts,
                             activeLinkedAccountID = activeLinkedAccountID,
                             mutatingLinkedAccountID = mutatingLinkedAccountID,
-                            currentSchoolBaseURL = currentSchoolBaseURL,
                             cloudNewMarkEvents = gradeHistorySnapshot
                                 ?.takeIf { it.linkedAccountID == activeLinkedAccountID }
                                 ?.recentNewMarkEvents
@@ -3177,6 +3218,7 @@ private fun GradeyApp(
                                     if (activateLinkedAccount(linked)) refreshSignedInData()
                                 }
                             },
+                            onReconnectPrefill = { linked -> reconnectPrefillFor(linked) },
                             onReconnectLinkedAccount = { linked, school, username, password ->
                                 val error = reconnectLinkedAccountWithCredentials(linked, school, username, password)
                                 if (error == null) refreshSignedInData()
@@ -3624,7 +3666,7 @@ private fun GradeyApp(
                         isAddingSchool = true
                         reconnectLinkedAccount = null
                         reconnectLinkedAccountID = null
-                        reconnectSchoolURL = ""
+                        applyReconnectPrefill(null)
                         schoolLoginError = null
                         phase = AppPhase.NEEDS_SCHOOL
                     },
@@ -3638,10 +3680,7 @@ private fun GradeyApp(
                             isAddingSchool = false
                             reconnectLinkedAccount = linked
                             reconnectLinkedAccountID = linked.id
-                            reconnectSchoolURL = graph.schoolRepository.currentStoredSession()
-                                ?.takeIf { it.linkedAccountID == linked.id || linkedAccounts.size == 1 }
-                                ?.baseURL
-                                .orEmpty()
+                            applyReconnectPrefill(reconnectPrefillFor(linked))
                             schoolLoginError = null
                             phase = AppPhase.NEEDS_SCHOOL
                         }

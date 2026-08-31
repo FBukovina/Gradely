@@ -45,6 +45,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -86,6 +87,7 @@ import com.bukovinafilip.gradey.domain.GradeHistoryTrends
 import com.bukovinafilip.gradey.domain.GradeMath
 import com.bukovinafilip.gradey.domain.GradeTrendRange
 import com.bukovinafilip.gradey.domain.SchoolLoginValidator
+import com.bukovinafilip.gradey.domain.SchoolReconnectPrefill
 import com.bukovinafilip.gradey.domain.SubjectGradeTrend
 import com.bukovinafilip.gradey.domain.TodayMealState
 import com.bukovinafilip.gradey.domain.TodayLinkedAccounts
@@ -221,7 +223,6 @@ fun TodayScreen(
     linkedSchoolAccounts: List<LinkedSchoolAccount> = emptyList(),
     activeLinkedAccountID: String? = null,
     mutatingLinkedAccountID: String? = null,
-    currentSchoolBaseURL: String = "",
     cloudNewMarkEvents: List<NewMarkEvent> = emptyList(),
     gradeTrends: List<SubjectGradeTrend> = emptyList(),
     isRefreshing: Boolean,
@@ -233,12 +234,15 @@ fun TodayScreen(
     onOpenTimetable: () -> Unit,
     onOpenMeals: () -> Unit,
     onActivateLinkedAccount: (LinkedSchoolAccount) -> Unit,
+    onReconnectPrefill: suspend (LinkedSchoolAccount) -> SchoolReconnectPrefill?,
     onReconnectLinkedAccount: suspend (LinkedSchoolAccount, String, String, String) -> String?,
     modifier: Modifier = Modifier,
 ) {
     var showsTrendDetails by rememberSaveable { mutableStateOf(false) }
     var selectedTrendRangeName by rememberSaveable { mutableStateOf(GradeTrendRange.NINETY_DAYS.name) }
-    var reconnectTarget by remember { mutableStateOf<LinkedSchoolAccount?>(null) }
+    var reconnectSheet by remember { mutableStateOf<TodayReconnectSheetState?>(null) }
+    var reconnectRequest by remember { mutableIntStateOf(0) }
+    val reconnectScope = rememberCoroutineScope()
     val todayListState = rememberLazyListState()
     val subjects = dashboard.marksResponse.subjects
     val overall = GradeMath.formattedAverage(GradeMath.overallAverage(subjects))
@@ -267,6 +271,23 @@ fun TodayScreen(
     }
     val topTrends = remember(gradeTrends) {
         gradeTrends.filter { (it.averageDelta ?: 0.0) != 0.0 }.take(4)
+    }
+
+    fun showReconnect(account: LinkedSchoolAccount) {
+        reconnectRequest += 1
+        val request = reconnectRequest
+        reconnectScope.launch {
+            val prefill = try {
+                onReconnectPrefill(account)
+            } catch (error: CancellationException) {
+                throw error
+            } catch (_: Throwable) {
+                null
+            }
+            if (request == reconnectRequest) {
+                reconnectSheet = TodayReconnectSheetState(account = account, prefill = prefill)
+            }
+        }
     }
 
     BackHandler(enabled = showsTrendDetails) { showsTrendDetails = false }
@@ -308,7 +329,7 @@ fun TodayScreen(
                         summary = linkedAccountSummary,
                         mutatingLinkedAccountID = mutatingLinkedAccountID,
                         onActivate = onActivateLinkedAccount,
-                        onReconnect = { reconnectTarget = it },
+                        onReconnect = ::showReconnect,
                     )
                 }
             }
@@ -317,7 +338,7 @@ fun TodayScreen(
                     SchoolConnectionNotice(
                         account = linked,
                         isBusy = mutatingLinkedAccountID != null,
-                        onReconnect = { reconnectTarget = linked },
+                        onReconnect = { showReconnect(linked) },
                     )
                 }
             }
@@ -354,19 +375,22 @@ fun TodayScreen(
         }
     }
 
-    reconnectTarget?.let { linked ->
+    reconnectSheet?.let { sheet ->
         TodaySchoolReconnectSheet(
-            account = linked,
-            initialSchoolURL = currentSchoolBaseURL.takeIf {
-                linked.id == activeLinkedAccountID || linkedAccountSummary.schoolAccounts.size == 1
-            }.orEmpty(),
+            account = sheet.account,
+            prefill = sheet.prefill,
             onReconnect = { school, username, password ->
-                onReconnectLinkedAccount(linked, school, username, password)
+                onReconnectLinkedAccount(sheet.account, school, username, password)
             },
-            onDismiss = { reconnectTarget = null },
+            onDismiss = { reconnectSheet = null },
         )
     }
 }
+
+private data class TodayReconnectSheetState(
+    val account: LinkedSchoolAccount,
+    val prefill: SchoolReconnectPrefill?,
+)
 
 @Composable
 private fun LinkedSchoolAccountPicker(
@@ -522,12 +546,12 @@ private fun SchoolConnectionNotice(
 @OptIn(ExperimentalMaterial3Api::class)
 private fun TodaySchoolReconnectSheet(
     account: LinkedSchoolAccount,
-    initialSchoolURL: String,
+    prefill: SchoolReconnectPrefill?,
     onReconnect: suspend (String, String, String) -> String?,
     onDismiss: () -> Unit,
 ) {
-    var school by remember(account.id, initialSchoolURL) { mutableStateOf(initialSchoolURL) }
-    var username by remember(account.id) { mutableStateOf("") }
+    var school by remember(account.id, prefill) { mutableStateOf(prefill?.schoolURL.orEmpty()) }
+    var username by remember(account.id, prefill) { mutableStateOf(prefill?.username.orEmpty()) }
     var password by remember(account.id) { mutableStateOf("") }
     var isPasswordVisible by remember(account.id) { mutableStateOf(false) }
     var hasAttempted by remember(account.id) { mutableStateOf(false) }
@@ -574,7 +598,10 @@ private fun TodaySchoolReconnectSheet(
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             Text(
-                text = stringResource(R.string.today_reconnect_title, account.displayName),
+                text = stringResource(
+                    R.string.today_reconnect_title,
+                    prefill?.schoolName?.takeIf(String::isNotBlank) ?: account.displayName,
+                ),
                 color = MaterialTheme.colorScheme.onSurface,
                 fontSize = 22.sp,
                 lineHeight = 28.sp,

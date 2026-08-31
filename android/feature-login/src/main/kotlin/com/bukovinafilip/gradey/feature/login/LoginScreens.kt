@@ -28,14 +28,17 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
@@ -57,6 +60,9 @@ import com.bukovinafilip.gradey.ui.GradeySpacing
 fun SchoolLoginScreen(
     isLoading: Boolean,
     initialSchoolURL: String = "",
+    initialSchoolName: String = "",
+    initialUsername: String = "",
+    stateScopeKey: String = "school-login",
     title: String? = null,
     subtitle: String? = null,
     errorMessage: String? = null,
@@ -73,10 +79,57 @@ fun SchoolLoginScreen(
     onBack: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
-    var school by remember(initialSchoolURL) { mutableStateOf(initialSchoolURL) }
-    var schoolSearch by remember { mutableStateOf("") }
+    key(stateScopeKey) {
+        SchoolLoginScreenContent(
+            isLoading = isLoading,
+            initialSchoolURL = initialSchoolURL,
+            initialSchoolName = initialSchoolName,
+            initialUsername = initialUsername,
+            title = title,
+            subtitle = subtitle,
+            errorMessage = errorMessage,
+            directorySchools = directorySchools,
+            isDirectoryLoading = isDirectoryLoading,
+            directoryErrorMessage = directoryErrorMessage,
+            onLoadDirectory = onLoadDirectory,
+            onRetryDirectory = onRetryDirectory,
+            onLogin = onLogin,
+            onCancelLogin = onCancelLogin,
+            onInputChanged = onInputChanged,
+            onOpenHelp = onOpenHelp,
+            onOpenGitHub = onOpenGitHub,
+            onBack = onBack,
+            modifier = modifier,
+        )
+    }
+}
+
+@Composable
+private fun SchoolLoginScreenContent(
+    isLoading: Boolean,
+    initialSchoolURL: String,
+    initialSchoolName: String,
+    initialUsername: String,
+    title: String?,
+    subtitle: String?,
+    errorMessage: String?,
+    directorySchools: List<SchoolDirectorySchool>,
+    isDirectoryLoading: Boolean,
+    directoryErrorMessage: String?,
+    onLoadDirectory: () -> Unit,
+    onRetryDirectory: () -> Unit,
+    onLogin: (String, String, String) -> Unit,
+    onCancelLogin: (() -> Unit)?,
+    onInputChanged: () -> Unit,
+    onOpenHelp: () -> Unit,
+    onOpenGitHub: () -> Unit,
+    onBack: (() -> Unit)?,
+    modifier: Modifier,
+) {
+    var school by rememberSaveable { mutableStateOf(initialSchoolURL) }
+    var schoolSearch by rememberSaveable { mutableStateOf(initialSchoolName) }
+    var username by rememberSaveable { mutableStateOf(initialUsername) }
     var isSchoolSearchActive by remember { mutableStateOf(false) }
-    var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var isPasswordVisible by remember { mutableStateOf(false) }
     var hasAttemptedLogin by remember { mutableStateOf(false) }
@@ -116,7 +169,9 @@ fun SchoolLoginScreen(
         GradeySectionCard(title = stringResource(R.string.login_credentials_title)) {
             Column(verticalArrangement = Arrangement.spacedBy(GradeySpacing.md)) {
                 OutlinedTextField(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag(SCHOOL_LOGIN_SEARCH_FIELD_TEST_TAG),
                     value = schoolSearch,
                     onValueChange = {
                         schoolSearch = it
@@ -233,7 +288,9 @@ fun SchoolLoginScreen(
                     Text(stringResource(R.string.login_use_demo_account))
                 }
                 OutlinedTextField(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag(SCHOOL_LOGIN_URL_FIELD_TEST_TAG),
                     value = school,
                     onValueChange = {
                         school = it
@@ -272,7 +329,9 @@ fun SchoolLoginScreen(
                     ),
                 )
                 OutlinedTextField(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag(SCHOOL_LOGIN_USERNAME_FIELD_TEST_TAG),
                     value = username,
                     onValueChange = {
                         username = it
@@ -297,7 +356,9 @@ fun SchoolLoginScreen(
                     ),
                 )
                 OutlinedTextField(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag(SCHOOL_LOGIN_PASSWORD_FIELD_TEST_TAG),
                     value = password,
                     onValueChange = {
                         password = it
@@ -312,6 +373,7 @@ fun SchoolLoginScreen(
                     },
                     trailingIcon = {
                         IconButton(
+                            modifier = Modifier.testTag(SCHOOL_LOGIN_PASSWORD_VISIBILITY_TEST_TAG),
                             enabled = !isLoading,
                             onClick = { isPasswordVisible = !isPasswordVisible },
                         ) {
@@ -349,7 +411,9 @@ fun SchoolLoginScreen(
                     )
                 }
                 GradeyPrimaryButton(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag(SCHOOL_LOGIN_CONNECT_BUTTON_TEST_TAG),
                     enabled = !isLoading,
                     onClick = ::submitLogin,
                 ) {
@@ -392,3 +456,10 @@ fun SchoolLoginScreen(
         }
     }
 }
+
+internal const val SCHOOL_LOGIN_SEARCH_FIELD_TEST_TAG = "school-login-search-field"
+internal const val SCHOOL_LOGIN_URL_FIELD_TEST_TAG = "school-login-url-field"
+internal const val SCHOOL_LOGIN_USERNAME_FIELD_TEST_TAG = "school-login-username-field"
+internal const val SCHOOL_LOGIN_PASSWORD_FIELD_TEST_TAG = "school-login-password-field"
+internal const val SCHOOL_LOGIN_PASSWORD_VISIBILITY_TEST_TAG = "school-login-password-visibility"
+internal const val SCHOOL_LOGIN_CONNECT_BUTTON_TEST_TAG = "school-login-connect-button"

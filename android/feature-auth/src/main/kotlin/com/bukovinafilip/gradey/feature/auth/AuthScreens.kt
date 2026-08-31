@@ -1,5 +1,6 @@
 package com.bukovinafilip.gradey.feature.auth
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
@@ -32,8 +33,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -196,6 +200,9 @@ fun OnboardingNotificationsScreen(
     progressPosition: Int? = null,
     progressCount: Int? = null,
 ) {
+    BackHandler {
+        if (!isWorking) onBack()
+    }
     GradeyScreen(modifier = modifier.statusBarsPadding().verticalScroll(rememberScrollState())) {
         if (progressPosition != null && progressCount != null) {
             OnboardingProgressHeader(progressPosition, progressCount, onBack, backEnabled = !isWorking)
@@ -245,6 +252,9 @@ fun OnboardingReadyScreen(
     progressCount: Int? = null,
 ) {
     val isWorking = isRetryingSchoolCloudLink || isRetryingNotificationSync || isFinishing
+    BackHandler {
+        if (!isWorking) onBack()
+    }
     GradeyScreen(modifier = modifier.statusBarsPadding().verticalScroll(rememberScrollState())) {
         if (progressPosition != null && progressCount != null) {
             OnboardingProgressHeader(progressPosition, progressCount, onBack, backEnabled = !isWorking)
@@ -276,6 +286,9 @@ fun OnboardingReadyScreen(
             GradeySectionCard(title = stringResource(R.string.onboarding_school_link_warning_title)) {
                 Text(
                     text = stringResource(R.string.onboarding_school_link_warning_body),
+                    modifier = Modifier.semantics {
+                        liveRegion = LiveRegionMode.Polite
+                    },
                     color = MaterialTheme.colorScheme.error,
                 )
                 if (!schoolCloudLinkErrorMessage.isNullOrBlank()) {
@@ -308,6 +321,9 @@ fun OnboardingReadyScreen(
             GradeySectionCard(title = stringResource(R.string.onboarding_notification_sync_warning_title)) {
                 Text(
                     text = stringResource(R.string.onboarding_notification_sync_warning_body),
+                    modifier = Modifier.semantics {
+                        liveRegion = LiveRegionMode.Polite
+                    },
                     color = MaterialTheme.colorScheme.error,
                 )
                 if (!notificationSyncErrorMessage.isNullOrBlank()) {
@@ -425,6 +441,9 @@ private fun OnboardingUpgradeConnectionWarning(
     GradeySectionCard(title = stringResource(R.string.onboarding_sync_warning_title)) {
         Text(
             text = stringResource(bodyResource),
+            modifier = Modifier.semantics {
+                liveRegion = LiveRegionMode.Polite
+            },
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         if (!errorMessage.isNullOrBlank()) {
@@ -465,6 +484,11 @@ fun AgeAttestationScreen(
     var pendingParentalKind by remember { mutableStateOf<AgeAttestationKind?>(null) }
     var parentConfirmed by remember { mutableStateOf(false) }
     val pending = pendingParentalKind
+
+    BackHandler(enabled = pending != null) {
+        pendingParentalKind = null
+        parentConfirmed = false
+    }
 
     GradeyScreen(modifier = modifier.statusBarsPadding().verticalScroll(rememberScrollState())) {
         if (pending == null) {
@@ -593,6 +617,9 @@ fun GradeyIdLoginScreen(
     onContinueWithoutAccount: (() -> Unit)? = null,
     onBack: (() -> Unit)? = null,
 ) {
+    BackHandler(enabled = onBack != null) {
+        if (!isLoading) onBack?.invoke()
+    }
     GradeyScreen(modifier = modifier.verticalScroll(rememberScrollState())) {
         if (progressPosition != null && progressCount != null) {
             OnboardingProgressHeader(
@@ -673,6 +700,9 @@ fun GradeyIdLoginScreen(
             if (!errorMessage.isNullOrBlank()) {
                 Text(
                     text = errorMessage,
+                    modifier = Modifier.semantics {
+                        liveRegion = LiveRegionMode.Assertive
+                    },
                     color = MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.bodySmall,
                 )

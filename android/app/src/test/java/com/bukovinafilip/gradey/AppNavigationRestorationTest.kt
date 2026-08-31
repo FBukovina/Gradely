@@ -5,6 +5,60 @@ import org.junit.Test
 
 class AppNavigationRestorationTest {
     @Test
+    fun mandatorySchoolGateSignsOutItsGradeyAccount() {
+        assertThat(
+            schoolLoginBackAction(
+                hasGradeyAccount = true,
+                isGuestMode = false,
+                isAddingSchool = false,
+                isReconnectingSchool = false,
+            ),
+        ).isEqualTo(SchoolLoginBackAction.SIGN_OUT_GRADEY_ID)
+    }
+
+    @Test
+    fun accountManagementSchoolRoutesStillReturnToAccount() {
+        assertThat(
+            schoolLoginBackAction(
+                hasGradeyAccount = true,
+                isGuestMode = false,
+                isAddingSchool = true,
+                isReconnectingSchool = false,
+            ),
+        ).isEqualTo(SchoolLoginBackAction.RETURN_TO_ACCOUNT)
+
+        assertThat(
+            schoolLoginBackAction(
+                hasGradeyAccount = true,
+                isGuestMode = false,
+                isAddingSchool = false,
+                isReconnectingSchool = true,
+            ),
+        ).isEqualTo(SchoolLoginBackAction.RETURN_TO_ACCOUNT)
+    }
+
+    @Test
+    fun rootLocalSchoolLoginDoesNotExposeBack() {
+        assertThat(
+            schoolLoginBackAction(
+                hasGradeyAccount = false,
+                isGuestMode = false,
+                isAddingSchool = false,
+                isReconnectingSchool = false,
+            ),
+        ).isEqualTo(SchoolLoginBackAction.NONE)
+
+        assertThat(
+            schoolLoginBackAction(
+                hasGradeyAccount = true,
+                isGuestMode = true,
+                isAddingSchool = false,
+                isReconnectingSchool = false,
+            ),
+        ).isEqualTo(SchoolLoginBackAction.NONE)
+    }
+
+    @Test
     fun addSchoolRouteRestoresOnlyAboveAUsableSignedInSession() {
         assertThat(
             restoreSchoolRoute(

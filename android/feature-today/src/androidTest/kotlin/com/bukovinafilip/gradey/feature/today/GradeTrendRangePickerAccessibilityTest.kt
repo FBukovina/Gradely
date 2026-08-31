@@ -406,6 +406,7 @@ class GradeTrendRangePickerAccessibilityTest {
                         timetable = null,
                         stravaMenu = null,
                         isMealsConnected = false,
+                        showMealsCard = true,
                         cloudNewMarkEvents = cloudNewMarkEvents,
                         gradeTrends = listOf(MathTrend),
                         isRefreshing = false,

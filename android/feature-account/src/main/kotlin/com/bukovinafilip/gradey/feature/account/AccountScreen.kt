@@ -184,6 +184,7 @@ fun AccountScreen(
     onReconnectLinkedAccount: (LinkedSchoolAccount) -> Unit,
     onToggleLinkedNotifications: (LinkedSchoolAccount, Boolean) -> Unit,
     onOpenNotificationSettings: () -> Unit,
+    onRequestNotificationPermission: () -> Unit = onOpenNotificationSettings,
     onUpdateNotificationPreferences: (NotificationPreferences) -> Unit,
     onOpenMeals: () -> Unit,
     onRetryStravaCloudLink: () -> Unit,
@@ -395,7 +396,21 @@ fun AccountScreen(
                     label = stringResource(R.string.notifications_new_marks),
                     checked = notificationPreferences.newMarksEnabled,
                     onCheckedChange = {
-                        onUpdateNotificationPreferences(notificationPreferences.copy(newMarksEnabled = it))
+                        when (
+                            val action = resolveNewMarksToggleAction(
+                                requestedEnabled = it,
+                                permissionGranted = notificationPermissionGranted,
+                            )
+                        ) {
+                            is NewMarksToggleAction.Persist -> {
+                                onUpdateNotificationPreferences(
+                                    notificationPreferences.copy(newMarksEnabled = action.enabled),
+                                )
+                            }
+                            NewMarksToggleAction.RequestPermission -> {
+                                onRequestNotificationPermission()
+                            }
+                        }
                     },
                     enabled = notificationControlsEnabled,
                 )

@@ -281,6 +281,7 @@ class TodayLinkedAccountInteractionTest {
                     timetable = null,
                     stravaMenu = null,
                     isMealsConnected = false,
+                    showMealsCard = true,
                     linkedSchoolAccounts = accounts,
                     activeLinkedAccountID = activeAccountID,
                     mutatingLinkedAccountID = mutatingAccountID,

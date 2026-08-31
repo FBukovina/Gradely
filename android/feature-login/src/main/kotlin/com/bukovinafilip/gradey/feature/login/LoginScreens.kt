@@ -1,5 +1,6 @@
 package com.bukovinafilip.gradey.feature.login
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
@@ -148,6 +149,13 @@ private fun SchoolLoginScreenContent(
             SchoolDirectorySearch.results(schoolSearch, directorySchools)
         } else {
             emptyList()
+        }
+    }
+
+    BackHandler(enabled = onBack != null) {
+        when {
+            isLoading && onCancelLogin != null -> onCancelLogin()
+            !isLoading -> onBack?.invoke()
         }
     }
 

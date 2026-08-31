@@ -30,8 +30,10 @@ import com.bukovinafilip.gradey.model.LinkedSchoolAccount
 import com.bukovinafilip.gradey.model.NotificationLockScreenDetail
 import com.bukovinafilip.gradey.model.NotificationPreferences
 import com.bukovinafilip.gradey.ui.GradeyTheme
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -126,15 +128,79 @@ class AccountNotificationControlsAccessibilityTest {
             .assertHeightIsAtLeast(48.dp)
     }
 
+    @Test
+    fun enablingWithoutPermissionRequestsPermissionWithoutPersistingOn() {
+        val permissionRequests = AtomicInteger(0)
+        val latestUpdate = AtomicReference<NotificationPreferences?>()
+        setNotificationScreen(
+            initialPreferences = NotificationPreferences.Default.copy(newMarksEnabled = false),
+            permissionGranted = false,
+            onRequestPermission = { permissionRequests.incrementAndGet() },
+            onUpdate = latestUpdate::set,
+        )
+
+        switchNode(R.string.notifications_new_marks)
+            .assert(toggleOffMatcher)
+            .performClick()
+            .assert(toggleOffMatcher)
+
+        composeRule.runOnIdle {
+            assertEquals(1, permissionRequests.get())
+            assertNull(latestUpdate.get())
+        }
+    }
+
+    @Test
+    fun enablingWithPermissionPersistsOn() {
+        val latestUpdate = AtomicReference<NotificationPreferences?>()
+        setNotificationScreen(
+            initialPreferences = NotificationPreferences.Default.copy(newMarksEnabled = false),
+            permissionGranted = true,
+            onUpdate = latestUpdate::set,
+        )
+
+        switchNode(R.string.notifications_new_marks)
+            .assert(toggleOffMatcher)
+            .performClick()
+            .assert(toggleOnMatcher)
+
+        composeRule.runOnIdle {
+            assertEquals(true, latestUpdate.get()?.newMarksEnabled)
+        }
+    }
+
+    @Test
+    fun deniedPermissionExposesWorkingSystemSettingsRecovery() {
+        val settingsOpens = AtomicInteger(0)
+        setNotificationScreen(
+            permissionGranted = false,
+            onOpenSettings = { settingsOpens.incrementAndGet() },
+        )
+
+        composeRule.onNodeWithText(context.getString(R.string.notifications_open_system_settings))
+            .performScrollTo()
+            .assertIsEnabled()
+            .performClick()
+
+        composeRule.runOnIdle { assertEquals(1, settingsOpens.get()) }
+    }
+
     private fun setNotificationScreen(
+        initialPreferences: NotificationPreferences = NotificationPreferences.Default,
+        permissionGranted: Boolean = true,
         isUpdating: Boolean = false,
+        onRequestPermission: () -> Unit = {},
+        onOpenSettings: () -> Unit = {},
         onUpdate: (NotificationPreferences) -> Unit = {},
     ) {
         composeRule.setContent {
-            var preferences by remember { mutableStateOf(NotificationPreferences.Default) }
+            var preferences by remember { mutableStateOf(initialPreferences) }
             NotificationTestScreen(
                 preferences = preferences,
+                permissionGranted = permissionGranted,
                 isUpdating = isUpdating,
+                onRequestPermission = onRequestPermission,
+                onOpenSettings = onOpenSettings,
                 onUpdate = {
                     preferences = it
                     onUpdate(it)
@@ -146,7 +212,10 @@ class AccountNotificationControlsAccessibilityTest {
     @Composable
     private fun NotificationTestScreen(
         preferences: NotificationPreferences,
+        permissionGranted: Boolean,
         isUpdating: Boolean,
+        onRequestPermission: () -> Unit,
+        onOpenSettings: () -> Unit,
         onUpdate: (NotificationPreferences) -> Unit,
     ) {
         GradeyTheme {
@@ -156,6 +225,7 @@ class AccountNotificationControlsAccessibilityTest {
                 selectedDestination = AccountSettingsDestination.NOTIFICATIONS,
                 hasBakalariConnectionOnDevice = true,
                 notificationPreferences = preferences,
+                notificationPermissionGranted = permissionGranted,
                 isUpdatingNotificationPreferences = isUpdating,
                 onUpdateFullName = {},
                 onSelectedDestinationChange = {},
@@ -165,7 +235,8 @@ class AccountNotificationControlsAccessibilityTest {
                 onActivateLinkedAccount = {},
                 onReconnectLinkedAccount = {},
                 onToggleLinkedNotifications = { _, _ -> },
-                onOpenNotificationSettings = {},
+                onOpenNotificationSettings = onOpenSettings,
+                onRequestNotificationPermission = onRequestPermission,
                 onUpdateNotificationPreferences = onUpdate,
                 onOpenMeals = {},
                 onRetryStravaCloudLink = {},

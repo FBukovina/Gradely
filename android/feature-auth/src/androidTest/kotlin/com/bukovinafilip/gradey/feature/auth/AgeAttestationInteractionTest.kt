@@ -17,6 +17,7 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import androidx.test.espresso.Espresso.pressBack
 import com.bukovinafilip.gradey.model.AgeAttestationKind
 import com.bukovinafilip.gradey.ui.GradeyTheme
 import java.util.concurrent.atomic.AtomicInteger
@@ -99,6 +100,35 @@ class AgeAttestationInteractionTest {
             assertEquals(1, privacyOpenCount.get())
             assertNull(confirmedKind.get())
         }
+    }
+
+    @Test
+    fun systemBackReturnsFromParentalReviewToTheAgeChooser() {
+        val confirmedKind = AtomicReference<AgeAttestationKind?>()
+        composeRule.setContent {
+            GradeyTheme {
+                AgeAttestationScreen(
+                    onConfirm = confirmedKind::set,
+                    onOpenPrivacyPolicy = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText(context.getString(R.string.age_under_thirteen))
+            .performScrollTo()
+            .performClick()
+        composeRule.onNodeWithText(context.getString(R.string.age_parent_agreement))
+            .performScrollTo()
+            .assertIsDisplayed()
+
+        pressBack()
+
+        composeRule.onNodeWithText(context.getString(R.string.age_choose_option))
+            .performScrollTo()
+            .assertIsDisplayed()
+        composeRule.onNodeWithText(context.getString(R.string.age_parent_agreement))
+            .assertDoesNotExist()
+        composeRule.runOnIdle { assertNull(confirmedKind.get()) }
     }
 
     private fun assertParentAgreementFlow(

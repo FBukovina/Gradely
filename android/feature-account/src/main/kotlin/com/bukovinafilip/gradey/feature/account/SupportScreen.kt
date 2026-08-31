@@ -23,11 +23,13 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -36,6 +38,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.bukovinafilip.gradey.model.GradeySupportTier
 import com.bukovinafilip.gradey.model.SupportBillingInterval
 import com.bukovinafilip.gradey.model.SupportCatalog
@@ -104,7 +109,7 @@ fun SupportScreen(
     var pendingDebugAction by remember { mutableStateOf<DebugAction?>(null) }
 
     BackHandler(onBack = onBack)
-    LaunchedEffect(Unit) { onReload() }
+    SupportEntitlementReloadEffect(onReload)
 
     Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         LazyColumn(
@@ -403,6 +408,31 @@ fun SupportScreen(
                 }
             },
         )
+    }
+}
+
+@Composable
+private fun SupportEntitlementReloadEffect(onReload: () -> Unit) {
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val currentOnReload = rememberUpdatedState(onReload)
+
+    LaunchedEffect(Unit) { currentOnReload.value() }
+    DisposableEffect(lifecycleOwner) {
+        var reloadOnNextResume = false
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_PAUSE -> reloadOnNextResume = true
+                Lifecycle.Event.ON_RESUME -> {
+                    if (reloadOnNextResume) {
+                        reloadOnNextResume = false
+                        currentOnReload.value()
+                    }
+                }
+                else -> Unit
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 }
 

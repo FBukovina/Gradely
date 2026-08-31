@@ -137,6 +137,8 @@ internal const val TODAY_RANGE_TEST_TAG_PREFIX = "todayTrendRange:"
 internal const val TODAY_ACTION_PILL_VISUAL_TEST_TAG = "todayActionPillVisual"
 internal const val TODAY_ABSENCE_PREDICTOR_CARD_TEST_TAG = "todayAbsencePredictorCard"
 internal const val TODAY_ABSENCE_PREDICTOR_ACTION_TEST_TAG = "todayAbsencePredictorAction"
+internal const val TODAY_LUNCH_CARD_TEST_TAG = "todayLunchCard"
+internal const val TODAY_LUNCH_ACTION_TEST_TAG = "todayLunchAction"
 
 @Composable
 fun TodayStateScreen(
@@ -229,6 +231,7 @@ fun TodayScreen(
     timetable: TimetableWeek?,
     stravaMenu: StravaCZMenu?,
     isMealsConnected: Boolean,
+    showMealsCard: Boolean,
     activeLinkedAccountDisplayName: String? = null,
     linkedSchoolAccounts: List<LinkedSchoolAccount> = emptyList(),
     activeLinkedAccountID: String? = null,
@@ -374,7 +377,9 @@ fun TodayScreen(
                     onOpenAbsence = onOpenAbsence,
                 )
             }
-            item { LunchCard(state = mealState, onOpenMeals = onOpenMeals) }
+            if (showMealsCard) {
+                item { LunchCard(state = mealState, onOpenMeals = onOpenMeals) }
+            }
             item { AbsencePredictorCard(onPlanAbsence = onOpenAbsence) }
             item {
                 NewMarksAndTrendsCard(
@@ -775,7 +780,11 @@ private fun LunchCard(
     state: TodayMealState,
     onOpenMeals: () -> Unit,
 ) {
-    DashboardSurface(modifier = Modifier.heightIn(min = 116.dp)) {
+    DashboardSurface(
+        modifier = Modifier
+            .heightIn(min = 116.dp)
+            .testTag(TODAY_LUNCH_CARD_TEST_TAG),
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -792,7 +801,11 @@ private fun LunchCard(
                         .weight(1f)
                         .padding(end = 8.dp),
                 )
-                TodayActionPill(text = stringResource(R.string.today_open), onClick = onOpenMeals)
+                TodayActionPill(
+                    text = stringResource(R.string.today_open),
+                    onClick = onOpenMeals,
+                    modifier = Modifier.testTag(TODAY_LUNCH_ACTION_TEST_TAG),
+                )
             }
             Spacer(Modifier.height(12.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {

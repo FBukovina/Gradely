@@ -277,6 +277,10 @@ class AbsenceManualSelectionInteractionTest {
     }
 
     private fun openManualSheet() {
+        composeRule.onNodeWithTag(
+            ABSENCE_MODE_TEST_TAG_PREFIX + AbsenceMode.Subjects.name,
+            useUnmergedTree = true,
+        ).performScrollTo().performClick()
         composeRule.onNodeWithText(chooseLessonsLabel)
             .performScrollTo()
             .performClick()

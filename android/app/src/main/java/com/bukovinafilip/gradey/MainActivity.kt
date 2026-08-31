@@ -424,7 +424,7 @@ private fun GradeyApp(
         mutableStateOf(OnboardingAccountIntent.GET_STARTED)
     }
     var account by remember { mutableStateOf<GradeyAccount?>(null) }
-    var gradeyIdentityGeneration by remember { mutableLongStateOf(0L) }
+    var gradeyIdentityGeneration by rememberSaveable { mutableLongStateOf(0L) }
     val onboardingUpgradeIdentityKey = when {
         isGuestMode -> "guest:$gradeyIdentityGeneration"
         account != null -> "account:${account?.id}:$gradeyIdentityGeneration"
@@ -560,8 +560,40 @@ private fun GradeyApp(
     var notificationSettingsRequestOwner by remember {
         mutableStateOf<OnboardingIdentityOwner?>(null)
     }
+    var accountNotificationPermissionRequestAccountID by rememberSaveable {
+        mutableStateOf<String?>(null)
+    }
+    var accountNotificationPermissionRequestGeneration by rememberSaveable {
+        mutableStateOf<Long?>(null)
+    }
+    var accountNotificationPermissionResult by rememberSaveable {
+        mutableStateOf<Boolean?>(null)
+    }
+    var isApplyingAccountNotificationPermissionResult by remember {
+        mutableStateOf(false)
+    }
+    val isRequestingAccountNotificationPermission =
+        accountNotificationPermissionRequestAccountID != null
     var notificationPermissionGranted by remember {
         mutableStateOf(context.notificationsAreEnabled())
+    }
+
+    fun beginAccountNotificationPermissionRequest(owner: GradeyIdentityOwner) {
+        accountNotificationPermissionRequestAccountID = owner.accountID
+        accountNotificationPermissionRequestGeneration = owner.generation
+        accountNotificationPermissionResult = null
+    }
+
+    fun completeAccountNotificationPermissionRequest(permissionGranted: Boolean) {
+        if (accountNotificationPermissionRequestAccountID != null) {
+            accountNotificationPermissionResult = permissionGranted
+        }
+    }
+
+    fun clearAccountNotificationPermissionRequest() {
+        accountNotificationPermissionRequestAccountID = null
+        accountNotificationPermissionRequestGeneration = null
+        accountNotificationPermissionResult = null
     }
 
     fun isGradeyIdentityBoundaryChanging(): Boolean =
@@ -653,6 +685,7 @@ private fun GradeyApp(
         isHandlingOnboardingNotificationChoice = false
         notificationPermissionRequestOwner = null
         notificationSettingsRequestOwner = null
+        clearAccountNotificationPermissionRequest()
         schoolLoginAttempt += 1
         schoolLoginJob?.cancel()
         schoolLoginJob = null
@@ -991,10 +1024,12 @@ private fun GradeyApp(
     val notificationSettingsLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult(),
     ) {
+        val permissionGranted = context.notificationsAreEnabled()
+        notificationPermissionGranted = permissionGranted
+        completeAccountNotificationPermissionRequest(permissionGranted)
         val owner = notificationSettingsRequestOwner
         notificationSettingsRequestOwner = null
         if (owner != null && owner.isCurrent()) {
-            notificationPermissionGranted = context.notificationsAreEnabled()
             val currentProgress = onboardingProgress ?: graph.onboardingProgressStore.loadProgress()
             val shouldEnableFromOnboarding =
                 currentProgress?.step == OnboardingStep.READY &&
@@ -1929,6 +1964,90 @@ private fun GradeyApp(
             notificationPreferencesError = error.userFacingMessage(context)
         } finally {
             if (updateOwner.isCurrent()) isUpdatingNotificationPreferences = false
+        }
+    }
+
+    val accountNotificationPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { _ ->
+        val permissionGranted = context.notificationsAreEnabled()
+        notificationPermissionGranted = permissionGranted
+        completeAccountNotificationPermissionRequest(permissionGranted)
+    }
+
+    LaunchedEffect(
+        accountNotificationPermissionRequestAccountID,
+        accountNotificationPermissionRequestGeneration,
+        accountNotificationPermissionResult,
+        account?.id,
+        gradeyIdentityGeneration,
+        isGuestMode,
+        phase,
+        activeGradeyIdentityBoundaryTokens,
+        isUpdatingNotificationPreferences,
+        isApplyingAccountNotificationPermissionResult,
+    ) {
+        if (
+            isUpdatingNotificationPreferences ||
+            isApplyingAccountNotificationPermissionResult
+        ) return@LaunchedEffect
+        when (
+            pendingAccountNotificationPermissionAction(
+                pendingAccountID = accountNotificationPermissionRequestAccountID,
+                pendingGeneration = accountNotificationPermissionRequestGeneration,
+                permissionGranted = accountNotificationPermissionResult,
+                currentAccountID = account?.id,
+                currentGeneration = gradeyIdentityGeneration,
+                currentGuestMode = isGuestMode,
+                isIdentityRestoring =
+                    phase == AppPhase.CHECKING || isGradeyIdentityBoundaryChanging(),
+            )
+        ) {
+            PendingAccountNotificationPermissionAction.NONE,
+            PendingAccountNotificationPermissionAction.WAIT_FOR_IDENTITY_RESTORE,
+            -> Unit
+
+            PendingAccountNotificationPermissionAction.DISCARD -> {
+                clearAccountNotificationPermissionRequest()
+            }
+
+            PendingAccountNotificationPermissionAction.PERSIST_ENABLED,
+            PendingAccountNotificationPermissionAction.PERSIST_DISABLED,
+            -> {
+                val pendingAccountID =
+                    accountNotificationPermissionRequestAccountID ?: return@LaunchedEffect
+                val pendingGeneration =
+                    accountNotificationPermissionRequestGeneration ?: return@LaunchedEffect
+                val permissionGranted =
+                    accountNotificationPermissionResult ?: return@LaunchedEffect
+                val pendingOwner = GradeyIdentityOwner(
+                    accountID = pendingAccountID,
+                    generation = pendingGeneration,
+                )
+                val updatedPreferences =
+                    notificationPreferences.copy(newMarksEnabled = permissionGranted)
+                isApplyingAccountNotificationPermissionResult = true
+                scope.launch {
+                    try {
+                        if (
+                            isUpdatingNotificationPreferences ||
+                            !pendingOwner.isCurrent()
+                        ) return@launch
+                        updateNotificationPreferences(updatedPreferences)
+                        if (
+                            accountNotificationPermissionRequestAccountID == pendingAccountID &&
+                            accountNotificationPermissionRequestGeneration == pendingGeneration &&
+                            accountNotificationPermissionResult == permissionGranted
+                        ) {
+                            clearAccountNotificationPermissionRequest()
+                        }
+                    } catch (_: GradeyIdentityChangedException) {
+                        // Identity state will re-drive the policy to wait or discard this result.
+                    } finally {
+                        isApplyingAccountNotificationPermissionResult = false
+                    }
+                }
+            }
         }
     }
 
@@ -4187,65 +4306,123 @@ private fun GradeyApp(
             },
         )
 
-        AppPhase.NEEDS_SCHOOL -> SchoolLoginScreen(
-            isLoading = isLoading,
-            initialSchoolURL = reconnectSchoolURL,
-            initialSchoolName = reconnectSchoolName,
-            initialUsername = reconnectSchoolUsername,
-            stateScopeKey = when {
-                reconnectLinkedAccountID != null -> "reconnect:${reconnectLinkedAccountID.orEmpty()}"
-                isAddingSchool -> "add-school"
-                else -> "school-login"
-            },
-            title = if (reconnectLinkedAccount == null) {
-                context.getString(R.string.connect_bakalari)
-            } else {
-                context.getString(R.string.reconnect_school, reconnectLinkedAccount?.displayName.orEmpty())
-            },
-            subtitle = if (reconnectLinkedAccount == null) {
-                context.getString(R.string.connect_bakalari_subtitle)
-            } else {
-                context.getString(R.string.reconnect_school_subtitle)
-            },
-            errorMessage = schoolLoginError,
-            directorySchools = directorySchools,
-            isDirectoryLoading = isSchoolDirectoryLoading,
-            directoryErrorMessage = schoolDirectoryError,
-            onLoadDirectory = { scope.launch { loadSchoolDirectory() } },
-            onRetryDirectory = { scope.launch { loadSchoolDirectory(forceRefresh = true) } },
-            onOpenHelp = {
-                val language = helpCenterLanguageCode(activeLanguageCode)
-                runCatching {
-                    activity.startActivity(
-                        Intent(
-                            Intent.ACTION_VIEW,
-                            Uri.parse("https://help.bukovinafilip.com/$language"),
-                        ),
-                    )
+        AppPhase.NEEDS_SCHOOL -> {
+            val onSchoolLoginBack: (() -> Unit)? = when (
+                schoolLoginBackAction(
+                    hasGradeyAccount = account != null,
+                    isGuestMode = isGuestMode,
+                    isAddingSchool = isAddingSchool,
+                    isReconnectingSchool = reconnectLinkedAccount != null,
+                )
+            ) {
+                SchoolLoginBackAction.NONE -> null
+                SchoolLoginBackAction.RETURN_TO_ACCOUNT -> {
+                    {
+                        reconnectLinkedAccount = null
+                        reconnectLinkedAccountID = null
+                        applyReconnectPrefill(null)
+                        isAddingSchool = false
+                        schoolLoginError = null
+                        phase = AppPhase.SIGNED_IN
+                        navigationViewModel.requestDestination(MainDestination.ACCOUNT)
+                    }
                 }
-            },
-            onOpenGitHub = {
-                runCatching {
-                    activity.startActivity(
-                        Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/FBukovina/Gradely")),
-                    )
+
+                SchoolLoginBackAction.SIGN_OUT_GRADEY_ID -> {
+                    {
+                        authError = null
+                        scope.launch {
+                            try {
+                                signOutAllGradeyState()
+                            } catch (error: CancellationException) {
+                                throw error
+                            } catch (error: Throwable) {
+                                authError = error.userFacingMessage(context)
+                            }
+                        }
+                    }
                 }
-            },
-            onLogin = { school, username, password ->
-                launchSchoolLogin {
-                    val reconnectTarget = reconnectLinkedAccount
-                    if (reconnectTarget != null) {
-                        val reconnectError = reconnectLinkedAccountWithCredentials(
-                            reconnectTarget,
-                            school,
-                            username,
-                            password,
+            }
+
+            SchoolLoginScreen(
+                isLoading = isLoading,
+                initialSchoolURL = reconnectSchoolURL,
+                initialSchoolName = reconnectSchoolName,
+                initialUsername = reconnectSchoolUsername,
+                stateScopeKey = when {
+                    reconnectLinkedAccountID != null -> "reconnect:${reconnectLinkedAccountID.orEmpty()}"
+                    isAddingSchool -> "add-school"
+                    else -> "school-login"
+                },
+                title = if (reconnectLinkedAccount == null) {
+                    context.getString(R.string.connect_bakalari)
+                } else {
+                    context.getString(R.string.reconnect_school, reconnectLinkedAccount?.displayName.orEmpty())
+                },
+                subtitle = if (reconnectLinkedAccount == null) {
+                    context.getString(R.string.connect_bakalari_subtitle)
+                } else {
+                    context.getString(R.string.reconnect_school_subtitle)
+                },
+                errorMessage = schoolLoginError,
+                directorySchools = directorySchools,
+                isDirectoryLoading = isSchoolDirectoryLoading,
+                directoryErrorMessage = schoolDirectoryError,
+                onLoadDirectory = { scope.launch { loadSchoolDirectory() } },
+                onRetryDirectory = { scope.launch { loadSchoolDirectory(forceRefresh = true) } },
+                onOpenHelp = {
+                    val language = helpCenterLanguageCode(activeLanguageCode)
+                    runCatching {
+                        activity.startActivity(
+                            Intent(
+                                Intent.ACTION_VIEW,
+                                Uri.parse("https://help.bukovinafilip.com/$language"),
+                            ),
                         )
-                        if (reconnectError != null) {
-                            schoolLoginError = reconnectError
+                    }
+                },
+                onOpenGitHub = {
+                    runCatching {
+                        activity.startActivity(
+                            Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/FBukovina/Gradely")),
+                        )
+                    }
+                },
+                onLogin = { school, username, password ->
+                    launchSchoolLogin {
+                        val reconnectTarget = reconnectLinkedAccount
+                        if (reconnectTarget != null) {
+                            val reconnectError = reconnectLinkedAccountWithCredentials(
+                                reconnectTarget,
+                                school,
+                                username,
+                                password,
+                            )
+                            if (reconnectError != null) {
+                                schoolLoginError = reconnectError
+                            } else {
+                                val loginOwner = currentOnboardingIdentityOwner()
+                                    ?: return@launchSchoolLogin
+                                isAddingSchool = false
+                                reconnectLinkedAccountID = null
+                                resetSignedInNavigation()
+                                phase = AppPhase.SIGNED_IN
+                                loadCachedSignedInData(isStillCurrent = { loginOwner.isCurrent() })
+                                if (!loginOwner.isCurrent()) return@launchSchoolLogin
+                                refreshSignedInData()
+                            }
                         } else {
+                            val schoolSession = loginReplacingSchoolSession(school, username, password)
                             val loginOwner = currentOnboardingIdentityOwner()
                                 ?: return@launchSchoolLogin
+                            dashboardViewModel.refresh(
+                                scopeKey = schoolSession.cacheScope,
+                                forceRefresh = false,
+                                load = graph.schoolRepository::loadDashboard,
+                            )
+                            if (!loginOwner.isCurrent()) return@launchSchoolLogin
+                            linkCurrentSchoolIfNeeded()
+                            if (!loginOwner.isCurrent()) return@launchSchoolLogin
                             isAddingSchool = false
                             reconnectLinkedAccountID = null
                             resetSignedInNavigation()
@@ -4254,44 +4431,13 @@ private fun GradeyApp(
                             if (!loginOwner.isCurrent()) return@launchSchoolLogin
                             refreshSignedInData()
                         }
-                    } else {
-                        val schoolSession = loginReplacingSchoolSession(school, username, password)
-                        val loginOwner = currentOnboardingIdentityOwner()
-                            ?: return@launchSchoolLogin
-                        dashboardViewModel.refresh(
-                            scopeKey = schoolSession.cacheScope,
-                            forceRefresh = false,
-                            load = graph.schoolRepository::loadDashboard,
-                        )
-                        if (!loginOwner.isCurrent()) return@launchSchoolLogin
-                        linkCurrentSchoolIfNeeded()
-                        if (!loginOwner.isCurrent()) return@launchSchoolLogin
-                        isAddingSchool = false
-                        reconnectLinkedAccountID = null
-                        resetSignedInNavigation()
-                        phase = AppPhase.SIGNED_IN
-                        loadCachedSignedInData(isStillCurrent = { loginOwner.isCurrent() })
-                        if (!loginOwner.isCurrent()) return@launchSchoolLogin
-                        refreshSignedInData()
                     }
-                }
-            },
-            onCancelLogin = ::cancelSchoolLogin,
-            onInputChanged = { schoolLoginError = null },
-            onBack = if (reconnectLinkedAccount == null && !isAddingSchool) {
-                null
-            } else {
-                {
-                    reconnectLinkedAccount = null
-                    reconnectLinkedAccountID = null
-                    applyReconnectPrefill(null)
-                    isAddingSchool = false
-                    schoolLoginError = null
-                    phase = AppPhase.SIGNED_IN
-                    navigationViewModel.requestDestination(MainDestination.ACCOUNT)
-                }
-            },
-        )
+                },
+                onCancelLogin = ::cancelSchoolLogin,
+                onInputChanged = { schoolLoginError = null },
+                onBack = onSchoolLoginBack,
+            )
+        }
 
         AppPhase.SIGNED_IN -> Box(
             modifier = Modifier
@@ -4343,6 +4489,7 @@ private fun GradeyApp(
                             timetable = timetable,
                             stravaMenu = stravaMenu.takeIf { showMealsTab },
                             isMealsConnected = showMealsTab && stravaSession != null,
+                            showMealsCard = showMealsTab,
                             activeLinkedAccountDisplayName = linkedAccounts
                                 .firstOrNull { it.id == activeLinkedAccountID }
                                 ?.displayName,
@@ -4814,7 +4961,9 @@ private fun GradeyApp(
                     isRetryingStravaCloudLink = isRetryingStravaCloudLink,
                     notificationPreferences = notificationPreferences,
                     notificationPermissionGranted = notificationPermissionGranted,
-                    isUpdatingNotificationPreferences = isUpdatingNotificationPreferences,
+                    isUpdatingNotificationPreferences =
+                        isUpdatingNotificationPreferences ||
+                            isRequestingAccountNotificationPermission,
                     notificationPreferencesErrorMessage = notificationPreferencesError,
                     isExportingData = isExportingData,
                     isDeletingAccount = isDeletingAccount,
@@ -4892,6 +5041,40 @@ private fun GradeyApp(
                                     context.packageName,
                                 ),
                             )
+                        }
+                    },
+                    onRequestNotificationPermission = {
+                        currentGradeyIdentityOwner()?.let { notificationOwner ->
+                            beginAccountNotificationPermissionRequest(notificationOwner)
+                            runCatching {
+                                when (
+                                    accountNotificationPermissionRecoveryAction(
+                                        Build.VERSION.SDK_INT,
+                                    )
+                                ) {
+                                    AccountNotificationPermissionRecoveryAction
+                                        .REQUEST_RUNTIME_PERMISSION -> {
+                                        accountNotificationPermissionLauncher.launch(
+                                            Manifest.permission.POST_NOTIFICATIONS,
+                                        )
+                                    }
+
+                                    AccountNotificationPermissionRecoveryAction
+                                        .OPEN_APP_NOTIFICATION_SETTINGS -> {
+                                        notificationSettingsLauncher.launch(
+                                            Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(
+                                                Settings.EXTRA_APP_PACKAGE,
+                                                context.packageName,
+                                            ),
+                                        )
+                                    }
+                                }
+                            }.onFailure { error ->
+                                if (notificationOwner.isCurrent()) {
+                                    clearAccountNotificationPermissionRequest()
+                                    notificationPreferencesError = error.userFacingMessage(context)
+                                }
+                            }
                         }
                     },
                     onUpdateNotificationPreferences = { preferences ->

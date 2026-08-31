@@ -301,7 +301,7 @@ fun AbsenceScreen(
     onOpenGradeyTools: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var mode by rememberSaveable { mutableStateOf(AbsenceMode.Subjects) }
+    var mode by rememberSaveable { mutableStateOf(AbsenceMode.Days) }
     var savedInteractionScopeKey by rememberSaveable { mutableStateOf(predictorScopeKey) }
     var savedManualSheetPresented by rememberSaveable(predictorScopeKey) { mutableStateOf(false) }
     var manualDrafts by rememberSaveable(predictorScopeKey, stateSaver = ManualDraftsSaver) {

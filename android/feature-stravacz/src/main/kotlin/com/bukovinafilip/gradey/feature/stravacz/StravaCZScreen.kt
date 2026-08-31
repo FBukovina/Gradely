@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -385,7 +386,12 @@ private fun FirstMenuLoad(
                 Text(stringResource(R.string.stravacz_loading))
             } else {
                 ErrorText(errorMessage ?: stringResource(R.string.stravacz_empty_message))
-                Button(onClick = onRetry) { Text(stringResource(R.string.stravacz_retry)) }
+                Button(
+                    onClick = onRetry,
+                    modifier = Modifier.heightIn(min = 48.dp),
+                ) {
+                    Text(stringResource(R.string.stravacz_retry))
+                }
             }
         }
     }

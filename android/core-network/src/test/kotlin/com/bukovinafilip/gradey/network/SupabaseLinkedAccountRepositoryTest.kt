@@ -124,6 +124,24 @@ class SupabaseLinkedAccountRepositoryTest {
     }
 
     @Test
+    fun `school link and reconnect never send placeholder school metadata`() = runTest {
+        val session = schoolSession().copy(linkedAccountSchoolName = " NÁzev   školy ")
+        val user = UserResponse(fullName = "Student Name", schoolName = "název školy")
+        server.enqueue(jsonResponse(accountResponse("linked")))
+        server.enqueue(jsonResponse(accountResponse("linked")))
+
+        repository().linkSchoolAccount(session, user)
+        val linkRequest = server.takeRequest()
+        repository().reconnectSchoolAccount("linked", session, user)
+        val reconnectRequest = server.takeRequest()
+
+        val linkBody = GradeyJson.parseToJsonElement(linkRequest.body.readUtf8()).jsonObject
+        val reconnectBody = GradeyJson.parseToJsonElement(reconnectRequest.body.readUtf8()).jsonObject
+        assertThat(linkBody).doesNotContainKey("school_name")
+        assertThat(reconnectBody).doesNotContainKey("school_name")
+    }
+
+    @Test
     fun `Strava link sends the iOS compatible canteen payload and caches success`() = runTest {
         server.enqueue(
             jsonResponse(

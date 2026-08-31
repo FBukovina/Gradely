@@ -36,12 +36,10 @@ object SchoolReconnectPrefills {
 
         return SchoolReconnectPrefill(
             schoolURL = session.baseURL,
-            schoolName = account.schoolName.nonBlank()
-                ?: session.linkedAccountSchoolName.nonBlank()
+            schoolName = SchoolDirectoryNameResolver.displayableName(account.schoolName)
+                ?: SchoolDirectoryNameResolver.displayableName(session.linkedAccountSchoolName)
                 ?: account.provider.displayName,
             username = session.bakalari?.username.orEmpty(),
         )
     }
 }
-
-private fun String?.nonBlank(): String? = this?.trim()?.takeIf(String::isNotEmpty)

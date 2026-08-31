@@ -352,6 +352,32 @@ class BakalariNetworkClientTest {
     }
 
     @Test
+    fun userRejectsPlaceholderSchoolNameWithUnicodeWhitespace() = runTest {
+        server.enqueue(
+            jsonResponse(
+                """{"FullName":"Student","SchoolOrganizationName":"\u0085Název\u00a0školy\u0085"}""",
+            ),
+        )
+
+        val user = client.fetchUser(baseURL(), "token")
+
+        assertThat(user.displaySchoolName).isNull()
+    }
+
+    @Test
+    fun userTrimsUnicodeEdgesWithoutChangingValidInternalWhitespace() = runTest {
+        server.enqueue(
+            jsonResponse(
+                """{"FullName":"Student","SchoolOrganizationName":"\u0085Real\t\u00a0School\u0085"}""",
+            ),
+        )
+
+        val user = client.fetchUser(baseURL(), "token")
+
+        assertThat(user.displaySchoolName).isEqualTo("Real\t\u00A0School")
+    }
+
+    @Test
     fun timetableAcceptsNumericHourIdsAndMissingDisplayFields() = runTest {
         server.enqueue(
             jsonResponse(

@@ -4,6 +4,7 @@ import com.bukovinafilip.gradey.domain.DevicePushTokenClient
 import com.bukovinafilip.gradey.domain.GradeyAuthRepository
 import com.bukovinafilip.gradey.domain.GradeyHistoryRepository
 import com.bukovinafilip.gradey.domain.LinkedAccountRepository
+import com.bukovinafilip.gradey.domain.SchoolDirectoryNameResolver
 import com.bukovinafilip.gradey.model.GradeyAuthSession
 import com.bukovinafilip.gradey.model.GradeyAccount
 import com.bukovinafilip.gradey.model.GradeyAccountSettingsSnapshot
@@ -14,6 +15,7 @@ import com.bukovinafilip.gradey.model.LinkedSchoolAccountActivation
 import com.bukovinafilip.gradey.model.NotificationPreferences
 import com.bukovinafilip.gradey.model.StoredSession
 import com.bukovinafilip.gradey.model.StravaCZStoredSession
+import com.bukovinafilip.gradey.model.UserResponse
 import kotlinx.serialization.builtins.ListSerializer
 import java.util.UUID
 
@@ -54,14 +56,14 @@ class LocalLinkedAccountRepository(
 
     override suspend fun linkSchoolAccount(
         session: StoredSession,
-        user: com.bukovinafilip.gradey.model.UserResponse?,
+        user: UserResponse?,
     ): LinkedSchoolAccount {
         val account = LinkedSchoolAccount(
             id = session.linkedAccountID ?: UUID.randomUUID().toString(),
             provider = LinkedAccountProvider.from(session.provider),
             providerUserID = user?.userUID,
             displayName = user?.fullName ?: session.linkedAccountDisplayName ?: session.provider.displayName,
-            schoolName = user?.displaySchoolName ?: session.linkedAccountSchoolName,
+            schoolName = resolvedLocalLinkedSchoolName(user, session.linkedAccountSchoolName),
         )
         saveUpsert(account)
         return account
@@ -89,14 +91,14 @@ class LocalLinkedAccountRepository(
     override suspend fun reconnectSchoolAccount(
         accountID: String,
         session: StoredSession,
-        user: com.bukovinafilip.gradey.model.UserResponse?,
+        user: UserResponse?,
     ): LinkedSchoolAccount {
         val existing = localAccounts().firstOrNull { it.id == accountID }
             ?: throw IllegalArgumentException("Linked school account was not found.")
         val updated = existing.copy(
             providerUserID = user?.userUID ?: existing.providerUserID,
             displayName = user?.fullName ?: existing.displayName,
-            schoolName = user?.displaySchoolName ?: existing.schoolName,
+            schoolName = resolvedLocalLinkedSchoolName(user, existing.schoolName),
         )
         saveUpsert(updated)
         return updated
@@ -132,6 +134,9 @@ class LocalLinkedAccountRepository(
         const val LEGACY_KEY = "linked.accounts.v1"
     }
 }
+
+internal fun resolvedLocalLinkedSchoolName(user: UserResponse?, fallback: String?): String? =
+    user?.displaySchoolName ?: SchoolDirectoryNameResolver.displayableName(fallback)
 
 class EmptyGradeyHistoryRepository : GradeyHistoryRepository {
     override suspend fun gradeHistory(accountID: String?, days: Int?): GradeHistoryResponse = GradeHistoryResponse()

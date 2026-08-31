@@ -2,6 +2,7 @@ package com.bukovinafilip.gradey.network
 
 import com.bukovinafilip.gradey.domain.GradeyAuthRepository
 import com.bukovinafilip.gradey.domain.LinkedAccountRepository
+import com.bukovinafilip.gradey.domain.SchoolDirectoryNameResolver
 import com.bukovinafilip.gradey.model.GradeyAccountSettingsSnapshot
 import com.bukovinafilip.gradey.model.LinkedSchoolAccount
 import com.bukovinafilip.gradey.model.LinkedSchoolAccountActivation
@@ -58,7 +59,8 @@ class SupabaseLinkedAccountRepository(
                 displayName = user?.fullName?.trim()?.takeIf(String::isNotEmpty)
                     ?: session.linkedAccountDisplayName
                     ?: session.provider.displayName,
-                schoolName = user?.displaySchoolName ?: session.linkedAccountSchoolName,
+                schoolName = user?.displaySchoolName
+                    ?: SchoolDirectoryNameResolver.displayableName(session.linkedAccountSchoolName),
                 providerUserID = user?.userUID,
                 tokenPayload = LinkedSchoolTokenPayload.from(session),
             ),
@@ -108,7 +110,8 @@ class SupabaseLinkedAccountRepository(
                 displayName = user?.fullName?.trim()?.takeIf(String::isNotEmpty)
                     ?: session.linkedAccountDisplayName
                     ?: session.provider.displayName,
-                schoolName = user?.displaySchoolName ?: session.linkedAccountSchoolName,
+                schoolName = user?.displaySchoolName
+                    ?: SchoolDirectoryNameResolver.displayableName(session.linkedAccountSchoolName),
                 providerUserID = user?.userUID,
                 tokenPayload = LinkedSchoolTokenPayload.from(session),
             ),

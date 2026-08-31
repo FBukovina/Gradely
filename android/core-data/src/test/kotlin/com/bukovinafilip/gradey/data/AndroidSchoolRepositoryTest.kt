@@ -9,6 +9,7 @@ import com.bukovinafilip.gradey.model.Absence
 import com.bukovinafilip.gradey.model.AbsencePerSubject
 import com.bukovinafilip.gradey.model.AbsenceResponse
 import com.bukovinafilip.gradey.model.BakalariCredentials
+import com.bukovinafilip.gradey.model.CachedSchoolDirectory
 import com.bukovinafilip.gradey.model.DashboardData
 import com.bukovinafilip.gradey.model.LoginResponse
 import com.bukovinafilip.gradey.model.LinkedSchoolAccount
@@ -16,6 +17,7 @@ import com.bukovinafilip.gradey.model.LinkedAccountProvider
 import com.bukovinafilip.gradey.model.MarksResponse
 import com.bukovinafilip.gradey.model.NextLessonWidgetLesson
 import com.bukovinafilip.gradey.model.NextLessonWidgetSnapshot
+import com.bukovinafilip.gradey.model.SchoolDirectorySchool
 import com.bukovinafilip.gradey.model.SchoolProvider
 import com.bukovinafilip.gradey.model.StoredSession
 import com.bukovinafilip.gradey.model.Subject
@@ -223,6 +225,108 @@ class AndroidSchoolRepositoryTest {
         assertThat(failure).isInstanceOf(java.io.IOException::class.java)
         assertThat(cache.loadDashboard(session.cacheScope)).isEqualTo(cached)
         assertThat(repository.loadCachedDashboard()).isEqualTo(cached)
+    }
+
+    @Test
+    fun `dashboard resolves a placeholder Bakalari school name from the cached directory`() = runTest {
+        val session = validSession().copy(linkedAccountSchoolName = "Linked School")
+        val cache = RoomGradeyCache(InMemoryCacheEntryDao(), GradeyJson)
+        cache.saveSchoolDirectory(
+            CachedSchoolDirectory(
+                schools = listOf(
+                    SchoolDirectorySchool(
+                        id = "school",
+                        name = "Directory Gymnázium",
+                        town = "Praha",
+                        schoolURL = "https://school.example.cz/",
+                    ),
+                ),
+                cachedAtEpochMillis = 1,
+            ),
+        )
+        val client = FakeBakalariClient().apply {
+            user = { _, _ ->
+                UserResponse(
+                    fullName = "Student One",
+                    schoolOrganizationName = "název školy",
+                    schoolName = "nazev skoly",
+                )
+            }
+        }
+        val repository = repository(client, InMemorySchoolSessionStorage(session), cache)
+
+        val dashboard = repository.loadDashboard()
+
+        assertThat(dashboard.user?.displaySchoolName).isEqualTo("Directory Gymnázium")
+        assertThat(cache.loadDashboard(session.cacheScope)?.user?.displaySchoolName)
+            .isEqualTo("Directory Gymnázium")
+    }
+
+    @Test
+    fun `valid API school name wins over directory and linked metadata`() = runTest {
+        val session = validSession().copy(linkedAccountSchoolName = "Linked School")
+        val cache = RoomGradeyCache(InMemoryCacheEntryDao(), GradeyJson)
+        cache.saveSchoolDirectory(
+            CachedSchoolDirectory(
+                schools = listOf(
+                    SchoolDirectorySchool(
+                        id = "school",
+                        name = "Directory School",
+                        town = "Praha",
+                        schoolURL = session.baseURL,
+                    ),
+                ),
+                cachedAtEpochMillis = 1,
+            ),
+        )
+        val client = FakeBakalariClient().apply {
+            user = { _, _ ->
+                UserResponse(
+                    fullName = "Student One",
+                    schoolOrganizationName = "API School",
+                    schoolName = "Fallback API School",
+                )
+            }
+        }
+
+        val dashboard = repository(client, InMemorySchoolSessionStorage(session), cache).loadDashboard()
+
+        assertThat(dashboard.user?.displaySchoolName).isEqualTo("API School")
+    }
+
+    @Test
+    fun `ambiguous directory falls back to sanitized linked school metadata`() = runTest {
+        val session = validSession().copy(
+            baseURL = "https://school.example.cz/student",
+            linkedAccountSchoolName = "  Linked School  ",
+        )
+        val cache = RoomGradeyCache(InMemoryCacheEntryDao(), GradeyJson)
+        cache.saveSchoolDirectory(
+            CachedSchoolDirectory(
+                schools = listOf(
+                    SchoolDirectorySchool(
+                        "first",
+                        "First School",
+                        "Praha",
+                        "https://school.example.cz/first",
+                    ),
+                    SchoolDirectorySchool(
+                        "second",
+                        "Second School",
+                        "Praha",
+                        "https://school.example.cz/second",
+                    ),
+                ),
+                cachedAtEpochMillis = 1,
+            ),
+        )
+        val client = FakeBakalariClient().apply {
+            user = { _, _ -> UserResponse(fullName = "Student One", schoolName = "název školy") }
+        }
+
+        val dashboard = repository(client, InMemorySchoolSessionStorage(session), cache).loadDashboard()
+
+        assertThat(dashboard.user?.displaySchoolName).isEqualTo("Linked School")
     }
 
     @Test

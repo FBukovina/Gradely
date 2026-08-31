@@ -10,6 +10,7 @@ import com.bukovinafilip.gradey.domain.AbsenceSubjectResolutionProgress
 import com.bukovinafilip.gradey.domain.AbsenceSubjectResolutionSource
 import com.bukovinafilip.gradey.domain.AbsenceTerms
 import com.bukovinafilip.gradey.domain.GradeMath
+import com.bukovinafilip.gradey.domain.SchoolDirectoryNameResolver
 import com.bukovinafilip.gradey.domain.SchoolRepository
 import com.bukovinafilip.gradey.domain.SchoolSessionExpiredException
 import com.bukovinafilip.gradey.domain.SchoolURLNormalizer
@@ -500,10 +501,25 @@ class AndroidSchoolRepository(
         null
     }
 
-    private fun UserResponse.resolvedFor(session: StoredSession): UserResponse =
+    private suspend fun UserResponse.resolvedFor(session: StoredSession): UserResponse {
         displaySchoolName?.let { resolved ->
-            if (resolved == schoolName) this else copy(schoolName = resolved)
-        } ?: copy(schoolName = session.linkedAccountSchoolName)
+            return if (resolved == schoolName) this else copy(schoolName = resolved)
+        }
+
+        val directoryName = try {
+            cache.loadSchoolDirectory()?.schools?.let { schools ->
+                SchoolDirectoryNameResolver.resolve(session.baseURL, schools)
+            }
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: Throwable) {
+            null
+        }
+        return copy(
+            schoolName = directoryName
+                ?: SchoolDirectoryNameResolver.displayableName(session.linkedAccountSchoolName),
+        )
+    }
 }
 
 private data class TermTimetableLoadResult(

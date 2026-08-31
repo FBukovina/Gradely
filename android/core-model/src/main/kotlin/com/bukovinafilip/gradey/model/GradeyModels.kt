@@ -1042,14 +1042,19 @@ data class DemoFixture(
 fun Mark.normalizedWeight(): Double = max(0.0001, weight ?: 1.0)
 
 private fun String?.displayableSchoolName(): String? {
-    val trimmed = this?.trim()?.takeIf(String::isNotEmpty) ?: return null
+    val trimmed = this
+        ?.replace(unicodeWhitespaceEdges, "")
+        ?.takeIf(String::isNotEmpty)
+        ?: return null
     val normalized = Normalizer.normalize(trimmed, Normalizer.Form.NFD)
         .replace(Regex("\\p{M}+"), "")
         .lowercase(Locale.ROOT)
-        .split(Regex("\\s+"))
-        .joinToString(" ")
+        .replace(unicodeWhitespace, " ")
     return trimmed.takeUnless { normalized == "nazev skoly" }
 }
+
+private val unicodeWhitespace = Regex("(?U)\\s+")
+private val unicodeWhitespaceEdges = Regex("(?U)^\\s+|\\s+$")
 
 object FlexibleStringSerializer : KSerializer<String> {
     override val descriptor: SerialDescriptor = PrimitiveSerialDescriptor("FlexibleString", PrimitiveKind.STRING)

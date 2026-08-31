@@ -44,6 +44,19 @@ class SchoolReconnectPrefillTest {
     }
 
     @Test
+    fun placeholderSchoolNamesFallBackToProviderWithoutReenteringTheForm() {
+        val target = schoolAccount("school-a", schoolName = "Název školy")
+
+        val prefill = SchoolReconnectPrefills.resolve(
+            session = session(linkedAccountID = target.id, linkedSchoolName = " NÁZEV   ŠKOLY "),
+            account = target,
+            accounts = listOf(target),
+        )
+
+        assertThat(prefill?.schoolName).isEqualTo(LinkedAccountProvider.BAKALARI.displayName)
+    }
+
+    @Test
     fun unscopedSessionUsesOnlySupportedSchoolAndIgnoresMealAndUnsupportedAccounts() {
         val target = schoolAccount("school-a")
         val meal = LinkedSchoolAccount(

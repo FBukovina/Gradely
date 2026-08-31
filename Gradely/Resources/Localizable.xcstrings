@@ -14738,25 +14738,25 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pomoc, zpětná vazba a informace"
+            "value" : "Předplatné, pomoc, zpětná vazba a informace"
           }
         },
         "cs-US" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "pomoc, feedback a info o appce"
+            "value" : "předplatné, pomoc, feedback a info o appce"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Help, feedback & app info"
+            "value" : "Subscriptions, help, feedback & app info"
           }
         },
         "en-CO" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "help, feedback & app info"
+            "value" : "subscriptions, help, feedback & app info"
           }
         }
       }
@@ -17076,25 +17076,25 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Získej pomoc, pošli zpětnou vazbu nebo podpoř další vývoj."
+            "value" : "Zobraz předplatné podpory, získej pomoc nebo pošli zpětnou vazbu."
           }
         },
         "cs-US" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "získej pomoc, pošli zpětnou vazbu nebo podpoř další vývoj."
+            "value" : "zobraz předplatné podpory, získej pomoc nebo pošli zpětnou vazbu."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Get help, send feedback, or support continued development."
+            "value" : "View Support subscriptions, get help, or send feedback."
           }
         },
         "en-CO" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "get help, send feedback, or support continued development."
+            "value" : "view support subscriptions, get help, or send feedback."
           }
         }
       }
@@ -17104,25 +17104,25 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pomoc a zpětná vazba"
+            "value" : "Předplatné, pomoc a zpětná vazba"
           }
         },
         "cs-US" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "pomoc a zpětná vazba"
+            "value" : "předplatné, pomoc a zpětná vazba"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Help & feedback"
+            "value" : "Subscriptions, help & feedback"
           }
         },
         "en-CO" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "help & feedback"
+            "value" : "subscriptions, help & feedback"
           }
         }
       }
@@ -18715,6 +18715,62 @@
         }
       }
     },
+    "support.plans.price.monthly" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ měsíčně"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ měsíčně"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ per month"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ per month"
+          }
+        }
+      }
+    },
+    "support.plans.price.yearly" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ ročně"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ ročně"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ per year"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ per year"
+          }
+        }
+      }
+    },
     "support.plans.renews" : {
       "localizations" : {
         "cs" : {
@@ -19168,25 +19224,25 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Podpořit Gradey"
+            "value" : "Předplatné podpory a příspěvky"
           }
         },
         "cs-US" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "podpořit Gradey"
+            "value" : "předplatné podpory a příspěvky"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Support Gradey"
+            "value" : "Support subscriptions & tips"
           }
         },
         "en-CO" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "support Gradey"
+            "value" : "support subscriptions & tips"
           }
         }
       }

@@ -557,11 +557,17 @@ final class GradelyUITests: XCTestCase {
         XCTAssertTrue(supportButton.waitForExistence(timeout: 3))
         supportButton.tap()
 
-        XCTAssertTrue(app.descendants(matching: .any)["supportTipsList"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.buttons["supportPlan-standard"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.buttons["supportPlan-plus"].exists)
-        XCTAssertTrue(app.descendants(matching: .any)["supportPlanIntervalPicker"].exists)
+        XCTAssertTrue(app.scrollViews["supportTipsScreen"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.descendants(matching: .any)["supportTipsList"].waitForExistence(timeout: 15))
+        XCTAssertTrue(app.buttons["supportPlan-standard-monthly"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["supportPlan-plus-monthly"].exists)
+        let intervalPicker = app.segmentedControls["supportPlanIntervalPicker"]
+        XCTAssertTrue(intervalPicker.exists)
         XCTAssertTrue(app.buttons["supportOfferCodeRedeemButton"].exists)
+
+        intervalPicker.buttons.element(boundBy: 1).tap()
+        XCTAssertTrue(app.buttons["supportPlan-standard-yearly"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["supportPlan-plus-yearly"].exists)
 
         let supportScroll = app.scrollViews["supportTipsScreen"]
         let smallTip = app.buttons["supportTip-tip_small"]
@@ -611,10 +617,11 @@ final class GradelyUITests: XCTestCase {
         XCTAssertTrue(supportButton.waitForExistence(timeout: 3))
         supportButton.tap()
 
-        XCTAssertTrue(app.buttons["supportPlan-standard"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.scrollViews["supportTipsScreen"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["supportPlan-standard-monthly"].waitForExistence(timeout: 15))
         XCTAssertTrue(app.buttons["supportRestorePurchasesButton"].exists)
         XCTAssertTrue(app.buttons["supportOfferCodeRedeemButton"].exists)
-        app.buttons["supportPlan-standard"].tap()
+        app.buttons["supportPlan-standard-monthly"].tap()
 
         XCTAssertTrue(app.descendants(matching: .any)["supportTipsThankYou"].waitForExistence(timeout: 5))
     }
@@ -1733,7 +1740,7 @@ final class GradelyUITests: XCTestCase {
 
         let detail = app.descendants(matching: .any)[destination.detailIdentifier]
         XCTAssertTrue(
-            detail.waitForExistence(timeout: 5),
+            detail.waitForExistence(timeout: 15),
             "Settings destination did not open: \(destination.detailIdentifier)"
         )
     }

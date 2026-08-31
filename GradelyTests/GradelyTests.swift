@@ -884,6 +884,26 @@ struct GradelyTests {
         #expect(entitlement.hasEarlyAccess)
     }
 
+    @Test func supportCatalogMergesIncompleteRevenueCatPlansWithStoreKitProducts() {
+        let revenueCatPlan = SupportPlanOption(
+            id: "revenuecat_support_standard_monthly",
+            productIdentifier: "com.bukovinafilip.BakalariMarks.support.standard.monthly",
+            tier: .standard,
+            interval: .monthly,
+            localizedPrice: "$1.99"
+        )
+        let fallbackPlans = SupportTipCatalog.previewSubscriptionPlans
+
+        let merged = SupportTipCatalog.mergingSubscriptionPlans(
+            preferred: [revenueCatPlan],
+            fallback: fallbackPlans
+        )
+
+        #expect(merged.count == 4)
+        #expect(merged.first?.id == revenueCatPlan.id)
+        #expect(merged.map(\.productIdentifier) == SupportTipCatalog.subscriptionProducts.map(\.productIdentifier))
+    }
+
     private func testMark(
         markText: String,
         caption: String? = nil,

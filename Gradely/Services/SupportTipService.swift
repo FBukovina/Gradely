@@ -166,22 +166,32 @@ final class RevenueCatSupportTipService: SupportTipProviding {
             throw SupportTipServiceError.notConfigured
         }
 
-        let offerings = try await Purchases.shared.offerings()
-        let tipOffering = offerings.offering(identifier: SupportTipCatalog.tipsOfferingIdentifier)
-            ?? offerings.current
-        let supportOffering = offerings.offering(identifier: SupportTipCatalog.supportOfferingIdentifier)
+        var tipOffering: Offering?
+        var supportOffering: Offering?
+        var offeringsError: Error?
+
+        do {
+            let offerings = try await Purchases.shared.offerings()
+            tipOffering = offerings.offering(identifier: SupportTipCatalog.tipsOfferingIdentifier)
+                ?? offerings.current
+            supportOffering = offerings.offering(identifier: SupportTipCatalog.supportOfferingIdentifier)
+        } catch {
+            // Subscription products are also loaded directly from StoreKit below.
+            // This keeps the App Store purchase surface available when RevenueCat
+            // is temporarily unavailable or its support offering is incomplete.
+            offeringsError = error
+        }
+
+        let tipPackages = orderedTipPackages(from: tipOffering)
+        let subscriptionPackages = orderedSubscriptionPackages(from: supportOffering)
 
         var packages: [Package] = []
-        if let tipOffering {
-            packages.append(contentsOf: orderedTipPackages(from: tipOffering))
-        }
-        if let supportOffering {
-            packages.append(contentsOf: orderedSubscriptionPackages(from: supportOffering))
-        }
+        packages.append(contentsOf: tipPackages)
+        packages.append(contentsOf: subscriptionPackages)
 
         packagesByIdentifier = Dictionary(uniqueKeysWithValues: packages.map { ($0.identifier, $0) })
 
-        let tips = orderedTipPackages(from: tipOffering).map { package in
+        let tips = tipPackages.map { package in
             SupportTipOption(
                 id: package.identifier,
                 productIdentifier: package.storeProduct.productIdentifier,
@@ -191,7 +201,7 @@ final class RevenueCatSupportTipService: SupportTipProviding {
                 localizedPrice: package.localizedPriceString
             )
         }
-        var plans = orderedSubscriptionPackages(from: supportOffering).compactMap { package -> SupportPlanOption? in
+        let revenueCatPlans = subscriptionPackages.compactMap { package -> SupportPlanOption? in
             guard let mapped = SupportTipCatalog.subscription(forPackageIdentifier: package.identifier)
                     ?? SupportTipCatalog.subscription(forProductIdentifier: package.storeProduct.productIdentifier)
             else {
@@ -205,14 +215,14 @@ final class RevenueCatSupportTipService: SupportTipProviding {
                 localizedPrice: package.localizedPriceString
             )
         }
+        var plans = revenueCatPlans
         #if canImport(StoreKit)
-        if plans.isEmpty {
-            let storeKitCatalog = await SupportStoreKitLoader.subscriptionPlans()
-            plans = storeKitCatalog.plans
-            storeKitProductsByIdentifier = storeKitCatalog.productsByIdentifier
-        } else {
-            storeKitProductsByIdentifier = [:]
-        }
+        let storeKitCatalog = await SupportStoreKitLoader.subscriptionPlans()
+        storeKitProductsByIdentifier = storeKitCatalog.productsByIdentifier
+        plans = SupportTipCatalog.mergingSubscriptionPlans(
+            preferred: revenueCatPlans,
+            fallback: storeKitCatalog.plans
+        )
         #endif
         #if DEBUG
         if plans.isEmpty {
@@ -221,16 +231,20 @@ final class RevenueCatSupportTipService: SupportTipProviding {
         #endif
 
         guard !tips.isEmpty || !plans.isEmpty else {
+            if let offeringsError {
+                throw offeringsError
+            }
             throw SupportTipServiceError.emptyOffering
         }
 
-        let customerInfo = try await Purchases.shared.customerInfo()
+        let customerInfo = (try? await Purchases.shared.customerInfo())
+            ?? Purchases.shared.cachedCustomerInfo
         let entitlement = entitlement(from: customerInfo)
         return SupportCatalog(
             tips: tips,
             plans: plans,
             entitlement: entitlement,
-            managementURL: customerInfo.managementURL ?? SupportTipCatalog.managementURL
+            managementURL: customerInfo?.managementURL ?? SupportTipCatalog.managementURL
         )
     }
 

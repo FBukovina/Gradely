@@ -4,6 +4,7 @@ import com.bukovinafilip.gradey.domain.GradeyAuthRepository
 import com.bukovinafilip.gradey.domain.GradeyIdentityChangedException
 import com.bukovinafilip.gradey.domain.LinkedAccountRepository
 import com.bukovinafilip.gradey.domain.SchoolDirectoryNameResolver
+import com.bukovinafilip.gradey.domain.SchoolReconnectIdentities
 import com.bukovinafilip.gradey.model.GradeyAccountSettingsSnapshot
 import com.bukovinafilip.gradey.model.GradeyAuthSession
 import com.bukovinafilip.gradey.model.LinkedSchoolAccount
@@ -114,6 +115,24 @@ class SupabaseLinkedAccountRepository(
         user: UserResponse?,
     ): LinkedSchoolAccount {
         require(accountID.isNotBlank()) { "Missing linked school account." }
+        val existing = cacheMutex.withLock {
+            accountLoader().firstOrNull {
+                it.id == accountID && it.provider.isSupportedSchoolProvider
+            }
+        }
+        if (
+            !SchoolReconnectIdentities.match(
+                existingProviderUserID = existing?.providerUserID,
+                candidateProviderUserID = user?.userUID,
+            )
+        ) {
+            throw GradeyFunctionException(
+                function = "relink-school-account",
+                statusCode = 422,
+                code = "SCHOOL_IDENTITY_MISMATCH",
+                message = "The refreshed credentials could not be proven to belong to the linked account.",
+            )
+        }
         return requestAndUpdateCache(
             request = { ownerSession ->
                 post(

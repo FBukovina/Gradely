@@ -5,6 +5,7 @@ import com.bukovinafilip.gradey.domain.GradeyAuthRepository
 import com.bukovinafilip.gradey.domain.GradeyHistoryRepository
 import com.bukovinafilip.gradey.domain.LinkedAccountRepository
 import com.bukovinafilip.gradey.domain.SchoolDirectoryNameResolver
+import com.bukovinafilip.gradey.domain.SchoolReconnectIdentities
 import com.bukovinafilip.gradey.model.GradeyAuthSession
 import com.bukovinafilip.gradey.model.GradeyAccount
 import com.bukovinafilip.gradey.model.GradeyAccountSettingsSnapshot
@@ -96,8 +97,14 @@ class LocalLinkedAccountRepository(
     ): LinkedSchoolAccount {
         val existing = localAccounts().firstOrNull { it.id == accountID }
             ?: throw IllegalArgumentException("Linked school account was not found.")
+        require(
+            existing.provider.isSupportedSchoolProvider &&
+                SchoolReconnectIdentities.match(existing.providerUserID, user?.userUID),
+        ) {
+            "The refreshed credentials could not be proven to belong to the linked account."
+        }
         val updated = existing.copy(
-            providerUserID = user?.userUID ?: existing.providerUserID,
+            providerUserID = user?.userUID?.trim(),
             displayName = user?.fullName ?: existing.displayName,
             schoolName = resolvedLocalLinkedSchoolName(user, existing.schoolName),
         )

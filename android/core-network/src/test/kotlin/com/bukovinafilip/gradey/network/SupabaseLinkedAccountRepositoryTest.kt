@@ -313,7 +313,11 @@ class SupabaseLinkedAccountRepositoryTest {
     @Test
     fun `school link and reconnect never send placeholder school metadata`() = runTest {
         val session = schoolSession().copy(linkedAccountSchoolName = " NÁzev   školy ")
-        val user = UserResponse(fullName = "Student Name", schoolName = "název školy")
+        val user = UserResponse(
+            fullName = "Student Name",
+            schoolName = "název školy",
+            userUID = "provider-user",
+        )
         server.enqueue(jsonResponse(accountResponse("linked")))
         server.enqueue(jsonResponse(accountResponse("linked")))
 
@@ -416,6 +420,59 @@ class SupabaseLinkedAccountRepositoryTest {
             .isEqualTo("student")
         assertThat(result.status).isEqualTo(LinkedAccountStatus.ACTIVE)
         assertThat(storedAccounts.single().status).isEqualTo(LinkedAccountStatus.ACTIVE)
+    }
+
+    @Test
+    fun `reconnect rejects missing blank and mismatched provider identity before network or cache write`() = runTest {
+        val original = account("school", status = LinkedAccountStatus.ACTION_REQUIRED)
+        storedAccounts = listOf(original)
+        val candidates = listOf(
+            null,
+            UserResponse("Student", userUID = null),
+            UserResponse("Student", userUID = ""),
+            UserResponse("Student", userUID = "   "),
+            UserResponse("Another student", userUID = "another-provider-user"),
+        )
+
+        candidates.forEach { candidate ->
+            val failure = runCatching {
+                repository().reconnectSchoolAccount(
+                    accountID = original.id,
+                    session = schoolSession(),
+                    user = candidate,
+                )
+            }.exceptionOrNull()
+
+            assertThat(failure).isInstanceOf(GradeyFunctionException::class.java)
+            failure as GradeyFunctionException
+            assertThat(failure.function).isEqualTo("relink-school-account")
+            assertThat(failure.statusCode).isEqualTo(422)
+            assertThat(failure.code).isEqualTo("SCHOOL_IDENTITY_MISMATCH")
+        }
+
+        assertThat(server.requestCount).isEqualTo(0)
+        assertThat(accountStoreWrites).isEqualTo(0)
+        assertThat(storedAccounts).containsExactly(original)
+    }
+
+    @Test
+    fun `reconnect rejects an existing account without a provider identity`() = runTest {
+        val original = account("school", status = LinkedAccountStatus.ACTION_REQUIRED)
+            .copy(providerUserID = " ")
+        storedAccounts = listOf(original)
+
+        val failure = runCatching {
+            repository().reconnectSchoolAccount(
+                accountID = original.id,
+                session = schoolSession(),
+                user = UserResponse("Student", userUID = "provider-user"),
+            )
+        }.exceptionOrNull()
+
+        assertThat(failure).isInstanceOf(GradeyFunctionException::class.java)
+        assertThat(server.requestCount).isEqualTo(0)
+        assertThat(accountStoreWrites).isEqualTo(0)
+        assertThat(storedAccounts).containsExactly(original)
     }
 
     @Test

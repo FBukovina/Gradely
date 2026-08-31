@@ -1,6 +1,6 @@
 begin;
 
-select plan(62);
+select plan(73);
 
 select has_column(
   'public',
@@ -280,6 +280,15 @@ select ok(
 );
 
 select ok(
+  not has_function_privilege(
+    'anon',
+    'public.relink_owned_school_link(uuid,uuid,public.linked_account_provider,text,text,text,text,jsonb,text)',
+    'execute'
+  ),
+  'anonymous clients cannot invoke credential rotation directly'
+);
+
+select ok(
   not (
     select prosecdef
     from pg_proc
@@ -293,6 +302,229 @@ select ok(
     'public.relink_owned_school_link(uuid,uuid,public.linked_account_provider,text,text,text,text,jsonb,text)'::regprocedure
   ) ilike '%account.id = p_account_id%account.user_id = p_user_id%',
   'school reconnect rechecks ownership while locking the requested row'
+);
+
+select ok(
+  pg_get_functiondef(
+    'public.relink_owned_school_link(uuid,uuid,public.linked_account_provider,text,text,text,text,jsonb,text)'::regprocedure
+  ) ilike '%nullif(%pg_catalog.btrim(v_existing.provider_user_id)%''%' and
+  pg_get_functiondef(
+    'public.relink_owned_school_link(uuid,uuid,public.linked_account_provider,text,text,text,text,jsonb,text)'::regprocedure
+  ) ilike '%nullif(%pg_catalog.btrim(p_provider_user_id)%''%',
+  'school reconnect canonicalizes both existing and candidate provider users'
+);
+
+select ok(
+  pg_get_functiondef(
+    'public.relink_owned_school_link(uuid,uuid,public.linked_account_provider,text,text,text,text,jsonb,text)'::regprocedure
+  ) ilike '%v_existing_provider_user_id is null%v_candidate_provider_user_id is null%v_existing_provider_user_id <> v_candidate_provider_user_id%',
+  'school reconnect rejects blank or different canonical provider users'
+);
+
+select ok(
+  pg_catalog.strpos(
+    pg_get_functiondef(
+      'public.relink_owned_school_link(uuid,uuid,public.linked_account_provider,text,text,text,text,jsonb,text)'::regprocedure
+    ),
+    'if v_existing_provider_user_id is null'
+  ) > 0 and
+  pg_catalog.strpos(
+    pg_get_functiondef(
+      'public.relink_owned_school_link(uuid,uuid,public.linked_account_provider,text,text,text,text,jsonb,text)'::regprocedure
+    ),
+    'if v_existing_provider_user_id is null'
+  ) < pg_catalog.strpos(
+    pg_get_functiondef(
+      'public.relink_owned_school_link(uuid,uuid,public.linked_account_provider,text,text,text,text,jsonb,text)'::regprocedure
+    ),
+    'insert into public.encrypted_provider_secrets'
+  ),
+  'school reconnect validates provider identity before writing a secret'
+);
+
+insert into auth.users (id, email)
+values (
+  '10000000-0000-0000-0000-000000000001'::uuid,
+  'strict-relink-pgtap@example.invalid'
+);
+
+insert into public.encrypted_provider_secrets (id, user_id, ciphertext)
+values
+  (
+    '10000000-0000-0000-0000-000000000101'::uuid,
+    '10000000-0000-0000-0000-000000000001'::uuid,
+    '\x01'::bytea
+  ),
+  (
+    '10000000-0000-0000-0000-000000000102'::uuid,
+    '10000000-0000-0000-0000-000000000001'::uuid,
+    '\x02'::bytea
+  ),
+  (
+    '10000000-0000-0000-0000-000000000103'::uuid,
+    '10000000-0000-0000-0000-000000000001'::uuid,
+    '\x03'::bytea
+  ),
+  (
+    '10000000-0000-0000-0000-000000000104'::uuid,
+    '10000000-0000-0000-0000-000000000001'::uuid,
+    '\x04'::bytea
+  );
+
+insert into public.linked_accounts (
+  id,
+  user_id,
+  provider,
+  provider_user_id,
+  base_url,
+  display_name,
+  status,
+  secret_id
+)
+values
+  (
+    '10000000-0000-0000-0000-000000000201'::uuid,
+    '10000000-0000-0000-0000-000000000001'::uuid,
+    'bakalari'::public.linked_account_provider,
+    'student-a',
+    'https://strict-relink-a.example/',
+    'Strict relink mismatch',
+    'action_required'::public.linked_account_status,
+    '10000000-0000-0000-0000-000000000101'::uuid
+  ),
+  (
+    '10000000-0000-0000-0000-000000000202'::uuid,
+    '10000000-0000-0000-0000-000000000001'::uuid,
+    'bakalari'::public.linked_account_provider,
+    '   ',
+    'https://strict-relink-b.example/',
+    'Strict relink blank existing',
+    'action_required'::public.linked_account_status,
+    '10000000-0000-0000-0000-000000000102'::uuid
+  ),
+  (
+    '10000000-0000-0000-0000-000000000203'::uuid,
+    '10000000-0000-0000-0000-000000000001'::uuid,
+    'bakalari'::public.linked_account_provider,
+    'student-c',
+    'https://strict-relink-c.example/',
+    'Strict relink blank candidate',
+    'action_required'::public.linked_account_status,
+    '10000000-0000-0000-0000-000000000103'::uuid
+  ),
+  (
+    '10000000-0000-0000-0000-000000000204'::uuid,
+    '10000000-0000-0000-0000-000000000001'::uuid,
+    'bakalari'::public.linked_account_provider,
+    '  student-d  ',
+    'https://strict-relink-d.example/',
+    'Strict relink canonical match',
+    'action_required'::public.linked_account_status,
+    '10000000-0000-0000-0000-000000000104'::uuid
+  );
+
+select throws_ok(
+  $test$
+    select public.relink_owned_school_link(
+      '10000000-0000-0000-0000-000000000001'::uuid,
+      '10000000-0000-0000-0000-000000000201'::uuid,
+      'bakalari'::public.linked_account_provider,
+      'student-b',
+      'https://strict-relink-a.example/',
+      'Strict relink mismatch',
+      null,
+      '{"provider":"bakalari"}'::jsonb,
+      '01234567890123456789012345678901'
+    )
+  $test$,
+  '22023',
+  'provider user does not match the owned account',
+  'school reconnect rejects credentials for a different provider user'
+);
+
+select throws_ok(
+  $test$
+    select public.relink_owned_school_link(
+      '10000000-0000-0000-0000-000000000001'::uuid,
+      '10000000-0000-0000-0000-000000000202'::uuid,
+      'bakalari'::public.linked_account_provider,
+      'student-b',
+      'https://strict-relink-b.example/',
+      'Strict relink blank existing',
+      null,
+      '{"provider":"bakalari"}'::jsonb,
+      '01234567890123456789012345678901'
+    )
+  $test$,
+  '22023',
+  'provider user does not match the owned account',
+  'school reconnect rejects a legacy account with a blank provider user'
+);
+
+select throws_ok(
+  $test$
+    select public.relink_owned_school_link(
+      '10000000-0000-0000-0000-000000000001'::uuid,
+      '10000000-0000-0000-0000-000000000203'::uuid,
+      'bakalari'::public.linked_account_provider,
+      '   ',
+      'https://strict-relink-c.example/',
+      'Strict relink blank candidate',
+      null,
+      '{"provider":"bakalari"}'::jsonb,
+      '01234567890123456789012345678901'
+    )
+  $test$,
+  '22023',
+  'provider user does not match the owned account',
+  'school reconnect rejects credentials with a blank provider user'
+);
+
+select lives_ok(
+  $test$
+    select public.relink_owned_school_link(
+      '10000000-0000-0000-0000-000000000001'::uuid,
+      '10000000-0000-0000-0000-000000000204'::uuid,
+      'bakalari'::public.linked_account_provider,
+      ' student-d ',
+      'https://strict-relink-d.example/',
+      'Strict relink canonical match',
+      null,
+      '{"provider":"bakalari"}'::jsonb,
+      '01234567890123456789012345678901'
+    )
+  $test$,
+  'school reconnect accepts equal canonical provider users'
+);
+
+select is(
+  (
+    select account.provider_user_id
+    from public.linked_accounts as account
+    where account.id = '10000000-0000-0000-0000-000000000204'::uuid
+  ),
+  'student-d',
+  'school reconnect persists the canonical provider user'
+);
+
+select is(
+  (
+    select account.secret_id = '10000000-0000-0000-0000-000000000104'::uuid
+    from public.linked_accounts as account
+    where account.id = '10000000-0000-0000-0000-000000000204'::uuid
+  ),
+  false,
+  'a valid school reconnect still rotates the encrypted provider secret'
+);
+
+select is(
+  (
+    select pg_catalog.count(*)
+    from public.encrypted_provider_secrets as secret
+    where secret.user_id = '10000000-0000-0000-0000-000000000001'::uuid
+  ),
+  4::bigint,
+  'rejected reconnects create no orphaned secrets and a valid rotation cleans up its old secret'
 );
 
 select has_function(

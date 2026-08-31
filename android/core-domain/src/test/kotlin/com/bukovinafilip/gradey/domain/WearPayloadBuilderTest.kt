@@ -104,6 +104,22 @@ class WearPayloadBuilderTest {
     }
 
     @Test
+    fun buildsCredentialFreeSignedInPayloadWithoutATimetable() {
+        val payload = WearPayloadBuilder.signedIn(
+            week = null,
+            supportTier = GradeySupportTier.STANDARD,
+            generatedAtEpochMillis = 123,
+        )
+
+        assertThat(payload.isSignedIn).isTrue()
+        assertThat(payload.generatedAtEpochMillis).isEqualTo(123)
+        assertThat(payload.supportTier).isEqualTo(GradeySupportTier.STANDARD)
+        assertThat(payload.auth).isNull()
+        assertThat(payload.user).isNull()
+        assertThat(payload.timetable).isNull()
+    }
+
+    @Test
     fun mapsNonWorkDayAsNotSchoolDayAndFallsBackFromMissingDate() {
         val week = TimetableWeek(
             weekStart = "2026-08-31",

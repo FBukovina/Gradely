@@ -97,6 +97,7 @@ import com.bukovinafilip.gradey.domain.AbsenceSubjectResolutionFailure
 import com.bukovinafilip.gradey.domain.AbsenceSubjectResolutionProgress
 import com.bukovinafilip.gradey.domain.SchoolSessionExpiredException
 import com.bukovinafilip.gradey.domain.SchoolCloudMutationToken
+import com.bukovinafilip.gradey.domain.SchoolReconnectIdentities
 import com.bukovinafilip.gradey.domain.SchoolReconnectPrefill
 import com.bukovinafilip.gradey.domain.SchoolReconnectPrefills
 import com.bukovinafilip.gradey.domain.TimetableDates
@@ -156,6 +157,8 @@ import com.bukovinafilip.gradey.navigation.navigateToMainDestination
 import com.bukovinafilip.gradey.navigation.resetToToday
 import com.bukovinafilip.gradey.widgets.updateNextLessonWidgets
 import com.bukovinafilip.gradey.wear.PhoneWearSyncPublisher
+import com.bukovinafilip.gradey.wear.loadCurrentWearTimetableCacheWhenNeeded
+import com.bukovinafilip.gradey.wear.publishCredentialFreeWearState
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import kotlinx.coroutines.CancellationException
@@ -285,6 +288,8 @@ private const val CURRENT_SCHOOL_LINK_MUTATION_ID = "current-school-link"
 class MainActivity : ComponentActivity() {
     private var deepLinkSequence = 0L
     private val deepLinkRequests = MutableStateFlow(DeepLinkRequest())
+
+    internal fun currentDeepLinkRequestForTesting(): DeepLinkRequest = deepLinkRequests.value
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -1349,6 +1354,45 @@ private fun GradeyApp(
                 )
             }
         }
+        if (storedSession != null) {
+            val wearToday = TimetableDates.today()
+            val cachedCurrentWearTimetable = try {
+                loadCurrentWearTimetableCacheWhenNeeded(
+                    displayedTimetable = timetable,
+                    today = wearToday,
+                    loadCachedTimetable = graph.schoolRepository::loadCachedTimetable,
+                )
+            } catch (error: CancellationException) {
+                throw error
+            } catch (_: Throwable) {
+                null
+            }
+            requireCurrent()
+            try {
+                publishCredentialFreeWearState(
+                    publicationSession = storedSession,
+                    displayedTimetable = timetable,
+                    cachedCurrentTimetable = cachedCurrentWearTimetable,
+                    user = dashboardViewModel.currentDashboard?.user,
+                    supportTier = supportTier,
+                    currentSession = graph.schoolRepository::currentStoredSession,
+                    isStillCurrent = { isStillCurrent() },
+                    today = wearToday,
+                    publish = { payload, publicationGuard ->
+                        PhoneWearSyncPublisher.publish(
+                            context.applicationContext,
+                            payload,
+                            publicationGuard,
+                        )
+                    },
+                )
+            } catch (error: CancellationException) {
+                throw error
+            } catch (_: Throwable) {
+                // Cached app startup remains usable when no Wear OS device is paired.
+            }
+            requireCurrent()
+        }
     }
 
     suspend fun linkCurrentStravaAccountIfNeeded(session: StravaCZStoredSession): Boolean {
@@ -2009,6 +2053,14 @@ private fun GradeyApp(
                 cloudMutationToken!!,
             )
             mutationOwner.requireCurrent()
+            if (
+                !SchoolReconnectIdentities.match(
+                    existingProviderUserID = linked.providerUserID,
+                    candidateProviderUserID = candidate.dashboard.user?.userUID,
+                )
+            ) {
+                return context.getString(R.string.error_linked_account)
+            }
             val updated = graph.linkedAccountRepository.reconnectSchoolAccount(
                 linked.id,
                 candidate.session,
@@ -3001,35 +3053,32 @@ private fun GradeyApp(
         val publicationSession = graph.schoolRepository.currentStoredSession() ?: return
         val displayedTimetable = timetable
         val today = TimetableDates.today()
-        val currentWeekStart = TimetableDates.apiDateString(TimetableDates.monday(today))
-        val cachedCurrent = if (
-            WearPayloadBuilder.currentWeekProjection(displayedTimetable, null, today) == null
-        ) {
-            try {
-                graph.schoolRepository.loadCachedTimetable(currentWeekStart)
-            } catch (error: CancellationException) {
-                throw error
-            } catch (_: Throwable) {
-                null
-            }
-        } else {
+        val cachedCurrent = try {
+            loadCurrentWearTimetableCacheWhenNeeded(
+                displayedTimetable = displayedTimetable,
+                today = today,
+                loadCachedTimetable = graph.schoolRepository::loadCachedTimetable,
+            )
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: Throwable) {
             null
         }
-        val currentTimetable = WearPayloadBuilder.currentWeekProjection(displayedTimetable, cachedCurrent, today)
-            ?: return
         try {
-            PhoneWearSyncPublisher.publish(
-                context.applicationContext,
-                WearPayloadBuilder.signedIn(
-                    currentTimetable,
-                    dashboardViewModel.currentDashboard?.user,
-                    supportTier,
-                ),
-                isStillCurrent = {
-                    activeSchoolSessionForScope(
-                        publicationSession.cacheScope,
-                        graph.schoolRepository.currentStoredSession(),
-                    ) != null
+            publishCredentialFreeWearState(
+                publicationSession = publicationSession,
+                displayedTimetable = displayedTimetable,
+                cachedCurrentTimetable = cachedCurrent,
+                user = dashboardViewModel.currentDashboard?.user,
+                supportTier = supportTier,
+                currentSession = graph.schoolRepository::currentStoredSession,
+                today = today,
+                publish = { payload, publicationGuard ->
+                    PhoneWearSyncPublisher.publish(
+                        context.applicationContext,
+                        payload,
+                        publicationGuard,
+                    )
                 },
             )
         } catch (error: CancellationException) {

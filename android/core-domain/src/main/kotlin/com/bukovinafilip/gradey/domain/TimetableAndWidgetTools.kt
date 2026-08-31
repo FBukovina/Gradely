@@ -275,7 +275,7 @@ object WearPayloadBuilder {
     }
 
     fun signedIn(
-        week: TimetableWeek,
+        week: TimetableWeek?,
         user: UserResponse? = null,
         supportTier: GradeySupportTier = GradeySupportTier.NONE,
         generatedAtEpochMillis: Long = System.currentTimeMillis(),
@@ -291,7 +291,7 @@ object WearPayloadBuilder {
                 classAbbrev = it.classAbbrev,
             )
         },
-        timetable = timetable(week, generatedAtEpochMillis, locale),
+        timetable = week?.let { timetable(it, generatedAtEpochMillis, locale) },
     )
 
     fun timetable(

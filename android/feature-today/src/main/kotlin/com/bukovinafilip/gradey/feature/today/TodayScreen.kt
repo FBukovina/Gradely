@@ -539,7 +539,9 @@ private fun SchoolConnectionNotice(
                 }
             }
             Text(
-                text = stringResource(R.string.today_reconnect_fallback),
+                text = account.actionRequiredReason
+                    ?.takeIf { it.isNotBlank() }
+                    ?: stringResource(R.string.today_reconnect_fallback),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 13.sp,
                 lineHeight = 18.sp,

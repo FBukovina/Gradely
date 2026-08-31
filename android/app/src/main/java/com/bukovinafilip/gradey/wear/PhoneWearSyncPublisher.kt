@@ -2,11 +2,18 @@ package com.bukovinafilip.gradey.wear
 
 import android.annotation.SuppressLint
 import android.content.Context
+import com.bukovinafilip.gradey.domain.TimetableDates
+import com.bukovinafilip.gradey.domain.WearPayloadBuilder
 import com.bukovinafilip.gradey.model.GradeyWearSyncContract
 import com.bukovinafilip.gradey.model.GradeyWearSyncPayload
+import com.bukovinafilip.gradey.model.GradeySupportTier
+import com.bukovinafilip.gradey.model.StoredSession
+import com.bukovinafilip.gradey.model.TimetableWeek
+import com.bukovinafilip.gradey.model.UserResponse
 import com.bukovinafilip.gradey.network.GradeyJson
 import com.google.android.gms.wearable.PutDataMapRequest
 import com.google.android.gms.wearable.Wearable
+import java.time.LocalDate
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
@@ -63,6 +70,49 @@ object PhoneWearSyncPublisher {
     private const val GENERATION_PREFERENCES_NAME = "gradey-wear-sync-publisher"
     private const val LAST_GENERATION_KEY = "last-generation.v1"
     private val publishCoordinator = WearPublishCoordinator()
+}
+
+internal suspend fun publishCredentialFreeWearState(
+    publicationSession: StoredSession,
+    displayedTimetable: TimetableWeek?,
+    cachedCurrentTimetable: TimetableWeek?,
+    user: UserResponse?,
+    supportTier: GradeySupportTier,
+    currentSession: suspend () -> StoredSession?,
+    isStillCurrent: suspend () -> Boolean = { true },
+    today: LocalDate = TimetableDates.today(),
+    publish: suspend (
+        payload: GradeyWearSyncPayload,
+        isStillCurrent: suspend () -> Boolean,
+    ) -> Boolean,
+): Boolean {
+    val currentTimetable = WearPayloadBuilder.currentWeekProjection(
+        preferred = displayedTimetable,
+        cachedCurrent = cachedCurrentTimetable,
+        today = today,
+    )
+    val payload = WearPayloadBuilder.signedIn(
+        week = currentTimetable,
+        user = user,
+        supportTier = supportTier,
+    )
+    check(payload.auth == null) { "Phone-to-watch snapshots must not contain school credentials." }
+    return publish(payload) {
+        isStillCurrent() && currentSession()?.cacheScope == publicationSession.cacheScope
+    }
+}
+
+internal suspend fun loadCurrentWearTimetableCacheWhenNeeded(
+    displayedTimetable: TimetableWeek?,
+    today: LocalDate = TimetableDates.today(),
+    loadCachedTimetable: suspend (weekStart: String) -> TimetableWeek?,
+): TimetableWeek? {
+    if (WearPayloadBuilder.currentWeekProjection(displayedTimetable, null, today) != null) {
+        return null
+    }
+    return loadCachedTimetable(
+        TimetableDates.apiDateString(TimetableDates.monday(today)),
+    )
 }
 
 internal fun nextWearPayloadGeneration(previous: Long?, requested: Long): Long = when (previous) {

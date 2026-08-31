@@ -89,6 +89,9 @@ dependencies {
     debugImplementation(libs.firebase.appcheck.debug)
     androidTestImplementation(enforcedPlatform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
+    androidTestImplementation(libs.androidx.test.espresso.core)
+    androidTestImplementation(libs.androidx.test.ext.junit)
+    androidTestImplementation(libs.androidx.test.runner)
     testImplementation(libs.junit)
     testImplementation(libs.truth)
 }

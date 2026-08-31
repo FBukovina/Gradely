@@ -7,7 +7,6 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
-import androidx.annotation.StringRes
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.enableEdgeToEdge
@@ -61,6 +60,9 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.FileProvider
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.rememberNavController
 import com.bukovinafilip.gradey.feature.absence.AbsenceScreen
 import com.bukovinafilip.gradey.feature.absence.AbsenceStateScreen
 import com.bukovinafilip.gradey.feature.absence.R as AbsenceR
@@ -138,6 +140,13 @@ import com.bukovinafilip.gradey.ui.GradeyScreen
 import com.bukovinafilip.gradey.ui.GradeySectionCard
 import com.bukovinafilip.gradey.push.GradeyPushRegistration
 import com.bukovinafilip.gradey.network.GradeyJson
+import com.bukovinafilip.gradey.navigation.MainDestination
+import com.bukovinafilip.gradey.navigation.MainNavigationViewModel
+import com.bukovinafilip.gradey.navigation.SignedInNavHost
+import com.bukovinafilip.gradey.navigation.navigateFromGradeyAiToAccount
+import com.bukovinafilip.gradey.navigation.navigateFromGradeyAiToSupport
+import com.bukovinafilip.gradey.navigation.navigateToMainDestination
+import com.bukovinafilip.gradey.navigation.resetToToday
 import com.bukovinafilip.gradey.widgets.updateNextLessonWidgets
 import com.bukovinafilip.gradey.wear.PhoneWearSyncPublisher
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
@@ -180,7 +189,6 @@ class MainActivity : ComponentActivity() {
                             graph.appLanguageStore.selection = selection
                             appLanguage = selection
                         },
-                        initialTab = gradeyDeepLinkDestination(intent?.dataString).toAppTab() ?: AppTab.TODAY,
                         deepLinkRequest = deepLinkRequest,
                     )
                 }
@@ -219,21 +227,6 @@ private enum class OnboardingUpgradeRetryTarget {
     MEALS,
 }
 
-private enum class AppTab(@StringRes val labelRes: Int) {
-    TODAY(R.string.tab_today),
-    SUBJECTS(R.string.tab_marks),
-    ABSENCE(R.string.tab_absence),
-    TIMETABLE(R.string.tab_timetable),
-    STRAVACZ(R.string.tab_meals),
-    ACCOUNT(R.string.tab_account),
-}
-
-private fun DeepLinkDestination?.toAppTab(): AppTab? = when (this) {
-    DeepLinkDestination.SUBJECTS -> AppTab.SUBJECTS
-    DeepLinkDestination.TIMETABLE -> AppTab.TIMETABLE
-    null -> null
-}
-
 private fun android.content.Context.notificationsAreEnabled(): Boolean =
     NotificationManagerCompat.from(this).areNotificationsEnabled() &&
         (
@@ -259,16 +252,20 @@ private fun GradeyApp(
     activity: ComponentActivity,
     appLanguage: AppLanguage,
     onAppLanguageChange: (AppLanguage) -> Unit,
-    initialTab: AppTab,
     deepLinkRequest: DeepLinkRequest,
 ) {
     val context = LocalContext.current
     val activeLanguageCode = LocalConfiguration.current.locales[0].language
     val scope = rememberCoroutineScope()
+    val signedInNavController = rememberNavController()
+    val navigationViewModel: MainNavigationViewModel = viewModel()
+    val pendingNavigationRoute by navigationViewModel.pendingDestinationRoute.collectAsStateWithLifecycle()
+    val signedInBackStackEntry by signedInNavController.currentBackStackEntryAsState()
+    val currentMainDestination = MainDestination.fromRoute(
+        signedInBackStackEntry?.destination?.route,
+    ) ?: MainDestination.TODAY
     var phase by remember { mutableStateOf(AppPhase.CHECKING) }
-    var selectedTab by rememberSaveable { mutableStateOf(initialTab) }
-    var isGradeyAIPresented by rememberSaveable { mutableStateOf(false) }
-    var isSupportPresented by rememberSaveable { mutableStateOf(false) }
+    var resetSignedInNavigationOnReady by rememberSaveable { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
     var authError by remember { mutableStateOf<String?>(null) }
     var schoolLoginError by remember { mutableStateOf<String?>(null) }
@@ -345,6 +342,14 @@ private fun GradeyApp(
     }
     var accountSettingsDestination by rememberSaveable(account?.id, isGuestMode) {
         mutableStateOf<AccountSettingsDestination?>(null)
+    }
+    fun resetSignedInNavigation() {
+        accountSettingsDestination = null
+        resetSignedInNavigationOnReady = true
+        if (phase == AppPhase.SIGNED_IN && signedInBackStackEntry != null) {
+            signedInNavController.resetToToday()
+            resetSignedInNavigationOnReady = false
+        }
     }
     var linkedAccounts by remember { mutableStateOf<List<LinkedSchoolAccount>>(emptyList()) }
     var activeLinkedAccountID by remember { mutableStateOf<String?>(null) }
@@ -465,6 +470,7 @@ private fun GradeyApp(
         notificationPreferencesError = null
         account = null
         authError = error.userFacingMessage(context)
+        resetSignedInNavigation()
         phase = AppPhase.SIGNED_OUT
     }
     suspend fun persistOnboardingNotificationPreference(enabled: Boolean): Boolean {
@@ -582,11 +588,32 @@ private fun GradeyApp(
         }
     }
 
-    LaunchedEffect(deepLinkRequest.sequence) {
-        gradeyDeepLinkDestination(deepLinkRequest.rawUri).toAppTab()?.let { destination ->
-            selectedTab = destination
-            isGradeyAIPresented = false
+    LaunchedEffect(deepLinkRequest.sequence, deepLinkRequest.rawUri) {
+        if (deepLinkRequest.sequence > 0L) {
+            navigationViewModel.acceptDeepLink(deepLinkRequest.rawUri)
         }
+    }
+
+    LaunchedEffect(
+        phase,
+        pendingNavigationRoute,
+        resetSignedInNavigationOnReady,
+        signedInBackStackEntry,
+    ) {
+        if (phase != AppPhase.SIGNED_IN || signedInBackStackEntry == null) {
+            return@LaunchedEffect
+        }
+        if (resetSignedInNavigationOnReady) {
+            signedInNavController.resetToToday()
+            resetSignedInNavigationOnReady = false
+        }
+        val route = pendingNavigationRoute ?: return@LaunchedEffect
+        val destination = MainDestination.fromRoute(route) ?: run {
+            navigationViewModel.consumePendingDestination(route)
+            return@LaunchedEffect
+        }
+        signedInNavController.navigateToMainDestination(destination)
+        navigationViewModel.consumePendingDestination(route)
     }
 
     LaunchedEffect(account?.id, notificationPermissionGranted) {
@@ -1008,8 +1035,7 @@ private fun GradeyApp(
         reconnectLinkedAccountID = null
         reconnectSchoolURL = ""
         isAddingSchool = false
-        selectedTab = AppTab.TODAY
-        isGradeyAIPresented = false
+        resetSignedInNavigation()
         dataError = null
         marksRefreshError = null
         absenceRefreshError = null
@@ -1049,8 +1075,7 @@ private fun GradeyApp(
         reconnectLinkedAccountID = null
         reconnectSchoolURL = ""
         isAddingSchool = false
-        selectedTab = AppTab.TODAY
-        isGradeyAIPresented = false
+        resetSignedInNavigation()
         dataError = null
         marksRefreshError = null
         absenceRefreshError = null
@@ -1250,6 +1275,7 @@ private fun GradeyApp(
             reconnectLinkedAccountID = null
             reconnectSchoolURL = ""
             linkedAccountError = null
+            resetSignedInNavigation()
             null
         } catch (error: CancellationException) {
             rollback()
@@ -1280,8 +1306,7 @@ private fun GradeyApp(
             gradeHistorySnapshot = null
             gradeHistoryRefreshError = null
             activeLinkedAccountID = activation.account.id
-            selectedTab = AppTab.TODAY
-            isGradeyAIPresented = false
+            resetSignedInNavigation()
             loadCachedSignedInData()
             return true
         } catch (error: CancellationException) {
@@ -1942,7 +1967,7 @@ private fun GradeyApp(
                 graph.guestModeStore.isEnabled = false
                 isGuestMode = false
                 account = null
-                selectedTab = AppTab.TODAY
+                resetSignedInNavigation()
                 phase = AppPhase.SIGNED_OUT
             }
         } catch (error: CancellationException) {
@@ -2949,6 +2974,7 @@ private fun GradeyApp(
                         } else {
                             isAddingSchool = false
                             reconnectLinkedAccountID = null
+                            resetSignedInNavigation()
                             phase = AppPhase.SIGNED_IN
                             loadCachedSignedInData()
                             refreshSignedInData()
@@ -2961,6 +2987,7 @@ private fun GradeyApp(
                         linkCurrentSchoolIfNeeded()
                         isAddingSchool = false
                         reconnectLinkedAccountID = null
+                        resetSignedInNavigation()
                         phase = AppPhase.SIGNED_IN
                         loadCachedSignedInData()
                         refreshSignedInData()
@@ -2979,7 +3006,7 @@ private fun GradeyApp(
                     isAddingSchool = false
                     schoolLoginError = null
                     phase = AppPhase.SIGNED_IN
-                    selectedTab = AppTab.ACCOUNT
+                    navigationViewModel.requestDestination(MainDestination.ACCOUNT)
                 }
             },
         )
@@ -3012,8 +3039,11 @@ private fun GradeyApp(
                 isLoading = isLoading,
                 hasError = absenceRefreshError != null,
             )
-            when (selectedTab) {
-                AppTab.TODAY -> when (todayPresentationState) {
+            SignedInNavHost(
+                navController = signedInNavController,
+                modifier = Modifier.fillMaxSize(),
+                todayContent = {
+                    when (todayPresentationState) {
                     TodayPresentationState.INITIAL_LOADING,
                     TodayPresentationState.FIRST_LOAD_ERROR,
                     -> TodayStateScreen(
@@ -3058,17 +3088,27 @@ private fun GradeyApp(
                                     }
                                 }
                             },
-                            onOpenAccount = { selectedTab = AppTab.ACCOUNT },
-                            onOpenGradeyTools = { isGradeyAIPresented = true },
-                            onOpenMarks = { selectedTab = AppTab.SUBJECTS },
-                            onOpenAbsence = { selectedTab = AppTab.ABSENCE },
-                            onOpenTimetable = { selectedTab = AppTab.TIMETABLE },
+                            onOpenAccount = {
+                                signedInNavController.navigateToMainDestination(MainDestination.ACCOUNT)
+                            },
+                            onOpenGradeyTools = {
+                                signedInNavController.navigateToMainDestination(MainDestination.GRADEY_AI)
+                            },
+                            onOpenMarks = {
+                                signedInNavController.navigateToMainDestination(MainDestination.SUBJECTS)
+                            },
+                            onOpenAbsence = {
+                                signedInNavController.navigateToMainDestination(MainDestination.ABSENCE)
+                            },
+                            onOpenTimetable = {
+                                signedInNavController.navigateToMainDestination(MainDestination.TIMETABLE)
+                            },
                             onOpenMeals = {
                                 if (!showMealsTab) {
                                     graph.mealsTabPreferenceStore.isVisible = true
                                     showMealsTab = true
                                 }
-                                selectedTab = AppTab.STRAVACZ
+                                signedInNavController.navigateToMainDestination(MainDestination.MEALS)
                             },
                             onActivateLinkedAccount = { linked ->
                                 scope.launch {
@@ -3090,9 +3130,10 @@ private fun GradeyApp(
                             modifier = standardScreenModifier,
                         )
                     }
-                }
-
-                AppTab.SUBJECTS -> if (currentDashboard != null && effectiveAbsence != null) SubjectsScreen(
+                    }
+                },
+                subjectsContent = {
+                    if (currentDashboard != null && effectiveAbsence != null) SubjectsScreen(
                     subjects = currentDashboard.marksResponse.subjects,
                     absence = effectiveAbsence,
                     gradeTrends = gradeHistorySnapshot
@@ -3116,8 +3157,12 @@ private fun GradeyApp(
                             }
                         }
                     },
-                    onOpenAccount = { selectedTab = AppTab.ACCOUNT },
-                    onOpenGradeyTools = { isGradeyAIPresented = true },
+                    onOpenAccount = {
+                        signedInNavController.navigateToMainDestination(MainDestination.ACCOUNT)
+                    },
+                    onOpenGradeyTools = {
+                        signedInNavController.navigateToMainDestination(MainDestination.GRADEY_AI)
+                    },
                     modifier = Modifier.fillMaxSize(),
                 ) else CoreDataUnavailableScreen(
                     title = context.getString(R.string.tab_marks),
@@ -3125,8 +3170,10 @@ private fun GradeyApp(
                     errorMessage = dataError,
                     onRetry = { scope.launch { runWithLoading { refreshSignedInData(true) } } },
                     modifier = standardScreenModifier,
-                )
-                AppTab.ABSENCE -> when (absencePresentationState) {
+                    )
+                },
+                absenceContent = {
+                    when (absencePresentationState) {
                     AbsencePresentationState.INITIAL_LOADING,
                     AbsencePresentationState.FIRST_LOAD_ERROR,
                     -> AbsenceStateScreen(
@@ -3165,8 +3212,12 @@ private fun GradeyApp(
                             onSaveManualSelections = ::saveManualAbsenceSelections,
                             predictorScopeKey = "$currentSchoolBaseURL:${activeLinkedAccountID.orEmpty()}",
                             onLoadPredictionLessons = graph.schoolRepository::loadAbsencePredictionLessons,
-                            onOpenAccount = { selectedTab = AppTab.ACCOUNT },
-                            onOpenGradeyTools = { isGradeyAIPresented = true },
+                            onOpenAccount = {
+                                signedInNavController.navigateToMainDestination(MainDestination.ACCOUNT)
+                            },
+                            onOpenGradeyTools = {
+                                signedInNavController.navigateToMainDestination(MainDestination.GRADEY_AI)
+                            },
                             modifier = Modifier.fillMaxSize(),
                         )
                     } else {
@@ -3177,8 +3228,10 @@ private fun GradeyApp(
                             modifier = standardScreenModifier,
                         )
                     }
-                }
-                AppTab.TIMETABLE -> if (timetable != null) TimetableScreen(
+                    }
+                },
+                timetableContent = {
+                    if (timetable != null) TimetableScreen(
                     week = timetable,
                     isRefreshing = isLoading,
                     errorMessage = timetableError,
@@ -3208,8 +3261,12 @@ private fun GradeyApp(
                             }
                         }
                     },
-                    onOpenAccount = { selectedTab = AppTab.ACCOUNT },
-                    onOpenGradeyTools = { isGradeyAIPresented = true },
+                    onOpenAccount = {
+                        signedInNavController.navigateToMainDestination(MainDestination.ACCOUNT)
+                    },
+                    onOpenGradeyTools = {
+                        signedInNavController.navigateToMainDestination(MainDestination.GRADEY_AI)
+                    },
                     modifier = Modifier.fillMaxSize(),
                 ) else CoreDataUnavailableScreen(
                     title = context.getString(TimetableR.string.timetable_title),
@@ -3224,8 +3281,10 @@ private fun GradeyApp(
                         }
                     },
                     modifier = standardScreenModifier,
-                )
-                AppTab.STRAVACZ -> StravaCZScreen(
+                    )
+                },
+                mealsContent = {
+                    StravaCZScreen(
                     session = stravaSession,
                     menu = stravaMenu,
                     isLoading = isStravaLoading,
@@ -3240,11 +3299,16 @@ private fun GradeyApp(
                         scope.launch { setStravaCZMeal(meal, ordered) }
                     },
                     onDisconnect = { scope.launch { disconnectStravaCZ() } },
-                    onOpenAccount = { selectedTab = AppTab.ACCOUNT },
-                    onOpenGradeyTools = { isGradeyAIPresented = true },
+                    onOpenAccount = {
+                        signedInNavController.navigateToMainDestination(MainDestination.ACCOUNT)
+                    },
+                    onOpenGradeyTools = {
+                        signedInNavController.navigateToMainDestination(MainDestination.GRADEY_AI)
+                    },
                     modifier = Modifier.fillMaxSize(),
-                )
-                AppTab.ACCOUNT -> if (isSupportPresented) {
+                    )
+                },
+                supportContent = {
                     SupportScreen(
                         catalog = supportCatalog,
                         isSignedIn = account != null && !isGuestMode,
@@ -3255,7 +3319,7 @@ private fun GradeyApp(
                         message = supportMessage,
                         appVersion = BuildConfig.VERSION_NAME,
                         appBuild = BuildConfig.VERSION_CODE.toString(),
-                        onBack = { isSupportPresented = false },
+                        onBack = { signedInNavController.popBackStack() },
                         onReload = { scope.launch { loadSupportCatalog() } },
                         onPurchasePlan = { plan: SupportPlanOption ->
                             scope.launch { purchaseSupportOption(plan.id, requiresGradeyID = true) }
@@ -3372,7 +3436,7 @@ private fun GradeyApp(
                                 val restarted = OnboardingProgress.initial(journey)
                                 graph.onboardingProgressStore.restart(restarted)
                                 clearOnboardingNotificationRecovery()
-                                isSupportPresented = false
+                                signedInNavController.popBackStack()
                                 onboardingProgress = restarted
                             }
                         },
@@ -3389,14 +3453,14 @@ private fun GradeyApp(
                             val restarted = OnboardingProgress.initial(OnboardingJourney.NEW_USER)
                             graph.onboardingProgressStore.restart(restarted)
                             clearOnboardingNotificationRecovery()
-                            isSupportPresented = false
+                            signedInNavController.popBackStack()
                             onboardingProgress = restarted
                         },
                         onDebugRestartUpgrade = {
                             val restarted = OnboardingProgress.initial(OnboardingJourney.UPGRADE)
                             graph.onboardingProgressStore.restart(restarted)
                             clearOnboardingNotificationRecovery()
-                            isSupportPresented = false
+                            signedInNavController.popBackStack()
                             onboardingProgress = restarted
                         },
                         onDebugResetAsNewUser = {
@@ -3407,7 +3471,7 @@ private fun GradeyApp(
                                     val restarted = OnboardingProgress.initial(OnboardingJourney.NEW_USER)
                                     graph.onboardingProgressStore.restart(restarted)
                                     clearOnboardingNotificationRecovery()
-                                    isSupportPresented = false
+                                    resetSignedInNavigation()
                                     onboardingProgress = restarted
                                 } catch (error: CancellationException) {
                                     throw error
@@ -3420,8 +3484,7 @@ private fun GradeyApp(
                             scope.launch {
                                 try {
                                     signOutAllGradeyState()
-                                    isSupportPresented = false
-                                    selectedTab = AppTab.TODAY
+                                    resetSignedInNavigation()
                                 } catch (error: CancellationException) {
                                     throw error
                                 } catch (error: Throwable) {
@@ -3431,7 +3494,8 @@ private fun GradeyApp(
                         },
                         modifier = standardScreenModifier,
                     )
-                } else {
+                },
+                accountContent = {
                     AccountScreen(
                     account = account,
                     linkedAccounts = linkedAccounts,
@@ -3467,7 +3531,7 @@ private fun GradeyApp(
                                 throw error
                             } catch (error: GradeySessionExpiredException) {
                                 expireGradeyIdentity(error)
-                                selectedTab = AppTab.TODAY
+                                resetSignedInNavigation()
                             } catch (error: Throwable) {
                                 profileError = error.userFacingMessage(context)
                             } finally {
@@ -3482,7 +3546,7 @@ private fun GradeyApp(
                         account = null
                         authError = null
                         profileError = null
-                        selectedTab = AppTab.TODAY
+                        resetSignedInNavigation()
                         phase = AppPhase.SIGNED_OUT
                     },
                     onRefreshLinkedAccounts = {
@@ -3533,7 +3597,7 @@ private fun GradeyApp(
                             graph.mealsTabPreferenceStore.isVisible = true
                             showMealsTab = true
                         }
-                        selectedTab = AppTab.STRAVACZ
+                        signedInNavController.navigateToMainDestination(MainDestination.MEALS)
                     },
                     onRetryStravaCloudLink = {
                         scope.launch { retryStravaCloudLink() }
@@ -3567,7 +3631,7 @@ private fun GradeyApp(
                     },
                     onOpenSupport = {
                         supportMessage = null
-                        isSupportPresented = true
+                        signedInNavController.navigateToMainDestination(MainDestination.SUPPORT)
                     },
                     onUnlinkLinkedAccount = { linked ->
                         scope.launch { unlinkLinkedAccount(linked) }
@@ -3576,7 +3640,12 @@ private fun GradeyApp(
                     onShowMealsTabChange = { visible ->
                         graph.mealsTabPreferenceStore.isVisible = visible
                         showMealsTab = visible
-                        if (!visible && selectedTab == AppTab.STRAVACZ) selectedTab = AppTab.TODAY
+                        val presentingDestination = MainDestination.fromRoute(
+                            signedInNavController.previousBackStackEntry?.destination?.route,
+                        )
+                        if (!visible && presentingDestination == MainDestination.MEALS) {
+                            resetSignedInNavigation()
+                        }
                     },
                     onSignOut = {
                         scope.launch {
@@ -3597,65 +3666,69 @@ private fun GradeyApp(
                     },
                     modifier = standardScreenModifier,
                 )
-                }
-            }
+                },
+                gradeyAiContent = {
+                    GradeyAIScreen(
+                        repository = graph.gradeyAIRepository,
+                        contextBuilder = graph.gradeyAIContextBuilder,
+                        isGuestMode = isGuestMode,
+                        supportTier = supportTier,
+                        onOpenAccount = {
+                            signedInNavController.navigateFromGradeyAiToAccount()
+                        },
+                        onOpenSupport = {
+                            supportMessage = null
+                            signedInNavController.navigateFromGradeyAiToSupport()
+                        },
+                        onClose = { signedInNavController.popBackStack() },
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                },
+            )
 
-            val selectedTabHasUsableContent = when (selectedTab) {
-                AppTab.TODAY, AppTab.SUBJECTS -> currentDashboard != null
-                AppTab.ABSENCE -> currentAbsence != null
-                AppTab.TIMETABLE -> timetable != null
-                AppTab.STRAVACZ -> stravaMenu != null
-                AppTab.ACCOUNT -> false
+            val selectedDestinationHasUsableContent = when (currentMainDestination) {
+                MainDestination.TODAY, MainDestination.SUBJECTS -> currentDashboard != null
+                MainDestination.ABSENCE -> currentAbsence != null
+                MainDestination.TIMETABLE -> timetable != null
+                MainDestination.MEALS -> stravaMenu != null
+                MainDestination.ACCOUNT,
+                MainDestination.SUPPORT,
+                MainDestination.GRADEY_AI,
+                -> false
             }
-            val selectedTabRefreshError = when (selectedTab) {
-                AppTab.ABSENCE -> absenceRefreshError
-                AppTab.STRAVACZ -> null
-                AppTab.TODAY, AppTab.SUBJECTS -> dataError ?: gradeHistoryRefreshError
-                else -> dataError
+            val selectedDestinationRefreshError = when (currentMainDestination) {
+                MainDestination.ABSENCE -> absenceRefreshError
+                MainDestination.MEALS,
+                MainDestination.ACCOUNT,
+                MainDestination.SUPPORT,
+                MainDestination.GRADEY_AI,
+                -> null
+                MainDestination.TODAY, MainDestination.SUBJECTS ->
+                    dataError ?: gradeHistoryRefreshError
+                MainDestination.TIMETABLE -> dataError
             }
             if (
-                selectedTab != AppTab.ACCOUNT &&
-                selectedTabRefreshError != null &&
-                selectedTabHasUsableContent
+                currentMainDestination.isPrimary &&
+                selectedDestinationRefreshError != null &&
+                selectedDestinationHasUsableContent
             ) {
                 DataRefreshWarning(
-                    message = selectedTabRefreshError.orEmpty(),
+                    message = selectedDestinationRefreshError.orEmpty(),
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .padding(start = 16.dp, end = 16.dp, bottom = 88.dp),
                 )
             }
 
-            if (selectedTab != AppTab.ACCOUNT) {
+            if (currentMainDestination.isPrimary) {
                 GradeyBottomNavigation(
-                    selectedTab = selectedTab,
+                    selectedDestination = currentMainDestination,
                     showMealsTab = showMealsTab,
-                    onSelect = {
-                        selectedTab = it
+                    onSelect = { destination ->
+                        signedInNavController.navigateToMainDestination(destination)
                         dataError = null
                     },
                     modifier = Modifier.align(Alignment.BottomCenter),
-                )
-            }
-
-            if (isGradeyAIPresented) {
-                GradeyAIScreen(
-                    repository = graph.gradeyAIRepository,
-                    contextBuilder = graph.gradeyAIContextBuilder,
-                    isGuestMode = isGuestMode,
-                    supportTier = supportTier,
-                    onOpenAccount = {
-                        isGradeyAIPresented = false
-                        selectedTab = AppTab.ACCOUNT
-                    },
-                    onOpenSupport = {
-                        isGradeyAIPresented = false
-                        selectedTab = AppTab.ACCOUNT
-                        supportMessage = null
-                        isSupportPresented = true
-                    },
-                    onClose = { isGradeyAIPresented = false },
-                    modifier = Modifier.fillMaxSize(),
                 )
             }
         }
@@ -3748,26 +3821,39 @@ private fun CoreDataUnavailableScreen(
     }
 }
 
-private val MarksTabs = listOf(AppTab.TODAY, AppTab.SUBJECTS, AppTab.ABSENCE, AppTab.TIMETABLE, AppTab.STRAVACZ)
+private val MarksTabs = MainDestination.primaryDestinations
 
 @Composable
-private fun AppTab.icon() = when (this) {
-    AppTab.TODAY -> GradeyIcons.Sun
-    AppTab.SUBJECTS -> GradeyIcons.CheckmarkBadge
-    AppTab.ABSENCE -> GradeyIcons.Calendar
-    AppTab.TIMETABLE -> GradeyIcons.Calendar
-    AppTab.STRAVACZ -> GradeyIcons.Restaurant
-    AppTab.ACCOUNT -> GradeyIcons.User
+private fun MainDestination.icon() = when (this) {
+    MainDestination.TODAY -> GradeyIcons.Sun
+    MainDestination.SUBJECTS -> GradeyIcons.CheckmarkBadge
+    MainDestination.ABSENCE -> GradeyIcons.Calendar
+    MainDestination.TIMETABLE -> GradeyIcons.Calendar
+    MainDestination.MEALS -> GradeyIcons.Restaurant
+    MainDestination.ACCOUNT,
+    MainDestination.SUPPORT,
+    MainDestination.GRADEY_AI,
+    -> GradeyIcons.User
+}
+
+private fun MainDestination.labelResource(): Int = when (this) {
+    MainDestination.TODAY -> R.string.tab_today
+    MainDestination.SUBJECTS -> R.string.tab_marks
+    MainDestination.ABSENCE -> R.string.tab_absence
+    MainDestination.TIMETABLE -> R.string.tab_timetable
+    MainDestination.MEALS -> R.string.tab_meals
+    MainDestination.ACCOUNT -> R.string.tab_account
+    MainDestination.SUPPORT, MainDestination.GRADEY_AI -> error("Not a bottom destination")
 }
 
 @Composable
 private fun GradeyBottomNavigation(
-    selectedTab: AppTab,
+    selectedDestination: MainDestination,
     showMealsTab: Boolean,
-    onSelect: (AppTab) -> Unit,
+    onSelect: (MainDestination) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val visibleTabs = MarksTabs.filter { showMealsTab || it != AppTab.STRAVACZ }
+    val visibleTabs = MarksTabs.filter { showMealsTab || it != MainDestination.MEALS }
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -3790,7 +3876,7 @@ private fun GradeyBottomNavigation(
                 visibleTabs.forEach { tab ->
                     BottomNavigationItem(
                         tab = tab,
-                        selected = selectedTab == tab,
+                        selected = selectedDestination == tab,
                         onClick = { onSelect(tab) },
                     )
                 }
@@ -3801,11 +3887,11 @@ private fun GradeyBottomNavigation(
 
 @Composable
 private fun androidx.compose.foundation.layout.RowScope.BottomNavigationItem(
-    tab: AppTab,
+    tab: MainDestination,
     selected: Boolean,
     onClick: () -> Unit,
 ) {
-    val label = stringResource(tab.labelRes)
+    val label = stringResource(tab.labelResource())
     val foreground = if (selected) {
         MaterialTheme.colorScheme.primary
     } else {
@@ -3840,7 +3926,7 @@ private fun androidx.compose.foundation.layout.RowScope.BottomNavigationItem(
                     tint = foreground,
                     modifier = Modifier.size(24.dp),
                 )
-                if (tab == AppTab.ABSENCE) {
+                if (tab == MainDestination.ABSENCE) {
                     Icon(
                         imageVector = GradeyIcons.ErrorCircle,
                         contentDescription = null,

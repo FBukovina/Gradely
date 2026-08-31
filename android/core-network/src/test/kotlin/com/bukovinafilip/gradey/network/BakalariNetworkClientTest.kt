@@ -1,5 +1,6 @@
 package com.bukovinafilip.gradey.network
 
+import com.bukovinafilip.gradey.model.Mark
 import com.bukovinafilip.gradey.model.Subject
 import com.bukovinafilip.gradey.model.SubjectInfo
 import com.google.common.truth.Truth.assertThat
@@ -10,6 +11,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -76,19 +78,41 @@ class BakalariNetworkClientTest {
         client.predictSubject(
             baseURL = baseURL(),
             accessToken = "access-token",
-            subject = Subject(subjectInfo = SubjectInfo(id = "math", name = "Mathematics")),
+            subject = Subject(
+                marks = listOf(
+                    Mark(
+                        id = "existing-mark",
+                        markText = "2",
+                        weight = null,
+                        maxPoints = null,
+                        subjectID = "math",
+                    ),
+                ),
+                subjectInfo = SubjectInfo(id = "math", name = "Mathematics"),
+            ),
             markText = "1",
             weight = 2,
         )
         val request = server.takeRequest()
-        val payload = GradeyJson.parseToJsonElement(request.body.readUtf8()).jsonArray.single().jsonObject
+        val payload = GradeyJson.parseToJsonElement(request.body.readUtf8()).jsonArray
+        val existingMark = payload[0].jsonObject
+        val predictedMark = payload[1].jsonObject
 
         assertThat(request.path).isEqualTo("/api/3/marks/what-if")
         assertThat(request.getHeader("Authorization")).isEqualTo("Bearer access-token")
         assertThat(request.getHeader("Content-Type")).startsWith("application/json")
-        assertThat(payload["MarkText"]?.jsonPrimitive?.content).isEqualTo("1")
-        assertThat(payload["Weight"]?.jsonPrimitive?.content).isEqualTo("2")
-        assertThat(payload["SubjectId"]?.jsonPrimitive?.content).isEqualTo("math")
+        assertThat(existingMark.keys).containsExactly("Id", "MarkText", "Weight", "MaxPoints", "SubjectId")
+        assertThat(existingMark["Id"]?.jsonPrimitive?.content).isEqualTo("existing-mark")
+        assertThat(existingMark["MarkText"]?.jsonPrimitive?.content).isEqualTo("2")
+        assertThat(existingMark["Weight"]).isEqualTo(JsonNull)
+        assertThat(existingMark["MaxPoints"]?.jsonPrimitive?.content).isEqualTo("0")
+        assertThat(existingMark["SubjectId"]?.jsonPrimitive?.content).isEqualTo("math")
+        assertThat(predictedMark.keys).containsExactly("Id", "MarkText", "Weight", "MaxPoints", "SubjectId")
+        assertThat(predictedMark["Id"]).isEqualTo(JsonNull)
+        assertThat(predictedMark["MarkText"]?.jsonPrimitive?.content).isEqualTo("1")
+        assertThat(predictedMark["Weight"]?.jsonPrimitive?.content).isEqualTo("2")
+        assertThat(predictedMark["MaxPoints"]?.jsonPrimitive?.content).isEqualTo("0")
+        assertThat(predictedMark["SubjectId"]?.jsonPrimitive?.content).isEqualTo("math")
     }
 
     @Test

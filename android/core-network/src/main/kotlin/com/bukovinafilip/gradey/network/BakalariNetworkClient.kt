@@ -15,6 +15,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import okhttp3.OkHttpClient
@@ -28,6 +29,10 @@ import java.net.UnknownHostException
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 import java.util.concurrent.TimeUnit
+
+private val BakalariWhatIfJson = Json(GradeyJson) {
+    explicitNulls = true
+}
 
 enum class BakalariErrorKind {
     INVALID_RESPONSE,
@@ -129,7 +134,7 @@ class BakalariNetworkClient(
             baseURL = baseURL,
             path = "api/3/marks/what-if",
             accessToken = accessToken,
-            body = GradeyJson.encodeToString(WhatIfMarkRequest.payload(subject, markText, weight)),
+            body = BakalariWhatIfJson.encodeToString(WhatIfMarkRequest.payload(subject, markText, weight)),
         )
 
     private suspend inline fun <reified T> postForm(

@@ -243,6 +243,17 @@ private class FakeAISchoolRepository(
         return requireNotNull(freshWeeks[weekContaining])
     }
     override suspend fun login(schoolURL: String, username: String, password: String): StoredSession = error("unused")
+    override suspend fun authenticateSchoolSessionCandidate(
+        schoolURL: String,
+        username: String,
+        password: String,
+        cloudMutationToken: com.bukovinafilip.gradey.domain.SchoolCloudMutationToken,
+    ): com.bukovinafilip.gradey.domain.AuthenticatedSchoolSessionCandidate = error("unused")
+    override suspend fun promoteAuthenticatedSchoolSessionCandidate(
+        candidate: com.bukovinafilip.gradey.domain.AuthenticatedSchoolSessionCandidate,
+        account: LinkedSchoolAccount,
+        cloudMutationToken: com.bukovinafilip.gradey.domain.SchoolCloudMutationToken,
+    ): StoredSession = error("unused")
     override suspend fun loadAbsence(forceRefresh: Boolean): AbsenceResponse = error("unused")
     override suspend fun resolveAbsenceSubjects(
         response: AbsenceResponse,

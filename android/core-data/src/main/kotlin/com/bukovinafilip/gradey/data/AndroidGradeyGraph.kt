@@ -88,38 +88,30 @@ class AndroidGradeyGraph private constructor(
             val linkedAccountSerializer = ListSerializer(
                 com.bukovinafilip.gradey.model.LinkedSchoolAccount.serializer(),
             )
+            val linkedAccountsKey = "gradey.linkedAccounts.v1"
+            val legacyLinkedAccountsKey = "linked.accounts.v1"
             val linkedAccountRepository = if (supabase.isConfigured) {
                 SupabaseLinkedAccountRepository(
                     configuration = supabase,
                     authRepository = authRepository,
                     accountStore = { accounts ->
                         if (accounts == null) {
-                            linkedAccountStore.clear("gradey.linkedAccounts.v1")
-                            linkedAccountStore.clear("linked.accounts.v1")
+                            linkedAccountStore.clear(setOf(linkedAccountsKey, legacyLinkedAccountsKey))
                         } else {
-                            linkedAccountStore.save(
-                                "gradey.linkedAccounts.v1",
-                                accounts,
-                                linkedAccountSerializer,
+                            linkedAccountStore.saveReplacing(
+                                key = linkedAccountsKey,
+                                value = accounts,
+                                serializer = linkedAccountSerializer,
+                                removeKeys = setOf(legacyLinkedAccountsKey),
                             )
-                            linkedAccountStore.clear("linked.accounts.v1")
                         }
                     },
                     accountLoader = {
-                        linkedAccountStore.loadOrClearInvalid(
-                            "gradey.linkedAccounts.v1",
-                            linkedAccountSerializer,
-                        ) ?: linkedAccountStore.loadOrClearInvalid(
-                            "linked.accounts.v1",
-                            linkedAccountSerializer,
-                        )?.also { accounts ->
-                            linkedAccountStore.save(
-                                "gradey.linkedAccounts.v1",
-                                accounts,
-                                linkedAccountSerializer,
-                            )
-                            linkedAccountStore.clear("linked.accounts.v1")
-                        }.orEmpty()
+                        linkedAccountStore.loadCurrentOrMigrateLegacy(
+                            currentKey = linkedAccountsKey,
+                            legacyKey = legacyLinkedAccountsKey,
+                            serializer = linkedAccountSerializer,
+                        ).orEmpty()
                     },
                 )
             } else {

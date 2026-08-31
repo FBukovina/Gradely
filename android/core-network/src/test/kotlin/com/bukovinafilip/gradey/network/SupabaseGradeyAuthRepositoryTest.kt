@@ -5,7 +5,9 @@ import com.bukovinafilip.gradey.model.GradeyAccount
 import com.bukovinafilip.gradey.model.GradeyAuthSession
 import com.google.common.truth.Truth.assertThat
 import java.io.IOException
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.cancelAndJoin
@@ -13,8 +15,10 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.yield
 import okhttp3.OkHttpClient
+import okhttp3.mockwebserver.Dispatcher
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
+import okhttp3.mockwebserver.RecordedRequest
 import okhttp3.mockwebserver.SocketPolicy
 import org.junit.After
 import org.junit.Before
@@ -247,25 +251,69 @@ class SupabaseGradeyAuthRepositoryTest {
     }
 
     @Test
-    fun `sign out waits for refresh and cannot be undone by its late response`() = runTest {
-        storedSession = session(expiresAt = NOW)
+    fun `sign out clears immediately while a held refresh response is rejected as stale`() = runTest {
+        val original = session(expiresAt = NOW)
+        storedSession = original
         val auth = repository()
-        server.enqueue(
-            jsonResponse(tokenResponse(accessToken = "late-access"))
-                .setBodyDelay(150, TimeUnit.MILLISECONDS),
+        val dispatcher = HeldAuthResponseDispatcher(
+            jsonResponse(tokenResponse(accessToken = "late-access")),
         )
-        server.enqueue(jsonResponse("{}"))
+        server.dispatcher = dispatcher
 
-        val refresh = async { auth.validSession() }
+        val refreshFailure = async {
+            runCatching { auth.validSession() }.exceptionOrNull()
+        }
+        dispatcher.requestStarted.await()
+        val refreshRequest = server.takeRequest()
+
+        val capture = async { auth.takeLocalSessionForSignOut() }
         yield()
-        val signOut = async { auth.signOut() }
-        refresh.await()
-        signOut.await()
+        val completedWhileRefreshWasHeld = capture.isCompleted
+        val clearedWhileRefreshWasHeld = storedSession == null
+        dispatcher.release()
+        val captured = capture.await()
 
-        assertThat(server.takeRequest().path).contains("grant_type=refresh_token")
-        val logout = server.takeRequest()
-        assertThat(logout.path).isEqualTo("/auth/v1/logout")
-        assertThat(logout.getHeader("Authorization")).isEqualTo("Bearer late-access")
+        assertThat(refreshRequest.path).contains("grant_type=refresh_token")
+        assertThat(completedWhileRefreshWasHeld).isTrue()
+        assertThat(clearedWhileRefreshWasHeld).isTrue()
+        assertThat(captured).isEqualTo(original)
+        assertThat(refreshFailure.await())
+            .isInstanceOf(GradeySessionExpiredException::class.java)
+        assertThat(storedSession).isNull()
+        assertThat(server.requestCount).isEqualTo(1)
+    }
+
+    @Test
+    fun `sign out invalidates a held Google sign in response`() = runTest {
+        val auth = repository()
+        val dispatcher = HeldAuthResponseDispatcher(
+            jsonResponse(tokenResponse(accessToken = "late-google-access")),
+        )
+        server.dispatcher = dispatcher
+
+        val signInFailure = async {
+            runCatching {
+                auth.signInWithGoogle(
+                    idToken = "google-id-token",
+                    accessToken = null,
+                    fullName = null,
+                )
+            }.exceptionOrNull()
+        }
+        dispatcher.requestStarted.await()
+        val signInRequest = server.takeRequest()
+
+        val capture = async { auth.takeLocalSessionForSignOut() }
+        yield()
+        val completedWhileSignInWasHeld = capture.isCompleted
+        dispatcher.release()
+        val captured = capture.await()
+
+        assertThat(signInRequest.path).contains("grant_type=id_token")
+        assertThat(completedWhileSignInWasHeld).isTrue()
+        assertThat(captured).isNull()
+        assertThat(signInFailure.await())
+            .isInstanceOf(GradeySessionExpiredException::class.java)
         assertThat(storedSession).isNull()
     }
 
@@ -278,9 +326,32 @@ class SupabaseGradeyAuthRepositoryTest {
         val signOut = async { auth.signOut() }
         yield()
         assertThat(server.takeRequest(1, TimeUnit.SECONDS)).isNotNull()
+        assertThat(storedSession).isNull()
         signOut.cancelAndJoin()
 
         assertThat(storedSession).isNull()
+    }
+
+    @Test
+    fun `captured account A revocation cannot disturb adopted account B`() = runTest {
+        val accountA = session(expiresAt = NOW + 3_600_000)
+        val accountB = accountA.copy(
+            accessToken = "account-b-access",
+            refreshToken = "account-b-refresh",
+            account = accountA.account.copy(id = "account-b"),
+        )
+        storedSession = accountA
+        val auth = repository()
+
+        val captured = auth.takeLocalSessionForSignOut()
+        assertThat(captured).isEqualTo(accountA)
+        assertThat(storedSession).isNull()
+
+        storedSession = accountB
+        auth.revokeSignedOutSession(captured!!)
+
+        assertThat(storedSession).isEqualTo(accountB)
+        assertThat(server.requestCount).isEqualTo(0)
     }
 
     private fun repository(
@@ -348,5 +419,24 @@ class SupabaseGradeyAuthRepositoryTest {
 
     private companion object {
         const val NOW = 1_800_000_000_000L
+    }
+}
+
+private class HeldAuthResponseDispatcher(
+    private val response: MockResponse,
+) : Dispatcher() {
+    val requestStarted = CompletableDeferred<Unit>()
+    private val responseRelease = CountDownLatch(1)
+
+    override fun dispatch(request: RecordedRequest): MockResponse {
+        requestStarted.complete(Unit)
+        check(responseRelease.await(5, TimeUnit.SECONDS)) {
+            "Timed out waiting to release a held auth response."
+        }
+        return response
+    }
+
+    fun release() {
+        responseRelease.countDown()
     }
 }

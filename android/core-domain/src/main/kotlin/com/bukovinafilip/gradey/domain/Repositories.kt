@@ -26,6 +26,7 @@ import com.bukovinafilip.gradey.model.StravaCZMenu
 import com.bukovinafilip.gradey.model.StravaCZStoredSession
 import com.bukovinafilip.gradey.model.Subject
 import com.bukovinafilip.gradey.model.TimetableWeek
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 
 interface BakalariClient {
@@ -48,14 +49,88 @@ interface SchoolDirectoryRepository {
     suspend fun refreshDirectory(): List<SchoolDirectorySchool>
 }
 
+/**
+ * Identifies the current Gradey-cloud ownership boundary for mutations of the
+ * locally retained school session.
+ *
+ * Tokens are deliberately opaque to callers. A [SchoolRepository]
+ * implementation decides whether a token is still current when the mutation
+ * reaches its atomic commit boundary.
+ */
+data class SchoolCloudMutationToken(
+    val epoch: Long,
+)
+
+data class SchoolCloudInvalidationResult(
+    val previousLinkedAccountID: String?,
+    val retainedSession: StoredSession?,
+)
+
+data class AuthenticatedSchoolSessionCandidate(
+    val session: StoredSession,
+    val dashboard: DashboardData,
+    val sessionGeneration: Long,
+)
+
 interface SchoolRepository {
     suspend fun bootstrapSession(): StoredSession?
     suspend fun currentStoredSession(): StoredSession?
     suspend fun login(schoolURL: String, username: String, password: String): StoredSession
+    suspend fun login(
+        schoolURL: String,
+        username: String,
+        password: String,
+        cloudMutationToken: SchoolCloudMutationToken,
+    ): StoredSession = login(schoolURL, username, password)
+    suspend fun authenticateSchoolSessionCandidate(
+        schoolURL: String,
+        username: String,
+        password: String,
+        cloudMutationToken: SchoolCloudMutationToken,
+    ): AuthenticatedSchoolSessionCandidate
+    suspend fun promoteAuthenticatedSchoolSessionCandidate(
+        candidate: AuthenticatedSchoolSessionCandidate,
+        account: LinkedSchoolAccount,
+        cloudMutationToken: SchoolCloudMutationToken,
+    ): StoredSession
     suspend fun restoreSession(session: StoredSession): StoredSession
     suspend fun activateLinkedSchoolAccount(session: StoredSession): StoredSession
+    suspend fun activateLinkedSchoolAccount(
+        session: StoredSession,
+        cloudMutationToken: SchoolCloudMutationToken,
+    ): StoredSession = activateLinkedSchoolAccount(session)
     suspend fun associateCurrentSession(account: LinkedSchoolAccount): StoredSession
+    suspend fun associateCurrentSession(
+        account: LinkedSchoolAccount,
+        cloudMutationToken: SchoolCloudMutationToken,
+    ): StoredSession = associateCurrentSession(account)
     suspend fun disassociateCurrentSession(accountID: String): StoredSession?
+    suspend fun disassociateCurrentSession(
+        accountID: String,
+        cloudMutationToken: SchoolCloudMutationToken,
+    ): StoredSession? = disassociateCurrentSession(accountID)
+    suspend fun captureSchoolCloudMutationToken(): SchoolCloudMutationToken =
+        SchoolCloudMutationToken(epoch = 0L)
+    suspend fun invalidateSchoolCloudMutationsAndDisassociate(): SchoolCloudInvalidationResult {
+        val current = currentStoredSession()
+        val accountID = current?.linkedAccountID
+        val retained = if (accountID == null) current else disassociateCurrentSession(accountID)
+        return SchoolCloudInvalidationResult(
+            previousLinkedAccountID = accountID,
+            retainedSession = retained,
+        )
+    }
+    suspend fun restoreSessionIfCurrentCandidate(
+        candidate: StoredSession,
+        previous: StoredSession?,
+        cloudMutationToken: SchoolCloudMutationToken,
+    ): StoredSession? {
+        val current = currentStoredSession()
+        if (current != candidate) return current
+        if (previous != null) return restoreSession(previous)
+        logout()
+        return null
+    }
     suspend fun logout()
     suspend fun clearLocalCaches() = Unit
     suspend fun clearNextLessonSnapshotIfSignedOut(): Boolean = currentStoredSession() == null
@@ -88,12 +163,34 @@ class GradeySessionExpiredException(
     cause,
 )
 
+class GradeyIdentityChangedException : CancellationException(
+    "The Gradey identity changed while a request was running.",
+)
+
 interface GradeyAuthRepository {
     suspend fun bootstrapSession(): GradeyAuthSession?
     suspend fun validSession(): GradeyAuthSession
     suspend fun refreshAccount(): GradeyAccount
     suspend fun updateFullName(fullName: String): GradeyAccount
     suspend fun signInWithGoogle(idToken: String, accessToken: String? = null, fullName: String? = null): GradeyAuthSession
+    /**
+     * Atomically removes the durable local session and returns the exact session
+     * that may still be revoked remotely. Implementations must serialize this
+     * with token refresh and sign-in so stale auth work cannot restore it.
+     */
+    suspend fun takeLocalSessionForSignOut(): GradeyAuthSession? {
+        val session = bootstrapSession()
+        signOut()
+        return session
+    }
+
+    /**
+     * Best-effort remote cleanup for a session already removed locally.
+     * The default is intentionally empty because legacy implementations perform
+     * their remote cleanup inside [signOut].
+     */
+    suspend fun revokeSignedOutSession(session: GradeyAuthSession) = Unit
+
     suspend fun signOut()
 }
 
@@ -110,6 +207,10 @@ interface LinkedAccountRepository {
     ): LinkedSchoolAccount
     suspend fun updateNotificationsEnabled(accountID: String, enabled: Boolean): LinkedSchoolAccount
     suspend fun unlinkAccount(accountID: String)
+    suspend fun unlinkAccountForSignedOutSession(
+        accountID: String,
+        session: GradeyAuthSession,
+    ) = Unit
     suspend fun clearLocalAccounts()
 }
 
@@ -236,6 +337,20 @@ interface StravaCZRepository {
     suspend fun login(canteenNumber: String, username: String, password: String): StravaCZStoredSession
     suspend fun loadMenu(forceRefresh: Boolean = false): Pair<StravaCZStoredSession, StravaCZMenu>
     suspend fun setMeal(meal: StravaCZMeal, ordered: Boolean): Pair<StravaCZStoredSession, StravaCZMenu>
+    /**
+     * Atomically clears the local meals session/cache and returns the exact session that may
+     * still be logged out remotely. Implementations should invalidate pending local commits.
+     */
+    suspend fun takeLocalSessionForSignOut(): StravaCZStoredSession? {
+        val session = bootstrapSession()
+        logout()
+        return session
+    }
+
+    /** Best-effort remote cleanup for a session that is already absent locally. */
+    suspend fun revokeSignedOutSession(session: StravaCZStoredSession) = Unit
+
+    /** Compatibility local logout. This must not wait for remote session revocation. */
     suspend fun logout()
 }
 

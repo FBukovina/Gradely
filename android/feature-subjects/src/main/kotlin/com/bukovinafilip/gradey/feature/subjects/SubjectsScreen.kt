@@ -65,9 +65,9 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
-import com.bukovinafilip.gradey.ui.GradeyIcons
-import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -107,6 +107,7 @@ import com.bukovinafilip.gradey.model.Mark
 import com.bukovinafilip.gradey.model.Subject
 import com.bukovinafilip.gradey.ui.GradeyAuroraBackground
 import com.bukovinafilip.gradey.ui.GradeyGradeBadge
+import com.bukovinafilip.gradey.ui.GradeyIcons
 import com.bukovinafilip.gradey.ui.GradeyRadius
 import com.bukovinafilip.gradey.ui.GradeySectionHeader
 import com.bukovinafilip.gradey.ui.GradeySpacing
@@ -163,6 +164,7 @@ fun SubjectsScreen(
     onOpenGradeyTools: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val locale = LocalConfiguration.current.locales[0] ?: Locale.getDefault()
     var selectedSubjectID by rememberSaveable { mutableStateOf<String?>(null) }
     var sortMode by rememberSaveable { mutableStateOf(SubjectSortMode.Focus) }
     var searchQuery by rememberSaveable { mutableStateOf("") }
@@ -181,6 +183,7 @@ fun SubjectsScreen(
             subjects = subjects,
             absence = absence,
             gradeTrends = gradeTrends,
+            locale = locale,
             refreshErrorMessage = refreshErrorMessage,
             sortMode = sortMode,
             onSortModeChange = { sortMode = it },
@@ -198,6 +201,7 @@ fun SubjectsScreen(
             subject = selectedSubject,
             absence = absence,
             trend = selectedTrend,
+            locale = locale,
             onPredictSubjectAverage = onPredictSubjectAverage,
             onBack = { selectedSubjectID = null },
             modifier = modifier,
@@ -210,6 +214,7 @@ private fun SubjectsOverview(
     subjects: List<Subject>,
     absence: AbsenceResponse,
     gradeTrends: List<SubjectGradeTrend>,
+    locale: Locale,
     refreshErrorMessage: String?,
     sortMode: SubjectSortMode,
     onSortModeChange: (SubjectSortMode) -> Unit,
@@ -291,9 +296,9 @@ private fun SubjectsOverview(
                     )
                 }
             }
-            item { OverallAverageCard(subjects) }
+            item { OverallAverageCard(subjects, locale) }
             if (recentTrends.isNotEmpty()) {
-                item { GradeMovementSection(recentTrends) }
+                item { GradeMovementSection(recentTrends, locale) }
             }
             item {
                 SubjectSearchField(
@@ -309,6 +314,7 @@ private fun SubjectsOverview(
                         subjects = sortedSubjects,
                         absenceByName = absenceRows,
                         trendsBySubjectID = trendsBySubjectID,
+                        locale = locale,
                         emptyMessage = if (searchQuery.isBlank()) {
                             stringResource(R.string.marks_empty)
                         } else {
@@ -556,8 +562,8 @@ private fun MarksHeader(
 }
 
 @Composable
-private fun OverallAverageCard(subjects: List<Subject>) {
-    val overallAverage = formatAverage(GradeMath.overallAverage(subjects))
+private fun OverallAverageCard(subjects: List<Subject>, locale: Locale) {
+    val overallAverage = formatAverage(GradeMath.overallAverage(subjects), locale)
     val totalMarks = subjects.sumOf { it.marks.size }
 
     Surface(
@@ -762,6 +768,7 @@ private fun SubjectsCard(
     subjects: List<Subject>,
     absenceByName: Map<String, com.bukovinafilip.gradey.domain.AbsenceSubjectSummary>,
     trendsBySubjectID: Map<String, SubjectGradeTrend?>,
+    locale: Locale,
     emptyMessage: String,
     onOpenSubject: (Subject) -> Unit,
 ) {
@@ -787,6 +794,7 @@ private fun SubjectsCard(
                         subject = subject,
                         absencePercentage = absenceByName[subject.displayName.subjectKey()]?.absencePercentage,
                         trend = trendsBySubjectID[subject.id],
+                        locale = locale,
                         onClick = { onOpenSubject(subject) },
                     )
                     if (index != subjects.lastIndex) {
@@ -808,6 +816,7 @@ private fun SubjectRow(
     subject: Subject,
     absencePercentage: Double?,
     trend: SubjectGradeTrend?,
+    locale: Locale,
     onClick: () -> Unit,
 ) {
     val average = GradeMath.subjectAverage(subject)
@@ -817,7 +826,7 @@ private fun SubjectRow(
     val trendDescription = trendDelta?.let { delta ->
         stringResource(
             if (delta < 0) R.string.subject_trend_better else R.string.subject_trend_worse,
-            String.format(Locale.getDefault(), "%.2f", kotlin.math.abs(delta)),
+            formatTwoDecimals(kotlin.math.abs(delta), locale),
         )
     }
 
@@ -855,6 +864,7 @@ private fun SubjectRow(
                     latestMark = latestMark,
                     trendDelta = trendDelta,
                     trendDescription = trendDescription,
+                    locale = locale,
                     wrapTitle = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -864,6 +874,7 @@ private fun SubjectRow(
                     average = average,
                     averageColor = bandForeground,
                     absenceText = absenceText,
+                    locale = locale,
                     stacked = true,
                 )
             }
@@ -879,6 +890,7 @@ private fun SubjectRow(
                     latestMark = latestMark,
                     trendDelta = trendDelta,
                     trendDescription = trendDescription,
+                    locale = locale,
                     wrapTitle = false,
                     modifier = Modifier
                         .weight(1f)
@@ -889,6 +901,7 @@ private fun SubjectRow(
                     average = average,
                     averageColor = bandForeground,
                     absenceText = absenceText,
+                    locale = locale,
                     stacked = false,
                 )
                 Spacer(Modifier.width(4.dp))
@@ -931,6 +944,7 @@ private fun SubjectRowDetails(
     latestMark: Mark?,
     trendDelta: Double?,
     trendDescription: String?,
+    locale: Locale,
     wrapTitle: Boolean,
     modifier: Modifier = Modifier,
 ) {
@@ -977,7 +991,7 @@ private fun SubjectRowDetails(
                         modifier = Modifier.size(14.dp),
                     )
                     Text(
-                        text = String.format(Locale.getDefault(), "%+.2f", delta),
+                        text = formatSignedTwoDecimals(delta, locale),
                         color = if (delta < 0) AccentTeal else DangerRed,
                         fontSize = 12.sp,
                         lineHeight = 15.sp,
@@ -1009,12 +1023,13 @@ private fun SubjectRowSummary(
     average: Double?,
     averageColor: Color,
     absenceText: String,
+    locale: Locale,
     stacked: Boolean,
 ) {
     val modifier = Modifier.testTag(SUBJECT_SUMMARY_TEST_TAG_PREFIX + subjectID)
     val averageContent: @Composable () -> Unit = {
         Text(
-            text = formatAverage(average),
+            text = formatAverage(average, locale),
             color = averageColor,
             fontSize = 20.sp,
             lineHeight = 23.sp,
@@ -1055,7 +1070,7 @@ private fun SubjectRowSummary(
 }
 
 @Composable
-private fun GradeMovementSection(trends: List<SubjectGradeTrend>) {
+private fun GradeMovementSection(trends: List<SubjectGradeTrend>, locale: Locale) {
     Column {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -1085,7 +1100,7 @@ private fun GradeMovementSection(trends: List<SubjectGradeTrend>) {
         ) {
             Column {
                 trends.forEachIndexed { index, trend ->
-                    GradeMovementRow(trend)
+                    GradeMovementRow(trend, locale)
                     if (index != trends.lastIndex) {
                         HorizontalDivider(
                             modifier = Modifier.padding(start = 16.dp),
@@ -1100,7 +1115,7 @@ private fun GradeMovementSection(trends: List<SubjectGradeTrend>) {
 }
 
 @Composable
-private fun GradeMovementRow(trend: SubjectGradeTrend) {
+private fun GradeMovementRow(trend: SubjectGradeTrend, locale: Locale) {
     val values = trend.events.mapNotNull { it.averageValue }
     val (background, foreground) = GradeMath.band(trend.latestAverage).subjectColors()
     val newMarks = (trend.latestMarkCount - trend.firstMarkCount).coerceAtLeast(0)
@@ -1144,7 +1159,7 @@ private fun GradeMovementRow(trend: SubjectGradeTrend) {
         }
         trend.averageDelta?.let { delta ->
             Text(
-                text = String.format(Locale.getDefault(), "%+.2f", delta),
+                text = formatSignedTwoDecimals(delta, locale),
                 color = if (delta > 0) DangerRed else AccentTeal,
                 fontSize = 15.sp,
                 lineHeight = 18.sp,
@@ -1186,6 +1201,7 @@ private fun SubjectDetail(
     subject: Subject,
     absence: AbsenceResponse,
     trend: SubjectGradeTrend?,
+    locale: Locale,
     onPredictSubjectAverage: suspend (Subject, String, Int) -> Double?,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
@@ -1264,6 +1280,7 @@ private fun SubjectDetail(
                     predicted = false,
                     markCount = subject.marks.size,
                     absencePercentage = absenceRow?.absencePercentage,
+                    locale = locale,
                 )
             }
             if (notes.hasContent) {
@@ -1275,7 +1292,7 @@ private fun SubjectDetail(
             item { Spacer(Modifier.height(16.dp)) }
             item { GradeySectionHeader(stringResource(R.string.subject_history_section)) }
             item { Spacer(Modifier.height(18.dp)) }
-            item { AverageChartCard(historyChart) }
+            item { AverageChartCard(historyChart, locale) }
             item { Spacer(Modifier.height(10.dp)) }
             item { GradeySectionHeader(stringResource(R.string.subject_prediction_section)) }
             item { Spacer(Modifier.height(24.dp)) }
@@ -1289,6 +1306,7 @@ private fun SubjectDetail(
                     predictedAverage = predictedAverage,
                     isPredictingExactAverage = isPredictingExactAverage,
                     isExactAverage = exactPredictedAverage != null,
+                    locale = locale,
                     onValueChange = { trialMark = MarkPredictionInput.acceptedMarkText(trialMark, it) },
                     onDecreaseWeight = { trialWeight = MarkPredictionInput.decreaseWeight(trialWeight) },
                     onIncreaseWeight = { trialWeight = MarkPredictionInput.increaseWeight(trialWeight) },
@@ -1388,6 +1406,7 @@ private fun SubjectAverageHero(
     predicted: Boolean,
     markCount: Int,
     absencePercentage: Double?,
+    locale: Locale,
 ) {
     Surface(
         modifier = Modifier
@@ -1414,7 +1433,7 @@ private fun SubjectAverageHero(
             )
             Spacer(Modifier.height(10.dp))
             Text(
-                text = formatAverage(average),
+                text = formatAverage(average, locale),
                 color = Color.White,
                 fontSize = 66.sp,
                 lineHeight = 70.sp,
@@ -1432,7 +1451,7 @@ private fun SubjectAverageHero(
                 DetailChip(
                     icon = { Icon(GradeyIcons.Calendar, contentDescription = null, modifier = Modifier.size(14.dp)) },
                     text = absencePercentage?.let {
-                        stringResource(R.string.subject_absence, formatOneDecimal(it))
+                        stringResource(R.string.subject_absence, formatOneDecimal(it, locale))
                     } ?: stringResource(R.string.subject_absence_unavailable),
                 )
             }
@@ -1539,7 +1558,7 @@ private fun DetailChip(
 }
 
 @Composable
-private fun AverageChartCard(chart: AverageHistoryChart) {
+private fun AverageChartCard(chart: AverageHistoryChart, locale: Locale) {
     if (chart.source == AverageHistorySource.NONE) {
         EmptyAverageChartCard()
         return
@@ -1562,7 +1581,7 @@ private fun AverageChartCard(chart: AverageHistoryChart) {
             R.string.subject_history_source_local
         },
     )
-    val delta = chart.averageDelta?.let { String.format(Locale.getDefault(), "%+.2f", it) }
+    val delta = chart.averageDelta?.let { formatSignedTwoDecimals(it, locale) }
     val chartDescription = pluralStringResource(
         R.plurals.subject_average_chart_description,
         points.size,
@@ -1619,7 +1638,7 @@ private fun AverageChartCard(chart: AverageHistoryChart) {
             }
 
             Text(
-                text = formatOneDecimal(topValue),
+                text = formatOneDecimal(topValue, locale),
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .padding(top = 44.dp, end = 16.dp),
@@ -1628,7 +1647,7 @@ private fun AverageChartCard(chart: AverageHistoryChart) {
                 lineHeight = 17.sp,
             )
             Text(
-                text = formatOneDecimal(safeBottomValue),
+                text = formatOneDecimal(safeBottomValue, locale),
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .padding(top = 107.dp, end = 16.dp),
@@ -1726,6 +1745,7 @@ private fun TryMarkCard(
     predictedAverage: Double?,
     isPredictingExactAverage: Boolean,
     isExactAverage: Boolean,
+    locale: Locale,
     onValueChange: (String) -> Unit,
     onDecreaseWeight: () -> Unit,
     onIncreaseWeight: () -> Unit,
@@ -1794,6 +1814,7 @@ private fun TryMarkCard(
                     predictedAverage = predicted,
                     isPredictingExactAverage = isPredictingExactAverage,
                     isExactAverage = isExactAverage,
+                    locale = locale,
                 )
             }
         }
@@ -1852,6 +1873,7 @@ private fun PredictionResultPanel(
     predictedAverage: Double,
     isPredictingExactAverage: Boolean,
     isExactAverage: Boolean,
+    locale: Locale,
 ) {
     val comparison = MarkPredictionInput.comparison(currentAverage, predictedAverage)
     val difference = currentAverage?.let { predictedAverage - it }
@@ -1864,11 +1886,11 @@ private fun PredictionResultPanel(
     val comparisonText = when (comparison) {
         MarkPredictionComparison.BETTER -> stringResource(
             R.string.subject_prediction_better,
-            formatAverage(kotlin.math.abs(difference ?: 0.0)),
+            formatAverage(kotlin.math.abs(difference ?: 0.0), locale),
         )
         MarkPredictionComparison.WORSE -> stringResource(
             R.string.subject_prediction_worse,
-            formatAverage(difference ?: 0.0),
+            formatAverage(difference ?: 0.0, locale),
         )
         MarkPredictionComparison.SAME -> stringResource(R.string.subject_prediction_same)
         MarkPredictionComparison.UNKNOWN -> null
@@ -1889,7 +1911,7 @@ private fun PredictionResultPanel(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
-            text = stringResource(R.string.subject_prediction_new_average, formatAverage(predictedAverage)),
+            text = stringResource(R.string.subject_prediction_new_average, formatAverage(predictedAverage, locale)),
             color = MaterialTheme.colorScheme.onSurface,
             fontSize = 18.sp,
             lineHeight = 22.sp,
@@ -2174,8 +2196,14 @@ private fun String.subjectKey(): String = Normalizer.normalize(this, Normalizer.
     .lowercase(Locale.ROOT)
     .replace(Regex("[^a-z0-9]+"), "")
 
-private fun formatAverage(average: Double?): String =
-    GradeMath.formattedAverage(average).replace('.', ',')
+private fun formatAverage(average: Double?, locale: Locale): String =
+    GradeMath.formattedAverage(average, locale)
 
-private fun formatOneDecimal(value: Double): String =
-    String.format(Locale.US, "%.1f", value).replace('.', ',')
+private fun formatOneDecimal(value: Double, locale: Locale): String =
+    String.format(locale, "%.1f", value)
+
+private fun formatTwoDecimals(value: Double, locale: Locale): String =
+    String.format(locale, "%.2f", value)
+
+private fun formatSignedTwoDecimals(value: Double, locale: Locale): String =
+    String.format(locale, "%+.2f", value)

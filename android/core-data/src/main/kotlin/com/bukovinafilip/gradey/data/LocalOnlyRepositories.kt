@@ -16,6 +16,7 @@ import com.bukovinafilip.gradey.model.NotificationPreferences
 import com.bukovinafilip.gradey.model.StoredSession
 import com.bukovinafilip.gradey.model.StravaCZStoredSession
 import com.bukovinafilip.gradey.model.UserResponse
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.builtins.ListSerializer
 import java.util.UUID
 
@@ -111,28 +112,64 @@ class LocalLinkedAccountRepository(
     }
 
     override suspend fun unlinkAccount(accountID: String) {
-        store.save(KEY, localAccounts().filterNot { it.id == accountID }, serializer)
+        store.saveReplacing(
+            key = KEY,
+            value = localAccounts().filterNot { it.id == accountID },
+            serializer = serializer,
+            removeKeys = setOf(LEGACY_KEY),
+        )
     }
 
     override suspend fun clearLocalAccounts() {
-        store.clear(KEY)
+        store.clear(setOf(KEY, LEGACY_KEY))
     }
 
     private fun saveUpsert(account: LinkedSchoolAccount) {
         val updated = localAccountsBlocking().filterNot { it.id == account.id } + account
-        store.save(KEY, updated, serializer)
+        store.saveReplacing(
+            key = KEY,
+            value = updated,
+            serializer = serializer,
+            removeKeys = setOf(LEGACY_KEY),
+        )
     }
 
     private fun localAccountsBlocking(): List<LinkedSchoolAccount> =
-        store.load(KEY, serializer) ?: store.load(LEGACY_KEY, serializer)?.also { accounts ->
-            store.save(KEY, accounts, serializer)
-            store.clear(LEGACY_KEY)
-        }.orEmpty()
+        store.loadCurrentOrMigrateLegacy(KEY, LEGACY_KEY, serializer).orEmpty()
 
     private companion object {
         const val KEY = "gradey.linkedAccounts.v1"
         const val LEGACY_KEY = "linked.accounts.v1"
     }
+}
+
+internal fun <T> SecureJsonStore.loadCurrentOrMigrateLegacy(
+    currentKey: String,
+    legacyKey: String,
+    serializer: KSerializer<T>,
+): T? = when (val current = read(currentKey, serializer)) {
+    SecureJsonReadResult.Absent -> when (val legacy = read(legacyKey, serializer)) {
+        SecureJsonReadResult.Absent -> null
+        SecureJsonReadResult.Rejected -> {
+            clear(setOf(currentKey, legacyKey))
+            null
+        }
+        is SecureJsonReadResult.Valid -> legacy.value.also { value ->
+            saveReplacing(
+                key = currentKey,
+                value = value,
+                serializer = serializer,
+                removeKeys = setOf(legacyKey),
+            )
+        }
+    }
+    SecureJsonReadResult.Rejected -> {
+        // A present current record is authoritative. Never resurrect an older identity after
+        // current-format corruption; quarantine both generations in one durable transaction.
+        clear(setOf(currentKey, legacyKey))
+        null
+    }
+    is SecureJsonReadResult.Valid -> current.value
 }
 
 internal fun resolvedLocalLinkedSchoolName(user: UserResponse?, fallback: String?): String? =

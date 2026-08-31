@@ -1,9 +1,11 @@
 package com.bukovinafilip.gradey.network
 
 import com.bukovinafilip.gradey.domain.GradeyAuthRepository
+import com.bukovinafilip.gradey.domain.GradeyIdentityChangedException
 import com.bukovinafilip.gradey.domain.LinkedAccountRepository
 import com.bukovinafilip.gradey.domain.SchoolDirectoryNameResolver
 import com.bukovinafilip.gradey.model.GradeyAccountSettingsSnapshot
+import com.bukovinafilip.gradey.model.GradeyAuthSession
 import com.bukovinafilip.gradey.model.LinkedSchoolAccount
 import com.bukovinafilip.gradey.model.LinkedSchoolAccountActivation
 import com.bukovinafilip.gradey.model.LinkedSchoolTokenPayload
@@ -38,61 +40,72 @@ class SupabaseLinkedAccountRepository(
     private val okHttpClient: OkHttpClient = OkHttpClient(),
 ) : LinkedAccountRepository {
     private val cacheMutex = Mutex()
+    private var cacheEpoch = 0L
 
-    override suspend fun localAccounts(): List<LinkedSchoolAccount> = accountLoader()
+    override suspend fun localAccounts(): List<LinkedSchoolAccount> =
+        cacheMutex.withLock { accountLoader() }
 
-    override suspend fun refreshAccounts(): GradeyAccountSettingsSnapshot {
-        val snapshot: GradeyAccountSettingsSnapshot = get("account-settings")
-        cacheMutex.withLock { accountStore(snapshot.linkedAccounts) }
-        return snapshot
-    }
+    override suspend fun refreshAccounts(): GradeyAccountSettingsSnapshot =
+        requestAndUpdateCache(
+            request = { session -> get("account-settings", session) },
+            updateCache = { snapshot -> accountStore(snapshot.linkedAccounts) },
+        )
 
     override suspend fun linkSchoolAccount(
         session: StoredSession,
         user: UserResponse?,
-    ): LinkedSchoolAccount {
-        val account: LinkedSchoolAccount = post(
-            function = "link-school-account",
-            body = LinkSchoolAccountRequest(
-                provider = session.provider,
-                baseURL = session.baseURL,
-                displayName = user?.fullName?.trim()?.takeIf(String::isNotEmpty)
-                    ?: session.linkedAccountDisplayName
-                    ?: session.provider.displayName,
-                schoolName = user?.displaySchoolName
-                    ?: SchoolDirectoryNameResolver.displayableName(session.linkedAccountSchoolName),
-                providerUserID = user?.userUID,
-                tokenPayload = LinkedSchoolTokenPayload.from(session),
-            ),
-        )
-        upsert(account)
-        return account
-    }
+    ): LinkedSchoolAccount = requestAndUpdateCache(
+        request = { ownerSession ->
+            post(
+                function = "link-school-account",
+                body = LinkSchoolAccountRequest(
+                    provider = session.provider,
+                    baseURL = session.baseURL,
+                    displayName = user?.fullName?.trim()?.takeIf(String::isNotEmpty)
+                        ?: session.linkedAccountDisplayName
+                        ?: session.provider.displayName,
+                    schoolName = user?.displaySchoolName
+                        ?: SchoolDirectoryNameResolver.displayableName(session.linkedAccountSchoolName),
+                    providerUserID = user?.userUID,
+                    tokenPayload = LinkedSchoolTokenPayload.from(session),
+                ),
+                session = ownerSession,
+            )
+        },
+        updateCache = ::upsertInCache,
+    )
 
-    override suspend fun linkStravaCZAccount(session: StravaCZStoredSession): LinkedSchoolAccount {
-        val account: LinkedSchoolAccount = post(
-            function = "link-stravacz-account",
-            body = LinkStravaCZAccountRequest(
-                displayName = session.displayName,
-                canteenNumber = session.canteenNumber,
-                canteenName = session.canteenName,
-                username = session.username,
-                serviceURL = session.serviceURL,
-                sessionID = session.sessionID,
-            ),
+    override suspend fun linkStravaCZAccount(session: StravaCZStoredSession): LinkedSchoolAccount =
+        requestAndUpdateCache(
+            request = { ownerSession ->
+                post(
+                    function = "link-stravacz-account",
+                    body = LinkStravaCZAccountRequest(
+                        displayName = session.displayName,
+                        canteenNumber = session.canteenNumber,
+                        canteenName = session.canteenName,
+                        username = session.username,
+                        serviceURL = session.serviceURL,
+                        sessionID = session.sessionID,
+                    ),
+                    session = ownerSession,
+                )
+            },
+            updateCache = ::upsertInCache,
         )
-        upsert(account)
-        return account
-    }
 
     override suspend fun activateSchoolAccount(accountID: String): LinkedSchoolAccountActivation {
         require(accountID.isNotBlank()) { "Missing linked school account." }
-        val activation: LinkedSchoolAccountActivation = post(
-            function = "activate-school-account",
-            body = AccountIDRequest(accountID),
+        return requestAndUpdateCache(
+            request = { session ->
+                post(
+                    function = "activate-school-account",
+                    body = AccountIDRequest(accountID),
+                    session = session,
+                )
+            },
+            updateCache = { activation -> upsertInCache(activation.account) },
         )
-        upsert(activation.account)
-        return activation
     }
 
     override suspend fun reconnectSchoolAccount(
@@ -101,23 +114,27 @@ class SupabaseLinkedAccountRepository(
         user: UserResponse?,
     ): LinkedSchoolAccount {
         require(accountID.isNotBlank()) { "Missing linked school account." }
-        val account: LinkedSchoolAccount = post(
-            function = "relink-school-account",
-            body = RelinkSchoolAccountRequest(
-                id = accountID,
-                provider = session.provider,
-                baseURL = session.baseURL,
-                displayName = user?.fullName?.trim()?.takeIf(String::isNotEmpty)
-                    ?: session.linkedAccountDisplayName
-                    ?: session.provider.displayName,
-                schoolName = user?.displaySchoolName
-                    ?: SchoolDirectoryNameResolver.displayableName(session.linkedAccountSchoolName),
-                providerUserID = user?.userUID,
-                tokenPayload = LinkedSchoolTokenPayload.from(session),
-            ),
+        return requestAndUpdateCache(
+            request = { ownerSession ->
+                post(
+                    function = "relink-school-account",
+                    body = RelinkSchoolAccountRequest(
+                        id = accountID,
+                        provider = session.provider,
+                        baseURL = session.baseURL,
+                        displayName = user?.fullName?.trim()?.takeIf(String::isNotEmpty)
+                            ?: session.linkedAccountDisplayName
+                            ?: session.provider.displayName,
+                        schoolName = user?.displaySchoolName
+                            ?: SchoolDirectoryNameResolver.displayableName(session.linkedAccountSchoolName),
+                        providerUserID = user?.userUID,
+                        tokenPayload = LinkedSchoolTokenPayload.from(session),
+                    ),
+                    session = ownerSession,
+                )
+            },
+            updateCache = ::upsertInCache,
         )
-        upsert(account)
-        return account
     }
 
     override suspend fun updateNotificationsEnabled(
@@ -125,63 +142,107 @@ class SupabaseLinkedAccountRepository(
         enabled: Boolean,
     ): LinkedSchoolAccount {
         require(accountID.isNotBlank()) { "Missing linked school account." }
-        val account: LinkedSchoolAccount = post(
-            function = "update-linked-account-preferences",
-            body = UpdateLinkedAccountPreferencesRequest(accountID, enabled),
+        return requestAndUpdateCache(
+            request = { session ->
+                post(
+                    function = "update-linked-account-preferences",
+                    body = UpdateLinkedAccountPreferencesRequest(accountID, enabled),
+                    session = session,
+                )
+            },
+            updateCache = ::upsertInCache,
         )
-        upsert(account)
-        return account
     }
 
     override suspend fun unlinkAccount(accountID: String) {
         require(accountID.isNotBlank()) { "Missing linked school account." }
+        requestAndUpdateCache(
+            request = { session ->
+                postIgnoringResponse(
+                    function = "unlink-account",
+                    body = AccountIDRequest(accountID),
+                    session = session,
+                )
+            },
+            updateCache = {
+                accountStore(accountLoader().filterNot { it.id == accountID })
+            },
+        )
+    }
+
+    override suspend fun unlinkAccountForSignedOutSession(
+        accountID: String,
+        session: GradeyAuthSession,
+    ) {
+        require(accountID.isNotBlank()) { "Missing linked school account." }
         postIgnoringResponse(
             function = "unlink-account",
             body = AccountIDRequest(accountID),
+            session = session,
         )
-        cacheMutex.withLock {
-            accountStore(accountLoader().filterNot { it.id == accountID })
-        }
     }
 
     override suspend fun clearLocalAccounts() {
-        cacheMutex.withLock { accountStore(null) }
-    }
-
-    private suspend fun upsert(account: LinkedSchoolAccount) {
         cacheMutex.withLock {
-            val updated = accountLoader()
-                .filterNot { it.id == account.id }
-                .plus(account)
-                .sortedBy { it.displayName.lowercase() }
-            accountStore(updated)
+            cacheEpoch += 1
+            accountStore(null)
         }
     }
 
-    private suspend inline fun <reified Response> get(function: String): Response =
-        GradeyJson.decodeFromString(sendData(function, "GET", null))
+    private suspend fun upsertInCache(account: LinkedSchoolAccount) {
+        val updated = accountLoader()
+            .filterNot { it.id == account.id }
+            .plus(account)
+            .sortedBy { it.displayName.lowercase() }
+        accountStore(updated)
+    }
+
+    private suspend fun <Response> requestAndUpdateCache(
+        request: suspend (GradeyAuthSession) -> Response,
+        updateCache: suspend (Response) -> Unit,
+    ): Response {
+        val ownerCacheEpoch = cacheMutex.withLock { cacheEpoch }
+        val ownerSession = authRepository.validSession()
+        val response = request(ownerSession)
+        cacheMutex.withLock {
+            val currentSession = authRepository.bootstrapSession()
+            if (ownerCacheEpoch != cacheEpoch || !ownerSession.isSameSessionAs(currentSession)) {
+                throw GradeyIdentityChangedException()
+            }
+            updateCache(response)
+        }
+        return response
+    }
+
+    private suspend inline fun <reified Response> get(
+        function: String,
+        session: GradeyAuthSession? = null,
+    ): Response = GradeyJson.decodeFromString(sendData(function, "GET", null, session))
 
     private suspend inline fun <reified Response, reified Body> post(
         function: String,
         body: Body,
+        session: GradeyAuthSession? = null,
     ): Response = GradeyJson.decodeFromString(
-        sendData(function, "POST", GradeyJson.encodeToString(body)),
+        sendData(function, "POST", GradeyJson.encodeToString(body), session),
     )
 
     private suspend inline fun <reified Body> postIgnoringResponse(
         function: String,
         body: Body,
+        session: GradeyAuthSession? = null,
     ) {
-        sendData(function, "POST", GradeyJson.encodeToString(body))
+        sendData(function, "POST", GradeyJson.encodeToString(body), session)
     }
 
     private suspend fun sendData(
         function: String,
         method: String,
         body: String?,
+        sessionOverride: GradeyAuthSession? = null,
     ): String {
         check(configuration.isConfigured) { "Gradey ID is not configured in this build." }
-        val session = authRepository.validSession()
+        val session = sessionOverride ?: authRepository.validSession()
         val builder = Request.Builder()
             .url(configuration.url.appendPath("functions/v1/$function"))
             .header("Accept", "application/json")
@@ -202,6 +263,11 @@ class SupabaseLinkedAccountRepository(
         }
     }
 }
+
+private fun GradeyAuthSession.isSameSessionAs(current: GradeyAuthSession?): Boolean =
+    current != null &&
+        account.id == current.account.id &&
+        accessToken == current.accessToken
 
 @Serializable
 private data class LinkSchoolAccountRequest(

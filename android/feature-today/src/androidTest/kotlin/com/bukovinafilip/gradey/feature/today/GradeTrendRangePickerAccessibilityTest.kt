@@ -3,6 +3,7 @@ package com.bukovinafilip.gradey.feature.today
 import android.content.res.Configuration
 import android.os.LocaleList
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
@@ -27,16 +28,30 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertWidthIsAtLeast
+import androidx.compose.ui.test.hasScrollAction
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import com.bukovinafilip.gradey.domain.DemoData
 import com.bukovinafilip.gradey.domain.GradeTrendRange
+import com.bukovinafilip.gradey.domain.SubjectGradeTrend
+import com.bukovinafilip.gradey.model.AbsenceResponse
+import com.bukovinafilip.gradey.model.DashboardData
+import com.bukovinafilip.gradey.model.LinkedAccountProvider
+import com.bukovinafilip.gradey.model.MarksResponse
+import com.bukovinafilip.gradey.model.NewMarkEvent
 import com.bukovinafilip.gradey.ui.GradeyTheme
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
 import java.util.Locale
 import java.util.concurrent.atomic.AtomicInteger
 import org.junit.Assert.assertEquals
@@ -210,6 +225,62 @@ class GradeTrendRangePickerAccessibilityTest {
         composeRule.runOnIdle { assertEquals(1, clicks.get()) }
     }
 
+    @Test
+    fun englishTodayNumbersFollowAppLocaleWhenJvmDefaultIsCzech() {
+        assertTodayNumberFormatting(
+            appLocaleTag = "en-US",
+            jvmDefault = Locale.forLanguageTag("cs-CZ"),
+            expectedAverage = "1.78",
+            unexpectedAverage = "1,78",
+            expectedDelta = "+0.25",
+            unexpectedDelta = "+0,25",
+        )
+    }
+
+    @Test
+    fun czechTodayNumbersFollowAppLocaleWhenJvmDefaultIsEnglish() {
+        assertTodayNumberFormatting(
+            appLocaleTag = "cs-CZ",
+            jvmDefault = Locale.US,
+            expectedAverage = "1,78",
+            unexpectedAverage = "1.78",
+            expectedDelta = "+0,25",
+            unexpectedDelta = "+0.25",
+        )
+    }
+
+    @Test
+    fun cloudNewMarkDetectedAtFollowsAppLocaleWhenJvmDefaultIsEnglish() {
+        val appLocale = Locale.forLanguageTag("cs-CZ")
+        val jvmDefault = Locale.US
+        val detectedAt = Instant.parse(DetectedAtNewMark.createdAt)
+        val formatter = DateTimeFormatter
+            .ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT)
+            .withZone(ZoneId.of("Europe/Prague"))
+        val expectedTimestamp = formatter.withLocale(appLocale).format(detectedAt)
+        val unexpectedTimestamp = formatter.withLocale(jvmDefault).format(detectedAt)
+        assertTrue(
+            "Selected and JVM-default locales must format the fixture differently",
+            expectedTimestamp != unexpectedTimestamp,
+        )
+
+        val originalDefault = Locale.getDefault()
+        try {
+            Locale.setDefault(jvmDefault)
+            setLocalizedToday(
+                localeTag = appLocale.toLanguageTag(),
+                cloudNewMarkEvents = listOf(DetectedAtNewMark),
+            )
+
+            composeRule.onNode(hasScrollAction())
+                .performScrollToNode(hasText(expectedTimestamp))
+            composeRule.onNodeWithText(expectedTimestamp).assertIsDisplayed()
+            composeRule.onNodeWithText(unexpectedTimestamp).assertDoesNotExist()
+        } finally {
+            Locale.setDefault(originalDefault)
+        }
+    }
+
     private fun setPicker(fontScale: Float = 1f) {
         composeRule.setContent {
             val baseDensity = LocalDensity.current
@@ -282,6 +353,79 @@ class GradeTrendRangePickerAccessibilityTest {
         }
     }
 
+    private fun assertTodayNumberFormatting(
+        appLocaleTag: String,
+        jvmDefault: Locale,
+        expectedAverage: String,
+        unexpectedAverage: String,
+        expectedDelta: String,
+        unexpectedDelta: String,
+    ) {
+        val originalDefault = Locale.getDefault()
+        try {
+            Locale.setDefault(jvmDefault)
+            setLocalizedToday(appLocaleTag)
+
+            composeRule.onNodeWithText(expectedAverage).assertIsDisplayed()
+            composeRule.onNode(hasScrollAction())
+                .performScrollToNode(hasText(expectedDelta))
+            composeRule.onNodeWithText(expectedDelta).assertIsDisplayed()
+            composeRule.onNodeWithText(unexpectedAverage).assertDoesNotExist()
+            composeRule.onNodeWithText(unexpectedDelta).assertDoesNotExist()
+        } finally {
+            Locale.setDefault(originalDefault)
+        }
+    }
+
+    private fun setLocalizedToday(
+        localeTag: String,
+        cloudNewMarkEvents: List<NewMarkEvent> = emptyList(),
+    ) {
+        composeRule.setContent {
+            val baseContext = LocalContext.current
+            val baseConfiguration = LocalConfiguration.current
+            val locale = remember(localeTag) { Locale.forLanguageTag(localeTag) }
+            val configuration = remember(baseConfiguration, locale) {
+                Configuration(baseConfiguration).apply {
+                    setLocale(locale)
+                    setLocales(LocaleList(locale))
+                }
+            }
+            val localizedContext = remember(baseContext, configuration) {
+                baseContext.createConfigurationContext(configuration)
+            }
+
+            CompositionLocalProvider(
+                LocalContext provides localizedContext,
+                LocalConfiguration provides configuration,
+            ) {
+                GradeyTheme {
+                    TodayScreen(
+                        dashboard = DashboardData(MarksResponse(subjects = listOf(DemoData.math))),
+                        absence = AbsenceResponse(),
+                        timetable = null,
+                        stravaMenu = null,
+                        isMealsConnected = false,
+                        cloudNewMarkEvents = cloudNewMarkEvents,
+                        gradeTrends = listOf(MathTrend),
+                        isRefreshing = false,
+                        onRefresh = {},
+                        onOpenAccount = {},
+                        onOpenGradeyTools = {},
+                        onOpenMarks = {},
+                        onOpenAbsence = {},
+                        onOpenTimetable = {},
+                        onOpenMeals = {},
+                        onActivateLinkedAccount = {},
+                        onReconnectPrefill = { null },
+                        onReconnectLinkedAccount = { _, _, _, _ -> null },
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }
+            }
+        }
+    }
+
     private fun localizedString(resource: Int, localeTag: String): String {
         val locale = Locale.forLanguageTag(localeTag)
         val configuration = Configuration(context.resources.configuration).apply {
@@ -298,6 +442,27 @@ class GradeTrendRangePickerAccessibilityTest {
 
     private companion object {
         const val TODAY_ACTION_PILL_TEST_TAG = "todayActionPill"
+        val MathTrend = SubjectGradeTrend(
+            subjectID = DemoData.math.id,
+            subjectAbbrev = DemoData.math.subjectInfo.abbrev,
+            subjectName = DemoData.math.displayName,
+            firstAverage = 1.53,
+            latestAverage = 1.78,
+            averageDelta = 0.25,
+            firstMarkCount = 2,
+            latestMarkCount = 3,
+            events = emptyList(),
+        )
+        val DetectedAtNewMark = NewMarkEvent(
+            id = "detected-at-locale",
+            linkedAccountID = "school",
+            provider = LinkedAccountProvider.BAKALARI,
+            subjectID = DemoData.math.id,
+            subjectAbbrev = DemoData.math.subjectInfo.abbrev,
+            subjectName = DemoData.math.displayName,
+            markText = "1",
+            createdAt = "2026-08-29T08:00:00Z",
+        )
         val tabRoleMatcher = SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Tab)
         val buttonRoleMatcher = SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Button)
     }

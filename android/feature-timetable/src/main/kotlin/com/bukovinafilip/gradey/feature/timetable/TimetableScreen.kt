@@ -5,18 +5,21 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
@@ -88,6 +91,13 @@ private val NoticeRed = GradeyColors.Poor
 internal const val TIMETABLE_PREVIOUS_WEEK_TEST_TAG = "timetablePreviousWeek"
 internal const val TIMETABLE_NEXT_WEEK_TEST_TAG = "timetableNextWeek"
 internal const val TIMETABLE_TODAY_TEST_TAG = "timetableToday"
+internal const val TIMETABLE_DETAIL_SCROLL_TEST_TAG = "timetableDetailScroll"
+internal const val TIMETABLE_DETAIL_HERO_TEST_TAG = "timetableDetailHero"
+internal const val TIMETABLE_DETAIL_HERO_TITLE_TEST_TAG = "timetableDetailHeroTitle"
+internal const val TIMETABLE_DETAIL_ROW_TEST_TAG_PREFIX = "timetableDetailRow:"
+internal const val TIMETABLE_LESSONS_LIST_TEST_TAG = "timetableLessonsList"
+internal const val TIMETABLE_LESSON_ROW_TEST_TAG_PREFIX = "timetableLessonRow:"
+internal const val TIMETABLE_LESSON_CARD_TEST_TAG_PREFIX = "timetableLessonCard:"
 
 private data class TimetableDaySlot(
     val date: LocalDate,
@@ -624,7 +634,7 @@ private fun DayStrip(
 }
 
 @Composable
-private fun LessonsList(
+internal fun LessonsList(
     day: ScheduledDay?,
     isLoaded: Boolean,
     onOpenLesson: (ScheduledLesson) -> Unit,
@@ -645,7 +655,9 @@ private fun LessonsList(
         else -> stringResource(R.string.timetable_empty_message)
     }
     LazyColumn(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .testTag(TIMETABLE_LESSONS_LIST_TEST_TAG),
         contentPadding = PaddingValues(top = 13.dp, end = 16.dp, bottom = 126.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
@@ -689,6 +701,7 @@ private fun LessonsList(
 }
 
 @Composable
+@OptIn(ExperimentalLayoutApi::class)
 private fun LessonRow(
     lesson: ScheduledLesson,
     onClick: () -> Unit,
@@ -705,20 +718,22 @@ private fun LessonRow(
         lesson.groups.takeIf(List<String>::isNotEmpty)?.joinToString(", "),
     )
     val hasExtras = !lesson.theme.isNullOrBlank() || lesson.hasHomework || lesson.changeKind != LessonChangeKind.NONE
-    val rowHeight = if (hasExtras) 102.dp else 76.dp
+    val rowMinHeight = if (hasExtras) 102.dp else 76.dp
     val isCanceled = lesson.changeKind == LessonChangeKind.CANCELED
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(rowHeight),
+            .heightIn(min = rowMinHeight)
+            .testTag(TIMETABLE_LESSON_ROW_TEST_TAG_PREFIX + lesson.id),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        LessonTimeRail(lesson = lesson, modifier = Modifier.width(72.dp).fillMaxHeight())
+        LessonTimeRail(lesson = lesson, modifier = Modifier.width(72.dp))
         Surface(
             modifier = Modifier
                 .weight(1f)
-                .fillMaxHeight()
+                .heightIn(min = rowMinHeight)
                 .alpha(if (isCanceled) 0.68f else 1f)
+                .testTag(TIMETABLE_LESSON_CARD_TEST_TAG_PREFIX + lesson.id)
                 .semantics {
                     contentDescription = buildString {
                         append(detailDescription)
@@ -791,7 +806,10 @@ private fun LessonRow(
                         )
                     }
                     if (lesson.changeKind != LessonChangeKind.NONE || lesson.hasHomework) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp),
+                        ) {
                             if (lesson.changeKind != LessonChangeKind.NONE) {
                                 StatusChip(
                                     text = lesson.localizedChangeLabel(),
@@ -846,7 +864,7 @@ private fun LessonTimeRail(
 }
 
 @Composable
-private fun LessonDetailSheet(lesson: ScheduledLesson) {
+internal fun LessonDetailSheet(lesson: ScheduledLesson) {
     val subjectName = lesson.localizedSubjectName()
     val teacher = lesson.teacherName ?: lesson.teacherAbbrev
     val room = lesson.roomName ?: lesson.roomAbbrev
@@ -866,14 +884,13 @@ private fun LessonDetailSheet(lesson: ScheduledLesson) {
         (if (lesson.hasHomework) 1 else 0) +
         (if (!lesson.changeDescription.isNullOrBlank()) 1 else 0) +
         changeDetails.size
-    val sheetHeight = (250 + detailRowCount * 45).coerceIn(390, 700).dp
     val background = MaterialTheme.colorScheme.background
     val surface = MaterialTheme.colorScheme.surfaceContainer
     val surfaceHigh = MaterialTheme.colorScheme.surfaceContainerHigh
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(sheetHeight)
+            .heightIn(min = 390.dp, max = 700.dp)
             .clip(RoundedCornerShape(48.dp))
             .background(
                 Brush.verticalGradient(
@@ -884,8 +901,9 @@ private fun LessonDetailSheet(lesson: ScheduledLesson) {
                     ),
                 ),
             ),
+        propagateMinConstraints = true,
     ) {
-        Canvas(Modifier.fillMaxSize()) {
+        Canvas(Modifier.matchParentSize()) {
             drawCircle(
                 brush = Brush.radialGradient(
                     colors = listOf(GradeyColors.Primary.copy(alpha = 0.28f), Color.Transparent),
@@ -897,7 +915,12 @@ private fun LessonDetailSheet(lesson: ScheduledLesson) {
             )
         }
         Column(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag(TIMETABLE_DETAIL_SCROLL_TEST_TAG)
+                .verticalScroll(rememberScrollState())
+                .navigationBarsPadding()
+                .padding(bottom = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Spacer(Modifier.height(6.dp))
@@ -919,7 +942,8 @@ private fun LessonDetailSheet(lesson: ScheduledLesson) {
                 modifier = Modifier
                     .padding(horizontal = 15.dp)
                     .fillMaxWidth()
-                    .height(96.dp)
+                    .heightIn(min = 96.dp)
+                    .testTag(TIMETABLE_DETAIL_HERO_TEST_TAG)
                     .clip(RoundedCornerShape(20.dp))
                     .background(Brush.horizontalGradient(listOf(HeroStart, HeroEnd)))
                     .semantics {
@@ -927,7 +951,7 @@ private fun LessonDetailSheet(lesson: ScheduledLesson) {
                     },
                 contentAlignment = Alignment.CenterStart,
             ) {
-                Column(modifier = Modifier.padding(horizontal = 24.dp)) {
+                Column(modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)) {
                     Text(
                         text = lesson.formattedTimeRange(),
                         color = Color(0xFFE2F7F1),
@@ -938,10 +962,15 @@ private fun LessonDetailSheet(lesson: ScheduledLesson) {
                     Spacer(Modifier.height(5.dp))
                     Text(
                         text = subjectName,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag(TIMETABLE_DETAIL_HERO_TITLE_TEST_TAG),
                         color = Color.White,
                         fontSize = 22.sp,
                         lineHeight = 28.sp,
                         fontWeight = FontWeight.Bold,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
             }
@@ -950,7 +979,7 @@ private fun LessonDetailSheet(lesson: ScheduledLesson) {
                 modifier = Modifier
                     .padding(horizontal = 15.dp)
                     .fillMaxWidth()
-                    .height((18 + detailRowCount * 45).dp),
+                    .heightIn(min = (18 + detailRowCount * 45).dp),
                 shape = RoundedCornerShape(20.dp),
                 color = MaterialTheme.colorScheme.surfaceContainer,
                 shadowElevation = 1.dp,
@@ -964,6 +993,9 @@ private fun LessonDetailSheet(lesson: ScheduledLesson) {
                             icon = { Icon(GradeyIcons.User, contentDescription = null) },
                             label = stringResource(R.string.timetable_detail_teacher),
                             value = it,
+                            modifier = Modifier.testTag(
+                                TIMETABLE_DETAIL_ROW_TEST_TAG_PREFIX + R.string.timetable_detail_teacher,
+                            ),
                         )
                     }
                     room?.let {
@@ -971,6 +1003,9 @@ private fun LessonDetailSheet(lesson: ScheduledLesson) {
                             icon = { Icon(GradeyIcons.MeetingRoom, contentDescription = null) },
                             label = stringResource(R.string.timetable_detail_room),
                             value = it,
+                            modifier = Modifier.testTag(
+                                TIMETABLE_DETAIL_ROW_TEST_TAG_PREFIX + R.string.timetable_detail_room,
+                            ),
                         )
                     }
                     if (lesson.groups.isNotEmpty()) {
@@ -978,6 +1013,9 @@ private fun LessonDetailSheet(lesson: ScheduledLesson) {
                             icon = { Icon(GradeyIcons.User, contentDescription = null) },
                             label = stringResource(R.string.timetable_detail_group),
                             value = lesson.groups.joinToString(", "),
+                            modifier = Modifier.testTag(
+                                TIMETABLE_DETAIL_ROW_TEST_TAG_PREFIX + R.string.timetable_detail_group,
+                            ),
                         )
                     }
                     lesson.theme?.takeIf { it.isNotBlank() }?.let { topic ->
@@ -985,6 +1023,9 @@ private fun LessonDetailSheet(lesson: ScheduledLesson) {
                             icon = { Icon(GradeyIcons.Book, contentDescription = null) },
                             label = stringResource(R.string.timetable_detail_topic),
                             value = topic,
+                            modifier = Modifier.testTag(
+                                TIMETABLE_DETAIL_ROW_TEST_TAG_PREFIX + R.string.timetable_detail_topic,
+                            ),
                         )
                     }
                     if (lesson.hasHomework) {
@@ -992,6 +1033,9 @@ private fun LessonDetailSheet(lesson: ScheduledLesson) {
                             icon = { Icon(GradeyIcons.Book, contentDescription = null) },
                             label = stringResource(R.string.timetable_detail_homework),
                             value = stringResource(R.string.timetable_detail_homework_assigned),
+                            modifier = Modifier.testTag(
+                                TIMETABLE_DETAIL_ROW_TEST_TAG_PREFIX + R.string.timetable_detail_homework,
+                            ),
                         )
                     }
                     lesson.changeDescription?.takeIf { it.isNotBlank() }?.let { change ->
@@ -999,6 +1043,9 @@ private fun LessonDetailSheet(lesson: ScheduledLesson) {
                             icon = { Icon(GradeyIcons.Information, contentDescription = null) },
                             label = lesson.localizedChangeLabel(),
                             value = change,
+                            modifier = Modifier.testTag(
+                                TIMETABLE_DETAIL_ROW_TEST_TAG_PREFIX + "change-description",
+                            ),
                         )
                     }
                     changeDetails.forEach { (label, value) ->
@@ -1006,6 +1053,7 @@ private fun LessonDetailSheet(lesson: ScheduledLesson) {
                             icon = { Icon(GradeyIcons.Information, contentDescription = null) },
                             label = stringResource(label),
                             value = value,
+                            modifier = Modifier.testTag(TIMETABLE_DETAIL_ROW_TEST_TAG_PREFIX + label),
                         )
                     }
                 }
@@ -1019,11 +1067,12 @@ private fun DetailRow(
     icon: @Composable () -> Unit,
     label: String,
     value: String,
+    modifier: Modifier = Modifier,
 ) {
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
-            .height(38.dp),
+            .heightIn(min = 38.dp),
         verticalAlignment = Alignment.Top,
     ) {
         Box(
@@ -1040,9 +1089,10 @@ private fun DetailRow(
                 CompositionLocalProvider(LocalContentColor provides AccentTeal) { icon() }
             }
         }
-        Column {
+        Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = label,
+                modifier = Modifier.fillMaxWidth(),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 13.sp,
                 lineHeight = 16.sp,
@@ -1050,12 +1100,11 @@ private fun DetailRow(
             )
             Text(
                 text = value,
+                modifier = Modifier.fillMaxWidth(),
                 color = MaterialTheme.colorScheme.onSurface,
                 fontSize = 17.sp,
                 lineHeight = 20.sp,
                 fontWeight = FontWeight.Normal,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
             )
         }
     }

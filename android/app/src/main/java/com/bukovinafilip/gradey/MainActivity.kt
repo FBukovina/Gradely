@@ -36,6 +36,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -86,6 +87,7 @@ import com.bukovinafilip.gradey.feature.timetable.R as TimetableR
 import com.bukovinafilip.gradey.feature.today.TodayScreen
 import com.bukovinafilip.gradey.feature.today.TodayStateScreen
 import com.bukovinafilip.gradey.domain.GradeySessionExpiredException
+import com.bukovinafilip.gradey.domain.GradeyIdentityChangedException
 import com.bukovinafilip.gradey.domain.GradeHistoryTrends
 import com.bukovinafilip.gradey.domain.GradeyStartupDestination
 import com.bukovinafilip.gradey.domain.AbsencePresentationState
@@ -94,6 +96,7 @@ import com.bukovinafilip.gradey.domain.AbsencePartialDayCandidate
 import com.bukovinafilip.gradey.domain.AbsenceSubjectResolutionFailure
 import com.bukovinafilip.gradey.domain.AbsenceSubjectResolutionProgress
 import com.bukovinafilip.gradey.domain.SchoolSessionExpiredException
+import com.bukovinafilip.gradey.domain.SchoolCloudMutationToken
 import com.bukovinafilip.gradey.domain.SchoolReconnectPrefill
 import com.bukovinafilip.gradey.domain.SchoolReconnectPrefills
 import com.bukovinafilip.gradey.domain.TimetableDates
@@ -115,6 +118,7 @@ import com.bukovinafilip.gradey.model.AbsenceResponse
 import com.bukovinafilip.gradey.model.AgeAttestationKind
 import com.bukovinafilip.gradey.model.AppLanguage
 import com.bukovinafilip.gradey.model.GradeyAccount
+import com.bukovinafilip.gradey.model.GradeyAuthSession
 import com.bukovinafilip.gradey.model.GradeySupportTier
 import com.bukovinafilip.gradey.model.LinkedAccountProvider
 import com.bukovinafilip.gradey.model.LinkedAccountStatus
@@ -175,12 +179,108 @@ internal fun shouldRouteToSchoolReconnect(currentSession: StoredSession?): Boole
 internal data class SchoolMutationOwner(
     val gradeyAccountID: String?,
     val isGuestMode: Boolean,
+    val gradeyIdentityGeneration: Long,
+    val operationToken: Long,
 )
 
 internal fun SchoolMutationOwner.isCurrent(
     currentGradeyAccountID: String?,
     currentGuestMode: Boolean,
-): Boolean = gradeyAccountID == currentGradeyAccountID && isGuestMode == currentGuestMode
+    currentGradeyIdentityGeneration: Long,
+    activeOperationToken: Long?,
+): Boolean =
+    gradeyAccountID == currentGradeyAccountID &&
+        isGuestMode == currentGuestMode &&
+        gradeyIdentityGeneration == currentGradeyIdentityGeneration &&
+        operationToken == activeOperationToken
+
+internal data class GradeyIdentityOwner(
+    val accountID: String,
+    val generation: Long,
+)
+
+internal fun GradeyIdentityOwner.isCurrent(
+    currentAccountID: String?,
+    currentGeneration: Long,
+    currentGuestMode: Boolean,
+): Boolean =
+    !currentGuestMode &&
+        accountID == currentAccountID &&
+        generation == currentGeneration
+
+internal data class OnboardingIdentityOwner(
+    val accountID: String?,
+    val isGuestMode: Boolean,
+    val generation: Long,
+)
+
+internal fun OnboardingIdentityOwner.isCurrent(
+    currentAccountID: String?,
+    currentGuestMode: Boolean,
+    currentGeneration: Long,
+): Boolean =
+    accountID == currentAccountID &&
+        isGuestMode == currentGuestMode &&
+        generation == currentGeneration
+
+internal data class GradeyIdentityBoundaryState(
+    val linkedAccounts: List<LinkedSchoolAccount>,
+    val activeLinkedAccountID: String?,
+    val notificationPreferences: NotificationPreferences,
+)
+
+internal fun GradeyIdentityBoundaryState.cleared(): GradeyIdentityBoundaryState =
+    GradeyIdentityBoundaryState(
+        linkedAccounts = emptyList(),
+        activeLinkedAccountID = null,
+        notificationPreferences = NotificationPreferences.Default,
+    )
+
+internal fun shouldTrustCachedSchoolAssociation(
+    trustCachedAssociation: Boolean,
+    session: StoredSession,
+    cachedAccounts: List<LinkedSchoolAccount>,
+): Boolean =
+    trustCachedAssociation &&
+        session.linkedAccountID != null &&
+        cachedAccounts.any {
+            it.id == session.linkedAccountID &&
+                it.provider.isSupportedSchoolProvider &&
+                it.status == LinkedAccountStatus.ACTIVE
+        }
+
+internal fun shouldDetachSchoolAssociationAfterAuthoritativeRefresh(
+    session: StoredSession?,
+    authoritativeAccounts: List<LinkedSchoolAccount>?,
+): Boolean {
+    val linkedAccountID = session?.linkedAccountID ?: return false
+    return authoritativeAccounts != null &&
+        authoritativeAccounts.none { it.id == linkedAccountID }
+}
+
+internal suspend fun completeLocalStravaDisconnectBeforeRemoteCleanup(
+    takeLocalSessionForSignOut: suspend () -> StravaCZStoredSession?,
+    clearVisibleState: () -> Unit,
+    captureGradeySessionForCleanup: suspend () -> GradeyAuthSession?,
+    launchRemoteCleanup: (StravaCZStoredSession?, GradeyAuthSession?) -> Unit,
+) {
+    val signedOutStravaSession = try {
+        takeLocalSessionForSignOut()
+    } finally {
+        clearVisibleState()
+    }
+    val gradeySession = try {
+        captureGradeySessionForCleanup()
+    } catch (error: CancellationException) {
+        launchRemoteCleanup(signedOutStravaSession, null)
+        throw error
+    } catch (_: Throwable) {
+        null
+    }
+    launchRemoteCleanup(signedOutStravaSession, gradeySession)
+}
+
+private const val CURRENT_SCHOOL_LINK_MUTATION_ID = "current-school-link"
 
 class MainActivity : ComponentActivity() {
     private var deepLinkSequence = 0L
@@ -319,10 +419,11 @@ private fun GradeyApp(
         mutableStateOf(OnboardingAccountIntent.GET_STARTED)
     }
     var account by remember { mutableStateOf<GradeyAccount?>(null) }
+    var gradeyIdentityGeneration by remember { mutableLongStateOf(0L) }
     val onboardingUpgradeIdentityKey = when {
-        isGuestMode -> "guest"
-        account != null -> "account:${account?.id}"
-        else -> "signed-out"
+        isGuestMode -> "guest:$gradeyIdentityGeneration"
+        account != null -> "account:${account?.id}:$gradeyIdentityGeneration"
+        else -> "signed-out:$gradeyIdentityGeneration"
     }
     var onboardingUpgradeSchoolCloudLinkState by remember(
         onboardingProgress?.journey,
@@ -393,6 +494,10 @@ private fun GradeyApp(
     var onboardingNotificationsReturnToReady by rememberSaveable { mutableStateOf(false) }
     var isRefreshingLinkedAccounts by remember { mutableStateOf(false) }
     var mutatingLinkedAccountID by remember { mutableStateOf<String?>(null) }
+    var linkedAccountMutationSequence by remember { mutableLongStateOf(0L) }
+    var activeLinkedAccountMutationToken by remember { mutableStateOf<Long?>(null) }
+    var gradeyIdentityBoundarySequence by remember { mutableLongStateOf(0L) }
+    var activeGradeyIdentityBoundaryTokens by remember { mutableStateOf<Set<Long>>(emptySet()) }
     var schoolLoginJob by remember { mutableStateOf<Job?>(null) }
     var schoolLoginAttempt by remember { mutableIntStateOf(0) }
     var directorySchools by remember { mutableStateOf<List<SchoolDirectorySchool>>(emptyList()) }
@@ -443,10 +548,120 @@ private fun GradeyApp(
     }
     var isUpdatingNotificationPreferences by remember { mutableStateOf(false) }
     var notificationPreferencesError by remember { mutableStateOf<String?>(null) }
+    var isHandlingOnboardingNotificationChoice by remember { mutableStateOf(false) }
+    var notificationPermissionRequestOwner by remember {
+        mutableStateOf<OnboardingIdentityOwner?>(null)
+    }
+    var notificationSettingsRequestOwner by remember {
+        mutableStateOf<OnboardingIdentityOwner?>(null)
+    }
     var notificationPermissionGranted by remember {
         mutableStateOf(context.notificationsAreEnabled())
     }
-    var isHandlingOnboardingNotificationChoice by remember { mutableStateOf(false) }
+
+    fun isGradeyIdentityBoundaryChanging(): Boolean =
+        activeGradeyIdentityBoundaryTokens.isNotEmpty()
+
+    fun currentGradeyIdentityOwner(): GradeyIdentityOwner? {
+        if (isGradeyIdentityBoundaryChanging()) return null
+        val accountID = account?.id ?: return null
+        if (isGuestMode) return null
+        return GradeyIdentityOwner(accountID, gradeyIdentityGeneration)
+    }
+
+    fun currentOnboardingIdentityOwner(): OnboardingIdentityOwner? {
+        if (isGradeyIdentityBoundaryChanging()) return null
+        return OnboardingIdentityOwner(
+            accountID = account?.id,
+            isGuestMode = isGuestMode,
+            generation = gradeyIdentityGeneration,
+        )
+    }
+
+    fun beginSchoolMutation(linkedAccountID: String): SchoolMutationOwner? {
+        if (isGradeyIdentityBoundaryChanging() || activeLinkedAccountMutationToken != null) return null
+        linkedAccountMutationSequence += 1
+        val owner = SchoolMutationOwner(
+            gradeyAccountID = account?.id,
+            isGuestMode = isGuestMode,
+            gradeyIdentityGeneration = gradeyIdentityGeneration,
+            operationToken = linkedAccountMutationSequence,
+        )
+        activeLinkedAccountMutationToken = owner.operationToken
+        mutatingLinkedAccountID = linkedAccountID
+        linkedAccountError = null
+        return owner
+    }
+
+    fun SchoolMutationOwner.isCurrent(): Boolean = isCurrent(
+        currentGradeyAccountID = account?.id,
+        currentGuestMode = isGuestMode,
+        currentGradeyIdentityGeneration = gradeyIdentityGeneration,
+        activeOperationToken = activeLinkedAccountMutationToken,
+    )
+
+    fun SchoolMutationOwner.requireCurrent() {
+        if (!isCurrent()) throw GradeyIdentityChangedException()
+    }
+
+    fun GradeyIdentityOwner.isCurrent(): Boolean = isCurrent(
+        currentAccountID = account?.id,
+        currentGeneration = gradeyIdentityGeneration,
+        currentGuestMode = isGuestMode,
+    )
+
+    fun GradeyIdentityOwner.requireCurrent() {
+        if (!isCurrent()) throw GradeyIdentityChangedException()
+    }
+
+    fun OnboardingIdentityOwner.isCurrent(): Boolean =
+        !isGradeyIdentityBoundaryChanging() &&
+            isCurrent(
+                currentAccountID = account?.id,
+                currentGuestMode = isGuestMode,
+                currentGeneration = gradeyIdentityGeneration,
+            )
+
+    fun OnboardingIdentityOwner.requireCurrent() {
+        if (!isCurrent()) throw GradeyIdentityChangedException()
+    }
+
+    fun finishSchoolMutation(owner: SchoolMutationOwner) {
+        if (!owner.isCurrent()) return
+        activeLinkedAccountMutationToken = null
+        mutatingLinkedAccountID = null
+    }
+
+    fun invalidateGradeyIdentityWork(): Long {
+        gradeyIdentityBoundarySequence += 1
+        val boundaryToken = gradeyIdentityBoundarySequence
+        activeGradeyIdentityBoundaryTokens = activeGradeyIdentityBoundaryTokens + boundaryToken
+        gradeyIdentityGeneration += 1
+        isRefreshingLinkedAccounts = false
+        isUpdatingNotificationPreferences = false
+        isRetryingStravaCloudLink = false
+        isUpdatingProfile = false
+        isExportingData = false
+        isDeletingAccount = false
+        profileError = null
+        privacyDataError = null
+        isHandlingOnboardingNotificationChoice = false
+        notificationPermissionRequestOwner = null
+        notificationSettingsRequestOwner = null
+        schoolLoginAttempt += 1
+        schoolLoginJob?.cancel()
+        schoolLoginJob = null
+        schoolLoginError = null
+        activeLinkedAccountMutationToken = null
+        mutatingLinkedAccountID = null
+        linkedAccountError = null
+        return boundaryToken
+    }
+
+    fun finishGradeyIdentityBoundaryChange(boundaryToken: Long) {
+        activeGradeyIdentityBoundaryTokens = activeGradeyIdentityBoundaryTokens - boundaryToken
+    }
+
     var onboardingNotificationNeedsSystemSettings by rememberSaveable {
         mutableStateOf(graph.onboardingProgressStore.notificationPermissionRecoveryNeeded)
     }
@@ -510,129 +725,264 @@ private fun GradeyApp(
         onboardingNotificationPreferenceSyncPending = false
         onboardingNotificationPushRegistrationPending = false
     }
-    suspend fun expireGradeyIdentity(error: GradeySessionExpiredException) {
-        graph.pushRegistrationStore.clear()
+
+    suspend fun clearGradeyIdentityBoundaryState() {
+        val cleared = GradeyIdentityBoundaryState(
+            linkedAccounts = linkedAccounts,
+            activeLinkedAccountID = activeLinkedAccountID,
+            notificationPreferences = notificationPreferences,
+        ).cleared()
+        linkedAccounts = cleared.linkedAccounts
+        activeLinkedAccountID = cleared.activeLinkedAccountID
+        notificationPreferences = cleared.notificationPreferences
+        gradeHistorySnapshot = null
+        gradeHistoryRefreshError = null
         notificationPreferencesError = null
-        account = null
-        authError = error.userFacingMessage(context)
-        resetSignedInNavigation()
-        phase = AppPhase.SIGNED_OUT
-        // A rejected cloud session cannot authenticate an unregister call. Invalidate the local
-        // FCM token so delivery to the former account's still-active backend row starts failing.
-        GradeyPushRegistration.invalidateCurrentToken()
+        isUpdatingNotificationPreferences = false
+        graph.pushRegistrationStore.clear()
+        graph.notificationPreferencesStore.clear()
+        clearOnboardingNotificationRecovery()
+        val schoolInvalidation = try {
+            graph.schoolRepository.invalidateSchoolCloudMutationsAndDisassociate()
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: Throwable) {
+            try {
+                graph.schoolRepository.logout()
+            } catch (error: CancellationException) {
+                throw error
+            } catch (_: Throwable) {
+                // The visible identity boundary still fails closed below. The repository's cloud
+                // mutation epoch was invalidated before its suspended persistence work began.
+            }
+            null
+        }
+        if (schoolInvalidation == null) {
+            dashboardViewModel.clear()
+            currentSchoolBaseURL = ""
+        } else {
+            val result = schoolInvalidation
+            val retainedSession = result.retainedSession
+            if (retainedSession == null) {
+                dashboardViewModel.clear()
+                currentSchoolBaseURL = ""
+            } else {
+                dashboardViewModel.adoptScope(retainedSession.cacheScope)
+                currentSchoolBaseURL = retainedSession.baseURL
+            }
+        }
+        try {
+            graph.historyRepository.clearAllCachedGradeHistory()
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: Throwable) {
+            // Cloud history is disposable; the visible identity boundary is already clear.
+        }
+        try {
+            graph.linkedAccountRepository.clearLocalAccounts()
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: Throwable) {
+            // The in-memory identity boundary remains authoritative if the optional snapshot is damaged.
+        }
     }
-    suspend fun persistOnboardingNotificationPreference(enabled: Boolean): Boolean {
+
+    suspend fun expireGradeyIdentity(error: GradeySessionExpiredException) {
+        val boundaryToken = invalidateGradeyIdentityWork()
+        try {
+            withContext(NonCancellable) {
+                clearGradeyIdentityBoundaryState()
+                // A rejected cloud session cannot authenticate an unregister call. Invalidate the local
+                // FCM token so delivery to the former account's still-active backend row starts failing.
+                GradeyPushRegistration.invalidateCurrentToken()
+            }
+        } finally {
+            account = null
+            authError = error.userFacingMessage(context)
+            resetSignedInNavigation()
+            phase = AppPhase.SIGNED_OUT
+            finishGradeyIdentityBoundaryChange(boundaryToken)
+        }
+    }
+
+    suspend fun prepareForInteractiveGradeyIdentityAdoption(): Long {
+        val boundaryToken = invalidateGradeyIdentityWork()
+        try {
+            withContext(NonCancellable) {
+                clearGradeyIdentityBoundaryState()
+            }
+            return boundaryToken
+        } catch (error: Throwable) {
+            finishGradeyIdentityBoundaryChange(boundaryToken)
+            throw error
+        }
+    }
+
+    suspend fun persistOnboardingNotificationPreference(
+        enabled: Boolean,
+        owner: OnboardingIdentityOwner,
+    ): Boolean {
+        if (!owner.isCurrent()) return false
         val updated = prepareNotificationPreferencesForUpdate(
             preferences = onboardingNotificationPreferences(notificationPreferences, enabled),
             timeZoneID = ZoneId.systemDefault().id,
         )
+        owner.requireCurrent()
         notificationPreferences = updated
         graph.notificationPreferencesStore.preferences = updated
         notificationPreferencesError = null
 
         if (account == null || isGuestMode || !graph.isGradeyCloudConfigured) {
+            owner.requireCurrent()
             setOnboardingNotificationPreferenceSyncPending(false)
             setOnboardingNotificationPushRegistrationPending(false)
             return true
         }
+        owner.requireCurrent()
         if (!updated.newMarksEnabled || !notificationPermissionGranted) {
             setOnboardingNotificationPushRegistrationPending(false)
         }
         setOnboardingNotificationPreferenceSyncPending(true)
         return try {
+            owner.requireCurrent()
             val session = graph.gradeyAuthRepository.validSession()
+            owner.requireCurrent()
             graph.devicePushTokenClient.updateNotificationPreferences(updated, session)
+            owner.requireCurrent()
             setOnboardingNotificationPreferenceSyncPending(false)
             true
+        } catch (_: GradeyIdentityChangedException) {
+            false
         } catch (error: CancellationException) {
             throw error
         } catch (error: GradeySessionExpiredException) {
-            expireGradeyIdentity(error)
-            onboardingProgress?.let { current ->
-                val accountStep = current.copy(step = OnboardingStep.ACCOUNT)
-                graph.onboardingProgressStore.saveProgress(accountStep)
-                onboardingProgress = accountStep
+            if (owner.isCurrent()) {
+                expireGradeyIdentity(error)
+                if (account == null && !isGuestMode && !isGradeyIdentityBoundaryChanging()) {
+                    onboardingProgress?.let { current ->
+                        val accountStep = current.copy(step = OnboardingStep.ACCOUNT)
+                        graph.onboardingProgressStore.saveProgress(accountStep)
+                        onboardingProgress = accountStep
+                    }
+                }
             }
             false
         } catch (error: Throwable) {
             // Keep the local choice and surface a retryable warning on Ready.
-            notificationPreferencesError = error.userFacingMessage(context)
-            true
+            if (owner.isCurrent()) {
+                notificationPreferencesError = error.userFacingMessage(context)
+                true
+            } else {
+                false
+            }
         }
     }
-    suspend fun refreshOnboardingPushRegistration() {
+    suspend fun refreshOnboardingPushRegistration(owner: OnboardingIdentityOwner) {
+        if (!owner.isCurrent()) return
         setOnboardingNotificationPushRegistrationPending(true)
         try {
+            owner.requireCurrent()
             if (GradeyPushRegistration.refreshIfEligible(context.applicationContext, graph)) {
+                owner.requireCurrent()
                 setOnboardingNotificationPushRegistrationPending(false)
                 if (!onboardingNotificationPreferenceSyncPending) {
                     notificationPreferencesError = null
                 }
             }
+        } catch (_: GradeyIdentityChangedException) {
+            // A replacement identity owns the recovery flags and visible error state.
         } catch (error: CancellationException) {
             throw error
         } catch (error: Throwable) {
-            notificationPreferencesError = error.userFacingMessage(context)
+            if (owner.isCurrent()) {
+                notificationPreferencesError = error.userFacingMessage(context)
+            }
         }
     }
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
     ) { granted ->
-        isHandlingOnboardingNotificationChoice = true
-        notificationPermissionGranted = granted || context.notificationsAreEnabled()
-        if (!notificationPermissionGranted) {
-            setOnboardingNotificationPermissionRecoveryNeeded(true)
-        }
-        scope.launch {
-            try {
-                val canAdvance = persistOnboardingNotificationPreference(notificationPermissionGranted)
-                if (notificationPermissionGranted) {
-                    setOnboardingNotificationPermissionRecoveryNeeded(false)
-                }
-                if (canAdvance) {
-                    val current = onboardingProgress ?: graph.onboardingProgressStore.loadProgress()
-                    if (current?.step == OnboardingStep.NOTIFICATIONS) {
-                        onboardingNotificationsReturnToReady = false
-                        val ready = current.copy(step = OnboardingStep.READY)
-                        graph.onboardingProgressStore.saveProgress(ready)
-                        onboardingProgress = ready
+        val owner = notificationPermissionRequestOwner
+        notificationPermissionRequestOwner = null
+        if (owner != null && owner.isCurrent()) {
+            isHandlingOnboardingNotificationChoice = true
+            notificationPermissionGranted = granted || context.notificationsAreEnabled()
+            if (!notificationPermissionGranted) {
+                setOnboardingNotificationPermissionRecoveryNeeded(true)
+            }
+            scope.launch {
+                try {
+                    val canAdvance = persistOnboardingNotificationPreference(
+                        notificationPermissionGranted,
+                        owner,
+                    )
+                    if (!owner.isCurrent()) return@launch
+                    if (notificationPermissionGranted) {
+                        setOnboardingNotificationPermissionRecoveryNeeded(false)
+                    }
+                    if (canAdvance) {
+                        owner.requireCurrent()
+                        val current = onboardingProgress ?: graph.onboardingProgressStore.loadProgress()
+                        owner.requireCurrent()
+                        if (current?.step == OnboardingStep.NOTIFICATIONS) {
+                            onboardingNotificationsReturnToReady = false
+                            val ready = current.copy(step = OnboardingStep.READY)
+                            graph.onboardingProgressStore.saveProgress(ready)
+                            onboardingProgress = ready
+                        }
+                    }
+                    if (canAdvance && notificationPermissionGranted) {
+                        refreshOnboardingPushRegistration(owner)
+                    }
+                } finally {
+                    if (owner.isCurrent()) {
+                        isHandlingOnboardingNotificationChoice = false
                     }
                 }
-                if (canAdvance && notificationPermissionGranted) {
-                    refreshOnboardingPushRegistration()
-                }
-            } finally {
-                isHandlingOnboardingNotificationChoice = false
             }
         }
     }
     val notificationSettingsLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult(),
     ) {
-        notificationPermissionGranted = context.notificationsAreEnabled()
-        val currentProgress = onboardingProgress ?: graph.onboardingProgressStore.loadProgress()
-        val shouldEnableFromOnboarding =
-            currentProgress?.step == OnboardingStep.READY &&
-            (
-                onboardingNotificationNeedsSystemSettings ||
-                    graph.onboardingProgressStore.notificationPermissionRecoveryNeeded
-                ) &&
-            notificationPermissionGranted
-        if (shouldEnableFromOnboarding && !isHandlingOnboardingNotificationChoice) {
-            isHandlingOnboardingNotificationChoice = true
-            scope.launch {
-                try {
-                    val canContinue = persistOnboardingNotificationPreference(enabled = true)
-                    setOnboardingNotificationPermissionRecoveryNeeded(false)
-                    if (canContinue) {
-                        refreshOnboardingPushRegistration()
+        val owner = notificationSettingsRequestOwner
+        notificationSettingsRequestOwner = null
+        if (owner != null && owner.isCurrent()) {
+            notificationPermissionGranted = context.notificationsAreEnabled()
+            val currentProgress = onboardingProgress ?: graph.onboardingProgressStore.loadProgress()
+            val shouldEnableFromOnboarding =
+                currentProgress?.step == OnboardingStep.READY &&
+                (
+                    onboardingNotificationNeedsSystemSettings ||
+                        graph.onboardingProgressStore.notificationPermissionRecoveryNeeded
+                    ) &&
+                notificationPermissionGranted
+            if (shouldEnableFromOnboarding && !isHandlingOnboardingNotificationChoice) {
+                isHandlingOnboardingNotificationChoice = true
+                scope.launch {
+                    try {
+                        val canContinue = persistOnboardingNotificationPreference(
+                            enabled = true,
+                            owner = owner,
+                        )
+                        if (!owner.isCurrent()) return@launch
+                        setOnboardingNotificationPermissionRecoveryNeeded(false)
+                        if (canContinue) {
+                            refreshOnboardingPushRegistration(owner)
+                        }
+                    } finally {
+                        if (owner.isCurrent()) {
+                            isHandlingOnboardingNotificationChoice = false
+                        }
                     }
-                } finally {
-                    isHandlingOnboardingNotificationChoice = false
+                }
+            } else if (notificationPermissionGranted) {
+                scope.launch {
+                    if (owner.isCurrent()) {
+                        GradeyPushRegistration.refreshIfEligible(context.applicationContext, graph)
+                    }
                 }
             }
-        } else if (notificationPermissionGranted) {
-            scope.launch { GradeyPushRegistration.refreshIfEligible(context.applicationContext, graph) }
         }
     }
 
@@ -674,9 +1024,11 @@ private fun GradeyApp(
         phase,
         account?.id,
         isGuestMode,
+        gradeyIdentityGeneration,
         notificationPermissionGranted,
     ) {
         if (phase == AppPhase.CHECKING) return@LaunchedEffect
+        val notificationOwner = currentOnboardingIdentityOwner() ?: return@LaunchedEffect
         val currentAccountID = account?.id
         val hasPendingNotificationRecovery =
             onboardingNotificationNeedsSystemSettings ||
@@ -704,8 +1056,11 @@ private fun GradeyApp(
             try {
                 val canContinue = persistOnboardingNotificationPreference(
                     enabled = notificationPreferences.newMarksEnabled,
+                    owner = notificationOwner,
                 )
+                if (!notificationOwner.isCurrent()) return@LaunchedEffect
                 val current = onboardingProgress ?: graph.onboardingProgressStore.loadProgress()
+                if (!notificationOwner.isCurrent()) return@LaunchedEffect
                 if (
                     canContinue &&
                     !onboardingNotificationPreferenceSyncPending &&
@@ -720,10 +1075,12 @@ private fun GradeyApp(
                     notificationPreferences.newMarksEnabled &&
                     notificationPermissionGranted
                 ) {
-                    refreshOnboardingPushRegistration()
+                    refreshOnboardingPushRegistration(notificationOwner)
                 }
             } finally {
-                isHandlingOnboardingNotificationChoice = false
+                if (notificationOwner.isCurrent()) {
+                    isHandlingOnboardingNotificationChoice = false
+                }
             }
         }
     }
@@ -739,6 +1096,7 @@ private fun GradeyApp(
     }
 
     fun launchSchoolLogin(block: suspend () -> Unit) {
+        val identityOwner = currentOnboardingIdentityOwner() ?: return
         schoolLoginAttempt += 1
         val attempt = schoolLoginAttempt
         schoolLoginJob?.cancel()
@@ -750,9 +1108,11 @@ private fun GradeyApp(
             } catch (error: CancellationException) {
                 throw error
             } catch (error: Throwable) {
-                schoolLoginError = error.userFacingMessage(context)
+                if (identityOwner.isCurrent()) {
+                    schoolLoginError = error.userFacingMessage(context)
+                }
             } finally {
-                if (attempt == schoolLoginAttempt) {
+                if (identityOwner.isCurrent() && attempt == schoolLoginAttempt) {
                     isLoading = false
                     schoolLoginJob = null
                 }
@@ -798,7 +1158,9 @@ private fun GradeyApp(
 
     suspend fun clearSchoolPlatformProjectionsAfterAccountChange(
         onlyWhileSignedOut: Boolean = false,
+        isStillCurrent: () -> Boolean = { true },
     ) = withContext(NonCancellable) {
+        if (!isStillCurrent()) return@withContext
         val shouldPublishSignedOut = if (onlyWhileSignedOut) {
             // This check and clear share the repository's session/publication mutex. A replacement
             // session therefore either prevents the clear or commits after it; old cleanup cannot
@@ -812,18 +1174,20 @@ private fun GradeyApp(
             }
             true
         }
-        if (!shouldPublishSignedOut) return@withContext
+        if (!shouldPublishSignedOut || !isStillCurrent()) return@withContext
         try {
             updateNextLessonWidgets(context.applicationContext)
         } catch (_: Throwable) {
             // A launcher host failure must not undo activation or reconnect routing.
         }
+        if (!isStillCurrent()) return@withContext
         try {
             PhoneWearSyncPublisher.publish(
                 context.applicationContext,
                 com.bukovinafilip.gradey.model.GradeyWearSyncPayload.signedOut(),
                 isStillCurrent = {
-                    !onlyWhileSignedOut || graph.schoolRepository.currentStoredSession() == null
+                    isStillCurrent() &&
+                        (!onlyWhileSignedOut || graph.schoolRepository.currentStoredSession() == null)
                 },
             )
         } catch (_: Throwable) {
@@ -926,25 +1290,56 @@ private fun GradeyApp(
         error.userFacingMessage(context)
     }
 
-    suspend fun loadCachedSignedInData() {
+    suspend fun loadCachedSignedInData(isStillCurrent: () -> Boolean) {
+        fun requireCurrent() {
+            if (!isStillCurrent()) throw GradeyIdentityChangedException()
+        }
+
+        requireCurrent()
         val storedSession = graph.schoolRepository.currentStoredSession()
+        requireCurrent()
         activeLinkedAccountID = storedSession?.linkedAccountID
         currentSchoolBaseURL = storedSession?.baseURL.orEmpty()
         dashboardViewModel.loadCached(
             scopeKey = storedSession?.cacheScope,
             load = graph.schoolRepository::loadCachedDashboard,
         )
-        graph.schoolRepository.loadCachedAbsence()?.let(::startAbsenceSubjectResolution)
-        graph.schoolRepository.loadCachedTimetable(timetableRequestedWeek)?.let {
+        requireCurrent()
+        val cachedAbsence = graph.schoolRepository.loadCachedAbsence()
+        requireCurrent()
+        cachedAbsence?.let(::startAbsenceSubjectResolution)
+        val cachedTimetable = graph.schoolRepository.loadCachedTimetable(timetableRequestedWeek)
+        requireCurrent()
+        cachedTimetable?.let {
             timetable = it
             timetableRequestedWeek = it.weekStart
         }
-        stravaSession = runCatching { graph.stravaCZRepository.bootstrapSession() }.getOrNull()
-        graph.stravaCZRepository.loadCachedMenu()?.let { stravaMenu = it }
-        linkedAccounts = runCatching { graph.linkedAccountRepository.localAccounts() }.getOrDefault(emptyList())
+        val cachedStravaSession = try {
+            graph.stravaCZRepository.bootstrapSession()
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: Throwable) {
+            null
+        }
+        requireCurrent()
+        stravaSession = cachedStravaSession
+        val cachedMenu = graph.stravaCZRepository.loadCachedMenu()
+        requireCurrent()
+        cachedMenu?.let { stravaMenu = it }
+        val cachedLinkedAccounts = try {
+            graph.linkedAccountRepository.localAccounts()
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: Throwable) {
+            emptyList()
+        }
+        requireCurrent()
+        linkedAccounts = cachedLinkedAccounts
         val linkedAccountID = storedSession?.linkedAccountID
         if (account != null && !isGuestMode && graph.isGradeyCloudConfigured && linkedAccountID != null) {
-            graph.historyRepository.loadCachedGradeHistory(linkedAccountID)?.let { history ->
+            val cachedHistory = graph.historyRepository.loadCachedGradeHistory(linkedAccountID)
+            requireCurrent()
+            cachedHistory?.let { history ->
                 gradeHistorySnapshot = GradeHistorySnapshot(
                     linkedAccountID = linkedAccountID,
                     trends = GradeHistoryTrends.make(history.events),
@@ -956,16 +1351,24 @@ private fun GradeyApp(
 
     suspend fun linkCurrentStravaAccountIfNeeded(session: StravaCZStoredSession): Boolean {
         if (account == null || isGuestMode || !graph.isGradeyCloudConfigured) return false
+        val linkOwner = currentGradeyIdentityOwner() ?: return false
         return try {
             // Re-link even when a cached record exists so the cloud receives the current
             // Strava session from this device, matching the iOS reconnect contract.
+            linkOwner.requireCurrent()
             graph.linkedAccountRepository.linkStravaCZAccount(session)
-            linkedAccounts = graph.linkedAccountRepository.localAccounts()
+            linkOwner.requireCurrent()
+            val refreshedAccounts = graph.linkedAccountRepository.localAccounts()
+            linkOwner.requireCurrent()
+            linkedAccounts = refreshedAccounts
             linkedAccountError = null
             true
+        } catch (error: GradeyIdentityChangedException) {
+            throw error
         } catch (error: CancellationException) {
             throw error
         } catch (error: Throwable) {
+            if (!linkOwner.isCurrent()) throw GradeyIdentityChangedException()
             // The local meals connection remains usable if optional cloud linking fails.
             linkedAccountError = error.userFacingMessage(context)
             false
@@ -975,11 +1378,12 @@ private fun GradeyApp(
     suspend fun retryStravaCloudLink() {
         val session = stravaSession ?: return
         if (isRetryingStravaCloudLink) return
+        val retryOwner = currentGradeyIdentityOwner() ?: return
         isRetryingStravaCloudLink = true
         try {
             linkCurrentStravaAccountIfNeeded(session)
         } finally {
-            isRetryingStravaCloudLink = false
+            if (retryOwner.isCurrent()) isRetryingStravaCloudLink = false
         }
     }
 
@@ -1047,24 +1451,92 @@ private fun GradeyApp(
         }
     }
 
-    suspend fun disconnectStravaCZ() {
-        val mealAccounts = linkedAccounts.filter { it.provider == LinkedAccountProvider.STRAVA_CZ }
-        mealAccounts.forEach { linked ->
-            try {
-                graph.linkedAccountRepository.unlinkAccount(linked.id)
-            } catch (error: CancellationException) {
-                throw error
-            } catch (_: Throwable) {
-                // Local disconnect remains authoritative if optional cloud unlink fails.
+    fun cleanupSignedOutStravaBestEffort(
+        session: StravaCZStoredSession?,
+        linkedAccountIDsToUnlink: List<String> = emptyList(),
+        gradeySession: GradeyAuthSession? = null,
+    ) {
+        if (gradeySession != null) {
+            linkedAccountIDsToUnlink.forEach { accountID ->
+                scope.launch {
+                    try {
+                        graph.linkedAccountRepository.unlinkAccountForSignedOutSession(
+                            accountID,
+                            gradeySession,
+                        )
+                    } catch (error: CancellationException) {
+                        throw error
+                    } catch (_: Throwable) {
+                        // The local meals session is already gone; cloud unlink is opportunistic.
+                    }
+                }
             }
         }
-        graph.stravaCZRepository.logout()
+        if (session != null) {
+            scope.launch {
+                try {
+                    graph.stravaCZRepository.revokeSignedOutSession(session)
+                } catch (error: CancellationException) {
+                    throw error
+                } catch (_: Throwable) {
+                    // The local meals session is already gone; remote logout is opportunistic.
+                }
+            }
+        }
+    }
+
+    fun clearStravaCZPresentation(linkedAccountIDsToHide: Set<String> = emptySet()) {
         stravaSession = null
         stravaMenu = null
         stravaError = null
         submittingStravaMealID = null
-        linkedAccounts = runCatching { graph.linkedAccountRepository.localAccounts() }.getOrDefault(
-            linkedAccounts.filterNot { it.provider == LinkedAccountProvider.STRAVA_CZ },
+        if (linkedAccountIDsToHide.isNotEmpty()) {
+            linkedAccounts = linkedAccounts.filterNot { it.id in linkedAccountIDsToHide }
+        }
+    }
+
+    suspend fun signOutStravaCZLocally() {
+        val signedOutSession = try {
+            graph.stravaCZRepository.takeLocalSessionForSignOut()
+        } finally {
+            clearStravaCZPresentation()
+        }
+        cleanupSignedOutStravaBestEffort(signedOutSession)
+    }
+
+    suspend fun disconnectStravaCZ() {
+        val disconnectOwner = currentGradeyIdentityOwner()
+        val mealAccounts = linkedAccounts.filter { it.provider == LinkedAccountProvider.STRAVA_CZ }
+        val mealAccountIDs = mealAccounts.map(LinkedSchoolAccount::id)
+        disconnectOwner?.requireCurrent()
+        completeLocalStravaDisconnectBeforeRemoteCleanup(
+            takeLocalSessionForSignOut = graph.stravaCZRepository::takeLocalSessionForSignOut,
+            clearVisibleState = {
+                clearStravaCZPresentation(mealAccountIDs.toSet())
+            },
+            captureGradeySessionForCleanup = {
+                if (disconnectOwner == null) {
+                    null
+                } else {
+                    disconnectOwner.requireCurrent()
+                    graph.gradeyAuthRepository.bootstrapSession().also { capturedSession ->
+                        disconnectOwner.requireCurrent()
+                        if (
+                            capturedSession != null &&
+                            capturedSession.account.id != disconnectOwner.accountID
+                        ) {
+                            throw GradeyIdentityChangedException()
+                        }
+                    }
+                }
+            },
+            launchRemoteCleanup = { signedOutSession, gradeySession ->
+                cleanupSignedOutStravaBestEffort(
+                    session = signedOutSession,
+                    linkedAccountIDsToUnlink = mealAccountIDs,
+                    gradeySession = gradeySession,
+                )
+            },
         )
     }
 
@@ -1167,13 +1639,32 @@ private fun GradeyApp(
         username: String,
         password: String,
     ): StoredSession {
-        val previousScope = graph.schoolRepository.currentStoredSession()?.cacheScope
-        val session = graph.schoolRepository.login(schoolURL, username, password)
-        if (previousScope != session.cacheScope) {
-            clearSchoolPresentationAfterAccountChange(session.cacheScope)
-            clearSchoolPlatformProjectionsAfterAccountChange()
+        val mutationOwner = beginSchoolMutation(CURRENT_SCHOOL_LINK_MUTATION_ID)
+            ?: throw IllegalStateException(context.getString(R.string.school_account_change_in_progress))
+        try {
+            mutationOwner.requireCurrent()
+            val cloudMutationToken = graph.schoolRepository.captureSchoolCloudMutationToken()
+            mutationOwner.requireCurrent()
+            val previousScope = graph.schoolRepository.currentStoredSession()?.cacheScope
+            mutationOwner.requireCurrent()
+            val session = graph.schoolRepository.login(
+                schoolURL,
+                username,
+                password,
+                cloudMutationToken,
+            )
+            mutationOwner.requireCurrent()
+            if (previousScope != session.cacheScope) {
+                clearSchoolPresentationAfterAccountChange(session.cacheScope)
+                clearSchoolPlatformProjectionsAfterAccountChange(
+                    isStillCurrent = { mutationOwner.isCurrent() },
+                )
+                mutationOwner.requireCurrent()
+            }
+            return session
+        } finally {
+            finishSchoolMutation(mutationOwner)
         }
-        return session
     }
 
     suspend fun loadTimetable(weekContaining: String): Throwable? {
@@ -1277,41 +1768,74 @@ private fun GradeyApp(
     }
 
     suspend fun clearLinkedAccountsForLocalMode() {
+        val ownsBoundary = !isGradeyIdentityBoundaryChanging()
+        val boundaryToken = if (ownsBoundary) invalidateGradeyIdentityWork() else null
         try {
-            graph.linkedAccountRepository.clearLocalAccounts()
-        } catch (error: CancellationException) {
-            throw error
-        } catch (_: Throwable) {
-            // A damaged optional linked-account snapshot must not block local Bakaláři use.
+            withContext(NonCancellable) { clearGradeyIdentityBoundaryState() }
+        } finally {
+            boundaryToken?.let(::finishGradeyIdentityBoundaryChange)
         }
-        linkedAccounts = emptyList()
-        gradeHistorySnapshot = null
-        gradeHistoryRefreshError = null
-        activeLinkedAccountID = null
     }
 
     suspend fun refreshLinkedAccountSnapshot() {
-        linkedAccounts = refreshRetainingContent(linkedAccounts) {
+        val localReadOwner = currentOnboardingIdentityOwner() ?: return
+        val localRefresh = refreshRetainingContent(linkedAccounts) {
             graph.linkedAccountRepository.localAccounts()
-        }.value
-        if (account == null || isGuestMode || !graph.isGradeyCloudConfigured) return
+        }
+        if (!localReadOwner.isCurrent()) return
+        linkedAccounts = localRefresh.value
+        val refreshOwner = currentGradeyIdentityOwner() ?: return
+        if (!graph.isGradeyCloudConfigured || isRefreshingLinkedAccounts) return
 
         isRefreshingLinkedAccounts = true
         linkedAccountError = null
         try {
             val snapshot = graph.linkedAccountRepository.refreshAccounts()
+            if (
+                !refreshOwner.isCurrent(
+                    account?.id,
+                    gradeyIdentityGeneration,
+                    isGuestMode,
+                )
+            ) return
             linkedAccounts = snapshot.linkedAccounts
             notificationPreferences = snapshot.notificationPreferences
             graph.notificationPreferencesStore.preferences = snapshot.notificationPreferences
             notificationPreferencesError = null
+        } catch (_: GradeyIdentityChangedException) {
+            // A replacement identity owns both the cache and any subsequent UI publication.
         } catch (error: CancellationException) {
             throw error
         } catch (error: GradeySessionExpiredException) {
-            expireGradeyIdentity(error)
+            if (
+                refreshOwner.isCurrent(
+                    account?.id,
+                    gradeyIdentityGeneration,
+                    isGuestMode,
+                )
+            ) {
+                expireGradeyIdentity(error)
+            }
         } catch (error: Throwable) {
-            linkedAccountError = error.userFacingMessage(context)
+            if (
+                refreshOwner.isCurrent(
+                    account?.id,
+                    gradeyIdentityGeneration,
+                    isGuestMode,
+                )
+            ) {
+                linkedAccountError = error.userFacingMessage(context)
+            }
         } finally {
-            isRefreshingLinkedAccounts = false
+            if (
+                refreshOwner.isCurrent(
+                    account?.id,
+                    gradeyIdentityGeneration,
+                    isGuestMode,
+                )
+            ) {
+                isRefreshingLinkedAccounts = false
+            }
         }
     }
 
@@ -1322,6 +1846,7 @@ private fun GradeyApp(
             !graph.isGradeyCloudConfigured ||
             isUpdatingNotificationPreferences
         ) return
+        val updateOwner = currentGradeyIdentityOwner() ?: return
 
         val previous = notificationPreferences
         val prepared = prepareNotificationPreferencesForUpdate(
@@ -1333,22 +1858,31 @@ private fun GradeyApp(
         notificationPreferencesError = null
         isUpdatingNotificationPreferences = true
         try {
+            updateOwner.requireCurrent()
             val session = graph.gradeyAuthRepository.validSession()
+            updateOwner.requireCurrent()
             graph.devicePushTokenClient.updateNotificationPreferences(prepared, session)
+            updateOwner.requireCurrent()
+        } catch (error: GradeyIdentityChangedException) {
+            throw error
         } catch (error: CancellationException) {
-            notificationPreferences = previous
-            graph.notificationPreferencesStore.preferences = previous
+            if (updateOwner.isCurrent()) {
+                notificationPreferences = previous
+                graph.notificationPreferencesStore.preferences = previous
+            }
             throw error
         } catch (error: GradeySessionExpiredException) {
+            if (!updateOwner.isCurrent()) throw GradeyIdentityChangedException()
             notificationPreferences = previous
             graph.notificationPreferencesStore.preferences = previous
             expireGradeyIdentity(error)
         } catch (error: Throwable) {
+            if (!updateOwner.isCurrent()) throw GradeyIdentityChangedException()
             notificationPreferences = previous
             graph.notificationPreferencesStore.preferences = previous
             notificationPreferencesError = error.userFacingMessage(context)
         } finally {
-            isUpdatingNotificationPreferences = false
+            if (updateOwner.isCurrent()) isUpdatingNotificationPreferences = false
         }
     }
 
@@ -1358,69 +1892,90 @@ private fun GradeyApp(
             gradeHistoryRefreshError = null
             return
         }
+        val refreshOwner = currentGradeyIdentityOwner() ?: return
+        refreshOwner.requireCurrent()
         val linkedAccountID = graph.schoolRepository.currentStoredSession()?.linkedAccountID
+        refreshOwner.requireCurrent()
         if (gradeHistorySnapshot?.linkedAccountID != linkedAccountID) {
             gradeHistorySnapshot = null
             gradeHistoryRefreshError = null
         }
         val refresh = refreshRetainingContent(gradeHistorySnapshot) {
+            refreshOwner.requireCurrent()
             val response = graph.historyRepository.gradeHistory(linkedAccountID, days = 400)
+            refreshOwner.requireCurrent()
             GradeHistorySnapshot(
                 linkedAccountID = linkedAccountID,
                 trends = GradeHistoryTrends.make(response.events),
                 recentNewMarkEvents = response.recentNewMarkEvents,
             )
         }
+        if (!refreshOwner.isCurrent()) return
+        if (graph.schoolRepository.currentStoredSession()?.linkedAccountID != linkedAccountID) return
         gradeHistorySnapshot = refresh.value
         gradeHistoryRefreshError = refresh.failure?.userFacingMessage(context)
     }
 
     suspend fun linkCurrentSchoolIfNeeded(trustCachedAssociation: Boolean = true): Boolean {
         if (account == null || isGuestMode || !graph.isGradeyCloudConfigured) return true
-        val session = graph.schoolRepository.currentStoredSession() ?: return false
-        val cachedAccounts = graph.linkedAccountRepository.localAccounts()
-        if (
-            trustCachedAssociation &&
-            session.linkedAccountID != null &&
-            cachedAccounts.any {
-                it.id == session.linkedAccountID &&
-                    it.provider.isSupportedSchoolProvider &&
-                    it.status == LinkedAccountStatus.ACTIVE
-            }
-        ) {
-            activeLinkedAccountID = session.linkedAccountID
-            linkedAccounts = cachedAccounts
-            linkedAccountError = null
-            return true
-        }
-
+        val mutationOwner = beginSchoolMutation(CURRENT_SCHOOL_LINK_MUTATION_ID) ?: return false
         return try {
+            mutationOwner.requireCurrent()
+            val cloudMutationToken = graph.schoolRepository.captureSchoolCloudMutationToken()
+            mutationOwner.requireCurrent()
+            val session = graph.schoolRepository.currentStoredSession() ?: return false
+            mutationOwner.requireCurrent()
+            val cachedAccounts = graph.linkedAccountRepository.localAccounts()
+            mutationOwner.requireCurrent()
+            if (shouldTrustCachedSchoolAssociation(trustCachedAssociation, session, cachedAccounts)) {
+                activeLinkedAccountID = session.linkedAccountID
+                linkedAccounts = cachedAccounts
+                linkedAccountError = null
+                return true
+            }
+
             val linked = graph.linkedAccountRepository.linkSchoolAccount(
                 session,
                 dashboardViewModel.currentDashboard?.user,
             )
+            mutationOwner.requireCurrent()
             if (
                 !linked.provider.isSupportedSchoolProvider ||
                 linked.status != LinkedAccountStatus.ACTIVE
             ) {
-                linkedAccounts = graph.linkedAccountRepository.localAccounts()
+                val refreshedAccounts = graph.linkedAccountRepository.localAccounts()
+                mutationOwner.requireCurrent()
+                linkedAccounts = refreshedAccounts
                 linkedAccountError = context.getString(R.string.error_linked_account)
                 return false
             }
-            val associatedSession = graph.schoolRepository.associateCurrentSession(linked)
+            mutationOwner.requireCurrent()
+            val associatedSession = graph.schoolRepository.associateCurrentSession(
+                linked,
+                cloudMutationToken,
+            )
+            mutationOwner.requireCurrent()
+            val refreshedAccounts = graph.linkedAccountRepository.localAccounts()
+            mutationOwner.requireCurrent()
             dashboardViewModel.adoptScope(associatedSession.cacheScope)
             activeLinkedAccountID = linked.id
-            linkedAccounts = graph.linkedAccountRepository.localAccounts()
+            linkedAccounts = refreshedAccounts
             linkedAccountError = null
             true
+        } catch (error: GradeyIdentityChangedException) {
+            throw error
         } catch (error: CancellationException) {
             throw error
         } catch (error: GradeySessionExpiredException) {
+            if (!mutationOwner.isCurrent()) throw GradeyIdentityChangedException()
             expireGradeyIdentity(error)
             false
         } catch (error: Throwable) {
+            if (!mutationOwner.isCurrent()) throw GradeyIdentityChangedException()
             linkedAccountError = error.userFacingMessage(context)
             false
+        } finally {
+            finishSchoolMutation(mutationOwner)
         }
     }
 
@@ -1433,37 +1988,47 @@ private fun GradeyApp(
         if (!linked.provider.isSupportedSchoolProvider) {
             return context.getString(R.string.error_linked_account)
         }
-        if (mutatingLinkedAccountID != null) {
+        val mutationOwner = beginSchoolMutation(linked.id)
+        if (mutationOwner == null) {
             return context.getString(R.string.school_account_change_in_progress)
         }
-        val mutationOwner = SchoolMutationOwner(account?.id, isGuestMode)
-        val previousSession = graph.schoolRepository.currentStoredSession()
-
-        suspend fun rollback() {
-            withContext(NonCancellable) {
-                if (previousSession == null) {
-                    graph.schoolRepository.logout()
-                } else {
-                    graph.schoolRepository.restoreSession(previousSession)
-                }
-            }
-        }
-
-        mutatingLinkedAccountID = linked.id
-        linkedAccountError = null
-        var reconnectCommitted = false
+        var previousSession: StoredSession? = null
+        var cloudMutationToken: SchoolCloudMutationToken? = null
         return try {
-            val candidateSession = graph.schoolRepository.login(schoolURL, username, password)
-            val candidateDashboard = graph.schoolRepository.loadDashboard(forceRefresh = false)
+            mutationOwner.requireCurrent()
+            cloudMutationToken = graph.schoolRepository.captureSchoolCloudMutationToken()
+            mutationOwner.requireCurrent()
+            previousSession = graph.schoolRepository.currentStoredSession()
+            mutationOwner.requireCurrent()
+            val candidate = graph.schoolRepository.authenticateSchoolSessionCandidate(
+                schoolURL,
+                username,
+                password,
+                cloudMutationToken!!,
+            )
+            mutationOwner.requireCurrent()
             val updated = graph.linkedAccountRepository.reconnectSchoolAccount(
                 linked.id,
-                candidateSession,
-                candidateDashboard.user,
+                candidate.session,
+                candidate.dashboard.user,
             )
-            val associatedSession = graph.schoolRepository.associateCurrentSession(updated)
-            reconnectCommitted = true
+            mutationOwner.requireCurrent()
+            val associatedSession = graph.schoolRepository.promoteAuthenticatedSchoolSessionCandidate(
+                candidate = candidate,
+                account = updated,
+                cloudMutationToken = cloudMutationToken!!,
+            )
+            mutationOwner.requireCurrent()
+            if (previousSession?.cacheScope != associatedSession.cacheScope) {
+                mutationOwner.requireCurrent()
+                clearSchoolPlatformProjectionsAfterAccountChange(
+                    isStillCurrent = { mutationOwner.isCurrent() },
+                )
+                mutationOwner.requireCurrent()
+            }
+            mutationOwner.requireCurrent()
             clearSchoolPresentationAfterAccountChange(associatedSession.cacheScope)
-            dashboardViewModel.replaceDashboard(candidateDashboard, associatedSession.cacheScope)
+            dashboardViewModel.replaceDashboard(candidate.dashboard, associatedSession.cacheScope)
             activeLinkedAccountID = updated.id
             currentSchoolBaseURL = associatedSession.baseURL
             linkedAccounts = linkedAccounts
@@ -1475,108 +2040,147 @@ private fun GradeyApp(
             applyReconnectPrefill(null)
             linkedAccountError = null
             resetSignedInNavigation()
-            if (previousSession?.cacheScope != associatedSession.cacheScope) {
-                clearSchoolPlatformProjectionsAfterAccountChange()
-            }
-            // Reconcile any older expiry continuation that observed the sessionless handoff while
-            // this committed replacement was still waiting for the repository mutation boundary.
-            if (mutationOwner.isCurrent(account?.id, isGuestMode)) {
-                schoolLoginError = null
-                phase = AppPhase.SIGNED_IN
-                null
-            } else {
-                context.getString(R.string.school_account_change_in_progress)
-            }
+            schoolLoginError = null
+            phase = AppPhase.SIGNED_IN
+            null
+        } catch (error: GradeyIdentityChangedException) {
+            throw error
         } catch (error: CancellationException) {
-            if (!reconnectCommitted) rollback()
             throw error
         } catch (error: Throwable) {
-            if (!reconnectCommitted) rollback()
+            if (!mutationOwner.isCurrent()) throw GradeyIdentityChangedException()
             error.userFacingMessage(context).also { linkedAccountError = it }
         } finally {
-            mutatingLinkedAccountID = null
+            finishSchoolMutation(mutationOwner)
         }
     }
 
     suspend fun activateLinkedAccount(linked: LinkedSchoolAccount): Boolean {
-        if (mutatingLinkedAccountID != null) return false
-        val mutationOwner = SchoolMutationOwner(account?.id, isGuestMode)
-        mutatingLinkedAccountID = linked.id
-        linkedAccountError = null
+        val mutationOwner = beginSchoolMutation(linked.id) ?: return false
         try {
+            mutationOwner.requireCurrent()
+            val cloudMutationToken = graph.schoolRepository.captureSchoolCloudMutationToken()
+            mutationOwner.requireCurrent()
             val previousSchoolScope = graph.schoolRepository.currentStoredSession()?.cacheScope
+            mutationOwner.requireCurrent()
             val activation = graph.linkedAccountRepository.activateSchoolAccount(linked.id)
+            mutationOwner.requireCurrent()
             val activatedSession = graph.schoolRepository.activateLinkedSchoolAccount(
                 activation.tokenPayload.makeStoredSession(activation.account),
+                cloudMutationToken,
             )
+            mutationOwner.requireCurrent()
+            if (previousSchoolScope != activatedSession.cacheScope) {
+                clearSchoolPlatformProjectionsAfterAccountChange(
+                    isStillCurrent = { mutationOwner.isCurrent() },
+                )
+                mutationOwner.requireCurrent()
+            }
             clearSchoolPresentationAfterAccountChange(activatedSession.cacheScope)
             activeLinkedAccountID = activation.account.id
             resetSignedInNavigation()
-            if (previousSchoolScope != activatedSession.cacheScope) {
-                clearSchoolPlatformProjectionsAfterAccountChange()
-            }
-            loadCachedSignedInData()
+            loadCachedSignedInData(isStillCurrent = { mutationOwner.isCurrent() })
+            mutationOwner.requireCurrent()
             // A stale expiry callback can transiently route while activation is in flight but before
             // this session is stored. Successful activation is authoritative and restores the gate.
-            val ownerIsCurrent = mutationOwner.isCurrent(account?.id, isGuestMode)
-            if (ownerIsCurrent) {
-                schoolLoginError = null
-                phase = AppPhase.SIGNED_IN
-            }
-            return ownerIsCurrent
+            schoolLoginError = null
+            phase = AppPhase.SIGNED_IN
+            return true
+        } catch (error: GradeyIdentityChangedException) {
+            throw error
         } catch (error: CancellationException) {
             throw error
         } catch (error: Throwable) {
+            if (!mutationOwner.isCurrent()) throw GradeyIdentityChangedException()
             linkedAccountError = error.userFacingMessage(context)
             return false
         } finally {
-            mutatingLinkedAccountID = null
+            finishSchoolMutation(mutationOwner)
         }
     }
 
     suspend fun updateLinkedAccountNotifications(linked: LinkedSchoolAccount, enabled: Boolean) {
-        if (mutatingLinkedAccountID != null) return
-        mutatingLinkedAccountID = linked.id
-        linkedAccountError = null
+        val mutationOwner = beginSchoolMutation(linked.id) ?: return
         try {
+            mutationOwner.requireCurrent()
             graph.linkedAccountRepository.updateNotificationsEnabled(linked.id, enabled)
-            linkedAccounts = graph.linkedAccountRepository.localAccounts()
+            mutationOwner.requireCurrent()
+            val refreshedAccounts = graph.linkedAccountRepository.localAccounts()
+            mutationOwner.requireCurrent()
+            linkedAccounts = refreshedAccounts
+        } catch (error: GradeyIdentityChangedException) {
+            throw error
         } catch (error: CancellationException) {
             throw error
         } catch (error: Throwable) {
+            if (!mutationOwner.isCurrent()) throw GradeyIdentityChangedException()
             linkedAccountError = error.userFacingMessage(context)
         } finally {
-            mutatingLinkedAccountID = null
+            finishSchoolMutation(mutationOwner)
         }
     }
 
     suspend fun unlinkLinkedAccount(linked: LinkedSchoolAccount) {
-        if (mutatingLinkedAccountID != null) return
-        mutatingLinkedAccountID = linked.id
-        linkedAccountError = null
+        val mutationOwner = beginSchoolMutation(linked.id) ?: return
         try {
-            graph.linkedAccountRepository.unlinkAccount(linked.id)
+            mutationOwner.requireCurrent()
             if (linked.provider == LinkedAccountProvider.STRAVA_CZ) {
-                graph.stravaCZRepository.logout()
-                stravaSession = null
-                stravaMenu = null
-                stravaError = null
-                submittingStravaMealID = null
-            } else if (activeLinkedAccountID == linked.id) {
-                val localSession = graph.schoolRepository.disassociateCurrentSession(linked.id)
+                completeLocalStravaDisconnectBeforeRemoteCleanup(
+                    takeLocalSessionForSignOut = graph.stravaCZRepository::takeLocalSessionForSignOut,
+                    clearVisibleState = {
+                        clearStravaCZPresentation(setOf(linked.id))
+                    },
+                    captureGradeySessionForCleanup = {
+                        mutationOwner.requireCurrent()
+                        graph.gradeyAuthRepository.bootstrapSession().also { capturedSession ->
+                            mutationOwner.requireCurrent()
+                            if (
+                                capturedSession != null &&
+                                capturedSession.account.id != mutationOwner.gradeyAccountID
+                            ) {
+                                throw GradeyIdentityChangedException()
+                            }
+                        }
+                    },
+                    launchRemoteCleanup = { signedOutSession, gradeySession ->
+                        cleanupSignedOutStravaBestEffort(
+                            session = signedOutSession,
+                            linkedAccountIDsToUnlink = listOf(linked.id),
+                            gradeySession = gradeySession,
+                        )
+                    },
+                )
+                return
+            }
+            val cloudMutationToken = graph.schoolRepository.captureSchoolCloudMutationToken()
+            mutationOwner.requireCurrent()
+            graph.linkedAccountRepository.unlinkAccount(linked.id)
+            mutationOwner.requireCurrent()
+            if (activeLinkedAccountID == linked.id) {
+                val localSession = graph.schoolRepository.disassociateCurrentSession(
+                    linked.id,
+                    cloudMutationToken,
+                )
+                mutationOwner.requireCurrent()
                 dashboardViewModel.adoptScope(localSession?.cacheScope)
                 graph.historyRepository.clearCachedGradeHistory(linked.id)
+                mutationOwner.requireCurrent()
                 gradeHistorySnapshot = null
                 gradeHistoryRefreshError = null
                 activeLinkedAccountID = null
             }
-            linkedAccounts = graph.linkedAccountRepository.localAccounts()
+            val refreshedAccounts = graph.linkedAccountRepository.localAccounts()
+            mutationOwner.requireCurrent()
+            linkedAccounts = refreshedAccounts
+        } catch (error: GradeyIdentityChangedException) {
+            throw error
         } catch (error: CancellationException) {
             throw error
         } catch (error: Throwable) {
+            if (!mutationOwner.isCurrent()) throw GradeyIdentityChangedException()
             linkedAccountError = error.userFacingMessage(context)
         } finally {
-            mutatingLinkedAccountID = null
+            finishSchoolMutation(mutationOwner)
         }
     }
 
@@ -1667,13 +2271,16 @@ private fun GradeyApp(
     }
 
     suspend fun openStoredSchoolOrLogin() {
+        val owner = currentOnboardingIdentityOwner() ?: return
         val schoolSession = graph.schoolRepository.bootstrapSession()
+        if (!owner.isCurrent()) return
         if (schoolSession == null) {
             phase = AppPhase.NEEDS_SCHOOL
             return
         }
         phase = AppPhase.SIGNED_IN
-        loadCachedSignedInData()
+        loadCachedSignedInData(isStillCurrent = { owner.isCurrent() })
+        if (!owner.isCurrent()) return
         refreshSignedInData()
     }
 
@@ -1682,10 +2289,9 @@ private fun GradeyApp(
         onboardingProgress = progress
     }
 
-    fun isCurrentUpgradeSupportAttempt(ownerAccountID: String, attempt: Int): Boolean =
+    fun isCurrentUpgradeSupportAttempt(owner: GradeyIdentityOwner, attempt: Int): Boolean =
         attempt == onboardingUpgradeCloudLinkAttempt &&
-            account?.id == ownerAccountID &&
-            !isGuestMode &&
+            owner.isCurrent() &&
             onboardingProgress?.journey == OnboardingJourney.UPGRADE &&
             onboardingProgress?.step == OnboardingStep.SUPPORT
 
@@ -1714,6 +2320,7 @@ private fun GradeyApp(
         ) {
             return
         }
+        val refreshOwner = currentGradeyIdentityOwner() ?: return
 
         val attempt = onboardingUpgradeCloudLinkAttempt + 1
         onboardingUpgradeCloudLinkAttempt = attempt
@@ -1722,15 +2329,32 @@ private fun GradeyApp(
         try {
             val existingAccounts = try {
                 val snapshot = graph.linkedAccountRepository.refreshAccounts()
+                if (
+                    !refreshOwner.isCurrent(
+                        account?.id,
+                        gradeyIdentityGeneration,
+                        isGuestMode,
+                    )
+                ) return
                 linkedAccounts = snapshot.linkedAccounts
                 notificationPreferences = snapshot.notificationPreferences
                 graph.notificationPreferencesStore.preferences = snapshot.notificationPreferences
                 snapshot.linkedAccounts
+            } catch (_: GradeyIdentityChangedException) {
+                return
             } catch (error: CancellationException) {
                 throw error
             } catch (error: GradeySessionExpiredException) {
-                expireGradeyIdentity(error)
-                returnUpgradeToAccountAfterExpiredIdentity(ownerAccountID)
+                if (
+                    refreshOwner.isCurrent(
+                        account?.id,
+                        gradeyIdentityGeneration,
+                        isGuestMode,
+                    )
+                ) {
+                    expireGradeyIdentity(error)
+                    returnUpgradeToAccountAfterExpiredIdentity(ownerAccountID)
+                }
                 return
             } catch (_: Throwable) {
                 // Never trust an unscoped on-device cloud snapshot after reauthentication.
@@ -1782,7 +2406,7 @@ private fun GradeyApp(
                 }
             }
 
-            if (!isCurrentUpgradeSupportAttempt(ownerAccountID, attempt)) return
+            if (!isCurrentUpgradeSupportAttempt(refreshOwner, attempt)) return
 
             var mealsState: OnboardingUpgradeCloudLinkState
             var mealsError: String? = null
@@ -1841,7 +2465,7 @@ private fun GradeyApp(
                 }
             }
 
-            if (!isCurrentUpgradeSupportAttempt(ownerAccountID, attempt)) return
+            if (!isCurrentUpgradeSupportAttempt(refreshOwner, attempt)) return
             onboardingUpgradeSchoolCloudLinkState = schoolState
             onboardingUpgradeSchoolCloudLinkError = schoolError
             onboardingUpgradeMealsCloudLinkState = mealsState
@@ -1849,7 +2473,7 @@ private fun GradeyApp(
             retainedMealsSession?.let { stravaSession = it }
             refreshedAccounts?.let { linkedAccounts = it }
         } finally {
-            if (attempt == onboardingUpgradeCloudLinkAttempt) {
+            if (isCurrentUpgradeSupportAttempt(refreshOwner, attempt)) {
                 isOnboardingUpgradeCloudLinkWorking = false
                 onboardingUpgradeRetryTarget = null
             }
@@ -1866,6 +2490,7 @@ private fun GradeyApp(
         ) {
             return
         }
+        val retryOwner = currentGradeyIdentityOwner() ?: return
         val hasRetainedSession = try {
             graph.schoolRepository.bootstrapSession()
         } catch (error: CancellationException) {
@@ -1873,6 +2498,7 @@ private fun GradeyApp(
         } catch (_: Throwable) {
             null
         } != null
+        retryOwner.requireCurrent()
         if (!hasRetainedSession) return
 
         val attempt = onboardingUpgradeCloudLinkAttempt + 1
@@ -1891,11 +2517,11 @@ private fun GradeyApp(
                 // Retry with the retained session even when optional cached profile data is unavailable.
             }
             val linked = linkCurrentSchoolIfNeeded(trustCachedAssociation = false)
-            if (account?.id != ownerAccountID) {
+            if (!retryOwner.isCurrent()) {
                 returnUpgradeToAccountAfterExpiredIdentity(ownerAccountID)
                 return
             }
-            if (!isCurrentUpgradeSupportAttempt(ownerAccountID, attempt)) return
+            if (!isCurrentUpgradeSupportAttempt(retryOwner, attempt)) return
             onboardingUpgradeSchoolCloudLinkState = if (linked) {
                 OnboardingUpgradeCloudLinkState.LINKED
             } else {
@@ -1907,7 +2533,7 @@ private fun GradeyApp(
                 linkedAccountError ?: context.getString(R.string.error_linked_account)
             }
         } finally {
-            if (attempt == onboardingUpgradeCloudLinkAttempt) {
+            if (isCurrentUpgradeSupportAttempt(retryOwner, attempt)) {
                 isOnboardingUpgradeCloudLinkWorking = false
                 onboardingUpgradeRetryTarget = null
             }
@@ -1924,6 +2550,7 @@ private fun GradeyApp(
         ) {
             return
         }
+        val retryOwner = currentGradeyIdentityOwner() ?: return
 
         val attempt = onboardingUpgradeCloudLinkAttempt + 1
         onboardingUpgradeCloudLinkAttempt = attempt
@@ -1953,12 +2580,13 @@ private fun GradeyApp(
             if (result is RetainedStravaCloudLinkResult.Failed) {
                 val cause = result.cause
                 if (cause is GradeySessionExpiredException) {
+                    if (!retryOwner.isCurrent()) return
                     expireGradeyIdentity(cause)
                     returnUpgradeToAccountAfterExpiredIdentity(ownerAccountID)
                     return
                 }
             }
-            if (!isCurrentUpgradeSupportAttempt(ownerAccountID, attempt)) return
+            if (!isCurrentUpgradeSupportAttempt(retryOwner, attempt)) return
             when (result) {
                 // A retry cannot recreate a session that disappeared outside this flow;
                 // retain the warning so the user is not told that the failed link succeeded.
@@ -1967,13 +2595,15 @@ private fun GradeyApp(
                     stravaSession = result.session
                     onboardingUpgradeMealsCloudLinkState = OnboardingUpgradeCloudLinkState.LINKED
                     onboardingUpgradeMealsCloudLinkError = null
-                    linkedAccounts = try {
+                    val refreshedAccounts = try {
                         graph.linkedAccountRepository.localAccounts()
                     } catch (error: CancellationException) {
                         throw error
                     } catch (_: Throwable) {
                         linkedAccounts
                     }
+                    retryOwner.requireCurrent()
+                    linkedAccounts = refreshedAccounts
                 }
                 is RetainedStravaCloudLinkResult.Failed -> {
                     stravaSession = result.session
@@ -1982,7 +2612,7 @@ private fun GradeyApp(
                 }
             }
         } finally {
-            if (attempt == onboardingUpgradeCloudLinkAttempt) {
+            if (isCurrentUpgradeSupportAttempt(retryOwner, attempt)) {
                 isOnboardingUpgradeCloudLinkWorking = false
                 onboardingUpgradeRetryTarget = null
             }
@@ -1990,9 +2620,13 @@ private fun GradeyApp(
     }
 
     suspend fun advanceOnboardingAfterAccountChoice() {
+        val owner = currentOnboardingIdentityOwner() ?: return
         val current = onboardingProgress ?: return
+        owner.requireCurrent()
         val hasSchool = graph.schoolRepository.bootstrapSession() != null
+        if (!owner.isCurrent()) return
         if (current.journey == OnboardingJourney.UPGRADE) {
+            owner.requireCurrent()
             persistOnboarding(
                 reconcileOnboardingProgress(
                     progress = current.copy(step = OnboardingStep.ACCOUNT),
@@ -2006,19 +2640,28 @@ private fun GradeyApp(
         var isSchoolCloudLinked = true
         if (hasSchool && account != null && !isGuestMode) {
             val schoolScope = graph.schoolRepository.currentStoredSession()?.cacheScope
+            owner.requireCurrent()
             dashboardViewModel.loadCached(
                 scopeKey = schoolScope,
                 load = graph.schoolRepository::loadCachedDashboard,
             )
+            if (!owner.isCurrent()) return
             if (dashboardViewModel.currentDashboard == null) {
                 dashboardViewModel.refresh(
                     scopeKey = schoolScope,
                     forceRefresh = false,
                     load = graph.schoolRepository::loadDashboard,
                 )
+                if (!owner.isCurrent()) return
             }
-            isSchoolCloudLinked = linkCurrentSchoolIfNeeded()
+            isSchoolCloudLinked = try {
+                linkCurrentSchoolIfNeeded()
+            } catch (_: GradeyIdentityChangedException) {
+                return
+            }
+            if (!owner.isCurrent()) return
         }
+        owner.requireCurrent()
         onboardingSchoolCloudLinkFailed =
             current.journey == OnboardingJourney.NEW_USER &&
             hasSchool &&
@@ -2026,6 +2669,7 @@ private fun GradeyApp(
             !isGuestMode &&
             !isSchoolCloudLinked
         onboardingSchoolCloudLinkError = linkedAccountError.takeIf { onboardingSchoolCloudLinkFailed }
+        owner.requireCurrent()
         persistOnboarding(
             reconcileOnboardingProgress(
                 progress = current.copy(step = OnboardingStep.ACCOUNT),
@@ -2089,47 +2733,148 @@ private fun GradeyApp(
         openStoredSchoolOrLogin()
     }
 
-    suspend fun signOutGradeyIdentity() {
+    fun revokeSignedOutGradeySessionBestEffort(
+        session: GradeyAuthSession?,
+        linkedAccountIDsToUnlink: List<String> = emptyList(),
+    ) {
+        if (session == null) return
+        scope.launch {
+            linkedAccountIDsToUnlink.forEach { accountID ->
+                try {
+                    graph.linkedAccountRepository.unlinkAccountForSignedOutSession(accountID, session)
+                } catch (error: CancellationException) {
+                    throw error
+                } catch (_: Throwable) {
+                    // Local sign-out is already complete; unlink is optional remote cleanup.
+                }
+            }
+            try {
+                graph.gradeyAuthRepository.revokeSignedOutSession(session)
+            } catch (error: CancellationException) {
+                throw error
+            } catch (_: Throwable) {
+                // The exact session is already gone locally; remote revocation is opportunistic.
+            }
+        }
+    }
+
+    suspend fun signOutGradeyIdentity(
+        existingBoundaryToken: Long? = null,
+        revokeRemoteSession: Boolean = true,
+    ): GradeyAuthSession? {
+        val boundaryToken = existingBoundaryToken ?: invalidateGradeyIdentityWork()
+        var signedOutSession: GradeyAuthSession? = null
+        // Hide the former account before the first suspension. The repository then
+        // advances its auth epoch and durably clears the session without waiting for
+        // any in-flight refresh/sign-in request; their late responses cannot commit.
+        account = null
         try {
-            graph.gradeyAuthRepository.signOut()
+            withContext(NonCancellable) {
+                try {
+                    signedOutSession = graph.gradeyAuthRepository.takeLocalSessionForSignOut()
+                } finally {
+                    try {
+                        clearGradeyIdentityBoundaryState()
+                    } finally {
+                        // There is no authenticated unregister-device endpoint. Deleting the FCM token makes
+                        // the prior account's backend row unusable until delivery marks it invalid.
+                        GradeyPushRegistration.invalidateCurrentToken()
+                    }
+                }
+            }
+            if (revokeRemoteSession) {
+                revokeSignedOutGradeySessionBestEffort(signedOutSession)
+            }
+            return signedOutSession
         } finally {
-            graph.pushRegistrationStore.clear()
-            graph.notificationPreferencesStore.clear()
-            clearOnboardingNotificationRecovery()
-            notificationPreferences = NotificationPreferences.Default
-            notificationPreferencesError = null
-            // There is no authenticated unregister-device endpoint. Deleting the FCM token makes
-            // the prior account's backend row unusable until delivery marks it invalid, while the
-            // existing eligible-registration path obtains a fresh token after the next sign-in.
-            GradeyPushRegistration.invalidateCurrentToken()
+            account = null
+            if (existingBoundaryToken == null) {
+                finishGradeyIdentityBoundaryChange(boundaryToken)
+            }
         }
     }
 
     suspend fun signOutAllGradeyState() {
-        disconnectStravaCZ()
-        signOutGradeyIdentity()
-        disconnectSchool()
-        clearLinkedAccountsForLocalMode()
-        try {
-            CredentialManager.create(context).clearCredentialState(ClearCredentialStateRequest())
-        } catch (error: CancellationException) {
-            throw error
-        } catch (_: Throwable) {
-            // Credential Manager cleanup must not undo completed local sign-out.
+        val boundaryToken = invalidateGradeyIdentityWork()
+        val stravaAccountIDs = linkedAccounts
+            .filter { it.provider == LinkedAccountProvider.STRAVA_CZ }
+            .map(LinkedSchoolAccount::id)
+        var signedOutSession: GradeyAuthSession? = null
+        var localCleanupFailure: Throwable? = null
+        fun rememberCleanupFailure(error: Throwable) {
+            if (localCleanupFailure == null) {
+                localCleanupFailure = error
+            } else {
+                localCleanupFailure?.addSuppressed(error)
+            }
         }
-        graph.guestModeStore.isEnabled = false
-        isGuestMode = false
+        isLoading = true
         account = null
+        resetSignedInNavigation()
         phase = AppPhase.SIGNED_OUT
+        try {
+            try {
+                signedOutSession = signOutGradeyIdentity(
+                    existingBoundaryToken = boundaryToken,
+                    revokeRemoteSession = false,
+                )
+            } catch (error: Throwable) {
+                rememberCleanupFailure(error)
+            }
+            withContext(NonCancellable) {
+                // Complete every durable local teardown before optional remote logout.
+                try {
+                    disconnectSchool()
+                } catch (error: Throwable) {
+                    rememberCleanupFailure(error)
+                }
+                stravaSession = null
+                stravaMenu = null
+                stravaError = null
+                submittingStravaMealID = null
+                try {
+                    signOutStravaCZLocally()
+                } catch (error: Throwable) {
+                    // Continue clearing the remaining local state if meals storage is damaged.
+                    rememberCleanupFailure(error)
+                }
+                try {
+                    graph.linkedAccountRepository.clearLocalAccounts()
+                } catch (error: Throwable) {
+                    rememberCleanupFailure(error)
+                }
+                try {
+                    CredentialManager.create(context).clearCredentialState(ClearCredentialStateRequest())
+                } catch (_: Throwable) {
+                    // Credential Manager cleanup must not undo completed local sign-out.
+                }
+                graph.guestModeStore.isEnabled = false
+                isGuestMode = false
+                account = null
+                phase = AppPhase.SIGNED_OUT
+            }
+            revokeSignedOutGradeySessionBestEffort(
+                session = signedOutSession,
+                linkedAccountIDsToUnlink = stravaAccountIDs,
+            )
+            localCleanupFailure?.let { throw it }
+        } finally {
+            isLoading = false
+            finishGradeyIdentityBoundaryChange(boundaryToken)
+        }
     }
 
     suspend fun exportGradeyData() {
         if (isExportingData || isDeletingAccount || account == null) return
+        val exportOwner = currentGradeyIdentityOwner() ?: return
         isExportingData = true
         privacyDataError = null
         try {
+            exportOwner.requireCurrent()
             val session = graph.gradeyAuthRepository.validSession()
+            exportOwner.requireCurrent()
             val payload = graph.devicePushTokenClient.requestDataExport(session)
+            exportOwner.requireCurrent()
             GradeyJson.parseToJsonElement(payload)
             val exportDirectory = File(context.cacheDir, "exports")
             check(exportDirectory.exists() || exportDirectory.mkdirs()) {
@@ -2153,24 +2898,32 @@ private fun GradeyApp(
         } catch (error: CancellationException) {
             throw error
         } catch (error: GradeySessionExpiredException) {
-            expireGradeyIdentity(error)
+            if (exportOwner.isCurrent()) expireGradeyIdentity(error)
         } catch (error: Throwable) {
-            privacyDataError = error.userFacingMessage(context)
+            if (exportOwner.isCurrent()) privacyDataError = error.userFacingMessage(context)
         } finally {
-            isExportingData = false
+            if (exportOwner.isCurrent()) isExportingData = false
         }
     }
 
     suspend fun deleteGradeyAccount() {
         if (isDeletingAccount || isExportingData || account == null) return
+        val deleteOwner = currentGradeyIdentityOwner() ?: return
+        var deleteBoundaryToken: Long? = null
         isDeletingAccount = true
         privacyDataError = null
         try {
+            deleteOwner.requireCurrent()
             val session = graph.gradeyAuthRepository.validSession()
+            deleteOwner.requireCurrent()
             graph.devicePushTokenClient.deleteAccount(session)
+            deleteOwner.requireCurrent()
+            val boundaryToken = invalidateGradeyIdentityWork()
+            deleteBoundaryToken = boundaryToken
+            isDeletingAccount = true
             withContext(NonCancellable) {
                 try {
-                    graph.stravaCZRepository.logout()
+                    signOutStravaCZLocally()
                 } catch (_: Throwable) {
                     // Continue clearing all other local identity state.
                 }
@@ -2178,7 +2931,7 @@ private fun GradeyApp(
                 stravaMenu = null
                 stravaError = null
                 try {
-                    signOutGradeyIdentity()
+                    signOutGradeyIdentity(existingBoundaryToken = boundaryToken)
                 } catch (_: Throwable) {
                     // The helper clears local Gradey state in its finally block.
                 }
@@ -2206,11 +2959,15 @@ private fun GradeyApp(
         } catch (error: CancellationException) {
             throw error
         } catch (error: GradeySessionExpiredException) {
-            expireGradeyIdentity(error)
+            if (deleteOwner.isCurrent()) expireGradeyIdentity(error)
         } catch (error: Throwable) {
-            privacyDataError = error.userFacingMessage(context)
+            if (deleteOwner.isCurrent()) privacyDataError = error.userFacingMessage(context)
         } finally {
-            isDeletingAccount = false
+            deleteBoundaryToken?.let { boundaryToken ->
+                isDeletingAccount = false
+                finishGradeyIdentityBoundaryChange(boundaryToken)
+            }
+            if (deleteOwner.isCurrent()) isDeletingAccount = false
         }
     }
 
@@ -2430,6 +3187,7 @@ private fun GradeyApp(
             clearLinkedAccountsForLocalMode()
         }
 
+        var startupGradeyIdentityExpired = false
         val authSession = if (graph.isGradeyCloudConfigured && !isGuestMode) {
             val restored = try {
                 graph.gradeyAuthRepository.bootstrapSession()
@@ -2448,6 +3206,7 @@ private fun GradeyApp(
                     } catch (error: CancellationException) {
                         throw error
                     } catch (error: GradeySessionExpiredException) {
+                        startupGradeyIdentityExpired = true
                         expireGradeyIdentity(error)
                         null
                     } catch (_: Throwable) {
@@ -2457,6 +3216,7 @@ private fun GradeyApp(
                 } catch (error: CancellationException) {
                     throw error
                 } catch (error: GradeySessionExpiredException) {
+                    startupGradeyIdentityExpired = true
                     expireGradeyIdentity(error)
                     null
                 } catch (_: Throwable) {
@@ -2467,7 +3227,10 @@ private fun GradeyApp(
         } else {
             null
         }
+        if (startupGradeyIdentityExpired) return@LaunchedEffect
         account = authSession?.account
+        val startupIdentityOwner = currentOnboardingIdentityOwner() ?: return@LaunchedEffect
+        val startupRefreshOwner = currentGradeyIdentityOwner()
         val storedNotificationRecoveryOwner =
             graph.onboardingProgressStore.notificationSyncOwnerAccountID
         val hasStoredNotificationRecovery =
@@ -2489,17 +3252,51 @@ private fun GradeyApp(
             null
         }
         var refreshedLinkedAccounts: List<LinkedSchoolAccount>? = null
-        if (authSession != null && !isGuestMode) {
+        if (authSession != null && startupRefreshOwner != null) {
             val snapshot = try {
                 graph.linkedAccountRepository.refreshAccounts()
+            } catch (_: GradeyIdentityChangedException) {
+                null
             } catch (error: CancellationException) {
                 throw error
             } catch (_: Throwable) {
                 null
             }
+            if (
+                !startupRefreshOwner.isCurrent(
+                    account?.id,
+                    gradeyIdentityGeneration,
+                    isGuestMode,
+                )
+            ) return@LaunchedEffect
             if (snapshot != null) {
                 refreshedLinkedAccounts = snapshot.linkedAccounts
                 linkedAccounts = snapshot.linkedAccounts
+            }
+            if (
+                shouldDetachSchoolAssociationAfterAuthoritativeRefresh(
+                    session = schoolSession,
+                    authoritativeAccounts = snapshot?.linkedAccounts,
+                )
+            ) {
+                startupRefreshOwner.requireCurrent()
+                schoolSession = try {
+                    graph.schoolRepository
+                        .invalidateSchoolCloudMutationsAndDisassociate()
+                        .retainedSession
+                } catch (error: CancellationException) {
+                    throw error
+                } catch (_: Throwable) {
+                    try {
+                        graph.schoolRepository.logout()
+                    } catch (error: CancellationException) {
+                        throw error
+                    } catch (_: Throwable) {
+                        // The in-memory startup projection still fails closed below.
+                    }
+                    null
+                }
+                startupRefreshOwner.requireCurrent()
             }
             if (schoolSession == null) {
                 val preferred = selectRestorableSchoolAccount(
@@ -2508,10 +3305,17 @@ private fun GradeyApp(
                 )
                 if (preferred != null) {
                     schoolSession = try {
+                        startupRefreshOwner.requireCurrent()
+                        val cloudMutationToken = graph.schoolRepository.captureSchoolCloudMutationToken()
+                        startupRefreshOwner.requireCurrent()
                         val activation = graph.linkedAccountRepository.activateSchoolAccount(preferred.id)
-                        graph.schoolRepository.activateLinkedSchoolAccount(
+                        startupRefreshOwner.requireCurrent()
+                        val activatedSession = graph.schoolRepository.activateLinkedSchoolAccount(
                             activation.tokenPayload.makeStoredSession(activation.account),
+                            cloudMutationToken,
                         )
+                        startupRefreshOwner.requireCurrent()
+                        activatedSession
                     } catch (error: CancellationException) {
                         throw error
                     } catch (_: Throwable) {
@@ -2530,8 +3334,13 @@ private fun GradeyApp(
             reconnectLinkedAccountID != null &&
             linkedAccounts.none { it.id == reconnectLinkedAccountID }
         ) {
-            linkedAccounts = runCatching { graph.linkedAccountRepository.localAccounts() }
-                .getOrDefault(linkedAccounts)
+            linkedAccounts = try {
+                graph.linkedAccountRepository.localAccounts()
+            } catch (error: CancellationException) {
+                throw error
+            } catch (_: Throwable) {
+                linkedAccounts
+            }
         }
         if (schoolSession == null) {
             // Reconcile durable platform surfaces on every cold start. A process can die after the
@@ -2582,25 +3391,33 @@ private fun GradeyApp(
         onboardingNotificationPushRegistrationPending =
             graph.onboardingProgressStore.notificationPushRegistrationPending
         val notificationRecoveryProgress = resolvedOnboarding
+        val notificationRecoveryOwner = currentOnboardingIdentityOwner()
         if (
             notificationPermissionRecoveryWasPending &&
             notificationPermissionGranted &&
+            notificationRecoveryOwner != null &&
             notificationRecoveryProgress != null &&
             notificationRecoveryProgress.step in
             setOf(OnboardingStep.NOTIFICATIONS, OnboardingStep.READY)
         ) {
             isHandlingOnboardingNotificationChoice = true
             try {
-                val canAdvance = persistOnboardingNotificationPreference(enabled = true)
+                val canAdvance = persistOnboardingNotificationPreference(
+                    enabled = true,
+                    owner = notificationRecoveryOwner,
+                )
+                if (!notificationRecoveryOwner.isCurrent()) return@LaunchedEffect
                 setOnboardingNotificationPermissionRecoveryNeeded(false)
                 if (canAdvance && notificationRecoveryProgress.step == OnboardingStep.NOTIFICATIONS) {
                     val ready = notificationRecoveryProgress.copy(step = OnboardingStep.READY)
                     graph.onboardingProgressStore.saveProgress(ready)
                     onboardingProgress = ready
                 }
-                if (canAdvance) refreshOnboardingPushRegistration()
+                if (canAdvance) refreshOnboardingPushRegistration(notificationRecoveryOwner)
             } finally {
-                isHandlingOnboardingNotificationChoice = false
+                if (notificationRecoveryOwner.isCurrent()) {
+                    isHandlingOnboardingNotificationChoice = false
+                }
             }
         }
         onboardingSchoolCloudLinkFailed = shouldShowOnboardingSchoolCloudLinkWarning(
@@ -2653,7 +3470,8 @@ private fun GradeyApp(
         }
 
         if (resolvedOnboarding == null && schoolSession != null) {
-            loadCachedSignedInData()
+            loadCachedSignedInData(isStillCurrent = { startupIdentityOwner.isCurrent() })
+            if (!startupIdentityOwner.isCurrent()) return@LaunchedEffect
             if (phase == AppPhase.SIGNED_IN) {
                 isLoading = true
                 try {
@@ -2715,18 +3533,33 @@ private fun GradeyApp(
                         scope.launch {
                             isLoading = true
                             authError = null
+                            var identityBoundaryToken: Long? = null
                             try {
                                 val googleCredential = requestGoogleCredential(context, graph.googleWebClientId)
-                                account = graph.gradeyAuthRepository.signInWithGoogle(
+                                val preparedBoundaryToken = prepareForInteractiveGradeyIdentityAdoption()
+                                identityBoundaryToken = preparedBoundaryToken
+                                val signedInAccount = graph.gradeyAuthRepository.signInWithGoogle(
                                     idToken = googleCredential.idToken,
                                     fullName = googleCredential.displayName,
                                 ).account
+                                withContext(NonCancellable) {
+                                    clearGradeyIdentityBoundaryState()
+                                    // Rotate only after the replacement session is durable. If Firebase
+                                    // delivers onNewToken concurrently, registration is then owned by B,
+                                    // never by the outgoing account A.
+                                    GradeyPushRegistration.invalidateCurrentToken()
+                                }
+                                account = signedInAccount
+                                finishGradeyIdentityBoundaryChange(preparedBoundaryToken)
+                                identityBoundaryToken = null
                                 graph.guestModeStore.isEnabled = false
                                 isGuestMode = false
                                 advanceOnboardingAfterAccountChoice()
                             } catch (error: CancellationException) {
+                                identityBoundaryToken?.let(::finishGradeyIdentityBoundaryChange)
                                 throw error
                             } catch (error: Throwable) {
+                                identityBoundaryToken?.let(::finishGradeyIdentityBoundaryChange)
                                 authError = error.userFacingMessage(context)
                             } finally {
                                 isLoading = false
@@ -2808,12 +3641,16 @@ private fun GradeyApp(
                     onLogin = { school, username, password ->
                         launchSchoolLogin {
                             val schoolSession = loginReplacingSchoolSession(school, username, password)
+                            val loginOwner = currentOnboardingIdentityOwner()
+                                ?: return@launchSchoolLogin
                             dashboardViewModel.refresh(
                                 scopeKey = schoolSession.cacheScope,
                                 forceRefresh = false,
                                 load = graph.schoolRepository::loadDashboard,
                             )
+                            if (!loginOwner.isCurrent()) return@launchSchoolLogin
                             val isSchoolCloudLinked = linkCurrentSchoolIfNeeded()
+                            if (!loginOwner.isCurrent()) return@launchSchoolLogin
                             phase = AppPhase.SIGNED_IN
                             advanceOnboardingAfterSchoolConnection(isSchoolCloudLinked)
                         }
@@ -2827,25 +3664,36 @@ private fun GradeyApp(
                 OnboardingStep.NOTIFICATIONS -> OnboardingNotificationsScreen(
                     onEnable = {
                         if (!isHandlingOnboardingNotificationChoice) {
+                            val notificationOwner = currentOnboardingIdentityOwner()
+                                ?: return@OnboardingNotificationsScreen
                             isHandlingOnboardingNotificationChoice = true
                             setOnboardingNotificationPermissionRecoveryNeeded(true)
                             if (
                                 Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
                                 !notificationPermissionGranted
                             ) {
+                                notificationPermissionRequestOwner = notificationOwner
                                 runCatching {
                                     notificationPermissionLauncher.launch(
                                         Manifest.permission.POST_NOTIFICATIONS,
                                     )
                                 }.onFailure { error ->
-                                    isHandlingOnboardingNotificationChoice = false
-                                    notificationPreferencesError = error.userFacingMessage(context)
+                                    if (notificationOwner.isCurrent()) {
+                                        notificationPermissionRequestOwner = null
+                                        isHandlingOnboardingNotificationChoice = false
+                                        notificationPreferencesError = error.userFacingMessage(context)
+                                    }
                                 }
                             } else {
                                 scope.launch {
                                     try {
+                                        notificationOwner.requireCurrent()
                                         notificationPermissionGranted = context.notificationsAreEnabled()
-                                        val canAdvance = persistOnboardingNotificationPreference(enabled = true)
+                                        val canAdvance = persistOnboardingNotificationPreference(
+                                            enabled = true,
+                                            owner = notificationOwner,
+                                        )
+                                        if (!notificationOwner.isCurrent()) return@launch
                                         if (notificationPermissionGranted) {
                                             setOnboardingNotificationPermissionRecoveryNeeded(false)
                                         }
@@ -2854,10 +3702,12 @@ private fun GradeyApp(
                                             persistOnboarding(progress.copy(step = OnboardingStep.READY))
                                         }
                                         if (canAdvance && notificationPermissionGranted) {
-                                            refreshOnboardingPushRegistration()
+                                            refreshOnboardingPushRegistration(notificationOwner)
                                         }
                                     } finally {
-                                        isHandlingOnboardingNotificationChoice = false
+                                        if (notificationOwner.isCurrent()) {
+                                            isHandlingOnboardingNotificationChoice = false
+                                        }
                                     }
                                 }
                             }
@@ -2865,17 +3715,26 @@ private fun GradeyApp(
                     },
                     onNotNow = {
                         if (!isHandlingOnboardingNotificationChoice) {
+                            val notificationOwner = currentOnboardingIdentityOwner()
+                                ?: return@OnboardingNotificationsScreen
                             isHandlingOnboardingNotificationChoice = true
                             scope.launch {
                                 try {
+                                    notificationOwner.requireCurrent()
                                     setOnboardingNotificationPermissionRecoveryNeeded(false)
-                                    val canAdvance = persistOnboardingNotificationPreference(enabled = false)
+                                    val canAdvance = persistOnboardingNotificationPreference(
+                                        enabled = false,
+                                        owner = notificationOwner,
+                                    )
+                                    if (!notificationOwner.isCurrent()) return@launch
                                     if (canAdvance) {
                                         onboardingNotificationsReturnToReady = false
                                         persistOnboarding(progress.copy(step = OnboardingStep.READY))
                                     }
                                 } finally {
-                                    isHandlingOnboardingNotificationChoice = false
+                                    if (notificationOwner.isCurrent()) {
+                                        isHandlingOnboardingNotificationChoice = false
+                                    }
                                 }
                             }
                         }
@@ -2950,21 +3809,27 @@ private fun GradeyApp(
                             !isHandlingOnboardingNotificationChoice &&
                             !isRetryingOnboardingSchoolCloudLink
                         ) {
+                            val notificationOwner = currentOnboardingIdentityOwner()
+                                ?: return@OnboardingReadyScreen
                             isHandlingOnboardingNotificationChoice = true
                             scope.launch {
                                 try {
                                     val canContinue = persistOnboardingNotificationPreference(
                                         enabled = notificationPreferences.newMarksEnabled,
+                                        owner = notificationOwner,
                                     )
+                                    if (!notificationOwner.isCurrent()) return@launch
                                     if (
                                         canContinue &&
                                         notificationPreferences.newMarksEnabled &&
                                         notificationPermissionGranted
                                     ) {
-                                        refreshOnboardingPushRegistration()
+                                        refreshOnboardingPushRegistration(notificationOwner)
                                     }
                                 } finally {
-                                    isHandlingOnboardingNotificationChoice = false
+                                    if (notificationOwner.isCurrent()) {
+                                        isHandlingOnboardingNotificationChoice = false
+                                    }
                                 }
                             }
                         }
@@ -2974,12 +3839,15 @@ private fun GradeyApp(
                         !isGuestMode &&
                         !onboardingSchoolCloudLinkFailed,
                     onOpenNotificationSettings = {
-                        notificationSettingsLauncher.launch(
-                            Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(
-                                Settings.EXTRA_APP_PACKAGE,
-                                context.packageName,
-                            ),
-                        )
+                        currentOnboardingIdentityOwner()?.let { notificationOwner ->
+                            notificationSettingsRequestOwner = notificationOwner
+                            notificationSettingsLauncher.launch(
+                                Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(
+                                    Settings.EXTRA_APP_PACKAGE,
+                                    context.packageName,
+                                ),
+                            )
+                        }
                     },
                     progressPosition = if (
                         isGuestMode || onboardingSchoolCloudLinkFailed
@@ -3156,12 +4024,25 @@ private fun GradeyApp(
                 scope.launch {
                     isLoading = true
                     authError = null
+                    var identityBoundaryToken: Long? = null
                     try {
                         val googleCredential = requestGoogleCredential(context, graph.googleWebClientId)
-                        account = graph.gradeyAuthRepository.signInWithGoogle(
+                        val preparedBoundaryToken = prepareForInteractiveGradeyIdentityAdoption()
+                        identityBoundaryToken = preparedBoundaryToken
+                        val signedInAccount = graph.gradeyAuthRepository.signInWithGoogle(
                             idToken = googleCredential.idToken,
                             fullName = googleCredential.displayName,
                         ).account
+                        withContext(NonCancellable) {
+                            clearGradeyIdentityBoundaryState()
+                            // Rotate only after the replacement session is durable. If Firebase
+                            // delivers onNewToken concurrently, registration is then owned by B,
+                            // never by the outgoing account A.
+                            GradeyPushRegistration.invalidateCurrentToken()
+                        }
+                        account = signedInAccount
+                        finishGradeyIdentityBoundaryChange(preparedBoundaryToken)
+                        identityBoundaryToken = null
                         graph.guestModeStore.isEnabled = false
                         isGuestMode = false
                         val schoolSession = graph.schoolRepository.currentStoredSession()
@@ -3181,8 +4062,10 @@ private fun GradeyApp(
                         }
                         openStoredSchoolOrLogin()
                     } catch (error: CancellationException) {
+                        identityBoundaryToken?.let(::finishGradeyIdentityBoundaryChange)
                         throw error
                     } catch (error: Throwable) {
+                        identityBoundaryToken?.let(::finishGradeyIdentityBoundaryChange)
                         authError = error.userFacingMessage(context)
                     } finally {
                         isLoading = false
@@ -3286,26 +4169,34 @@ private fun GradeyApp(
                         if (reconnectError != null) {
                             schoolLoginError = reconnectError
                         } else {
+                            val loginOwner = currentOnboardingIdentityOwner()
+                                ?: return@launchSchoolLogin
                             isAddingSchool = false
                             reconnectLinkedAccountID = null
                             resetSignedInNavigation()
                             phase = AppPhase.SIGNED_IN
-                            loadCachedSignedInData()
+                            loadCachedSignedInData(isStillCurrent = { loginOwner.isCurrent() })
+                            if (!loginOwner.isCurrent()) return@launchSchoolLogin
                             refreshSignedInData()
                         }
                     } else {
                         val schoolSession = loginReplacingSchoolSession(school, username, password)
+                        val loginOwner = currentOnboardingIdentityOwner()
+                            ?: return@launchSchoolLogin
                         dashboardViewModel.refresh(
                             scopeKey = schoolSession.cacheScope,
                             forceRefresh = false,
                             load = graph.schoolRepository::loadDashboard,
                         )
+                        if (!loginOwner.isCurrent()) return@launchSchoolLogin
                         linkCurrentSchoolIfNeeded()
+                        if (!loginOwner.isCurrent()) return@launchSchoolLogin
                         isAddingSchool = false
                         reconnectLinkedAccountID = null
                         resetSignedInNavigation()
                         phase = AppPhase.SIGNED_IN
-                        loadCachedSignedInData()
+                        loadCachedSignedInData(isStillCurrent = { loginOwner.isCurrent() })
+                        if (!loginOwner.isCurrent()) return@launchSchoolLogin
                         refreshSignedInData()
                     }
                 }
@@ -3855,19 +4746,26 @@ private fun GradeyApp(
                     privacyDataErrorMessage = privacyDataError,
                     onUpdateFullName = { fullName ->
                         scope.launch {
+                            val updateOwner = currentGradeyIdentityOwner() ?: return@launch
                             isUpdatingProfile = true
                             profileError = null
                             try {
-                                account = graph.gradeyAuthRepository.updateFullName(fullName)
+                                val updatedAccount = graph.gradeyAuthRepository.updateFullName(fullName)
+                                updateOwner.requireCurrent()
+                                account = updatedAccount
                             } catch (error: CancellationException) {
                                 throw error
                             } catch (error: GradeySessionExpiredException) {
-                                expireGradeyIdentity(error)
-                                resetSignedInNavigation()
+                                if (updateOwner.isCurrent()) {
+                                    expireGradeyIdentity(error)
+                                    resetSignedInNavigation()
+                                }
                             } catch (error: Throwable) {
-                                profileError = error.userFacingMessage(context)
+                                if (updateOwner.isCurrent()) {
+                                    profileError = error.userFacingMessage(context)
+                                }
                             } finally {
-                                isUpdatingProfile = false
+                                if (updateOwner.isCurrent()) isUpdatingProfile = false
                             }
                         }
                     },
@@ -3911,12 +4809,15 @@ private fun GradeyApp(
                         scope.launch { updateLinkedAccountNotifications(linked, enabled) }
                     },
                     onOpenNotificationSettings = {
-                        notificationSettingsLauncher.launch(
-                            Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(
-                                Settings.EXTRA_APP_PACKAGE,
-                                context.packageName,
-                            ),
-                        )
+                        currentOnboardingIdentityOwner()?.let { notificationOwner ->
+                            notificationSettingsRequestOwner = notificationOwner
+                            notificationSettingsLauncher.launch(
+                                Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(
+                                    Settings.EXTRA_APP_PACKAGE,
+                                    context.packageName,
+                                ),
+                            )
+                        }
                     },
                     onUpdateNotificationPreferences = { preferences ->
                         scope.launch { updateNotificationPreferences(preferences) }

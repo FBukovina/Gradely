@@ -1,5 +1,6 @@
 package com.bukovinafilip.gradey.data
 
+import com.bukovinafilip.gradey.domain.GradeyIdentityChangedException
 import com.bukovinafilip.gradey.domain.StravaCZAppError
 import com.bukovinafilip.gradey.domain.StravaCZAppException
 import com.bukovinafilip.gradey.domain.StravaCZClient
@@ -10,6 +11,8 @@ import com.bukovinafilip.gradey.model.StravaCZMeal
 import com.bukovinafilip.gradey.model.StravaCZMenu
 import com.bukovinafilip.gradey.model.StravaCZStoredSession
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.security.MessageDigest
 
 class AndroidStravaCZRepository(
@@ -18,10 +21,16 @@ class AndroidStravaCZRepository(
     private val cache: RoomGradeyCache,
     private val clock: () -> Long = System::currentTimeMillis,
 ) : StravaCZRepository {
-    override suspend fun bootstrapSession(): StravaCZStoredSession? = sessionStore.load()
+    private val sessionMutationMutex = Mutex()
+    private var sessionEpoch = 0L
+
+    override suspend fun bootstrapSession(): StravaCZStoredSession? =
+        sessionMutationMutex.withLock { sessionStore.load() }
 
     override suspend fun loadCachedMenu(): StravaCZMenu? =
-        sessionStore.load()?.let { cache.loadStravaMenu(it.cacheScope()) }
+        sessionMutationMutex.withLock {
+            sessionStore.load()?.let { cache.loadStravaMenu(it.cacheScope()) }
+        }
 
     override suspend fun login(
         canteenNumber: String,
@@ -33,25 +42,29 @@ class AndroidStravaCZRepository(
         if (normalizedCanteen.isEmpty() || normalizedUsername.isEmpty() || password.isEmpty()) {
             throw StravaCZAppException(StravaCZAppError.MISSING_FIELDS)
         }
-        val previous = sessionStore.load()
+        val requestEpoch = sessionMutationMutex.withLock { sessionEpoch }
         val session = client.login(normalizedCanteen, normalizedUsername, password)
             .copy(savedAtEpochMillis = clock())
-        previous?.let { cache.clearStravaMenu(it.cacheScope()) }
-        cache.clearStravaMenu(session.cacheScope())
-        sessionStore.save(session)
-        return session
+        return sessionMutationMutex.withLock {
+            requireCurrentEpoch(requestEpoch)
+            sessionEpoch = nextSessionEpoch(sessionEpoch)
+            sessionStore.load()?.let { cache.clearStravaMenu(it.cacheScope()) }
+            cache.clearStravaMenu(session.cacheScope())
+            sessionStore.save(session)
+            session
+        }
     }
 
     override suspend fun loadMenu(forceRefresh: Boolean): Pair<StravaCZStoredSession, StravaCZMenu> {
-        val session = validSession()
+        val owner = currentSessionOwner()
         return try {
-            val menu = client.fetchMenu(session)
-            cache.saveStravaMenu(session.cacheScope(), menu)
-            session to menu
+            val menu = client.fetchMenu(owner.session)
+            publishMenuIfCurrent(owner, menu)
+            owner.session to menu
         } catch (error: CancellationException) {
             throw error
         } catch (error: Throwable) {
-            clearIfAuthenticationError(error, session)
+            clearIfAuthenticationError(error, owner)
             throw error
         }
     }
@@ -61,67 +74,140 @@ class AndroidStravaCZRepository(
         ordered: Boolean,
     ): Pair<StravaCZStoredSession, StravaCZMenu> {
         if (!meal.canModify) throw StravaCZAppException(StravaCZAppError.MEAL_NOT_MODIFIABLE)
-        var session = validSession()
+        var owner = currentSessionOwner()
         return try {
-            client.changeMealOrder(session, meal.id, ordered)?.let { balance ->
-                session = session.copy(balance = balance, savedAtEpochMillis = clock())
-                sessionStore.save(session)
-            }
-            client.saveOrders(session)?.let { balance ->
-                session = session.copy(balance = balance, savedAtEpochMillis = clock())
-                sessionStore.save(session)
-            }
-            val menu = client.fetchMenu(session)
-            cache.saveStravaMenu(session.cacheScope(), menu)
-            session to menu
+            owner = applyBalanceResponseIfCurrent(
+                owner,
+                client.changeMealOrder(owner.session, meal.id, ordered),
+            )
+            owner = applyBalanceResponseIfCurrent(
+                owner,
+                client.saveOrders(owner.session),
+            )
+            val menu = client.fetchMenu(owner.session)
+            publishMenuIfCurrent(owner, menu)
+            owner.session to menu
         } catch (error: CancellationException) {
             throw error
         } catch (error: Throwable) {
-            rollback(session)
-            runCatching {
-                val menu = client.fetchMenu(session)
-                cache.saveStravaMenu(session.cacheScope(), menu)
+            requireCurrentOwnerCheckpoint(owner)
+            owner = rollback(owner)
+            try {
+                val menu = client.fetchMenu(owner.session)
+                publishMenuIfCurrent(owner, menu)
+            } catch (refreshCancellation: CancellationException) {
+                throw refreshCancellation
+            } catch (_: Throwable) {
+                // Preserve the original order failure when recovery refresh is unavailable.
             }
-            clearIfAuthenticationError(error, session)
+            clearIfAuthenticationError(error, owner)
             throw error
+        }
+    }
+
+    override suspend fun takeLocalSessionForSignOut(): StravaCZStoredSession? =
+        sessionMutationMutex.withLock {
+            sessionEpoch = nextSessionEpoch(sessionEpoch)
+            val current = sessionStore.load()
+            sessionStore.clear()
+            current?.let { cache.clearStravaMenu(it.cacheScope()) }
+            current
+        }
+
+    override suspend fun revokeSignedOutSession(session: StravaCZStoredSession) {
+        try {
+            client.logout(session)
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: Throwable) {
+            // The captured session is already absent locally; remote logout is best effort.
         }
     }
 
     override suspend fun logout() {
-        val session = sessionStore.load()
-        sessionStore.clear()
-        session?.let { cache.clearStravaMenu(it.cacheScope()) }
-        if (session != null) {
-            try {
-                client.logout(session)
-            } catch (error: CancellationException) {
-                throw error
-            } catch (_: Throwable) {
-                // Local disconnect is authoritative; remote logout is best effort.
-            }
+        takeLocalSessionForSignOut()
+    }
+
+    private suspend fun currentSessionOwner(): SessionOwner = sessionMutationMutex.withLock {
+        SessionOwner(
+            epoch = sessionEpoch,
+            session = sessionStore.load()
+                ?: throw StravaCZAppException(StravaCZAppError.NOT_LOGGED_IN),
+        )
+    }
+
+    private suspend fun persistBalanceIfCurrent(owner: SessionOwner, balance: Double): SessionOwner =
+        sessionMutationMutex.withLock {
+            requireCurrentOwner(owner)
+            val updated = owner.session.copy(balance = balance, savedAtEpochMillis = clock())
+            sessionStore.save(updated)
+            owner.copy(session = updated)
+        }
+
+    private suspend fun applyBalanceResponseIfCurrent(
+        owner: SessionOwner,
+        balance: Double?,
+    ): SessionOwner = if (balance == null) {
+        requireCurrentOwnerCheckpoint(owner)
+        owner
+    } else {
+        persistBalanceIfCurrent(owner, balance)
+    }
+
+    private suspend fun publishMenuIfCurrent(owner: SessionOwner, menu: StravaCZMenu) {
+        sessionMutationMutex.withLock {
+            requireCurrentOwner(owner)
+            cache.saveStravaMenu(owner.session.cacheScope(), menu)
         }
     }
 
-    private fun validSession(): StravaCZStoredSession = sessionStore.load()
-        ?: throw StravaCZAppException(StravaCZAppError.NOT_LOGGED_IN)
-
-    private suspend fun rollback(session: StravaCZStoredSession) {
+    private suspend fun rollback(owner: SessionOwner): SessionOwner =
         try {
-            val balance = client.cancelOrderChanges(session) ?: return
-            sessionStore.save(session.copy(balance = balance, savedAtEpochMillis = clock()))
+            applyBalanceResponseIfCurrent(
+                owner,
+                client.cancelOrderChanges(owner.session),
+            )
         } catch (error: CancellationException) {
             throw error
         } catch (_: Throwable) {
             // Preserve the original order error when rollback is unavailable.
+            requireCurrentOwnerCheckpoint(owner)
+            owner
+        }
+
+    private suspend fun requireCurrentOwnerCheckpoint(owner: SessionOwner) {
+        sessionMutationMutex.withLock { requireCurrentOwner(owner) }
+    }
+
+    private suspend fun clearIfAuthenticationError(error: Throwable, owner: SessionOwner) {
+        if (error is StravaCZException && error.kind == StravaCZErrorKind.AUTHENTICATION) {
+            sessionMutationMutex.withLock {
+                if (!owner.isCurrent()) return@withLock
+                sessionEpoch = nextSessionEpoch(sessionEpoch)
+                sessionStore.clear()
+                cache.clearStravaMenu(owner.session.cacheScope())
+            }
         }
     }
 
-    private suspend fun clearIfAuthenticationError(error: Throwable, session: StravaCZStoredSession) {
-        if (error is StravaCZException && error.kind == StravaCZErrorKind.AUTHENTICATION) {
-            sessionStore.clear()
-            cache.clearStravaMenu(session.cacheScope())
-        }
+    private fun requireCurrentEpoch(expectedEpoch: Long) {
+        if (sessionEpoch != expectedEpoch) throw GradeyIdentityChangedException()
     }
+
+    private fun requireCurrentOwner(owner: SessionOwner) {
+        if (!owner.isCurrent()) throw GradeyIdentityChangedException()
+    }
+
+    private fun SessionOwner.isCurrent(): Boolean =
+        epoch == sessionEpoch && sessionStore.load() == session
+
+    private fun nextSessionEpoch(current: Long): Long =
+        if (current == Long.MAX_VALUE) Long.MIN_VALUE else current + 1L
+
+    private data class SessionOwner(
+        val epoch: Long,
+        val session: StravaCZStoredSession,
+    )
 }
 
 interface StravaCZSessionStorage {

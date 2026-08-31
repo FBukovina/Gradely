@@ -1,6 +1,8 @@
 package com.bukovinafilip.gradey.network
 
 import com.bukovinafilip.gradey.domain.GradeyAuthRepository
+import com.bukovinafilip.gradey.domain.GradeyIdentityChangedException
+import com.bukovinafilip.gradey.domain.GradeySessionExpiredException
 import com.bukovinafilip.gradey.model.BakalariCredentials
 import com.bukovinafilip.gradey.model.GradeyAccount
 import com.bukovinafilip.gradey.model.GradeyAuthSession
@@ -11,22 +13,32 @@ import com.bukovinafilip.gradey.model.StoredSession
 import com.bukovinafilip.gradey.model.StravaCZStoredSession
 import com.bukovinafilip.gradey.model.UserResponse
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.async
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import okhttp3.mockwebserver.Dispatcher
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
+import okhttp3.mockwebserver.RecordedRequest
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
 class SupabaseLinkedAccountRepositoryTest {
     private lateinit var server: MockWebServer
     private var storedAccounts = emptyList<LinkedSchoolAccount>()
+    private var accountStoreWrites = 0
 
     @Before
     fun setUp() {
+        storedAccounts = emptyList()
+        accountStoreWrites = 0
         server = MockWebServer()
         server.start()
     }
@@ -47,6 +59,32 @@ class SupabaseLinkedAccountRepositoryTest {
     }
 
     @Test
+    fun `clear remains final writer when a legacy cache migration is already loading`() = runTest {
+        storedAccounts = listOf(account("legacy-account-a"))
+        val loaderStarted = CompletableDeferred<Unit>()
+        val releaseLoader = CompletableDeferred<Unit>()
+        val repository = repository(
+            accountLoader = {
+                val legacyAccounts = storedAccounts
+                loaderStarted.complete(Unit)
+                releaseLoader.await()
+                storedAccounts = legacyAccounts
+                legacyAccounts
+            },
+        )
+
+        val heldLoad = async(start = CoroutineStart.UNDISPATCHED) { repository.localAccounts() }
+        loaderStarted.await()
+        val clear = async(start = CoroutineStart.UNDISPATCHED) { repository.clearLocalAccounts() }
+        releaseLoader.complete(Unit)
+
+        assertThat(heldLoad.await().map { it.id }).containsExactly("legacy-account-a")
+        clear.await()
+        assertThat(storedAccounts).isEmpty()
+        assertThat(accountStoreWrites).isEqualTo(1)
+    }
+
+    @Test
     fun `account settings refresh uses Gradey auth and replaces the encrypted snapshot`() = runTest {
         storedAccounts = listOf(account("stale"))
         server.enqueue(jsonResponse(settingsResponse(accountID = "remote", activeID = "remote")))
@@ -61,6 +99,155 @@ class SupabaseLinkedAccountRepositoryTest {
         assertThat(snapshot.activeSchoolAccountID).isEqualTo("remote")
         assertThat(snapshot.linkedAccounts.single().status).isEqualTo(LinkedAccountStatus.ACTIVE)
         assertThat(storedAccounts.map { it.id }).containsExactly("remote")
+        assertThat(accountStoreWrites).isEqualTo(1)
+    }
+
+    @Test
+    fun `held account refresh cannot overwrite replacement identity cache`() = runTest {
+        val dispatcher = HeldResponseDispatcher(
+            jsonResponse(settingsResponse(accountID = "account-a", activeID = "account-a")),
+        )
+        server.dispatcher = dispatcher
+        val authRepository = FakeAuthRepository()
+        val repository = repository(authRepository)
+
+        val heldRefresh = async { repository.refreshAccounts() }
+        dispatcher.requestStarted.await()
+        authRepository.signOut()
+        authRepository.replaceSession(fakeAuthSession(accountID = "gradey-b", accessToken = "auth-b"))
+        storedAccounts = listOf(account("account-b"))
+        dispatcher.release()
+
+        val failure = runCatching { heldRefresh.await() }.exceptionOrNull()
+        val request = server.takeRequest()
+
+        assertThat(request.getHeader("Authorization")).isEqualTo("Bearer auth-access")
+        assertThat(failure).isInstanceOf(GradeyIdentityChangedException::class.java)
+        assertThat(storedAccounts.map { it.id }).containsExactly("account-b")
+        assertThat(accountStoreWrites).isEqualTo(0)
+    }
+
+    @Test
+    fun `held account refresh cannot repopulate cache cleared before identity adoption`() = runTest {
+        storedAccounts = listOf(account("account-a"))
+        val dispatcher = HeldResponseDispatcher(
+            jsonResponse(settingsResponse(accountID = "account-a", activeID = "account-a")),
+        )
+        server.dispatcher = dispatcher
+        val repository = repository()
+
+        val heldRefresh = async { repository.refreshAccounts() }
+        dispatcher.requestStarted.await()
+        repository.clearLocalAccounts()
+        dispatcher.release()
+
+        val failure = runCatching { heldRefresh.await() }.exceptionOrNull()
+
+        assertThat(failure).isInstanceOf(GradeyIdentityChangedException::class.java)
+        assertThat(storedAccounts).isEmpty()
+        assertThat(accountStoreWrites).isEqualTo(1)
+    }
+
+    @Test
+    fun `held link cannot upsert into replacement identity cache`() = runTest {
+        val dispatcher = HeldResponseDispatcher(jsonResponse(accountResponse("account-a")))
+        server.dispatcher = dispatcher
+        val authRepository = FakeAuthRepository()
+        val repository = repository(authRepository)
+
+        val heldLink = async { repository.linkSchoolAccount(schoolSession(), user = null) }
+        dispatcher.requestStarted.await()
+        authRepository.signOut()
+        authRepository.replaceSession(fakeAuthSession(accountID = "gradey-b", accessToken = "auth-b"))
+        storedAccounts = listOf(account("account-b"))
+        dispatcher.release()
+
+        val failure = runCatching { heldLink.await() }.exceptionOrNull()
+
+        assertThat(failure).isInstanceOf(GradeyIdentityChangedException::class.java)
+        assertThat(storedAccounts.map { it.id }).containsExactly("account-b")
+        assertThat(accountStoreWrites).isEqualTo(0)
+    }
+
+    @Test
+    fun `held link cannot upsert after cache is cleared with same auth session`() = runTest {
+        storedAccounts = listOf(account("account-a"))
+        val dispatcher = HeldResponseDispatcher(jsonResponse(accountResponse("stale-link")))
+        server.dispatcher = dispatcher
+        val repository = repository()
+
+        val heldLink = async { repository.linkSchoolAccount(schoolSession(), user = null) }
+        dispatcher.requestStarted.await()
+        repository.clearLocalAccounts()
+        dispatcher.release()
+
+        val failure = runCatching { heldLink.await() }.exceptionOrNull()
+
+        assertThat(failure).isInstanceOf(GradeyIdentityChangedException::class.java)
+        assertThat(storedAccounts).isEmpty()
+        assertThat(accountStoreWrites).isEqualTo(1)
+    }
+
+    @Test
+    fun `held unlink cannot delete from replacement identity cache`() = runTest {
+        val dispatcher = HeldResponseDispatcher(jsonResponse("{}"))
+        server.dispatcher = dispatcher
+        val authRepository = FakeAuthRepository()
+        val repository = repository(authRepository)
+
+        val heldUnlink = async { repository.unlinkAccount("shared-account") }
+        dispatcher.requestStarted.await()
+        authRepository.signOut()
+        authRepository.replaceSession(fakeAuthSession(accountID = "gradey-b", accessToken = "auth-b"))
+        storedAccounts = listOf(account("shared-account"))
+        dispatcher.release()
+
+        val failure = runCatching { heldUnlink.await() }.exceptionOrNull()
+
+        assertThat(failure).isInstanceOf(GradeyIdentityChangedException::class.java)
+        assertThat(storedAccounts.map { it.id }).containsExactly("shared-account")
+        assertThat(accountStoreWrites).isEqualTo(0)
+    }
+
+    @Test
+    fun `held unlink cannot delete cache adopted after clear with same auth session`() = runTest {
+        storedAccounts = listOf(account("shared-account"))
+        val dispatcher = HeldResponseDispatcher(jsonResponse("{}"))
+        server.dispatcher = dispatcher
+        val repository = repository()
+
+        val heldUnlink = async { repository.unlinkAccount("shared-account") }
+        dispatcher.requestStarted.await()
+        repository.clearLocalAccounts()
+        storedAccounts = listOf(account("adopted-account"))
+        dispatcher.release()
+
+        val failure = runCatching { heldUnlink.await() }.exceptionOrNull()
+
+        assertThat(failure).isInstanceOf(GradeyIdentityChangedException::class.java)
+        assertThat(storedAccounts.map { it.id }).containsExactly("adopted-account")
+        assertThat(accountStoreWrites).isEqualTo(1)
+    }
+
+    @Test
+    fun `signed out session unlink uses captured identity without touching replacement cache`() = runTest {
+        val authRepository = FakeAuthRepository()
+        val accountASession = authRepository.validSession()
+        authRepository.replaceSession(fakeAuthSession(accountID = "gradey-b", accessToken = "auth-b"))
+        storedAccounts = listOf(account("account-b"))
+        server.enqueue(jsonResponse("{}"))
+
+        repository(authRepository).unlinkAccountForSignedOutSession(
+            accountID = "account-a-meals",
+            session = accountASession,
+        )
+        val request = server.takeRequest()
+
+        assertThat(request.path).isEqualTo("/functions/v1/unlink-account")
+        assertThat(request.getHeader("Authorization")).isEqualTo("Bearer auth-access")
+        assertThat(request.body.readUtf8()).isEqualTo("""{"id":"account-a-meals"}""")
+        assertThat(storedAccounts.map { it.id }).containsExactly("account-b")
+        assertThat(accountStoreWrites).isEqualTo(0)
     }
 
     @Test
@@ -272,11 +459,17 @@ class SupabaseLinkedAccountRepositoryTest {
         assertThat(htmlFailure?.message).doesNotContain("secret diagnostic")
     }
 
-    private fun repository() = SupabaseLinkedAccountRepository(
+    private fun repository(
+        authRepository: GradeyAuthRepository = FakeAuthRepository(),
+        accountLoader: suspend () -> List<LinkedSchoolAccount> = { storedAccounts },
+    ) = SupabaseLinkedAccountRepository(
         configuration = SupabaseConfiguration(server.url("/").toString(), "anon-key"),
-        authRepository = FakeAuthRepository(),
-        accountStore = { storedAccounts = it.orEmpty() },
-        accountLoader = { storedAccounts },
+        authRepository = authRepository,
+        accountStore = {
+            storedAccounts = it.orEmpty()
+            accountStoreWrites += 1
+        },
+        accountLoader = accountLoader,
     )
 
     private fun schoolSession() = StoredSession(
@@ -339,20 +532,53 @@ class SupabaseLinkedAccountRepositoryTest {
         .setBody(body)
 }
 
-private class FakeAuthRepository : GradeyAuthRepository {
-    private val session = GradeyAuthSession(
-        accessToken = "auth-access",
-        refreshToken = "auth-refresh",
-        account = GradeyAccount("gradey-user"),
-    )
+private class HeldResponseDispatcher(
+    private val response: MockResponse,
+) : Dispatcher() {
+    val requestStarted = CompletableDeferred<Unit>()
+    private val responseRelease = CountDownLatch(1)
+
+    override fun dispatch(request: RecordedRequest): MockResponse {
+        requestStarted.complete(Unit)
+        check(responseRelease.await(5, TimeUnit.SECONDS)) {
+            "Timed out waiting to release a held linked-account response."
+        }
+        return response
+    }
+
+    fun release() {
+        responseRelease.countDown()
+    }
+}
+
+private class FakeAuthRepository(
+    initialSession: GradeyAuthSession = fakeAuthSession(),
+) : GradeyAuthRepository {
+    @Volatile
+    private var session: GradeyAuthSession? = initialSession
+
+    fun replaceSession(replacement: GradeyAuthSession) {
+        session = replacement
+    }
 
     override suspend fun bootstrapSession() = session
-    override suspend fun validSession() = session
-    override suspend fun refreshAccount() = session.account
-    override suspend fun updateFullName(fullName: String) = session.account.copy(fullName = fullName)
-    override suspend fun signInWithGoogle(idToken: String, accessToken: String?, fullName: String?) = session
-    override suspend fun signOut() = Unit
+    override suspend fun validSession() = session ?: throw GradeySessionExpiredException()
+    override suspend fun refreshAccount() = validSession().account
+    override suspend fun updateFullName(fullName: String) = validSession().account.copy(fullName = fullName)
+    override suspend fun signInWithGoogle(idToken: String, accessToken: String?, fullName: String?) = validSession()
+    override suspend fun signOut() {
+        session = null
+    }
 }
+
+private fun fakeAuthSession(
+    accountID: String = "gradey-user",
+    accessToken: String = "auth-access",
+) = GradeyAuthSession(
+    accessToken = accessToken,
+    refreshToken = "auth-refresh",
+    account = GradeyAccount(accountID),
+)
 
 private fun JsonObject.stringValue(key: String): String = getValue(key).jsonPrimitive.content
 private fun JsonObject.objectValue(key: String): JsonObject = getValue(key).jsonObject

@@ -41,6 +41,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.bukovinafilip.gradey.model.AbsenceResponse
 import com.bukovinafilip.gradey.domain.DemoData
+import com.bukovinafilip.gradey.domain.SubjectGradeTrend
 import com.bukovinafilip.gradey.model.Subject
 import com.bukovinafilip.gradey.ui.GradeyTheme
 import java.util.Locale
@@ -177,6 +178,30 @@ class SubjectsControlsAccessibilityTest {
         assertTrue(
             "Adjacent subject rows must not overlap at 200% font scale",
             orderedRows.zipWithNext().all { (first, second) -> first.bottom <= second.top },
+        )
+    }
+
+    @Test
+    fun englishSubjectNumbersFollowAppLocaleWhenJvmDefaultIsCzech() {
+        assertSubjectNumberFormatting(
+            appLocaleTag = "en-US",
+            jvmDefault = Locale.forLanguageTag("cs-CZ"),
+            expectedAverage = "1.78",
+            unexpectedAverage = "1,78",
+            expectedDelta = "+0.25",
+            unexpectedDelta = "+0,25",
+        )
+    }
+
+    @Test
+    fun czechSubjectNumbersFollowAppLocaleWhenJvmDefaultIsEnglish() {
+        assertSubjectNumberFormatting(
+            appLocaleTag = "cs-CZ",
+            jvmDefault = Locale.US,
+            expectedAverage = "1,78",
+            unexpectedAverage = "1.78",
+            expectedDelta = "+0,25",
+            unexpectedDelta = "+0.25",
         )
     }
 
@@ -348,9 +373,10 @@ class SubjectsControlsAccessibilityTest {
 
     private fun setSubjectRows(
         subjects: List<Subject>,
+        gradeTrends: List<SubjectGradeTrend> = emptyList(),
         localeTag: String,
-        fontScale: Float,
-        width: androidx.compose.ui.unit.Dp,
+        fontScale: Float = 1f,
+        width: androidx.compose.ui.unit.Dp = 360.dp,
     ) {
         composeRule.setContent {
             val baseContext = LocalContext.current
@@ -377,6 +403,7 @@ class SubjectsControlsAccessibilityTest {
                         SubjectsScreen(
                             subjects = subjects,
                             absence = AbsenceResponse(),
+                            gradeTrends = gradeTrends,
                             onPredictSubjectAverage = { _, _, _ -> null },
                             isRefreshing = false,
                             onRefresh = {},
@@ -386,6 +413,32 @@ class SubjectsControlsAccessibilityTest {
                     }
                 }
             }
+        }
+    }
+
+    private fun assertSubjectNumberFormatting(
+        appLocaleTag: String,
+        jvmDefault: Locale,
+        expectedAverage: String,
+        unexpectedAverage: String,
+        expectedDelta: String,
+        unexpectedDelta: String,
+    ) {
+        val originalDefault = Locale.getDefault()
+        try {
+            Locale.setDefault(jvmDefault)
+            setSubjectRows(
+                subjects = listOf(DemoData.math, DemoData.czech),
+                gradeTrends = listOf(MathTrend),
+                localeTag = appLocaleTag,
+            )
+
+            composeRule.onNodeWithText(expectedAverage).performScrollTo().assertIsDisplayed()
+            composeRule.onNodeWithText(expectedDelta).performScrollTo().assertIsDisplayed()
+            composeRule.onNodeWithText(unexpectedAverage).assertDoesNotExist()
+            composeRule.onNodeWithText(unexpectedDelta).assertDoesNotExist()
+        } finally {
+            Locale.setDefault(originalDefault)
         }
     }
 
@@ -474,6 +527,17 @@ class SubjectsControlsAccessibilityTest {
         assertHeightIsAtLeast(48.dp).assertWidthIsAtLeast(48.dp)
 
     private companion object {
+        val MathTrend = SubjectGradeTrend(
+            subjectID = DemoData.math.id,
+            subjectAbbrev = DemoData.math.subjectInfo.abbrev,
+            subjectName = DemoData.math.displayName,
+            firstAverage = 1.53,
+            latestAverage = 1.78,
+            averageDelta = 0.25,
+            firstMarkCount = 2,
+            latestMarkCount = 3,
+            events = emptyList(),
+        )
         val tabRoleMatcher = SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Tab)
         val buttonRoleMatcher = SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Button)
     }

@@ -58,6 +58,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
@@ -247,6 +248,7 @@ fun TodayScreen(
     onReconnectLinkedAccount: suspend (LinkedSchoolAccount, String, String, String) -> String?,
     modifier: Modifier = Modifier,
 ) {
+    val locale = LocalConfiguration.current.locales[0] ?: Locale.getDefault()
     var showsTrendDetails by rememberSaveable { mutableStateOf(false) }
     var selectedTrendRangeName by rememberSaveable { mutableStateOf(GradeTrendRange.NINETY_DAYS.name) }
     var reconnectSheet by remember { mutableStateOf<TodayReconnectSheetState?>(null) }
@@ -254,7 +256,7 @@ fun TodayScreen(
     val reconnectScope = rememberCoroutineScope()
     val todayListState = rememberLazyListState()
     val subjects = dashboard.marksResponse.subjects
-    val overall = GradeMath.formattedAverage(GradeMath.overallAverage(subjects))
+    val overall = GradeMath.formattedAverage(GradeMath.overallAverage(subjects), locale)
     val totalMarks = subjects.sumOf { it.marks.size }
     val studentName = TodayStudentNames.resolve(
         schoolFullName = dashboard.user?.fullName,
@@ -304,6 +306,7 @@ fun TodayScreen(
         GradeTrendsScreen(
             trends = gradeTrends,
             selectedRangeName = selectedTrendRangeName,
+            locale = locale,
             onRangeSelected = { selectedTrendRangeName = it.name },
             onBack = { showsTrendDetails = false },
             modifier = modifier,
@@ -377,6 +380,7 @@ fun TodayScreen(
                 NewMarksAndTrendsCard(
                     newMarks = newMarks,
                     trends = topTrends,
+                    locale = locale,
                     onOpenMarks = onOpenMarks,
                     onOpenTrends = { showsTrendDetails = true },
                 )
@@ -1541,6 +1545,7 @@ internal fun AbsencePredictorCard(onPlanAbsence: () -> Unit) {
 private fun NewMarksAndTrendsCard(
     newMarks: List<TodayNewMark>,
     trends: List<SubjectGradeTrend>,
+    locale: Locale,
     onOpenMarks: () -> Unit,
     onOpenTrends: () -> Unit,
 ) {
@@ -1604,7 +1609,7 @@ private fun NewMarksAndTrendsCard(
                             fontWeight = FontWeight.SemiBold,
                         )
                         Text(
-                            text = mark.detectedAt?.let(::formatDetectedAt)
+                            text = mark.detectedAt?.let { formatDetectedAt(it, locale) }
                                 ?: stringResource(R.string.today_new_from_school),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
@@ -1631,7 +1636,7 @@ private fun NewMarksAndTrendsCard(
                             color = MaterialTheme.colorScheme.outlineVariant,
                         )
                     }
-                    GradeTrendRow(trend)
+                    GradeTrendRow(trend, locale)
                 }
             }
         }
@@ -1642,6 +1647,7 @@ private fun NewMarksAndTrendsCard(
 private fun GradeTrendsScreen(
     trends: List<SubjectGradeTrend>,
     selectedRangeName: String,
+    locale: Locale,
     onRangeSelected: (GradeTrendRange) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
@@ -1675,7 +1681,7 @@ private fun GradeTrendsScreen(
                 if (filteredTrends.isEmpty()) {
                     GradeTrendsEmptyCard()
                 } else {
-                    GradeTrendsList(filteredTrends)
+                    GradeTrendsList(filteredTrends, locale)
                 }
             }
         }
@@ -1813,7 +1819,7 @@ private fun trendRangeLabel(range: GradeTrendRange): String = stringResource(
 )
 
 @Composable
-private fun GradeTrendsList(trends: List<SubjectGradeTrend>) {
+private fun GradeTrendsList(trends: List<SubjectGradeTrend>, locale: Locale) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(18.dp),
@@ -1826,7 +1832,7 @@ private fun GradeTrendsList(trends: List<SubjectGradeTrend>) {
     ) {
         Column {
             trends.forEachIndexed { index, trend ->
-                GradeTrendRow(trend)
+                GradeTrendRow(trend, locale)
                 if (index != trends.lastIndex) {
                     HorizontalDivider(
                         modifier = Modifier.padding(start = 106.dp, end = 16.dp),
@@ -1909,7 +1915,7 @@ private fun CloudHistoryEmptyRow() {
 }
 
 @Composable
-private fun GradeTrendRow(trend: SubjectGradeTrend) {
+private fun GradeTrendRow(trend: SubjectGradeTrend, locale: Locale) {
     val newMarkCount = (trend.latestMarkCount - trend.firstMarkCount).coerceAtLeast(0)
     Row(
         modifier = Modifier
@@ -1951,7 +1957,7 @@ private fun GradeTrendRow(trend: SubjectGradeTrend) {
         }
         trend.averageDelta?.let { delta ->
             Text(
-                text = String.format(Locale.getDefault(), "%+.2f", delta),
+                text = String.format(locale, "%+.2f", delta),
                 color = if (delta <= 0) MaterialTheme.colorScheme.primary else DangerRed,
                 fontSize = 15.sp,
                 lineHeight = 18.sp,
@@ -2075,10 +2081,10 @@ private fun IconTile(
     }
 }
 
-private fun formatDetectedAt(instant: java.time.Instant): String =
+private fun formatDetectedAt(instant: java.time.Instant, locale: Locale): String =
     DateTimeFormatter
         .ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT)
-        .withLocale(Locale.getDefault())
+        .withLocale(locale)
         .withZone(PragueZone)
         .format(instant)
 

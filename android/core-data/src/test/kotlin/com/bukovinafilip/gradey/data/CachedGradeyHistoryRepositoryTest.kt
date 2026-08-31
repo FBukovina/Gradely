@@ -1,11 +1,14 @@
 package com.bukovinafilip.gradey.data
 
 import com.bukovinafilip.gradey.domain.GradeyHistoryRepository
+import com.bukovinafilip.gradey.domain.GradeyIdentityChangedException
 import com.bukovinafilip.gradey.model.GradeHistoryResponse
 import com.bukovinafilip.gradey.model.LinkedAccountProvider
 import com.bukovinafilip.gradey.model.NewMarkEvent
 import com.bukovinafilip.gradey.network.GradeyJson
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.async
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
 import java.security.MessageDigest
@@ -65,6 +68,24 @@ class CachedGradeyHistoryRepositoryTest {
         assertThat(repository.loadCachedGradeHistory("account-b")).isNull()
     }
 
+    @Test
+    fun `identity reset rejects a held response before it can repopulate cleared history`() = runTest {
+        val remote = HeldHistoryRepository(history("late-a"))
+        val repository = CachedGradeyHistoryRepository(
+            remote,
+            RoomGradeyCache(HistoryCacheDao(), GradeyJson),
+        )
+        val heldRequest = async { repository.gradeHistory("account-a", 400) }
+        remote.requestStarted.await()
+
+        repository.clearAllCachedGradeHistory()
+        remote.releaseResponse.complete(Unit)
+        val failure = runCatching { heldRequest.await() }.exceptionOrNull()
+
+        assertThat(failure).isInstanceOf(GradeyIdentityChangedException::class.java)
+        assertThat(repository.loadCachedGradeHistory("account-a")).isNull()
+    }
+
     private fun history(id: String) = GradeHistoryResponse(
         recentNewMarkEvents = listOf(
             NewMarkEvent(
@@ -90,6 +111,19 @@ private class FakeHistoryRepository(
 
     override suspend fun gradeHistory(accountID: String?, days: Int?): GradeHistoryResponse {
         failure?.let { throw it }
+        return response
+    }
+}
+
+private class HeldHistoryRepository(
+    private val response: GradeHistoryResponse,
+) : GradeyHistoryRepository {
+    val requestStarted = CompletableDeferred<Unit>()
+    val releaseResponse = CompletableDeferred<Unit>()
+
+    override suspend fun gradeHistory(accountID: String?, days: Int?): GradeHistoryResponse {
+        requestStarted.complete(Unit)
+        releaseResponse.await()
         return response
     }
 }

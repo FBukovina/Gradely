@@ -1,5 +1,6 @@
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
     android:description="@string/app_name"
+    android:initialLayout="@layout/glance_default_loading_layout"
     android:minWidth="180dp"
     android:minHeight="80dp"
     android:previewLayout="@layout/glance_default_loading_layout"
@@ -8,4 +9,3 @@
     android:targetCellHeight="1"
     android:updatePeriodMillis="1800000"
     android:widgetCategory="home_screen" />
-

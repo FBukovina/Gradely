@@ -4,6 +4,7 @@ import com.bukovinafilip.gradey.domain.BakalariClient
 import com.bukovinafilip.gradey.domain.AbsenceSubjectResolutionFailure
 import com.bukovinafilip.gradey.domain.AbsenceSubjectResolutionSource
 import com.bukovinafilip.gradey.domain.AbsenceLessonSelections
+import com.bukovinafilip.gradey.domain.GradeyIdentityChangedException
 import com.bukovinafilip.gradey.domain.SchoolSessionExpiredException
 import com.bukovinafilip.gradey.model.Absence
 import com.bukovinafilip.gradey.model.AbsencePerSubject
@@ -75,6 +76,139 @@ class AndroidSchoolRepositoryTest {
         assertThat(session.refreshToken).isEqualTo("login-refresh")
         assertThat(session.bakalari).isEqualTo(BakalariCredentials("student", " secret with spaces "))
         assertThat(sessions.load()).isEqualTo(session)
+    }
+
+    @Test
+    fun `authenticated reconnect candidate and dashboard do not replace the durable previous session`() = runTest {
+        val previous = validSession().copy(
+            linkedAccountID = "previous-account",
+            linkedAccountDisplayName = "Previous Student",
+        )
+        val sessions = InMemorySchoolSessionStorage(previous)
+        val client = FakeBakalariClient()
+        val repository = repository(client, sessions)
+        val token = repository.captureSchoolCloudMutationToken()
+
+        val candidate = repository.authenticateSchoolSessionCandidate(
+            schoolURL = "https://candidate.example.cz",
+            username = "candidate-student",
+            password = "candidate-secret",
+            cloudMutationToken = token,
+        )
+
+        assertThat(candidate.session.baseURL).isEqualTo("https://candidate.example.cz")
+        assertThat(candidate.session.bakalari)
+            .isEqualTo(BakalariCredentials("candidate-student", "candidate-secret"))
+        assertThat(candidate.dashboard.user?.fullName).isEqualTo("Student")
+        assertThat(sessions.load()).isEqualTo(previous)
+        assertThat(client.loginCalls).isEqualTo(1)
+        assertThat(client.marksCalls).isEqualTo(1)
+    }
+
+    @Test
+    fun `failed cloud reconnect after candidate authentication leaves previous session durable`() = runTest {
+        val previous = validSession().copy(linkedAccountID = "previous-account")
+        val sessions = InMemorySchoolSessionStorage(previous)
+        val repository = repository(FakeBakalariClient(), sessions)
+        val token = repository.captureSchoolCloudMutationToken()
+
+        val failure = runCatching {
+            repository.authenticateSchoolSessionCandidate(
+                schoolURL = "https://candidate.example.cz",
+                username = "candidate-student",
+                password = "candidate-secret",
+                cloudMutationToken = token,
+            )
+            throw java.io.IOException("cloud reconnect failed")
+        }.exceptionOrNull()
+
+        assertThat(failure).isInstanceOf(java.io.IOException::class.java)
+        assertThat(sessions.load()).isEqualTo(previous)
+    }
+
+    @Test
+    fun `successful cloud reconnect promotion atomically replaces and associates candidate`() = runTest {
+        val previous = validSession().copy(linkedAccountID = "previous-account")
+        val sessions = InMemorySchoolSessionStorage(previous)
+        val repository = repository(FakeBakalariClient(), sessions)
+        val token = repository.captureSchoolCloudMutationToken()
+        val candidate = repository.authenticateSchoolSessionCandidate(
+            schoolURL = "https://candidate.example.cz",
+            username = "candidate-student",
+            password = "candidate-secret",
+            cloudMutationToken = token,
+        )
+        val account = LinkedSchoolAccount(
+            id = "reconnected-account",
+            provider = LinkedAccountProvider.BAKALARI,
+            displayName = "Reconnected Student",
+            schoolName = "Reconnected School",
+        )
+
+        val promoted = repository.promoteAuthenticatedSchoolSessionCandidate(candidate, account, token)
+
+        assertThat(promoted.accessToken).isEqualTo(candidate.session.accessToken)
+        assertThat(promoted.linkedAccountID).isEqualTo(account.id)
+        assertThat(promoted.linkedAccountDisplayName).isEqualTo(account.displayName)
+        assertThat(promoted.linkedAccountSchoolName).isEqualTo(account.schoolName)
+        assertThat(sessions.load()).isEqualTo(promoted)
+    }
+
+    @Test
+    fun `same epoch activation winner cannot be overwritten by concurrent login`() = runTest {
+        val loginStarted = CompletableDeferred<Unit>()
+        val activationStarted = CompletableDeferred<Unit>()
+        val releaseLogin = CompletableDeferred<Unit>()
+        val releaseActivation = CompletableDeferred<Unit>()
+        val sessions = InMemorySchoolSessionStorage(validSession())
+        val client = FakeBakalariClient().apply {
+            loginResult = { _, username, _ ->
+                when (username) {
+                    "login-student" -> {
+                        loginStarted.complete(Unit)
+                        releaseLogin.await()
+                        LoginResponse("login-would-be-stale", "login-refresh", "Bearer", 3_600)
+                    }
+                    "activation-student" -> {
+                        activationStarted.complete(Unit)
+                        releaseActivation.await()
+                        LoginResponse("activation-winner", "activation-refresh", "Bearer", 3_600)
+                    }
+                    else -> error("Unexpected user $username")
+                }
+            }
+        }
+        val repository = repository(client, sessions)
+        val token = repository.captureSchoolCloudMutationToken()
+        val incoming = validSession().copy(
+            baseURL = "https://activation.example.cz",
+            bakalari = BakalariCredentials("activation-student", "activation-secret"),
+            linkedAccountID = "activation-account",
+        )
+
+        val loggingIn = async {
+            runCatching {
+                repository.login(
+                    "https://login.example.cz",
+                    "login-student",
+                    "login-secret",
+                    token,
+                )
+            }
+        }
+        val activating = async {
+            runCatching { repository.activateLinkedSchoolAccount(incoming, token) }
+        }
+        loginStarted.await()
+        activationStarted.await()
+        releaseActivation.complete(Unit)
+        val activation = activating.await().getOrThrow()
+        releaseLogin.complete(Unit)
+        val loginFailure = loggingIn.await().exceptionOrNull()
+
+        assertThat(loginFailure).isInstanceOf(CancellationException::class.java)
+        assertThat(activation.accessToken).isEqualTo("activation-winner")
+        assertThat(sessions.load()).isEqualTo(activation)
     }
 
     @Test
@@ -191,6 +325,332 @@ class AndroidSchoolRepositoryTest {
         assertThat(local?.linkedAccountDisplayName).isNull()
         assertThat(local?.linkedAccountSchoolName).isNull()
         assertThat(sessions.load()).isEqualTo(local)
+    }
+
+    @Test
+    fun `cloud commit before identity invalidation is atomically detached without clearing local state`() = runTest {
+        val original = validSession()
+        val sessions = InMemorySchoolSessionStorage(original)
+        val cache = RoomGradeyCache(InMemoryCacheEntryDao(), GradeyJson)
+        val widgetSnapshot = NextLessonWidgetSnapshot(
+            cachedAtEpochMillis = 1,
+            lessons = listOf(NextLessonWidgetLesson("retained-lesson", 1)),
+        )
+        cache.saveNextLessonSnapshot(widgetSnapshot)
+        val repository = repository(FakeBakalariClient(), sessions, cache)
+        val token = repository.captureSchoolCloudMutationToken()
+        val account = LinkedSchoolAccount(
+            id = "account-a",
+            provider = LinkedAccountProvider.BAKALARI,
+            displayName = "Student A",
+            schoolName = "School A",
+        )
+
+        val associated = repository.associateCurrentSession(account, token)
+        val cloudScopedDashboard = DashboardData(MarksResponse(), user = UserResponse("Student A"))
+        cache.saveDashboard(associated.cacheScope, cloudScopedDashboard)
+        val invalidation = repository.invalidateSchoolCloudMutationsAndDisassociate()
+        val detached = invalidation.retainedSession
+
+        assertThat(associated.linkedAccountID).isEqualTo("account-a")
+        assertThat(invalidation.previousLinkedAccountID).isEqualTo("account-a")
+        assertThat(detached?.linkedAccountID).isNull()
+        assertThat(detached?.linkedAccountDisplayName).isNull()
+        assertThat(detached?.linkedAccountSchoolName).isNull()
+        assertThat(detached?.accessToken).isEqualTo(original.accessToken)
+        assertThat(detached?.refreshToken).isEqualTo(original.refreshToken)
+        assertThat(detached?.bakalari).isEqualTo(original.bakalari)
+        assertThat(sessions.load()).isEqualTo(detached)
+        assertThat(cache.loadDashboard(associated.cacheScope)).isEqualTo(cloudScopedDashboard)
+        assertThat(cache.loadNextLessonSnapshot()).isEqualTo(widgetSnapshot)
+    }
+
+    @Test
+    fun `identity invalidation before old cloud commits rejects every stale mutation`() = runTest {
+        val current = validSession().copy(
+            linkedAccountID = "account-a",
+            linkedAccountDisplayName = "Student A",
+            linkedAccountSchoolName = "School A",
+        )
+        val sessions = InMemorySchoolSessionStorage(current)
+        val client = FakeBakalariClient()
+        val repository = repository(client, sessions)
+        val staleToken = repository.captureSchoolCloudMutationToken()
+        val invalidation = repository.invalidateSchoolCloudMutationsAndDisassociate()
+        val detached = invalidation.retainedSession
+        val accountA = LinkedSchoolAccount(
+            id = "account-a",
+            provider = LinkedAccountProvider.BAKALARI,
+            displayName = "Student A",
+            schoolName = "School A",
+        )
+
+        val loginFailure = runCatching {
+            repository.login("https://school-a.example.cz", "student-a", "secret-a", staleToken)
+        }.exceptionOrNull()
+        val associationFailure = runCatching {
+            repository.associateCurrentSession(accountA, staleToken)
+        }.exceptionOrNull()
+        val activationFailure = runCatching {
+            repository.activateLinkedSchoolAccount(current, staleToken)
+        }.exceptionOrNull()
+        val disassociationFailure = runCatching {
+            repository.disassociateCurrentSession("account-a", staleToken)
+        }.exceptionOrNull()
+        val rollbackFailure = runCatching {
+            repository.restoreSessionIfCurrentCandidate(
+                candidate = current,
+                previous = current.copy(linkedAccountID = "previous-account-a"),
+                cloudMutationToken = staleToken,
+            )
+        }.exceptionOrNull()
+
+        assertThat(loginFailure).isInstanceOf(GradeyIdentityChangedException::class.java)
+        assertThat(associationFailure).isInstanceOf(GradeyIdentityChangedException::class.java)
+        assertThat(activationFailure).isInstanceOf(GradeyIdentityChangedException::class.java)
+        assertThat(disassociationFailure).isInstanceOf(GradeyIdentityChangedException::class.java)
+        assertThat(rollbackFailure).isInstanceOf(GradeyIdentityChangedException::class.java)
+        assertThat(client.loginCalls).isEqualTo(0)
+        assertThat(invalidation.previousLinkedAccountID).isEqualTo("account-a")
+        assertThat(sessions.load()).isEqualTo(detached)
+        assertThat(sessions.load()?.linkedAccountID).isNull()
+    }
+
+    @Test
+    fun `identity invalidation advances during held login and rejects its stale response`() = runTest {
+        val loginStarted = CompletableDeferred<Unit>()
+        val releaseLogin = CompletableDeferred<Unit>()
+        val current = validSession().copy(
+            linkedAccountID = "account-a",
+            linkedAccountDisplayName = "Student A",
+            linkedAccountSchoolName = "School A",
+        )
+        val sessions = InMemorySchoolSessionStorage(current)
+        val client = FakeBakalariClient().apply {
+            loginResult = { _, _, _ ->
+                loginStarted.complete(Unit)
+                releaseLogin.await()
+                LoginResponse("stale-access", "stale-refresh", "Bearer", 3_600)
+            }
+        }
+        val repository = repository(client, sessions)
+        val token = repository.captureSchoolCloudMutationToken()
+
+        val loggingIn = async {
+            runCatching {
+                repository.login(
+                    "https://school-b.example.cz",
+                    "student-b",
+                    "secret-b",
+                    token,
+                )
+            }
+        }
+        loginStarted.await()
+        val invalidating = async { repository.invalidateSchoolCloudMutationsAndDisassociate() }
+        yield()
+        val invalidationCompletedWhileNetworkWasHeld = invalidating.isCompleted
+        releaseLogin.complete(Unit)
+
+        val invalidation = invalidating.await()
+        val loginFailure = loggingIn.await().exceptionOrNull()
+        val retained = invalidation.retainedSession
+
+        assertThat(invalidationCompletedWhileNetworkWasHeld).isTrue()
+        assertThat(loginFailure).isInstanceOf(GradeyIdentityChangedException::class.java)
+        assertThat(invalidation.previousLinkedAccountID).isEqualTo("account-a")
+        assertThat(retained?.accessToken).isEqualTo(current.accessToken)
+        assertThat(retained?.bakalari).isEqualTo(current.bakalari)
+        assertThat(retained?.linkedAccountID).isNull()
+        assertThat(sessions.load()).isEqualTo(retained)
+    }
+
+    @Test
+    fun `identity invalidation advances during held activation and rejects its stale response`() = runTest {
+        val activationStarted = CompletableDeferred<Unit>()
+        val releaseActivation = CompletableDeferred<Unit>()
+        val current = validSession().copy(
+            linkedAccountID = "account-a",
+            linkedAccountDisplayName = "Student A",
+            linkedAccountSchoolName = "School A",
+        )
+        val incoming = validSession().copy(
+            accessToken = "cloud-poller-access-b",
+            refreshToken = "cloud-poller-refresh-b",
+            baseURL = "https://school-b.example.cz",
+            bakalari = BakalariCredentials("student-b", "secret-b"),
+            linkedAccountID = "account-b",
+            linkedAccountDisplayName = "Student B",
+            linkedAccountSchoolName = "School B",
+        )
+        val sessions = InMemorySchoolSessionStorage(current)
+        val client = FakeBakalariClient().apply {
+            loginResult = { _, _, _ ->
+                activationStarted.complete(Unit)
+                releaseActivation.await()
+                LoginResponse("stale-access-b", "stale-refresh-b", "Bearer", 3_600)
+            }
+        }
+        val repository = repository(client, sessions)
+        val token = repository.captureSchoolCloudMutationToken()
+
+        val activating = async {
+            runCatching { repository.activateLinkedSchoolAccount(incoming, token) }
+        }
+        activationStarted.await()
+        val invalidating = async { repository.invalidateSchoolCloudMutationsAndDisassociate() }
+        yield()
+        val invalidationCompletedWhileNetworkWasHeld = invalidating.isCompleted
+        releaseActivation.complete(Unit)
+
+        val invalidation = invalidating.await()
+        val activationFailure = activating.await().exceptionOrNull()
+        val retained = invalidation.retainedSession
+
+        assertThat(invalidationCompletedWhileNetworkWasHeld).isTrue()
+        assertThat(activationFailure).isInstanceOf(GradeyIdentityChangedException::class.java)
+        assertThat(invalidation.previousLinkedAccountID).isEqualTo("account-a")
+        assertThat(retained?.accessToken).isEqualTo(current.accessToken)
+        assertThat(retained?.bakalari).isEqualTo(current.bakalari)
+        assertThat(retained?.linkedAccountID).isNull()
+        assertThat(sessions.load()).isEqualTo(retained)
+    }
+
+    @Test
+    fun `identity invalidation clears only the session when detached persistence fails`() = runTest {
+        val current = validSession().copy(
+            linkedAccountID = "account-a",
+            linkedAccountDisplayName = "Student A",
+            linkedAccountSchoolName = "School A",
+        )
+        val sessions = FailingDetachSchoolSessionStorage(current)
+        val cache = RoomGradeyCache(InMemoryCacheEntryDao(), GradeyJson)
+        val cachedDashboard = DashboardData(MarksResponse(), user = UserResponse("Student A"))
+        cache.saveDashboard(current.cacheScope, cachedDashboard)
+        val repository = repository(FakeBakalariClient(), sessions, cache)
+        val staleToken = repository.captureSchoolCloudMutationToken()
+
+        val invalidation = repository.invalidateSchoolCloudMutationsAndDisassociate()
+        val staleFailure = runCatching {
+            repository.disassociateCurrentSession("account-a", staleToken)
+        }.exceptionOrNull()
+
+        assertThat(invalidation.previousLinkedAccountID).isEqualTo("account-a")
+        assertThat(invalidation.retainedSession).isNull()
+        assertThat(sessions.load()).isNull()
+        assertThat(sessions.clearCalls).isEqualTo(1)
+        assertThat(cache.loadDashboard(current.cacheScope)).isEqualTo(cachedDashboard)
+        assertThat(staleFailure).isInstanceOf(GradeyIdentityChangedException::class.java)
+    }
+
+    @Test
+    fun `cloud epoch remains invalidated when both detach persistence and fallback clear fail`() = runTest {
+        val current = validSession().copy(linkedAccountID = "account-a")
+        val sessions = FailingDetachSchoolSessionStorage(current, failClear = true)
+        val repository = repository(FakeBakalariClient(), sessions)
+        val staleToken = repository.captureSchoolCloudMutationToken()
+
+        val invalidationFailure = runCatching {
+            repository.invalidateSchoolCloudMutationsAndDisassociate()
+        }.exceptionOrNull()
+        val staleFailure = runCatching {
+            repository.associateCurrentSession(
+                LinkedSchoolAccount(
+                    id = "account-a",
+                    provider = LinkedAccountProvider.BAKALARI,
+                    displayName = "Student A",
+                    schoolName = "School A",
+                ),
+                staleToken,
+            )
+        }.exceptionOrNull()
+
+        assertThat(invalidationFailure).hasMessageThat().isEqualTo("detached session write failed")
+        assertThat(invalidationFailure?.suppressed?.singleOrNull())
+            .hasMessageThat()
+            .isEqualTo("session clear failed")
+        assertThat(staleFailure).isInstanceOf(GradeyIdentityChangedException::class.java)
+    }
+
+    @Test
+    fun `current cloud token permits guarded school mutations`() = runTest {
+        val sessions = InMemorySchoolSessionStorage(null)
+        val client = FakeBakalariClient()
+        val repository = repository(client, sessions)
+        val token = repository.captureSchoolCloudMutationToken()
+        val account = LinkedSchoolAccount(
+            id = "account-a",
+            provider = LinkedAccountProvider.BAKALARI,
+            displayName = "Student A",
+            schoolName = "School A",
+        )
+
+        val loggedIn = repository.login(
+            "https://school-a.example.cz",
+            "student-a",
+            "secret-a",
+            token,
+        )
+        val associated = repository.associateCurrentSession(account, token)
+        val detached = repository.disassociateCurrentSession(account.id, token)
+        val activated = repository.activateLinkedSchoolAccount(
+            loggedIn.copy(
+                linkedAccountID = account.id,
+                linkedAccountDisplayName = account.displayName,
+                linkedAccountSchoolName = account.schoolName,
+            ),
+            token,
+        )
+
+        assertThat(associated.linkedAccountID).isEqualTo(account.id)
+        assertThat(detached?.linkedAccountID).isNull()
+        assertThat(activated.linkedAccountID).isEqualTo(account.id)
+        assertThat(sessions.load()).isEqualTo(activated)
+        assertThat(client.loginCalls).isEqualTo(2)
+    }
+
+    @Test
+    fun `reconnect rollback restores previous session only while its candidate and token are current`() = runTest {
+        val previous = validSession().copy(linkedAccountID = "previous-account")
+        val candidate = validSession().copy(
+            accessToken = "candidate-access",
+            refreshToken = "candidate-refresh",
+            baseURL = "https://candidate.example.cz",
+            bakalari = BakalariCredentials("candidate", "candidate-secret"),
+            linkedAccountID = null,
+        )
+        val sessions = InMemorySchoolSessionStorage(candidate)
+        val repository = repository(FakeBakalariClient(), sessions)
+        val token = repository.captureSchoolCloudMutationToken()
+
+        val restored = repository.restoreSessionIfCurrentCandidate(candidate, previous, token)
+
+        assertThat(restored).isEqualTo(previous)
+        assertThat(sessions.load()).isEqualTo(previous)
+    }
+
+    @Test
+    fun `reconnect rollback leaves a newer school session unchanged`() = runTest {
+        val previous = validSession().copy(linkedAccountID = "previous-account")
+        val candidate = validSession().copy(
+            accessToken = "candidate-access",
+            baseURL = "https://candidate.example.cz",
+        )
+        val newer = validSession().copy(
+            accessToken = "newer-access",
+            baseURL = "https://newer.example.cz",
+            bakalari = BakalariCredentials("newer", "newer-secret"),
+            linkedAccountID = "newer-account",
+        )
+        val sessions = InMemorySchoolSessionStorage(candidate)
+        val repository = repository(FakeBakalariClient(), sessions)
+        val token = repository.captureSchoolCloudMutationToken()
+        repository.restoreSession(newer)
+
+        val retained = repository.restoreSessionIfCurrentCandidate(candidate, previous, token)
+
+        assertThat(retained).isEqualTo(newer)
+        assertThat(sessions.load()).isEqualTo(newer)
     }
 
     @Test
@@ -425,11 +885,96 @@ class AndroidSchoolRepositoryTest {
     }
 
     @Test
-    fun `logout queued behind a refresh cannot be undone by the late response`() = runTest {
+    fun `concurrent expired requests share one failing refresh result`() = runTest {
         val refreshStarted = CompletableDeferred<Unit>()
         val releaseRefresh = CompletableDeferred<Unit>()
-        val marksRequestStarted = CompletableDeferred<Unit>()
-        val releaseMarksRequest = CompletableDeferred<Unit>()
+        val refreshFailure = java.io.IOException("offline")
+        val client = FakeBakalariClient().apply {
+            refresh = { _, _ ->
+                refreshStarted.complete(Unit)
+                releaseRefresh.await()
+                throw refreshFailure
+            }
+        }
+        val repository = repository(client, InMemorySchoolSessionStorage(expiredSession()))
+
+        val first = async { runCatching { repository.loadDashboard() } }
+        val second = async { runCatching { repository.loadDashboard() } }
+        refreshStarted.await()
+        yield()
+        val callsWhileHeld = client.refreshCalls
+        releaseRefresh.complete(Unit)
+
+        val firstFailure = first.await().exceptionOrNull()
+        val secondFailure = second.await().exceptionOrNull()
+
+        assertThat(callsWhileHeld).isEqualTo(1)
+        assertThat(client.refreshCalls).isEqualTo(1)
+        assertThat(firstFailure).isInstanceOf(java.io.IOException::class.java)
+        assertThat(firstFailure).hasMessageThat().isEqualTo("offline")
+        assertThat(secondFailure).isInstanceOf(java.io.IOException::class.java)
+        assertThat(secondFailure).hasMessageThat().isEqualTo("offline")
+    }
+
+    @Test
+    fun `stale refresh flight cannot displace current flight or split its followers`() = runTest {
+        val staleRefreshStarted = CompletableDeferred<Unit>()
+        val currentRefreshStarted = CompletableDeferred<Unit>()
+        val releaseStaleRefresh = CompletableDeferred<Unit>()
+        val releaseCurrentRefresh = CompletableDeferred<Unit>()
+        var staleRefreshCalls = 0
+        var currentRefreshCalls = 0
+        val stale = expiredSession().copy(baseURL = "https://stale.example.cz")
+        val current = expiredSession().copy(
+            accessToken = "current-expired-access",
+            refreshToken = "current-expired-refresh",
+            baseURL = "https://current.example.cz",
+            bakalari = BakalariCredentials("current-student", "current-secret"),
+        )
+        val sessions = InMemorySchoolSessionStorage(stale)
+        val client = FakeBakalariClient().apply {
+            refresh = { baseURL, _ ->
+                if (baseURL == stale.baseURL) {
+                    staleRefreshCalls += 1
+                    staleRefreshStarted.complete(Unit)
+                    releaseStaleRefresh.await()
+                    LoginResponse("stale-refreshed", "stale-refreshed-token", "Bearer", 3_600)
+                } else {
+                    currentRefreshCalls += 1
+                    currentRefreshStarted.complete(Unit)
+                    releaseCurrentRefresh.await()
+                    LoginResponse("current-refreshed", "current-refreshed-token", "Bearer", 3_600)
+                }
+            }
+        }
+        val repository = repository(client, sessions)
+
+        val staleRequest = async { runCatching { repository.loadDashboard() } }
+        staleRefreshStarted.await()
+        repository.restoreSession(current)
+        val currentLeader = async { repository.loadDashboard() }
+        currentRefreshStarted.await()
+        val currentFollower = async { repository.loadDashboard() }
+        yield()
+        val currentCallsWhileHeld = currentRefreshCalls
+        releaseCurrentRefresh.complete(Unit)
+        currentLeader.await()
+        currentFollower.await()
+        releaseStaleRefresh.complete(Unit)
+        val staleFailure = staleRequest.await().exceptionOrNull()
+
+        assertThat(currentCallsWhileHeld).isEqualTo(1)
+        assertThat(currentRefreshCalls).isEqualTo(1)
+        assertThat(staleRefreshCalls).isEqualTo(1)
+        assertThat(client.refreshCalls).isEqualTo(2)
+        assertThat(staleFailure).isInstanceOf(CancellationException::class.java)
+        assertThat(sessions.load()?.accessToken).isEqualTo("current-refreshed")
+    }
+
+    @Test
+    fun `logout completes during a held refresh and cannot be undone by the late response`() = runTest {
+        val refreshStarted = CompletableDeferred<Unit>()
+        val releaseRefresh = CompletableDeferred<Unit>()
         val accountA = expiredSession().copy(linkedAccountID = "account-a")
         val sessions = InMemorySchoolSessionStorage(accountA)
         val cache = RoomGradeyCache(InMemoryCacheEntryDao(), GradeyJson)
@@ -451,11 +996,6 @@ class AndroidSchoolRepositoryTest {
                 releaseRefresh.await()
                 refreshedResponse()
             }
-            marks = { _, _ ->
-                marksRequestStarted.complete(Unit)
-                releaseMarksRequest.await()
-                MarksResponse()
-            }
         }
         val repository = repository(client, sessions, cache)
 
@@ -463,19 +1003,18 @@ class AndroidSchoolRepositoryTest {
         refreshStarted.await()
         val logout = async { repository.logout() }
         yield()
-
-        assertThat(logout.isCompleted).isFalse()
-
-        releaseRefresh.complete(Unit)
-        marksRequestStarted.await()
+        val logoutCompletedWhileRefreshWasHeld = logout.isCompleted
         logout.await()
-        assertThat(sessions.load()).isNull()
-        releaseMarksRequest.complete(Unit)
+        val sessionAfterLogout = sessions.load()
+        releaseRefresh.complete(Unit)
 
         val failure = runCatching { refreshing.await() }.exceptionOrNull()
 
+        assertThat(logoutCompletedWhileRefreshWasHeld).isTrue()
+        assertThat(sessionAfterLogout).isNull()
         assertThat(failure).isInstanceOf(CancellationException::class.java)
         assertThat(client.refreshCalls).isEqualTo(1)
+        assertThat(client.marksCalls).isEqualTo(0)
         assertThat(sessions.load()).isNull()
         assertThat(cache.loadDashboard(accountA.cacheScope)).isNull()
         assertThat(cache.loadMarks(accountA.cacheScope)).isNull()
@@ -487,7 +1026,236 @@ class AndroidSchoolRepositoryTest {
     }
 
     @Test
-    fun `account activation queued behind an old refresh remains the active session`() = runTest {
+    fun `rejected held refresh after logout never sends stored credentials`() = runTest {
+        val refreshStarted = CompletableDeferred<Unit>()
+        val releaseRefresh = CompletableDeferred<Unit>()
+        val sessions = InMemorySchoolSessionStorage(expiredSession())
+        val client = FakeBakalariClient().apply {
+            refresh = { _, _ ->
+                refreshStarted.complete(Unit)
+                releaseRefresh.await()
+                throw BakalariApiException(401, "refresh rejected")
+            }
+        }
+        val repository = repository(client, sessions)
+
+        val refreshing = async { runCatching { repository.loadDashboard() } }
+        refreshStarted.await()
+        repository.logout()
+        releaseRefresh.complete(Unit)
+
+        val refreshFailure = refreshing.await().exceptionOrNull()
+
+        assertThat(refreshFailure).isInstanceOf(GradeyIdentityChangedException::class.java)
+        assertThat(client.refreshCalls).isEqualTo(1)
+        assertThat(client.loginCalls).isEqualTo(0)
+        assertThat(sessions.load()).isNull()
+    }
+
+    @Test
+    fun `identity invalidation completes during a held refresh and stale response cannot relink`() = runTest {
+        val refreshStarted = CompletableDeferred<Unit>()
+        val releaseRefresh = CompletableDeferred<Unit>()
+        val accountA = expiredSession().copy(
+            linkedAccountID = "account-a",
+            linkedAccountDisplayName = "Student A",
+            linkedAccountSchoolName = "School A",
+        )
+        val sessions = InMemorySchoolSessionStorage(accountA)
+        val cache = RoomGradeyCache(InMemoryCacheEntryDao(), GradeyJson)
+        val widgetSnapshot = NextLessonWidgetSnapshot(
+            cachedAtEpochMillis = 1,
+            lessons = listOf(NextLessonWidgetLesson("account-a-lesson", 1)),
+        )
+        cache.saveNextLessonSnapshot(widgetSnapshot)
+        val client = FakeBakalariClient().apply {
+            refresh = { _, _ ->
+                refreshStarted.complete(Unit)
+                releaseRefresh.await()
+                refreshedResponse()
+            }
+        }
+        val repository = repository(client, sessions, cache)
+
+        val refreshing = async { repository.loadDashboard() }
+        refreshStarted.await()
+        val invalidating = async { repository.invalidateSchoolCloudMutationsAndDisassociate() }
+        yield()
+        val invalidationCompletedWhileRefreshWasHeld = invalidating.isCompleted
+        val invalidation = invalidating.await()
+        releaseRefresh.complete(Unit)
+
+        val refreshFailure = runCatching { refreshing.await() }.exceptionOrNull()
+        val retained = invalidation.retainedSession
+
+        assertThat(invalidationCompletedWhileRefreshWasHeld).isTrue()
+        assertThat(refreshFailure).isInstanceOf(CancellationException::class.java)
+        assertThat(retained?.accessToken).isEqualTo(accountA.accessToken)
+        assertThat(retained?.refreshToken).isEqualTo(accountA.refreshToken)
+        assertThat(retained?.bakalari).isEqualTo(accountA.bakalari)
+        assertThat(retained?.linkedAccountID).isNull()
+        assertThat(retained?.linkedAccountDisplayName).isNull()
+        assertThat(retained?.linkedAccountSchoolName).isNull()
+        assertThat(sessions.load()).isEqualTo(retained)
+        assertThat(cache.loadNextLessonSnapshot()).isEqualTo(widgetSnapshot)
+        assertThat(client.marksCalls).isEqualTo(0)
+    }
+
+    @Test
+    fun `rejected held refresh after detach never sends stored credentials`() = runTest {
+        val refreshStarted = CompletableDeferred<Unit>()
+        val releaseRefresh = CompletableDeferred<Unit>()
+        val linked = expiredSession().copy(
+            linkedAccountID = "account-a",
+            linkedAccountDisplayName = "Student A",
+            linkedAccountSchoolName = "School A",
+        )
+        val sessions = InMemorySchoolSessionStorage(linked)
+        val client = FakeBakalariClient().apply {
+            refresh = { _, _ ->
+                refreshStarted.complete(Unit)
+                releaseRefresh.await()
+                throw BakalariApiException(401, "refresh rejected")
+            }
+        }
+        val repository = repository(client, sessions)
+
+        val refreshing = async { runCatching { repository.loadDashboard() } }
+        refreshStarted.await()
+        val retained = repository.invalidateSchoolCloudMutationsAndDisassociate().retainedSession
+        releaseRefresh.complete(Unit)
+
+        val refreshFailure = refreshing.await().exceptionOrNull()
+
+        assertThat(refreshFailure).isInstanceOf(GradeyIdentityChangedException::class.java)
+        assertThat(client.refreshCalls).isEqualTo(1)
+        assertThat(client.loginCalls).isEqualTo(0)
+        assertThat(retained?.bakalari).isEqualTo(linked.bakalari)
+        assertThat(retained?.linkedAccountID).isNull()
+        assertThat(sessions.load()).isEqualTo(retained)
+    }
+
+    @Test
+    fun `rejected stale refresh cannot send credentials or clear a replacement session`() = runTest {
+        val refreshStarted = CompletableDeferred<Unit>()
+        val releaseRefresh = CompletableDeferred<Unit>()
+        val accountA = expiredSession().copy(
+            baseURL = "https://school-a.example.cz",
+            linkedAccountID = "account-a",
+        )
+        val accountB = validSession().copy(
+            accessToken = "replacement-access-b",
+            refreshToken = "replacement-refresh-b",
+            baseURL = "https://school-b.example.cz",
+            bakalari = BakalariCredentials("student-b", "secret-b"),
+            linkedAccountID = "account-b",
+        )
+        val sessions = InMemorySchoolSessionStorage(accountA)
+        val client = FakeBakalariClient().apply {
+            refresh = { _, _ ->
+                refreshStarted.complete(Unit)
+                releaseRefresh.await()
+                throw BakalariApiException(401, "refresh rejected")
+            }
+            loginResult = { _, _, _ -> throw BakalariApiException(401, "login rejected") }
+        }
+        val repository = repository(client, sessions)
+
+        val refreshing = async { repository.loadDashboard() }
+        refreshStarted.await()
+        val restored = repository.restoreSession(accountB)
+        releaseRefresh.complete(Unit)
+
+        val refreshFailure = runCatching { refreshing.await() }.exceptionOrNull()
+
+        assertThat(refreshFailure).isInstanceOf(CancellationException::class.java)
+        assertThat(restored).isEqualTo(accountB)
+        assertThat(sessions.load()).isEqualTo(accountB)
+        assertThat(client.refreshCalls).isEqualTo(1)
+        assertThat(client.loginCalls).isEqualTo(0)
+        assertThat(client.marksCalls).isEqualTo(0)
+    }
+
+    @Test
+    fun `logout advances during held login and stale response cannot restore the session`() = runTest {
+        val loginStarted = CompletableDeferred<Unit>()
+        val releaseLogin = CompletableDeferred<Unit>()
+        val sessions = InMemorySchoolSessionStorage(validSession())
+        val client = FakeBakalariClient().apply {
+            loginResult = { _, _, _ ->
+                loginStarted.complete(Unit)
+                releaseLogin.await()
+                LoginResponse("stale-access", "stale-refresh", "Bearer", 3_600)
+            }
+        }
+        val repository = repository(client, sessions)
+
+        val loggingIn = async {
+            runCatching {
+                repository.login(
+                    "https://school-b.example.cz",
+                    "student-b",
+                    "secret-b",
+                )
+            }
+        }
+        loginStarted.await()
+        val loggingOut = async { repository.logout() }
+        yield()
+        val logoutCompletedWhileNetworkWasHeld = loggingOut.isCompleted
+        releaseLogin.complete(Unit)
+
+        loggingOut.await()
+        val loginFailure = loggingIn.await().exceptionOrNull()
+
+        assertThat(logoutCompletedWhileNetworkWasHeld).isTrue()
+        assertThat(loginFailure).isInstanceOf(GradeyIdentityChangedException::class.java)
+        assertThat(sessions.load()).isNull()
+    }
+
+    @Test
+    fun `logout advances during held activation and stale response cannot restore the session`() = runTest {
+        val activationStarted = CompletableDeferred<Unit>()
+        val releaseActivation = CompletableDeferred<Unit>()
+        val current = validSession().copy(linkedAccountID = "account-a")
+        val incoming = validSession().copy(
+            accessToken = "cloud-poller-access-b",
+            refreshToken = "cloud-poller-refresh-b",
+            baseURL = "https://school-b.example.cz",
+            bakalari = BakalariCredentials("student-b", "secret-b"),
+            linkedAccountID = "account-b",
+            linkedAccountDisplayName = "Student B",
+            linkedAccountSchoolName = "School B",
+        )
+        val sessions = InMemorySchoolSessionStorage(current)
+        val client = FakeBakalariClient().apply {
+            loginResult = { _, _, _ ->
+                activationStarted.complete(Unit)
+                releaseActivation.await()
+                LoginResponse("stale-access-b", "stale-refresh-b", "Bearer", 3_600)
+            }
+        }
+        val repository = repository(client, sessions)
+
+        val activating = async {
+            runCatching { repository.activateLinkedSchoolAccount(incoming) }
+        }
+        activationStarted.await()
+        val loggingOut = async { repository.logout() }
+        yield()
+        val logoutCompletedWhileNetworkWasHeld = loggingOut.isCompleted
+        releaseActivation.complete(Unit)
+
+        loggingOut.await()
+        val activationFailure = activating.await().exceptionOrNull()
+
+        assertThat(logoutCompletedWhileNetworkWasHeld).isTrue()
+        assertThat(activationFailure).isInstanceOf(GradeyIdentityChangedException::class.java)
+        assertThat(sessions.load()).isNull()
+    }
+
+    @Test
+    fun `account activation completes during an old refresh and remains the active session`() = runTest {
         val refreshStarted = CompletableDeferred<Unit>()
         val releaseRefresh = CompletableDeferred<Unit>()
         val accountA = expiredSession().copy(
@@ -524,13 +1292,12 @@ class AndroidSchoolRepositoryTest {
         refreshStarted.await()
         val activatingAccountB = async { repository.activateLinkedSchoolAccount(accountB) }
         yield()
-
-        assertThat(activatingAccountB.isCompleted).isFalse()
-
-        releaseRefresh.complete(Unit)
+        val activationCompletedWhileRefreshWasHeld = activatingAccountB.isCompleted
         val activated = activatingAccountB.await()
+        releaseRefresh.complete(Unit)
         val refreshFailure = runCatching { refreshingAccountA.await() }.exceptionOrNull()
 
+        assertThat(activationCompletedWhileRefreshWasHeld).isTrue()
         assertThat(refreshFailure).isInstanceOf(CancellationException::class.java)
         assertThat(client.refreshCalls).isEqualTo(1)
         assertThat(client.loginCalls).isEqualTo(1)
@@ -638,6 +1405,50 @@ class AndroidSchoolRepositoryTest {
         assertThat(cache.loadRawTimetable(accountA.cacheScope, weekStart)).isNull()
         assertThat(cache.loadTimetable(accountA.cacheScope, weekStart)).isNull()
         assertThat(cache.loadNextLessonSnapshot()).isNull()
+    }
+
+    @Test
+    fun `held data cannot publish after logout and relogin to the same cache scope`() = runTest {
+        val marksStarted = CompletableDeferred<Unit>()
+        val releaseMarks = CompletableDeferred<Unit>()
+        val original = validSession()
+        val sessions = InMemorySchoolSessionStorage(original)
+        val cache = RoomGradeyCache(InMemoryCacheEntryDao(), GradeyJson)
+        val client = FakeBakalariClient().apply {
+            marks = { _, accessToken ->
+                if (accessToken == original.accessToken) {
+                    marksStarted.complete(Unit)
+                    releaseMarks.await()
+                }
+                MarksResponse(
+                    subjects = listOf(
+                        Subject(subjectInfo = SubjectInfo("stale-subject", "S", "Stale subject")),
+                    ),
+                )
+            }
+            loginResult = { _, _, _ ->
+                LoginResponse("same-scope-new-access", "same-scope-new-refresh", "Bearer", 3_600)
+            }
+        }
+        val repository = repository(client, sessions, cache)
+
+        val loadingOldSession = async { repository.loadDashboard() }
+        marksStarted.await()
+        repository.logout()
+        val replacement = repository.login(
+            original.baseURL,
+            requireNotNull(original.bakalari).username,
+            original.bakalari!!.password,
+        )
+        assertThat(replacement.cacheScope).isEqualTo(original.cacheScope)
+        releaseMarks.complete(Unit)
+
+        val failure = runCatching { loadingOldSession.await() }.exceptionOrNull()
+
+        assertThat(failure).isInstanceOf(CancellationException::class.java)
+        assertThat(sessions.load()).isEqualTo(replacement)
+        assertThat(cache.loadMarks(original.cacheScope)).isNull()
+        assertThat(cache.loadDashboard(original.cacheScope)).isNull()
     }
 
     @Test
@@ -1268,6 +2079,26 @@ private class InMemorySchoolSessionStorage(
         this.session = session
     }
     override fun clear() {
+        session = null
+    }
+}
+
+private class FailingDetachSchoolSessionStorage(
+    private var session: StoredSession?,
+    private val failClear: Boolean = false,
+) : SchoolSessionStorage {
+    var clearCalls = 0
+        private set
+
+    override fun load(): StoredSession? = session
+
+    override fun save(session: StoredSession) {
+        throw IllegalStateException("detached session write failed")
+    }
+
+    override fun clear() {
+        clearCalls += 1
+        if (failClear) throw IllegalStateException("session clear failed")
         session = null
     }
 }

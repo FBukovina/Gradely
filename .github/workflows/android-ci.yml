@@ -46,6 +46,7 @@ jobs:
       - name: Verify Android phone and Wear projects
         run: >-
           ./gradlew
+          verifyComposeCompilerPlugins
           :app:lintDebug
           :app:assembleDebug
           :wear:assembleDebug

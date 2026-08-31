@@ -1,6 +1,7 @@
 package com.bukovinafilip.gradey.feature.today
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -53,7 +54,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
@@ -101,6 +101,8 @@ import com.bukovinafilip.gradey.model.ScheduledLesson
 import com.bukovinafilip.gradey.model.StravaCZMenu
 import com.bukovinafilip.gradey.model.TimetableWeek
 import com.bukovinafilip.gradey.ui.GradeyColors
+import com.bukovinafilip.gradey.ui.GradeyAuroraBackground
+import com.bukovinafilip.gradey.ui.gradeyBrandGradient
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -110,17 +112,6 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
-private val BackgroundTop = Color(0xFFDDF4F2)
-private val BackgroundMiddle = Color(0xFFF0F8F8)
-private val BackgroundBottom = Color(0xFFF7F7FA)
-private val AccentTeal = Color(0xFF17A185)
-private val HeroStart = Color(0xFF16A083)
-private val AccentGreen = Color(0xFF1CA46A)
-private val AccentDark = Color(0xFF063C36)
-private val CardWhite = Color(0xFFFDFDFE)
-private val MutedText = Color(0xFF919196)
-private val SoftMint = Color(0xFFDDF4EF)
-private val SoftGray = Color(0xFFF0F0F2)
 private val WarningOrange = Color(0xFFFF8D28)
 private val DangerRed = Color(0xFFE5545D)
 private val RiskWatchOrange = Color(0xFFFF9500)
@@ -135,14 +126,10 @@ fun TodayStateScreen(
 ) {
     Box(
         modifier = modifier
-            .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(BackgroundTop, BackgroundMiddle, BackgroundBottom),
-                ),
-            ),
+            .fillMaxSize(),
         contentAlignment = Alignment.Center,
     ) {
+        GradeyAuroraBackground()
         Column(
             modifier = Modifier
                 .widthIn(max = 520.dp)
@@ -152,7 +139,7 @@ fun TodayStateScreen(
         ) {
             Text(
                 text = stringResource(R.string.today_title),
-                color = AccentDark,
+                color = MaterialTheme.colorScheme.onBackground,
                 fontSize = 30.sp,
                 lineHeight = 36.sp,
                 fontWeight = FontWeight.Bold,
@@ -164,24 +151,24 @@ fun TodayStateScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     if (state == TodayPresentationState.INITIAL_LOADING) {
-                        CircularProgressIndicator(color = AccentTeal)
+                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                         Text(
                             text = stringResource(R.string.today_loading),
-                            color = Color.Black,
+                            color = MaterialTheme.colorScheme.onSurface,
                             fontSize = 18.sp,
                             lineHeight = 23.sp,
                             fontWeight = FontWeight.SemiBold,
                         )
                         Text(
                             text = stringResource(R.string.today_loading_subtitle),
-                            color = MutedText,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center,
                         )
                     } else {
                         Icon(
                             imageVector = GradeyIcons.Calendar,
                             contentDescription = null,
-                            tint = MutedText,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(34.dp),
                         )
                         Text(
@@ -190,7 +177,7 @@ fun TodayStateScreen(
                             } else {
                                 stringResource(R.string.today_load_failed)
                             },
-                            color = Color.Black,
+                            color = MaterialTheme.colorScheme.onSurface,
                             fontSize = 18.sp,
                             lineHeight = 23.sp,
                             fontWeight = FontWeight.SemiBold,
@@ -198,7 +185,7 @@ fun TodayStateScreen(
                         )
                         Text(
                             text = errorMessage ?: stringResource(R.string.today_no_data_subtitle),
-                            color = MutedText,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center,
                         )
                         Button(onClick = onRetry) {
@@ -284,13 +271,9 @@ fun TodayScreen(
 
     Box(
         modifier = modifier
-            .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(BackgroundTop, BackgroundMiddle, BackgroundBottom),
-                ),
-            ),
+            .fillMaxSize(),
     ) {
+        GradeyAuroraBackground()
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
@@ -389,11 +372,11 @@ private fun LinkedSchoolAccountPicker(
                 .padding(horizontal = 16.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            IconTile(background = SoftMint) {
+            IconTile(background = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)) {
                 Icon(
                     imageVector = GradeyIcons.User,
                     contentDescription = null,
-                    tint = AccentTeal,
+                    tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(22.dp),
                 )
             }
@@ -401,7 +384,7 @@ private fun LinkedSchoolAccountPicker(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = active?.displayName ?: stringResource(R.string.today_school_account),
-                    color = Color.Black,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontSize = 16.sp,
                     lineHeight = 20.sp,
                     fontWeight = FontWeight.SemiBold,
@@ -410,7 +393,7 @@ private fun LinkedSchoolAccountPicker(
                 )
                 Text(
                     text = active?.schoolName ?: stringResource(R.string.today_linked_accounts),
-                    color = MutedText,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 12.sp,
                     lineHeight = 16.sp,
                     maxLines = 1,
@@ -421,7 +404,7 @@ private fun LinkedSchoolAccountPicker(
                 if (mutatingLinkedAccountID != null) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(24.dp),
-                        color = AccentTeal,
+                        color = MaterialTheme.colorScheme.primary,
                         strokeWidth = 2.dp,
                     )
                 } else {
@@ -429,7 +412,7 @@ private fun LinkedSchoolAccountPicker(
                         Icon(
                             imageVector = GradeyIcons.ArrowDown,
                             contentDescription = stringResource(R.string.today_choose_school_account),
-                            tint = AccentTeal,
+                            tint = MaterialTheme.colorScheme.primary,
                         )
                     }
                 }
@@ -447,7 +430,7 @@ private fun LinkedSchoolAccountPicker(
                                     Text(linked.displayName, fontWeight = FontWeight.SemiBold)
                                     Text(
                                         text = linked.schoolName ?: linked.status.localizedLabel(),
-                                        color = MutedText,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         fontSize = 12.sp,
                                     )
                                 }
@@ -493,14 +476,14 @@ private fun SchoolConnectionNotice(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = stringResource(R.string.today_school_attention),
-                        color = Color.Black,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontSize = 15.sp,
                         lineHeight = 19.sp,
                         fontWeight = FontWeight.Bold,
                     )
                     Text(
                         text = account.displayName,
-                        color = MutedText,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 12.sp,
                         lineHeight = 16.sp,
                     )
@@ -508,7 +491,7 @@ private fun SchoolConnectionNotice(
             }
             Text(
                 text = stringResource(R.string.today_reconnect_fallback),
-                color = MutedText,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 13.sp,
                 lineHeight = 18.sp,
             )
@@ -580,14 +563,14 @@ private fun TodaySchoolReconnectSheet(
         ) {
             Text(
                 text = stringResource(R.string.today_reconnect_title, account.displayName),
-                color = Color.Black,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontSize = 22.sp,
                 lineHeight = 28.sp,
                 fontWeight = FontWeight.Bold,
             )
             Text(
                 text = stringResource(R.string.today_reconnect_message),
-                color = MutedText,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 14.sp,
                 lineHeight = 20.sp,
             )
@@ -754,11 +737,16 @@ private fun LunchCard(
             }
             Spacer(Modifier.height(12.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                IconTile(background = if (state is TodayMealState.Ordered) SoftMint else SoftGray) {
+                val mealTint = if (state is TodayMealState.Ordered) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                }
+                IconTile(background = mealTint.copy(alpha = 0.12f)) {
                     Icon(
                         imageVector = GradeyIcons.Restaurant,
                         contentDescription = null,
-                        tint = if (state is TodayMealState.Ordered) AccentTeal else MutedText,
+                        tint = mealTint,
                         modifier = Modifier.size(22.dp),
                     )
                 }
@@ -789,7 +777,7 @@ private fun LunchCard(
                         text = title,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        color = Color.Black,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontSize = 16.sp,
                         lineHeight = 20.sp,
                         fontWeight = FontWeight.SemiBold,
@@ -798,7 +786,7 @@ private fun LunchCard(
                         text = subtitle,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
-                        color = MutedText,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 13.sp,
                         lineHeight = 17.sp,
                     )
@@ -827,20 +815,20 @@ private fun TodayHeader(
                 .size(44.dp),
             onClick = onOpenGradeyTools,
             shape = CircleShape,
-            color = Color(0xFFE9FCFB),
+            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.10f),
             shadowElevation = 2.dp,
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Surface(
                     modifier = Modifier.size(30.dp),
                     shape = CircleShape,
-                    color = Color(0xFFCFF3EE),
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
                             imageVector = GradeyIcons.Sparkles,
                             contentDescription = stringResource(R.string.today_open_gradey_ai),
-                            tint = AccentTeal,
+                            tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(22.dp),
                         )
                     }
@@ -850,7 +838,7 @@ private fun TodayHeader(
 
         Text(
             text = stringResource(R.string.today_title),
-            color = Color.Black,
+            color = MaterialTheme.colorScheme.onBackground,
             fontSize = 18.sp,
             lineHeight = 22.sp,
             fontWeight = FontWeight.SemiBold,
@@ -862,7 +850,7 @@ private fun TodayHeader(
                 .width(106.dp)
                 .height(44.dp),
             shape = RoundedCornerShape(25.dp),
-            color = Color(0xFFE8FCFA),
+            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.10f),
             shadowElevation = 2.dp,
         ) {
             Row(
@@ -881,14 +869,14 @@ private fun TodayHeader(
                         if (isRefreshing) {
                             CircularProgressIndicator(
                                 modifier = Modifier.size(21.dp),
-                                color = AccentTeal,
+                                color = MaterialTheme.colorScheme.primary,
                                 strokeWidth = 2.5.dp,
                             )
                         } else {
                             Icon(
                                 imageVector = GradeyIcons.Refresh,
                                 contentDescription = stringResource(R.string.today_refresh),
-                                tint = AccentTeal,
+                                tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(27.dp),
                             )
                         }
@@ -898,13 +886,13 @@ private fun TodayHeader(
                     modifier = Modifier.size(34.dp),
                     onClick = onOpenAccount,
                     shape = CircleShape,
-                    color = Color(0xFFC9F2EC),
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
                             imageVector = GradeyIcons.User,
                             contentDescription = stringResource(R.string.today_open_account),
-                            tint = AccentTeal,
+                            tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(23.dp),
                         )
                     }
@@ -931,14 +919,14 @@ private fun AverageCard(
     ) {
         Column(
             modifier = Modifier
-                .background(Brush.horizontalGradient(listOf(HeroStart, AccentGreen)))
+                .background(gradeyBrandGradient())
                 .padding(horizontal = 24.dp, vertical = 24.dp),
         ) {
             Text(
                 text = fullName,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
-                color = Color(0xFF021D1A),
+                color = GradeyColors.OnAccent,
                 fontSize = 22.sp,
                 lineHeight = 27.sp,
                 fontWeight = FontWeight.Bold,
@@ -952,14 +940,14 @@ private fun AverageCard(
                 Column {
                     Text(
                         text = stringResource(R.string.today_overall_average),
-                        color = AccentDark,
+                        color = GradeyColors.OnAccent.copy(alpha = 0.70f),
                         fontSize = 12.sp,
                         lineHeight = 18.sp,
                         fontWeight = FontWeight.Bold,
                     )
                     Text(
                         text = overallAverage,
-                        color = Color(0xFF001D19),
+                        color = GradeyColors.OnAccent,
                         fontSize = 50.sp,
                         lineHeight = 53.sp,
                         fontWeight = FontWeight.ExtraBold,
@@ -976,7 +964,7 @@ private fun AverageCard(
                             subjectCount,
                             subjectCount,
                         ),
-                        color = AccentDark,
+                        color = GradeyColors.OnAccent.copy(alpha = 0.72f),
                         fontSize = 12.sp,
                         lineHeight = 18.sp,
                         fontWeight = FontWeight.Bold,
@@ -987,7 +975,7 @@ private fun AverageCard(
                             markCount,
                             markCount,
                         ),
-                        color = AccentDark,
+                        color = GradeyColors.OnAccent.copy(alpha = 0.72f),
                         fontSize = 12.sp,
                         lineHeight = 18.sp,
                         fontWeight = FontWeight.Bold,
@@ -1010,11 +998,11 @@ private fun MarksShortcut(onClick: () -> Unit) {
                 .padding(horizontal = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            IconTile(background = SoftMint) {
+            IconTile(background = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)) {
                 Icon(
                     imageVector = GradeyIcons.CheckmarkBadge,
                     contentDescription = null,
-                    tint = AccentTeal,
+                    tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(25.dp),
                 )
             }
@@ -1022,7 +1010,7 @@ private fun MarksShortcut(onClick: () -> Unit) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = stringResource(R.string.today_marks),
-                    color = Color.Black,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontSize = 17.sp,
                     lineHeight = 22.sp,
                     fontWeight = FontWeight.SemiBold,
@@ -1031,7 +1019,7 @@ private fun MarksShortcut(onClick: () -> Unit) {
                     text = stringResource(R.string.today_marks_subtitle),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    color = MutedText,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 13.sp,
                     lineHeight = 17.sp,
                 )
@@ -1039,7 +1027,7 @@ private fun MarksShortcut(onClick: () -> Unit) {
             Icon(
                 imageVector = GradeyIcons.ArrowRight,
                 contentDescription = null,
-                tint = Color(0xFF858589),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(27.dp),
             )
         }
@@ -1059,19 +1047,19 @@ private fun EmptyDashboardCard() {
             Icon(
                 imageVector = GradeyIcons.CheckmarkBadge,
                 contentDescription = null,
-                tint = MutedText,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(30.dp),
             )
             Text(
                 text = stringResource(R.string.today_empty_title),
-                color = Color.Black,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontSize = 17.sp,
                 lineHeight = 22.sp,
                 fontWeight = FontWeight.Bold,
             )
             Text(
                 text = stringResource(R.string.today_empty_subtitle),
-                color = MutedText,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 13.sp,
                 lineHeight = 18.sp,
                 textAlign = TextAlign.Center,
@@ -1146,8 +1134,12 @@ private fun NowAndNextCard(
         TodayTimetableState.UNAVAILABLE,
         -> GradeyIcons.Calendar
     }
-    val iconTint = if (summary.state == TodayTimetableState.CURRENT) AccentTeal else MutedText
-    val iconBackground = if (summary.state == TodayTimetableState.CURRENT) SoftMint else SoftGray
+    val iconTint = if (summary.state == TodayTimetableState.CURRENT) {
+        MaterialTheme.colorScheme.primary
+    } else {
+        MaterialTheme.colorScheme.onSurfaceVariant
+    }
+    val iconBackground = iconTint.copy(alpha = 0.12f)
 
     DashboardSurface(
         modifier = Modifier.heightIn(min = 96.dp),
@@ -1175,7 +1167,7 @@ private fun NowAndNextCard(
                         text = title,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        color = Color.Black,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontSize = 16.sp,
                         lineHeight = 20.sp,
                         fontWeight = FontWeight.SemiBold,
@@ -1184,7 +1176,7 @@ private fun NowAndNextCard(
                         text = subtitle,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        color = MutedText,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 13.sp,
                         lineHeight = 17.sp,
                     )
@@ -1193,7 +1185,7 @@ private fun NowAndNextCard(
             if (summary.hasChanges) {
                 HorizontalDivider(
                     modifier = Modifier.padding(vertical = 12.dp),
-                    color = Color(0xFFE7E7EA),
+                    color = MaterialTheme.colorScheme.outlineVariant,
                 )
                 val changedLessons = summary.changedLessons.take(3)
                 changedLessons.forEachIndexed { index, lesson ->
@@ -1224,7 +1216,7 @@ private fun TimetableChangeRow(lesson: ScheduledLesson) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = "${lesson.changeKind.localizedLabel()} · ${lesson.displayTitle(lessonFallback)}",
-                color = Color.Black,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontSize = 14.sp,
                 lineHeight = 18.sp,
                 fontWeight = FontWeight.SemiBold,
@@ -1235,7 +1227,7 @@ private fun TimetableChangeRow(lesson: ScheduledLesson) {
             if (detail.isNotBlank()) {
                 Text(
                     text = detail,
-                    color = MutedText,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 12.sp,
                     lineHeight = 16.sp,
                     maxLines = 1,
@@ -1285,13 +1277,17 @@ private fun AbsenceRiskCard(
                         .padding(horizontal = 16.dp, vertical = 24.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    IconTile(background = SoftGray) {
-                        Icon(GradeyIcons.Calendar, contentDescription = null, tint = MutedText)
+                    IconTile(background = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.12f)) {
+                        Icon(
+                            GradeyIcons.Calendar,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                     }
                     Spacer(Modifier.width(13.dp))
                     Text(
                         text = stringResource(R.string.today_absence_unavailable),
-                        color = MutedText,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 14.sp,
                     )
                 }
@@ -1312,7 +1308,7 @@ private fun AbsenceRiskCard(
                     Text(
                         text = stringResource(R.string.today_school_limit_unavailable),
                         modifier = Modifier.padding(start = 16.dp, top = 4.dp, end = 16.dp, bottom = 6.dp),
-                        color = MutedText,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 12.sp,
                         lineHeight = 16.sp,
                     )
@@ -1350,7 +1346,7 @@ private fun RiskRow(
                 text = subjectName,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                color = Color.Black,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontSize = 16.sp,
                 lineHeight = 19.sp,
                 fontWeight = FontWeight.SemiBold,
@@ -1359,7 +1355,7 @@ private fun RiskRow(
                 text = absenceLimitDescription(missedLessons, totalLessons, missesUntilLimit),
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
-                color = MutedText,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 13.sp,
                 lineHeight = 16.sp,
             )
@@ -1443,11 +1439,14 @@ private fun AbsencePredictorCard(onPlanAbsence: () -> Unit) {
             }
             Spacer(Modifier.height(13.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                IconTile(background = SoftGray, size = 38.dp) {
+                IconTile(
+                    background = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.12f),
+                    size = 38.dp,
+                ) {
                     Icon(
                         imageVector = GradeyIcons.Calendar,
                         contentDescription = null,
-                        tint = MutedText,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(22.dp),
                     )
                 }
@@ -1455,7 +1454,7 @@ private fun AbsencePredictorCard(onPlanAbsence: () -> Unit) {
                 Column {
                     Text(
                         text = stringResource(R.string.today_no_planned_absences),
-                        color = Color.Black,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontSize = 16.sp,
                         lineHeight = 20.sp,
                         fontWeight = FontWeight.SemiBold,
@@ -1464,7 +1463,7 @@ private fun AbsencePredictorCard(onPlanAbsence: () -> Unit) {
                         text = stringResource(R.string.today_plan_absence_body),
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
-                        color = MutedText,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 13.sp,
                         lineHeight = 17.sp,
                     )
@@ -1504,7 +1503,7 @@ private fun NewMarksAndTrendsCard(
                 if (index > 0) {
                     HorizontalDivider(
                         modifier = Modifier.padding(start = 67.dp, end = 16.dp),
-                        color = SoftGray,
+                        color = MaterialTheme.colorScheme.outlineVariant,
                     )
                 }
                 Row(
@@ -1514,11 +1513,11 @@ private fun NewMarksAndTrendsCard(
                         .padding(horizontal = 16.dp, vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    IconTile(background = SoftMint) {
+                    IconTile(background = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)) {
                         Icon(
                             imageVector = GradeyIcons.CheckmarkBadge,
                             contentDescription = null,
-                            tint = AccentTeal,
+                            tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(22.dp),
                         )
                     }
@@ -1532,7 +1531,7 @@ private fun NewMarksAndTrendsCard(
                             ),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
-                            color = Color.Black,
+                            color = MaterialTheme.colorScheme.onSurface,
                             fontSize = 16.sp,
                             lineHeight = 20.sp,
                             fontWeight = FontWeight.SemiBold,
@@ -1542,7 +1541,7 @@ private fun NewMarksAndTrendsCard(
                                 ?: stringResource(R.string.today_new_from_school),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
-                            color = MutedText,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontSize = 13.sp,
                             lineHeight = 17.sp,
                         )
@@ -1552,7 +1551,7 @@ private fun NewMarksAndTrendsCard(
             if (newMarks.isNotEmpty() && trends.isNotEmpty()) {
                 HorizontalDivider(
                     modifier = Modifier.padding(start = 67.dp, end = 16.dp),
-                    color = SoftGray,
+                    color = MaterialTheme.colorScheme.outlineVariant,
                 )
             }
             if (trends.isEmpty()) {
@@ -1562,7 +1561,7 @@ private fun NewMarksAndTrendsCard(
                     if (index > 0) {
                         HorizontalDivider(
                             modifier = Modifier.padding(start = 67.dp, end = 16.dp),
-                            color = SoftGray,
+                            color = MaterialTheme.colorScheme.outlineVariant,
                         )
                     }
                     GradeTrendRow(trend)
@@ -1589,8 +1588,8 @@ private fun GradeTrendsScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(Brush.verticalGradient(listOf(BackgroundTop, BackgroundMiddle, BackgroundBottom))),
     ) {
+        GradeyAuroraBackground()
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
@@ -1630,21 +1629,21 @@ private fun GradeTrendsHeader(onBack: () -> Unit) {
                 .size(42.dp),
             onClick = onBack,
             shape = CircleShape,
-            color = Color.White.copy(alpha = 0.82f),
+            color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.92f),
             shadowElevation = 1.dp,
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Icon(
                     imageVector = GradeyIcons.ArrowLeft,
                     contentDescription = stringResource(R.string.today_back),
-                    tint = AccentTeal,
+                    tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(28.dp),
                 )
             }
         }
         Text(
             text = stringResource(R.string.today_grade_movement),
-            color = Color.Black,
+            color = MaterialTheme.colorScheme.onBackground,
             fontSize = 18.sp,
             lineHeight = 22.sp,
             fontWeight = FontWeight.SemiBold,
@@ -1662,7 +1661,7 @@ private fun GradeTrendRangePicker(
             .fillMaxWidth()
             .height(38.dp),
         shape = RoundedCornerShape(20.dp),
-        color = Color(0xFFD7E4E4).copy(alpha = 0.92f),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.92f),
     ) {
         Row(modifier = Modifier.padding(2.dp)) {
             GradeTrendRange.entries.forEach { range ->
@@ -1672,7 +1671,11 @@ private fun GradeTrendRangePicker(
                         .height(34.dp),
                     onClick = { onSelected(range) },
                     shape = RoundedCornerShape(18.dp),
-                    color = if (range == selected) Color.White else Color.Transparent,
+                    color = if (range == selected) {
+                        MaterialTheme.colorScheme.surfaceContainer
+                    } else {
+                        Color.Transparent
+                    },
                     shadowElevation = if (range == selected) 1.dp else 0.dp,
                 ) {
                     Box(contentAlignment = Alignment.Center) {
@@ -1680,7 +1683,7 @@ private fun GradeTrendRangePicker(
                             text = trendRangeLabel(range),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
-                            color = Color.Black,
+                            color = MaterialTheme.colorScheme.onSurface,
                             fontSize = 13.sp,
                             lineHeight = 16.sp,
                             fontWeight = if (range == selected) FontWeight.Bold else FontWeight.Normal,
@@ -1706,7 +1709,11 @@ private fun GradeTrendsList(trends: List<SubjectGradeTrend>) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(18.dp),
-        color = CardWhite,
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        border = BorderStroke(
+            1.dp,
+            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f),
+        ),
         shadowElevation = 2.dp,
     ) {
         Column {
@@ -1715,7 +1722,7 @@ private fun GradeTrendsList(trends: List<SubjectGradeTrend>) {
                 if (index != trends.lastIndex) {
                     HorizontalDivider(
                         modifier = Modifier.padding(start = 106.dp, end = 16.dp),
-                        color = SoftGray,
+                        color = MaterialTheme.colorScheme.outlineVariant,
                     )
                 }
             }
@@ -1733,13 +1740,13 @@ private fun GradeTrendsEmptyCard() {
             Icon(
                 imageVector = GradeyIcons.Sparkles,
                 contentDescription = null,
-                tint = MutedText,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(28.dp),
             )
             Spacer(Modifier.height(8.dp))
             Text(
                 text = stringResource(R.string.today_no_grade_history),
-                color = Color.Black,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontSize = 16.sp,
                 lineHeight = 20.sp,
                 fontWeight = FontWeight.Bold,
@@ -1747,7 +1754,7 @@ private fun GradeTrendsEmptyCard() {
             Spacer(Modifier.height(3.dp))
             Text(
                 text = stringResource(R.string.today_cloud_trends_subtitle),
-                color = MutedText,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 13.sp,
                 lineHeight = 17.sp,
                 textAlign = TextAlign.Center,
@@ -1764,11 +1771,11 @@ private fun CloudHistoryEmptyRow() {
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        IconTile(background = SoftGray) {
+        IconTile(background = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.12f)) {
             Icon(
                 imageVector = GradeyIcons.Sparkles,
                 contentDescription = null,
-                tint = MutedText,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(21.dp),
             )
         }
@@ -1776,7 +1783,7 @@ private fun CloudHistoryEmptyRow() {
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = stringResource(R.string.today_no_grade_history),
-                color = Color.Black,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontSize = 15.sp,
                 lineHeight = 19.sp,
                 fontWeight = FontWeight.SemiBold,
@@ -1785,7 +1792,7 @@ private fun CloudHistoryEmptyRow() {
                 text = stringResource(R.string.today_cloud_trends_subtitle),
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
-                color = MutedText,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 12.sp,
                 lineHeight = 16.sp,
             )
@@ -1808,7 +1815,7 @@ private fun GradeTrendRow(trend: SubjectGradeTrend) {
                 .width(76.dp)
                 .height(34.dp),
             shape = RoundedCornerShape(10.dp),
-            color = SoftMint,
+            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.10f),
         ) {
             GradeTrendSparkline(trend.events.mapNotNull { it.averageValue })
         }
@@ -1818,7 +1825,7 @@ private fun GradeTrendRow(trend: SubjectGradeTrend) {
                 text = trend.displayName,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                color = Color.Black,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontSize = 15.sp,
                 lineHeight = 18.sp,
                 fontWeight = FontWeight.Bold,
@@ -1829,7 +1836,7 @@ private fun GradeTrendRow(trend: SubjectGradeTrend) {
                 } else {
                     stringResource(R.string.today_average_movement)
                 },
-                color = MutedText,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 12.sp,
                 lineHeight = 15.sp,
             )
@@ -1837,7 +1844,7 @@ private fun GradeTrendRow(trend: SubjectGradeTrend) {
         trend.averageDelta?.let { delta ->
             Text(
                 text = String.format(Locale.getDefault(), "%+.2f", delta),
-                color = if (delta <= 0) AccentTeal else DangerRed,
+                color = if (delta <= 0) MaterialTheme.colorScheme.primary else DangerRed,
                 fontSize = 15.sp,
                 lineHeight = 18.sp,
                 fontWeight = FontWeight.Bold,
@@ -1848,6 +1855,7 @@ private fun GradeTrendRow(trend: SubjectGradeTrend) {
 
 @Composable
 private fun GradeTrendSparkline(values: List<Double>) {
+    val accent = MaterialTheme.colorScheme.primary
     Canvas(modifier = Modifier.fillMaxSize().padding(horizontal = 6.dp, vertical = 7.dp)) {
         if (values.isEmpty()) return@Canvas
         val minimum = values.minOrNull() ?: return@Canvas
@@ -1865,11 +1873,11 @@ private fun GradeTrendSparkline(values: List<Double>) {
             }
             drawPath(
                 path = path,
-                color = AccentTeal,
+                color = accent,
                 style = Stroke(width = 2.2.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round),
             )
         }
-        offsets.forEach { drawCircle(AccentTeal, radius = 2.dp.toPx(), center = it) }
+        offsets.forEach { drawCircle(accent, radius = 2.dp.toPx(), center = it) }
     }
 }
 
@@ -1879,21 +1887,28 @@ private fun DashboardSurface(
     onClick: (() -> Unit)? = null,
     content: @Composable () -> Unit,
 ) {
+    val shape = RoundedCornerShape(20.dp)
+    val border = BorderStroke(
+        1.dp,
+        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f),
+    )
     if (onClick == null) {
         Surface(
             modifier = modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(20.dp),
-            color = CardWhite.copy(alpha = 0.98f),
-            shadowElevation = 3.dp,
+            shape = shape,
+            color = MaterialTheme.colorScheme.surfaceContainer,
+            border = border,
+            shadowElevation = 6.dp,
             content = content,
         )
     } else {
         Surface(
             modifier = modifier.fillMaxWidth(),
             onClick = onClick,
-            shape = RoundedCornerShape(20.dp),
-            color = CardWhite.copy(alpha = 0.98f),
-            shadowElevation = 3.dp,
+            shape = shape,
+            color = MaterialTheme.colorScheme.surfaceContainer,
+            border = border,
+            shadowElevation = 6.dp,
             content = content,
         )
     }
@@ -1903,7 +1918,7 @@ private fun DashboardSurface(
 private fun SectionHeading(text: String) {
     Text(
         text = text,
-        color = MutedText,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
         fontSize = 13.sp,
         lineHeight = 18.sp,
         letterSpacing = 0.65.sp,
@@ -1917,7 +1932,7 @@ private fun ActionPill(text: String, onClick: () -> Unit) {
         modifier = Modifier.height(28.dp),
         onClick = onClick,
         shape = RoundedCornerShape(18.dp),
-        color = SoftMint,
+        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
     ) {
         Box(
             modifier = Modifier.padding(horizontal = 14.dp),
@@ -1925,7 +1940,7 @@ private fun ActionPill(text: String, onClick: () -> Unit) {
         ) {
             Text(
                 text = text,
-                color = AccentTeal,
+                color = MaterialTheme.colorScheme.primary,
                 fontSize = 13.sp,
                 lineHeight = 16.sp,
                 fontWeight = FontWeight.Bold,
@@ -1964,7 +1979,7 @@ private fun ScheduledLesson.details(): String =
 
 @Composable
 private fun AbsenceRiskLevel.riskColor(): Color = when (this) {
-    AbsenceRiskLevel.SAFE -> GradeyColors.Primary
+    AbsenceRiskLevel.SAFE -> MaterialTheme.colorScheme.primary
     AbsenceRiskLevel.WATCH -> RiskWatchOrange
     AbsenceRiskLevel.HIGH, AbsenceRiskLevel.OVER_LIMIT -> GradeyColors.Poor
     AbsenceRiskLevel.UNAVAILABLE -> MaterialTheme.colorScheme.onSurfaceVariant

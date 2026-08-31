@@ -2250,7 +2250,7 @@ private fun GradeyApp(
                     onDisconnect = { scope.launch { disconnectStravaCZ() } },
                     onOpenAccount = { selectedTab = AppTab.ACCOUNT },
                     onOpenGradeyTools = { isGradeyAIPresented = true },
-                    modifier = standardScreenModifier,
+                    modifier = Modifier.fillMaxSize(),
                 )
                 AppTab.ACCOUNT -> if (isSupportPresented) {
                     SupportScreen(

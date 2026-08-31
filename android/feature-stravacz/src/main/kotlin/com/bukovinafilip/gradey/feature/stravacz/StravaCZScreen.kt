@@ -39,8 +39,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -55,13 +53,17 @@ import com.bukovinafilip.gradey.model.StravaCZMenu
 import com.bukovinafilip.gradey.model.StravaCZMenuDay
 import com.bukovinafilip.gradey.model.StravaCZOrderType
 import com.bukovinafilip.gradey.model.StravaCZStoredSession
+import com.bukovinafilip.gradey.ui.GradeyAuroraBackground
+import com.bukovinafilip.gradey.ui.GradeyAuroraStyle
 import com.bukovinafilip.gradey.ui.GradeyColors
 import com.bukovinafilip.gradey.ui.GradeyIcons
 import com.bukovinafilip.gradey.ui.GradeyHero
+import com.bukovinafilip.gradey.ui.GradeyPrimaryButton
 import com.bukovinafilip.gradey.ui.GradeyRadius
 import com.bukovinafilip.gradey.ui.GradeySectionCard
 import com.bukovinafilip.gradey.ui.GradeySpacing
 import com.bukovinafilip.gradey.ui.MetadataRow
+import com.bukovinafilip.gradey.ui.gradeyBrandGradient
 import java.text.NumberFormat
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -89,57 +91,65 @@ fun StravaCZScreen(
     var pendingExistingMeal by remember { mutableStateOf<StravaCZMeal?>(null) }
     var showDisconnectConfirmation by rememberSaveable { mutableStateOf(false) }
 
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .statusBarsPadding(),
-    ) {
-        MealsToolbar(
-            connected = session != null,
-            busy = isLoading || isRefreshing || submittingMealID != null,
-            onRefresh = onRefresh,
-            onDisconnect = { showDisconnectConfirmation = true },
-            onOpenAccount = onOpenAccount,
-            onOpenGradeyTools = onOpenGradeyTools,
+    Box(modifier = modifier.fillMaxSize()) {
+        GradeyAuroraBackground(
+            style = if (session == null) {
+                GradeyAuroraStyle.ACCOUNT_SETTINGS
+            } else {
+                GradeyAuroraStyle.STANDARD
+            },
         )
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .statusBarsPadding(),
+        ) {
+            MealsToolbar(
+                connected = session != null,
+                busy = isLoading || isRefreshing || submittingMealID != null,
+                onRefresh = onRefresh,
+                onDisconnect = { showDisconnectConfirmation = true },
+                onOpenAccount = onOpenAccount,
+                onOpenGradeyTools = onOpenGradeyTools,
+            )
 
-        when {
-            session == null -> ConnectContent(
-                isLoading = isLoading,
-                errorMessage = errorMessage,
-                onConnect = onConnect,
-                modifier = Modifier.weight(1f),
-            )
-            menu == null -> FirstMenuLoad(
-                isLoading = isLoading,
-                errorMessage = errorMessage,
-                onRetry = onRefresh,
-                modifier = Modifier.weight(1f),
-            )
-            else -> MenuContent(
-                session = session,
-                menu = menu,
-                isRefreshing = isRefreshing,
-                submittingMealID = submittingMealID,
-                errorMessage = errorMessage,
-                onToggle = { meal ->
-                    if (meal.ordered) {
-                        onSetMeal(meal, false)
-                    } else {
-                        val existing = menu.days
-                            .firstOrNull { it.date == meal.dateKey }
-                            ?.orderedMainMeal
-                        if (existing != null && existing.id != meal.id) {
-                            pendingExistingMeal = existing
-                            pendingReplacement = meal
+            when {
+                session == null -> ConnectContent(
+                    isLoading = isLoading,
+                    errorMessage = errorMessage,
+                    onConnect = onConnect,
+                    modifier = Modifier.weight(1f),
+                )
+                menu == null -> FirstMenuLoad(
+                    isLoading = isLoading,
+                    errorMessage = errorMessage,
+                    onRetry = onRefresh,
+                    modifier = Modifier.weight(1f),
+                )
+                else -> MenuContent(
+                    session = session,
+                    menu = menu,
+                    isRefreshing = isRefreshing,
+                    submittingMealID = submittingMealID,
+                    errorMessage = errorMessage,
+                    onToggle = { meal ->
+                        if (meal.ordered) {
+                            onSetMeal(meal, false)
                         } else {
-                            onSetMeal(meal, true)
+                            val existing = menu.days
+                                .firstOrNull { it.date == meal.dateKey }
+                                ?.orderedMainMeal
+                            if (existing != null && existing.id != meal.id) {
+                                pendingExistingMeal = existing
+                                pendingReplacement = meal
+                            } else {
+                                onSetMeal(meal, true)
+                            }
                         }
-                    }
-                },
-                modifier = Modifier.weight(1f),
-            )
+                    },
+                    modifier = Modifier.weight(1f),
+                )
+            }
         }
     }
 
@@ -214,13 +224,18 @@ private fun MealsToolbar(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         IconButton(onClick = onOpenGradeyTools) {
-            Icon(GradeyIcons.Sparkles, contentDescription = stringResource(R.string.stravacz_open_ai), tint = GradeyColors.Primary)
+            Icon(
+                GradeyIcons.Sparkles,
+                contentDescription = stringResource(R.string.stravacz_open_ai),
+                tint = MaterialTheme.colorScheme.primary,
+            )
         }
         Text(
             stringResource(R.string.stravacz_title),
             modifier = Modifier.weight(1f),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onBackground,
             textAlign = androidx.compose.ui.text.style.TextAlign.Center,
         )
         if (connected) {
@@ -228,14 +243,22 @@ private fun MealsToolbar(
                 if (busy) {
                     CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp)
                 } else {
-                    Icon(GradeyIcons.Refresh, contentDescription = stringResource(R.string.stravacz_refresh), tint = GradeyColors.Primary)
+                    Icon(
+                        GradeyIcons.Refresh,
+                        contentDescription = stringResource(R.string.stravacz_refresh),
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
                 }
             }
         } else {
             Spacer(Modifier.size(48.dp))
         }
         IconButton(onClick = onOpenAccount) {
-            Icon(GradeyIcons.User, contentDescription = stringResource(R.string.stravacz_open_account), tint = GradeyColors.Primary)
+            Icon(
+                GradeyIcons.User,
+                contentDescription = stringResource(R.string.stravacz_open_account),
+                tint = MaterialTheme.colorScheme.primary,
+            )
         }
         if (connected) {
             IconButton(onClick = onDisconnect, enabled = !busy) {
@@ -309,9 +332,8 @@ private fun ConnectContent(
                     },
                 )
                 ErrorText(errorMessage)
-                Button(
+                GradeyPrimaryButton(
                     onClick = { onConnect(canteenNumber, username, password) },
-                    modifier = Modifier.fillMaxWidth(),
                     enabled = valid && !isLoading,
                 ) {
                     if (isLoading) {
@@ -403,7 +425,7 @@ private fun MealsHero(session: StravaCZStoredSession, orderedCount: Int) {
         modifier = Modifier
             .fillMaxWidth()
             .background(
-                Brush.linearGradient(listOf(GradeyColors.Primary, GradeyColors.Secondary)),
+                gradeyBrandGradient(),
                 androidx.compose.foundation.shape.RoundedCornerShape(GradeyRadius.card),
             )
             .padding(GradeySpacing.xl),

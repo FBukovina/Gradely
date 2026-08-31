@@ -13,6 +13,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -43,7 +44,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
@@ -1992,7 +1992,11 @@ private fun GradeyApp(
             },
         )
 
-        AppPhase.SIGNED_IN -> Box(modifier = Modifier.fillMaxSize()) {
+        AppPhase.SIGNED_IN -> Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background),
+        ) {
             val standardScreenModifier = Modifier
                 .fillMaxSize()
                 .statusBarsPadding()
@@ -2777,7 +2781,7 @@ private fun GradeyBottomNavigation(
                 .fillMaxWidth()
                 .height(62.dp),
             shape = RoundedCornerShape(31.dp),
-            color = Color(0xFFFDFDFF).copy(alpha = 0.96f),
+            color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.96f),
             shadowElevation = 8.dp,
         ) {
             Row(
@@ -2804,14 +2808,22 @@ private fun androidx.compose.foundation.layout.RowScope.BottomNavigationItem(
     onClick: () -> Unit,
 ) {
     val label = stringResource(tab.labelRes)
-    val foreground = if (selected) Color(0xFF0DA388) else Color(0xFF19191D)
+    val foreground = if (selected) {
+        MaterialTheme.colorScheme.primary
+    } else {
+        MaterialTheme.colorScheme.onSurfaceVariant
+    }
     Surface(
         modifier = Modifier
             .weight(1f)
             .height(54.dp),
         onClick = onClick,
         shape = RoundedCornerShape(27.dp),
-        color = if (selected) Color(0xFFE8E8EC) else Color.Transparent,
+        color = if (selected) {
+            MaterialTheme.colorScheme.surfaceVariant
+        } else {
+            MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0f)
+        },
     ) {
         Column(
             modifier = Modifier.fillMaxSize(),
@@ -2841,7 +2853,11 @@ private fun androidx.compose.foundation.layout.RowScope.BottomNavigationItem(
             }
             Text(
                 text = label,
-                color = if (selected) Color(0xFF0DA388) else Color.Black,
+                color = if (selected) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.onSurface
+                },
                 fontSize = 12.sp,
                 lineHeight = 14.sp,
                 fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,

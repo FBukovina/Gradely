@@ -5,6 +5,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -95,6 +96,7 @@ import com.bukovinafilip.gradey.domain.SubjectAttentionScore
 import com.bukovinafilip.gradey.model.AbsenceResponse
 import com.bukovinafilip.gradey.model.Mark
 import com.bukovinafilip.gradey.model.Subject
+import com.bukovinafilip.gradey.ui.GradeyAuroraBackground
 import com.bukovinafilip.gradey.ui.color
 import com.bukovinafilip.gradey.ui.softColor
 import kotlinx.coroutines.CancellationException
@@ -107,19 +109,13 @@ import java.time.temporal.ChronoUnit
 import java.util.Locale
 import kotlin.math.roundToInt
 
-private val BackgroundTop = Color(0xFFCBDDDD)
-private val BackgroundBottom = Color(0xFFEFEFF4)
 private val AccentTeal = Color(0xFF17A185)
 private val HeroStart = Color(0xFF18A182)
 private val HeroEnd = Color(0xFF1CA567)
 private val DetailHeroStart = Color(0xFF148A94)
 private val DetailHeroEnd = Color(0xFF3099A1)
-private val CardWhite = Color(0xFFFDFDFE)
-private val MutedText = Color(0xFF8E8E93)
-private val DividerColor = Color(0xFFC6C6C8)
 private val SoftTeal = Color(0xFFDEEFF0)
 private val SoftMint = Color(0xFFE0F3EA)
-private val SoftGray = Color(0xFFEEEEF0)
 private val ExcellentGreen = Color(0xFF18A56F)
 private val WarningOrange = Color(0xFFE0921A)
 private val DangerRed = Color(0xFFD95461)
@@ -244,9 +240,9 @@ private fun SubjectsOverview(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(BackgroundBottom),
+            .background(MaterialTheme.colorScheme.background),
     ) {
-        MarksBackgroundGlow()
+        GradeyAuroraBackground()
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
@@ -312,7 +308,7 @@ private fun MarksRefreshErrorCard(
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(14.dp),
-        color = Color(0xFFFFE9EC),
+        color = DangerRed.copy(alpha = 0.12f),
     ) {
         Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
             Text(
@@ -325,13 +321,13 @@ private fun MarksRefreshErrorCard(
             Spacer(Modifier.height(3.dp))
             Text(
                 text = stringResource(R.string.marks_refresh_failed_cached),
-                color = Color(0xFF71333B),
+                color = MaterialTheme.colorScheme.onSurface,
                 fontSize = 13.sp,
                 lineHeight = 17.sp,
             )
             Text(
                 text = errorMessage,
-                color = MutedText,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 12.sp,
                 lineHeight = 16.sp,
                 maxLines = 2,
@@ -342,7 +338,7 @@ private fun MarksRefreshErrorCard(
                 onClick = onRetry,
                 enabled = !isRefreshing,
                 shape = RoundedCornerShape(10.dp),
-                color = Color.White.copy(alpha = 0.8f),
+                color = MaterialTheme.colorScheme.surfaceContainer,
                 contentColor = DangerRed,
             ) {
                 Row(
@@ -419,20 +415,20 @@ private fun MarksHeader(
                 .size(44.dp),
             onClick = onOpenGradeyTools,
             shape = CircleShape,
-            color = Color(0xFFE8FAFB),
+            color = MaterialTheme.colorScheme.surfaceContainer,
             shadowElevation = 2.dp,
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Surface(
                     modifier = Modifier.size(30.dp),
                     shape = CircleShape,
-                    color = Color(0xFFC7ECE9),
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f),
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
                             imageVector = GradeyIcons.Sparkles,
                             contentDescription = stringResource(R.string.marks_open_gradey_tools),
-                            tint = AccentTeal,
+                            tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(22.dp),
                         )
                     }
@@ -442,7 +438,7 @@ private fun MarksHeader(
 
         Text(
             text = title,
-            color = Color.Black,
+            color = MaterialTheme.colorScheme.onBackground,
             fontSize = 18.sp,
             lineHeight = 22.sp,
             fontWeight = FontWeight.SemiBold,
@@ -454,7 +450,7 @@ private fun MarksHeader(
                 .width(105.dp)
                 .height(44.dp),
             shape = RoundedCornerShape(22.dp),
-            color = Color(0xFFDCFAF6),
+            color = MaterialTheme.colorScheme.surfaceContainer,
             shadowElevation = 2.dp,
         ) {
             Row(
@@ -473,14 +469,14 @@ private fun MarksHeader(
                         if (isRefreshing) {
                             CircularProgressIndicator(
                                 modifier = Modifier.size(21.dp),
-                                color = AccentTeal,
+                                color = MaterialTheme.colorScheme.primary,
                                 strokeWidth = 2.5.dp,
                             )
                         } else {
                             Icon(
                                 imageVector = GradeyIcons.Refresh,
                                 contentDescription = stringResource(R.string.marks_refresh_content_description),
-                                tint = AccentTeal,
+                                tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(27.dp),
                             )
                         }
@@ -490,13 +486,13 @@ private fun MarksHeader(
                     modifier = Modifier.size(32.dp),
                     onClick = onOpenAccount,
                     shape = CircleShape,
-                    color = Color(0xFFBDECE4),
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f),
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
                             imageVector = GradeyIcons.User,
                             contentDescription = stringResource(R.string.marks_open_account),
-                            tint = AccentTeal,
+                            tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(22.dp),
                         )
                     }
@@ -583,7 +579,7 @@ private fun SubjectsSectionHeader(
                 .width(173.dp)
                 .height(31.dp),
             shape = RoundedCornerShape(16.dp),
-            color = Color(0xFFD7E4E4).copy(alpha = 0.92f),
+            color = MaterialTheme.colorScheme.surfaceVariant,
         ) {
             Row(modifier = Modifier.padding(1.dp)) {
                 SortSegment(
@@ -620,7 +616,7 @@ private fun SortSegment(
         modifier = modifier.height(29.dp),
         onClick = onClick,
         shape = RoundedCornerShape(15.dp),
-        color = if (selected) Color.White else Color.Transparent,
+        color = if (selected) MaterialTheme.colorScheme.surface else Color.Transparent,
         shadowElevation = if (selected) 1.dp else 0.dp,
     ) {
         Box(contentAlignment = Alignment.Center) {
@@ -631,7 +627,7 @@ private fun SortSegment(
             }
             Text(
                 text = label,
-                color = Color.Black,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontSize = 14.sp,
                 lineHeight = 17.sp,
                 fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
@@ -652,7 +648,7 @@ private fun SubjectsCard(
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(14.dp),
-        color = CardWhite,
+        color = MaterialTheme.colorScheme.surfaceContainer,
         shadowElevation = 1.dp,
     ) {
         if (subjects.isEmpty()) {
@@ -662,7 +658,7 @@ private fun SubjectsCard(
                     .height(68.dp),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(emptyMessage, color = MutedText, fontSize = 14.sp)
+                Text(emptyMessage, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
             }
         } else {
             Column {
@@ -677,7 +673,7 @@ private fun SubjectsCard(
                         HorizontalDivider(
                             modifier = Modifier.padding(start = 68.dp),
                             thickness = 0.5.dp,
-                            color = DividerColor.copy(alpha = 0.72f),
+                            color = MaterialTheme.colorScheme.outlineVariant,
                         )
                     }
                 }
@@ -736,7 +732,7 @@ private fun SubjectRow(
                 text = subject.displayName,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                color = Color.Black,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontSize = 18.sp,
                 lineHeight = 21.sp,
                 fontWeight = FontWeight.Bold,
@@ -745,7 +741,7 @@ private fun SubjectRow(
                 val markCount = subject.marks.size
                 Text(
                     text = pluralStringResource(R.plurals.subject_mark_count, markCount, markCount),
-                    color = MutedText,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 16.sp,
                     lineHeight = 19.sp,
                 )
@@ -792,7 +788,7 @@ private fun SubjectRow(
             Text(
                 text = absencePercentage?.let { stringResource(R.string.marks_row_absence, it.roundToInt()) }
                     ?: stringResource(R.string.subject_absence_unavailable),
-                color = MutedText,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 14.sp,
                 lineHeight = 17.sp,
                 fontWeight = FontWeight.SemiBold,
@@ -803,7 +799,7 @@ private fun SubjectRow(
         Icon(
             imageVector = GradeyIcons.ArrowRight,
             contentDescription = stringResource(R.string.marks_open_subject, subject.displayName),
-            tint = Color(0xFFC7C7CC),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.size(22.dp),
         )
     }
@@ -820,7 +816,7 @@ private fun GradeMovementSection(trends: List<SubjectGradeTrend>) {
             SectionHeading(stringResource(R.string.marks_trends_section))
             Text(
                 text = stringResource(R.string.marks_trends_range),
-                color = MutedText,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 13.sp,
                 lineHeight = 17.sp,
                 fontWeight = FontWeight.SemiBold,
@@ -830,7 +826,7 @@ private fun GradeMovementSection(trends: List<SubjectGradeTrend>) {
         Surface(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(14.dp),
-            color = CardWhite,
+            color = MaterialTheme.colorScheme.surfaceContainer,
             shadowElevation = 1.dp,
         ) {
             Column {
@@ -840,7 +836,7 @@ private fun GradeMovementSection(trends: List<SubjectGradeTrend>) {
                         HorizontalDivider(
                             modifier = Modifier.padding(start = 16.dp),
                             thickness = 0.5.dp,
-                            color = DividerColor.copy(alpha = 0.72f),
+                            color = MaterialTheme.colorScheme.outlineVariant,
                         )
                     }
                 }
@@ -874,7 +870,7 @@ private fun GradeMovementRow(trend: SubjectGradeTrend) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = trend.displayName,
-                color = Color.Black,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontSize = 15.sp,
                 lineHeight = 18.sp,
                 fontWeight = FontWeight.Bold,
@@ -887,7 +883,7 @@ private fun GradeMovementRow(trend: SubjectGradeTrend) {
                 } else {
                     stringResource(R.string.marks_trends_movement)
                 },
-                color = MutedText,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 12.sp,
                 lineHeight = 15.sp,
             )
@@ -974,6 +970,7 @@ private fun SubjectDetail(
     val remotePredictionEnabled = calculatorEnabled && subject.markPredictionEnabled
     val notes = remember(subject) { SubjectDetailNotesPolicy.resolve(subject) }
     val historyChart = remember(subject, trend) { AverageHistoryPolicy.resolve(subject, trend, PragueZone) }
+    val isDarkTheme = isSystemInDarkTheme()
 
     LaunchedEffect(subject.id, trialMark, trialWeight, remotePredictionEnabled) {
         exactPredictedAverage = null
@@ -991,14 +988,17 @@ private fun SubjectDetail(
         }
     }
 
-    StatusBarAppearance(useDarkIcons = !isScrolled)
+    StatusBarAppearance(
+        useDarkIcons = !isDarkTheme && !isScrolled,
+        restoreDarkIcons = !isDarkTheme,
+    )
 
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(BackgroundBottom),
+            .background(MaterialTheme.colorScheme.background),
     ) {
-        MarksBackgroundGlow()
+        GradeyAuroraBackground()
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             state = listState,
@@ -1094,14 +1094,14 @@ private fun SubjectDetailHeader(
                 .size(44.dp),
             onClick = onBack,
             shape = CircleShape,
-            color = if (isScrolled) Color(0xFFA3E3E6) else Color(0xFFE9FCFB),
+            color = if (isScrolled) Color(0xFFA3E3E6) else MaterialTheme.colorScheme.surfaceContainer,
             shadowElevation = 2.dp,
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Icon(
                     imageVector = GradeyIcons.ArrowLeft,
                     contentDescription = stringResource(R.string.subject_back),
-                    tint = Color(0xFF061C1B),
+                    tint = if (isScrolled) Color(0xFF061C1B) else MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.size(28.dp),
                 )
             }
@@ -1110,7 +1110,7 @@ private fun SubjectDetailHeader(
             text = title,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            color = if (isScrolled) Color.White else Color.Black,
+            color = if (isScrolled) Color.White else MaterialTheme.colorScheme.onBackground,
             fontSize = 17.sp,
             lineHeight = 21.sp,
             fontWeight = FontWeight.Medium,
@@ -1181,7 +1181,7 @@ private fun SubjectNotesCard(notes: SubjectDetailNotes) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
-        color = CardWhite,
+        color = MaterialTheme.colorScheme.surfaceContainer,
         shadowElevation = 1.dp,
     ) {
         Column(
@@ -1195,12 +1195,12 @@ private fun SubjectNotesCard(notes: SubjectDetailNotes) {
                 )
             }
             if (notes.subjectNote != null && notes.hasTemporaryContent) {
-                HorizontalDivider(color = DividerColor)
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             }
             if (notes.hasTemporaryContent) {
                 Text(
                     text = stringResource(R.string.subject_temporary_mark_label),
-                    color = MutedText,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 13.sp,
                     lineHeight = 16.sp,
                     fontWeight = FontWeight.SemiBold,
@@ -1217,7 +1217,7 @@ private fun SubjectNotesCard(notes: SubjectDetailNotes) {
                 notes.temporaryMarkNote?.let { note ->
                     Text(
                         text = note,
-                        color = Color.Black,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontSize = 15.sp,
                         lineHeight = 20.sp,
                     )
@@ -1232,14 +1232,14 @@ private fun NoteBlock(label: String, value: String) {
     Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
         Text(
             text = label,
-            color = MutedText,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontSize = 13.sp,
             lineHeight = 16.sp,
             fontWeight = FontWeight.SemiBold,
         )
         Text(
             text = value,
-            color = Color.Black,
+            color = MaterialTheme.colorScheme.onSurface,
             fontSize = 15.sp,
             lineHeight = 20.sp,
         )
@@ -1304,6 +1304,8 @@ private fun AverageChartCard(chart: AverageHistoryChart) {
         points.size,
         points.size,
     )
+    val gridColor = MaterialTheme.colorScheme.outlineVariant
+    val pointBackground = MaterialTheme.colorScheme.surfaceContainer
 
     Surface(
         modifier = Modifier
@@ -1313,7 +1315,7 @@ private fun AverageChartCard(chart: AverageHistoryChart) {
                 contentDescription = chartDescription
             },
         shape = RoundedCornerShape(20.dp),
-        color = CardWhite,
+        color = MaterialTheme.colorScheme.surfaceContainer,
         shadowElevation = 1.dp,
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
@@ -1322,8 +1324,8 @@ private fun AverageChartCard(chart: AverageHistoryChart) {
                 val xEnd = size.width - 36.dp.toPx()
                 val yTop = 51.dp.toPx()
                 val yBottom = 114.dp.toPx()
-                drawLine(Color(0xFFE6E6E8), Offset(xStart, yTop), Offset(xEnd, yTop), strokeWidth = 0.7.dp.toPx())
-                drawLine(Color(0xFFE6E6E8), Offset(xStart, yBottom), Offset(xEnd, yBottom), strokeWidth = 0.7.dp.toPx())
+                drawLine(gridColor, Offset(xStart, yTop), Offset(xEnd, yTop), strokeWidth = 0.7.dp.toPx())
+                drawLine(gridColor, Offset(xStart, yBottom), Offset(xEnd, yBottom), strokeWidth = 0.7.dp.toPx())
 
                 val offsets = points.mapIndexed { index, point ->
                     val x = if (points.size == 1) {
@@ -1347,7 +1349,7 @@ private fun AverageChartCard(chart: AverageHistoryChart) {
                     )
                 }
                 offsets.forEach { point ->
-                    drawCircle(Color.White, radius = 6.dp.toPx(), center = point)
+                    drawCircle(pointBackground, radius = 6.dp.toPx(), center = point)
                     drawCircle(Color(0xFF1396A0), radius = 4.5.dp.toPx(), center = point)
                 }
             }
@@ -1357,7 +1359,7 @@ private fun AverageChartCard(chart: AverageHistoryChart) {
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .padding(top = 44.dp, end = 16.dp),
-                color = MutedText,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 13.sp,
                 lineHeight = 17.sp,
             )
@@ -1366,7 +1368,7 @@ private fun AverageChartCard(chart: AverageHistoryChart) {
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .padding(top = 107.dp, end = 16.dp),
-                color = MutedText,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 13.sp,
                 lineHeight = 17.sp,
             )
@@ -1378,7 +1380,12 @@ private fun AverageChartCard(chart: AverageHistoryChart) {
             ) {
                 dateLabels.forEach { label ->
                     Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                        Text(label, color = MutedText, fontSize = 13.sp, lineHeight = 17.sp)
+                        Text(
+                            label,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontSize = 13.sp,
+                            lineHeight = 17.sp,
+                        )
                     }
                 }
             }
@@ -1389,7 +1396,12 @@ private fun AverageChartCard(chart: AverageHistoryChart) {
                     .padding(start = 16.dp, end = 16.dp, bottom = 20.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                Text(sourceCaption, color = MutedText, fontSize = 13.sp, lineHeight = 17.sp)
+                Text(
+                    sourceCaption,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = 13.sp,
+                    lineHeight = 17.sp,
+                )
                 delta?.let {
                     Text(
                         text = it,
@@ -1413,7 +1425,7 @@ private fun EmptyAverageChartCard() {
             .height(160.dp)
             .semantics { contentDescription = title },
         shape = RoundedCornerShape(20.dp),
-        color = CardWhite,
+        color = MaterialTheme.colorScheme.surfaceContainer,
         shadowElevation = 1.dp,
     ) {
         Column(
@@ -1423,7 +1435,7 @@ private fun EmptyAverageChartCard() {
         ) {
             Text(
                 text = title,
-                color = Color.Black,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontSize = 17.sp,
                 lineHeight = 21.sp,
                 fontWeight = FontWeight.Bold,
@@ -1431,7 +1443,7 @@ private fun EmptyAverageChartCard() {
             Spacer(Modifier.height(6.dp))
             Text(
                 text = stringResource(R.string.subject_history_empty_body),
-                color = MutedText,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 13.sp,
                 lineHeight = 18.sp,
                 textAlign = TextAlign.Center,
@@ -1459,7 +1471,7 @@ private fun TryMarkCard(
             .fillMaxWidth()
             .heightIn(min = if (errorMessage == null) 138.dp else 158.dp),
         shape = RoundedCornerShape(20.dp),
-        color = CardWhite,
+        color = MaterialTheme.colorScheme.surfaceContainer,
         shadowElevation = 1.dp,
     ) {
         Column(modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 16.dp)) {
@@ -1470,13 +1482,13 @@ private fun TryMarkCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(46.dp)
-                    .background(SoftGray, RoundedCornerShape(13.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(13.dp))
                     .padding(horizontal = 13.dp),
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
-                cursorBrush = SolidColor(AccentTeal),
+                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                 textStyle = TextStyle(
-                    color = Color.Black,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontSize = 18.sp,
                     lineHeight = 22.sp,
                 ),
@@ -1487,7 +1499,7 @@ private fun TryMarkCard(
                                 text = stringResource(
                                     if (enabled) R.string.subject_prediction_placeholder else R.string.subject_prediction_unavailable,
                                 ),
-                                color = Color(0xFFC4C4C8),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 fontSize = 18.sp,
                                 lineHeight = 22.sp,
                             )
@@ -1509,7 +1521,7 @@ private fun TryMarkCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(44.dp)
-                    .background(SoftGray, RoundedCornerShape(13.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(13.dp))
                     .padding(horizontal = 8.dp, vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -1518,13 +1530,13 @@ private fun TryMarkCard(
                     enabled = enabled && weight > 1,
                     onClick = onDecreaseWeight,
                     contentDescription = stringResource(R.string.subject_prediction_decrease_weight),
-                    tint = Color(0xFFD1D1D6),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f),
                 ) {
                     Icon(GradeyIcons.Minus, contentDescription = null, modifier = Modifier.size(22.dp))
                 }
                 Text(
                     text = stringResource(R.string.subject_prediction_weight, weight),
-                    color = Color.Black,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontSize = 17.sp,
                     lineHeight = 21.sp,
                     fontWeight = FontWeight.Bold,
@@ -1533,7 +1545,7 @@ private fun TryMarkCard(
                     enabled = enabled && weight < 10,
                     onClick = onIncreaseWeight,
                     contentDescription = stringResource(R.string.subject_prediction_increase_weight),
-                    tint = AccentTeal,
+                    tint = MaterialTheme.colorScheme.primary,
                 ) {
                     Icon(GradeyIcons.Add, contentDescription = null, modifier = Modifier.size(27.dp))
                 }
@@ -1563,7 +1575,8 @@ private fun PredictionResultPanel(
     val tint = when (comparison) {
         MarkPredictionComparison.BETTER -> AccentTeal
         MarkPredictionComparison.WORSE -> DangerRed
-        MarkPredictionComparison.SAME, MarkPredictionComparison.UNKNOWN -> MutedText
+        MarkPredictionComparison.SAME,
+        MarkPredictionComparison.UNKNOWN -> MaterialTheme.colorScheme.onSurfaceVariant
     }
     val comparisonText = when (comparison) {
         MarkPredictionComparison.BETTER -> stringResource(
@@ -1594,7 +1607,7 @@ private fun PredictionResultPanel(
     ) {
         Text(
             text = stringResource(R.string.subject_prediction_new_average, formatAverage(predictedAverage)),
-            color = Color.Black,
+            color = MaterialTheme.colorScheme.onSurface,
             fontSize = 18.sp,
             lineHeight = 22.sp,
             fontWeight = FontWeight.Bold,
@@ -1609,10 +1622,10 @@ private fun PredictionResultPanel(
                 CircularProgressIndicator(
                     modifier = Modifier.size(12.dp),
                     strokeWidth = 1.5.dp,
-                    color = MutedText,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            Text(source, color = MutedText, fontSize = 12.sp, lineHeight = 15.sp)
+            Text(source, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp, lineHeight = 15.sp)
         }
     }
 }
@@ -1633,7 +1646,7 @@ private fun StepperButton(
         onClick = onClick,
         enabled = enabled,
         shape = RoundedCornerShape(9.dp),
-        color = Color.White.copy(alpha = if (enabled) 0.96f else 0.64f),
+        color = MaterialTheme.colorScheme.surfaceContainer,
         contentColor = tint,
     ) {
         Box(contentAlignment = Alignment.Center) { content() }
@@ -1655,7 +1668,7 @@ private fun MarkCard(subject: Subject, mark: Mark) {
             .fillMaxWidth()
             .heightIn(min = 112.dp),
         shape = RoundedCornerShape(20.dp),
-        color = CardWhite,
+        color = MaterialTheme.colorScheme.surfaceContainer,
         shadowElevation = 1.dp,
     ) {
         Row(
@@ -1668,7 +1681,7 @@ private fun MarkCard(subject: Subject, mark: Mark) {
             ) {
                 Text(
                     text = metadata.caption,
-                    color = Color.Black,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontSize = 18.sp,
                     lineHeight = 22.sp,
                     fontWeight = FontWeight.Bold,
@@ -1678,7 +1691,7 @@ private fun MarkCard(subject: Subject, mark: Mark) {
                 metadata.theme?.let { theme ->
                     Text(
                         text = theme,
-                        color = MutedText,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 17.sp,
                         lineHeight = 20.sp,
                         maxLines = 2,
@@ -1697,7 +1710,7 @@ private fun MarkCard(subject: Subject, mark: Mark) {
                         Spacer(Modifier.width(8.dp))
                         Text(
                             text = it.fullDate(),
-                            color = MutedText,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontSize = 13.sp,
                             lineHeight = 17.sp,
                         )
@@ -1708,7 +1721,11 @@ private fun MarkCard(subject: Subject, mark: Mark) {
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     metadata.typeLabel?.let {
-                        TagPill(text = it, color = Color(0xFFF0F0F2), textColor = MutedText)
+                        TagPill(
+                            text = it,
+                            color = MaterialTheme.colorScheme.surfaceVariant,
+                            textColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                     }
                     metadata.weightBadge?.let { weight ->
                         val label = when (weight.kind) {
@@ -1745,11 +1762,15 @@ private fun EmptyMarksCard() {
             .fillMaxWidth()
             .height(80.dp),
         shape = RoundedCornerShape(20.dp),
-        color = CardWhite,
+        color = MaterialTheme.colorScheme.surfaceContainer,
         shadowElevation = 1.dp,
     ) {
         Box(contentAlignment = Alignment.Center) {
-            Text(stringResource(R.string.subject_no_marks), color = MutedText, fontSize = 15.sp)
+            Text(
+                stringResource(R.string.subject_no_marks),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontSize = 15.sp,
+            )
         }
     }
 }
@@ -1804,7 +1825,7 @@ private fun TagPill(text: String, color: Color, textColor: Color) {
 private fun SectionHeading(text: String) {
     Text(
         text = text,
-        color = MutedText,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
         fontSize = 14.sp,
         lineHeight = 18.sp,
         letterSpacing = 0.7.sp,
@@ -1813,47 +1834,21 @@ private fun SectionHeading(text: String) {
 }
 
 @Composable
-private fun StatusBarAppearance(useDarkIcons: Boolean) {
+private fun StatusBarAppearance(
+    useDarkIcons: Boolean,
+    restoreDarkIcons: Boolean,
+) {
     val view = LocalView.current
     val activity = view.context as? Activity
     if (activity != null && !view.isInEditMode) {
         SideEffect {
             WindowCompat.getInsetsController(activity.window, view).isAppearanceLightStatusBars = useDarkIcons
         }
-        DisposableEffect(Unit) {
+        DisposableEffect(activity, view, restoreDarkIcons) {
             onDispose {
-                WindowCompat.getInsetsController(activity.window, view).isAppearanceLightStatusBars = true
+                WindowCompat.getInsetsController(activity.window, view).isAppearanceLightStatusBars = restoreDarkIcons
             }
         }
-    }
-}
-
-@Composable
-private fun MarksBackgroundGlow() {
-    Canvas(modifier = Modifier.fillMaxSize()) {
-        drawRect(
-            brush = Brush.verticalGradient(
-                colorStops = arrayOf(
-                    0f to BackgroundTop,
-                    0.32f to BackgroundBottom,
-                    1f to BackgroundBottom,
-                ),
-            ),
-        )
-        drawRect(
-            brush = Brush.radialGradient(
-                colors = listOf(Color(0x35309C89), Color.Transparent),
-                center = Offset(size.width, size.height * 0.24f),
-                radius = size.width * 0.75f,
-            ),
-        )
-        drawRect(
-            brush = Brush.radialGradient(
-                colors = listOf(Color(0x265EAEB5), Color.Transparent),
-                center = Offset(0f, size.height * 0.59f),
-                radius = size.width * 0.70f,
-            ),
-        )
     }
 }
 

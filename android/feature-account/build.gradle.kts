@@ -6,7 +6,10 @@ plugins {
 android {
     namespace = "com.bukovinafilip.gradey.feature.account"
     compileSdk = 36
-    defaultConfig { minSdk = 26 }
+    defaultConfig {
+        minSdk = 26
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
     buildFeatures { compose = true }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -29,6 +32,12 @@ dependencies {
     implementation(libs.androidx.compose.ui)
     implementation(libs.coil.compose)
     implementation(libs.coil.network.okhttp)
+    debugImplementation(libs.androidx.compose.ui.test.manifest)
+    androidTestImplementation(enforcedPlatform(libs.androidx.compose.bom))
+    androidTestImplementation(libs.androidx.compose.ui.test.junit4)
+    androidTestImplementation(libs.androidx.test.espresso.core)
+    androidTestImplementation(libs.androidx.test.ext.junit)
+    androidTestImplementation(libs.androidx.test.runner)
     testImplementation(libs.junit)
     testImplementation(libs.truth)
 }

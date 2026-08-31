@@ -29,6 +29,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -64,6 +65,7 @@ import com.bukovinafilip.gradey.domain.TodayTimetableSummaries
 import com.bukovinafilip.gradey.domain.TodayTimetableSummary
 import com.bukovinafilip.gradey.model.LessonChangeKind
 import com.bukovinafilip.gradey.model.ScheduledDay
+import com.bukovinafilip.gradey.ui.GradeyAuroraBackground
 import com.bukovinafilip.gradey.ui.GradeyColors
 import com.bukovinafilip.gradey.ui.GradeyIcons
 import com.bukovinafilip.gradey.ui.StatusChip
@@ -73,16 +75,10 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
-private val BackgroundTop = Color(0xFFCBDDDD)
-private val BackgroundBottom = Color(0xFFF2F2F7)
-private val AccentTeal = Color(0xFF17A185)
-private val HeroStart = Color(0xFF18A182)
-private val HeroEnd = Color(0xFF1CA567)
-private val MutedText = Color(0xFF8A8A8E)
-private val MutedLight = Color(0xFFB9BAC0)
-private val SubjectTile = Color(0xFFDEF1ED)
-private val NoticeRed = Color(0xFFD83E4F)
-private val DividerColor = Color(0xFFC6C6C8)
+private val AccentTeal = GradeyColors.Primary
+private val HeroStart = GradeyColors.Primary
+private val HeroEnd = GradeyColors.Secondary
+private val NoticeRed = GradeyColors.Poor
 private data class TimetableDaySlot(
     val date: LocalDate,
     val day: ScheduledDay?,
@@ -117,9 +113,9 @@ fun TimetableScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(BackgroundBottom),
+            .background(MaterialTheme.colorScheme.background),
     ) {
-        TimetableBackgroundGlow()
+        GradeyAuroraBackground()
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -149,19 +145,19 @@ fun TimetableScreen(
                 onSelect = { selectedDate = it.toString() },
             )
             Spacer(Modifier.height(11.dp))
-            HorizontalDivider(thickness = 0.5.dp, color = DividerColor.copy(alpha = 0.62f))
+            HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
             if (!errorMessage.isNullOrBlank()) {
                 Surface(
                     modifier = Modifier
                         .padding(horizontal = 16.dp, vertical = 8.dp)
                         .fillMaxWidth(),
                     shape = RoundedCornerShape(14.dp),
-                    color = Color(0xFFFFECEE),
+                    color = MaterialTheme.colorScheme.errorContainer,
                 ) {
                     Text(
                         text = errorMessage,
                         modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-                        color = NoticeRed,
+                        color = MaterialTheme.colorScheme.onErrorContainer,
                         fontSize = 13.sp,
                         lineHeight = 17.sp,
                     )
@@ -187,7 +183,7 @@ fun TimetableScreen(
             sheetState = sheetState,
             shape = RoundedCornerShape(48.dp),
             containerColor = Color.Transparent,
-            contentColor = Color.Black,
+            contentColor = MaterialTheme.colorScheme.onSurface,
             tonalElevation = 12.dp,
             scrimColor = Color.Black.copy(alpha = 0.20f),
             dragHandle = null,
@@ -245,27 +241,37 @@ private fun TodaySummaryCard(summary: TodayTimetableSummary) {
             .padding(horizontal = 16.dp, vertical = 8.dp)
             .fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
-        color = Color.White.copy(alpha = 0.9f),
+        color = MaterialTheme.colorScheme.surfaceContainer,
         shadowElevation = 1.dp,
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(3.dp),
         ) {
-            Text(title, color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            Text(
+                title,
+                color = MaterialTheme.colorScheme.onSurface,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+            )
             if (!subtitle.isNullOrBlank()) {
-                Text(subtitle, color = MutedText, fontSize = 13.sp, lineHeight = 17.sp)
+                Text(
+                    subtitle,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = 13.sp,
+                    lineHeight = 17.sp,
+                )
             }
             if (summary.currentLesson != null && nextLesson != null && nextName != null) {
                 HorizontalDivider(
                     modifier = Modifier.padding(vertical = 5.dp),
                     thickness = 0.5.dp,
-                    color = DividerColor,
+                    color = MaterialTheme.colorScheme.outlineVariant,
                 )
                 Text(
                     stringResource(R.string.timetable_summary_next, nextName) +
                         " · ${nextLesson.formattedTimeRange()}",
-                    color = MutedText,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 12.sp,
                     lineHeight = 15.sp,
                     fontWeight = FontWeight.SemiBold,
@@ -316,11 +322,15 @@ private fun TimetableHeader(
                 .size(44.dp),
             onClick = onOpenGradeyTools,
             shape = CircleShape,
-            color = Color(0xFFE8FAFB),
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
             shadowElevation = 2.dp,
         ) {
             Box(contentAlignment = Alignment.Center) {
-                Surface(modifier = Modifier.size(30.dp), shape = CircleShape, color = Color(0xFFC7ECE9)) {
+                Surface(
+                    modifier = Modifier.size(30.dp),
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f),
+                ) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
                             imageVector = GradeyIcons.Sparkles,
@@ -335,7 +345,7 @@ private fun TimetableHeader(
 
         Text(
             text = stringResource(R.string.timetable_title),
-            color = Color.Black,
+            color = MaterialTheme.colorScheme.onBackground,
             fontSize = 17.sp,
             lineHeight = 21.sp,
             fontWeight = FontWeight.SemiBold,
@@ -347,7 +357,7 @@ private fun TimetableHeader(
                 .width(106.dp)
                 .height(44.dp),
             shape = RoundedCornerShape(22.dp),
-            color = Color(0xFFDCFAF6),
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
             shadowElevation = 2.dp,
         ) {
             Row(
@@ -383,7 +393,7 @@ private fun TimetableHeader(
                     modifier = Modifier.size(36.dp),
                     onClick = onOpenAccount,
                     shape = CircleShape,
-                    color = Color(0xFFBDECE4),
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f),
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
@@ -427,7 +437,7 @@ private fun WeekNavigator(
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
                 text = formatWeekRange(monday, locale),
-                color = Color.Black,
+                color = MaterialTheme.colorScheme.onBackground,
                 fontSize = 18.sp,
                 lineHeight = 22.sp,
                 fontWeight = FontWeight.SemiBold,
@@ -469,7 +479,7 @@ private fun WeekArrow(
         onClick = onClick,
         enabled = enabled,
         shape = CircleShape,
-        color = Color(0xFFBFE4DF).copy(alpha = if (enabled) 0.72f else 0.45f),
+        color = MaterialTheme.colorScheme.primary.copy(alpha = if (enabled) 0.16f else 0.08f),
     ) {
         Box(contentAlignment = Alignment.Center) { icon() }
     }
@@ -498,6 +508,11 @@ private fun DayStrip(
             val description = "${slot.date.format(weekdayFormatter)}, ${slot.date.dayOfMonth}"
             val showDayLabel = String.format(locale, showDayTemplate, description)
             val shape = RoundedCornerShape(17.dp)
+            val dayContentColor = if (selected) {
+                GradeyColors.OnAccent
+            } else {
+                MaterialTheme.colorScheme.onSurface
+            }
             Box(
                 modifier = Modifier
                     .size(width = 52.dp, height = 66.dp)
@@ -506,7 +521,8 @@ private fun DayStrip(
                         if (selected) {
                             Brush.horizontalGradient(listOf(HeroStart, HeroEnd))
                         } else {
-                            Brush.linearGradient(listOf(Color.White, Color.White))
+                            val surface = MaterialTheme.colorScheme.surfaceContainer
+                            Brush.linearGradient(listOf(surface, surface))
                         },
                     )
                     .clickable(
@@ -527,14 +543,14 @@ private fun DayStrip(
                     Spacer(Modifier.height(9.dp))
                     Text(
                         text = slot.date.format(weekdayFormatter),
-                        color = Color.Black,
+                        color = dayContentColor,
                         fontSize = 12.sp,
                         lineHeight = 16.sp,
                         fontWeight = FontWeight.Bold,
                     )
                     Text(
                         text = slot.date.dayOfMonth.toString(),
-                        color = Color.Black,
+                        color = dayContentColor,
                         fontSize = 20.sp,
                         lineHeight = 24.sp,
                         fontWeight = FontWeight.Bold,
@@ -585,7 +601,7 @@ private fun LessonsList(
                         .fillMaxWidth()
                         .height(76.dp),
                     shape = RoundedCornerShape(20.dp),
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.surfaceContainer,
                     shadowElevation = 2.dp,
                 ) {
                     Column(
@@ -595,13 +611,13 @@ private fun LessonsList(
                     ) {
                         Text(
                             text = emptyTitle,
-                            color = Color.Black,
+                            color = MaterialTheme.colorScheme.onSurface,
                             fontSize = 16.sp,
                             fontWeight = FontWeight.SemiBold,
                         )
                         Text(
                             text = emptyMessage,
-                            color = MutedText,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontSize = 13.sp,
                             lineHeight = 17.sp,
                         )
@@ -655,7 +671,11 @@ private fun LessonRow(
                 },
             onClick = onClick,
             shape = RoundedCornerShape(20.dp),
-            color = if (isCanceled) Color(0xFFFFF1F2) else Color.White,
+            color = if (isCanceled) {
+                MaterialTheme.colorScheme.errorContainer
+            } else {
+                MaterialTheme.colorScheme.surfaceContainer
+            },
             shadowElevation = 1.dp,
         ) {
             Row(
@@ -665,7 +685,10 @@ private fun LessonRow(
                 Box(
                     modifier = Modifier
                         .size(46.dp)
-                        .background(SubjectTile, RoundedCornerShape(12.dp)),
+                        .background(
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.14f),
+                            RoundedCornerShape(12.dp),
+                        ),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
@@ -683,7 +706,7 @@ private fun LessonRow(
                 ) {
                     Text(
                         text = subjectName,
-                        color = Color.Black,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontSize = 18.sp,
                         lineHeight = 22.sp,
                         fontWeight = FontWeight.SemiBold,
@@ -694,7 +717,7 @@ private fun LessonRow(
                     if (metadata.isNotEmpty()) {
                         Text(
                             text = metadata.joinToString(" · "),
-                            color = MutedText,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontSize = 14.sp,
                             lineHeight = 17.sp,
                             maxLines = 1,
@@ -704,7 +727,7 @@ private fun LessonRow(
                     lesson.theme?.takeIf { it.isNotBlank() }?.let { topic ->
                         Text(
                             text = topic,
-                            color = MutedText,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontSize = 13.sp,
                             lineHeight = 17.sp,
                             maxLines = 1,
@@ -744,21 +767,21 @@ private fun LessonTimeRail(
     ) {
         Text(
             text = lesson.hour.caption,
-            color = Color.Black,
+            color = MaterialTheme.colorScheme.onBackground,
             fontSize = 18.sp,
             lineHeight = 22.sp,
             fontWeight = FontWeight.Bold,
         )
         Text(
             text = lesson.hour.beginTime.clockDisplay(),
-            color = MutedText,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontSize = 13.sp,
             lineHeight = 16.sp,
             fontWeight = FontWeight.Medium,
         )
         Text(
             text = lesson.hour.endTime.clockDisplay(),
-            color = MutedLight,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.72f),
             fontSize = 13.sp,
             lineHeight = 16.sp,
             fontWeight = FontWeight.Medium,
@@ -788,6 +811,9 @@ private fun LessonDetailSheet(lesson: ScheduledLesson) {
         (if (!lesson.changeDescription.isNullOrBlank()) 1 else 0) +
         changeDetails.size
     val sheetHeight = (250 + detailRowCount * 45).coerceIn(390, 700).dp
+    val background = MaterialTheme.colorScheme.background
+    val surface = MaterialTheme.colorScheme.surfaceContainer
+    val surfaceHigh = MaterialTheme.colorScheme.surfaceContainerHigh
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -796,10 +822,9 @@ private fun LessonDetailSheet(lesson: ScheduledLesson) {
             .background(
                 Brush.verticalGradient(
                     colorStops = arrayOf(
-                        0f to Color(0xFFD3E7E7),
-                        0.26f to Color(0xFFC4E1DD),
-                        0.68f to Color(0xFFEDF1F3),
-                        1f to BackgroundBottom,
+                        0f to surfaceHigh,
+                        0.34f to surface,
+                        1f to background,
                     ),
                 ),
             ),
@@ -807,7 +832,7 @@ private fun LessonDetailSheet(lesson: ScheduledLesson) {
         Canvas(Modifier.fillMaxSize()) {
             drawCircle(
                 brush = Brush.radialGradient(
-                    colors = listOf(Color(0x4930A78E), Color.Transparent),
+                    colors = listOf(GradeyColors.Primary.copy(alpha = 0.28f), Color.Transparent),
                     center = Offset(size.width * 0.76f, size.height * 0.05f),
                     radius = size.width * 0.65f,
                 ),
@@ -823,12 +848,12 @@ private fun LessonDetailSheet(lesson: ScheduledLesson) {
             Box(
                 modifier = Modifier
                     .size(width = 34.dp, height = 5.dp)
-                    .background(Color(0xFF83A5A3), RoundedCornerShape(3.dp)),
+                    .background(MaterialTheme.colorScheme.outline, RoundedCornerShape(3.dp)),
             )
             Spacer(Modifier.height(16.dp))
             Text(
                 text = subjectName,
-                color = Color.Black,
+                color = MaterialTheme.colorScheme.onBackground,
                 fontSize = 20.sp,
                 lineHeight = 26.sp,
                 fontWeight = FontWeight.SemiBold,
@@ -871,7 +896,7 @@ private fun LessonDetailSheet(lesson: ScheduledLesson) {
                     .fillMaxWidth()
                     .height((18 + detailRowCount * 45).dp),
                 shape = RoundedCornerShape(20.dp),
-                color = Color.White,
+                color = MaterialTheme.colorScheme.surfaceContainer,
                 shadowElevation = 1.dp,
             ) {
                 Column(
@@ -962,14 +987,14 @@ private fun DetailRow(
         Column {
             Text(
                 text = label,
-                color = MutedText,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 13.sp,
                 lineHeight = 16.sp,
                 fontWeight = FontWeight.SemiBold,
             )
             Text(
                 text = value,
-                color = Color.Black,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontSize = 17.sp,
                 lineHeight = 20.sp,
                 fontWeight = FontWeight.Normal,
@@ -977,35 +1002,6 @@ private fun DetailRow(
                 overflow = TextOverflow.Ellipsis,
             )
         }
-    }
-}
-
-@Composable
-private fun TimetableBackgroundGlow() {
-    Canvas(modifier = Modifier.fillMaxSize()) {
-        drawRect(
-            brush = Brush.verticalGradient(
-                colorStops = arrayOf(
-                    0f to BackgroundTop,
-                    0.34f to BackgroundBottom,
-                    1f to BackgroundBottom,
-                ),
-            ),
-        )
-        drawRect(
-            brush = Brush.radialGradient(
-                colors = listOf(Color(0x3830A78E), Color.Transparent),
-                center = Offset(size.width, size.height * 0.22f),
-                radius = size.width * 0.78f,
-            ),
-        )
-        drawRect(
-            brush = Brush.radialGradient(
-                colors = listOf(Color(0x245EAEB5), Color.Transparent),
-                center = Offset(0f, size.height * 0.56f),
-                radius = size.width * 0.72f,
-            ),
-        )
     }
 }
 

@@ -32,8 +32,9 @@ wearCompose = "1.4.1"
 wearWatchface = "1.3.0"
 wearable = "20.0.1"
 work = "2.10.0"
-androidxTestExtJunit = "1.2.1"
-androidxTestRunner = "1.6.2"
+androidxTestEspresso = "3.7.0"
+androidxTestExtJunit = "1.3.0"
+androidxTestRunner = "1.7.0"
 
 [libraries]
 androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
@@ -67,6 +68,7 @@ androidx-wear-compose-navigation = { group = "androidx.wear.compose", name = "co
 androidx-wear-watchface-complications-data-source-ktx = { group = "androidx.wear.watchface", name = "watchface-complications-data-source-ktx", version.ref = "wearWatchface" }
 androidx-work-runtime-ktx = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "work" }
 androidx-test-ext-junit = { group = "androidx.test.ext", name = "junit", version.ref = "androidxTestExtJunit" }
+androidx-test-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "androidxTestEspresso" }
 androidx-test-runner = { group = "androidx.test", name = "runner", version.ref = "androidxTestRunner" }
 coil-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref = "coil" }
 coil-network-okhttp = { group = "io.coil-kt.coil3", name = "coil-network-okhttp", version.ref = "coil" }

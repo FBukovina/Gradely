@@ -30,6 +30,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -72,6 +73,7 @@ import com.bukovinafilip.gradey.domain.AbsencePrediction
 import com.bukovinafilip.gradey.domain.AbsencePredictionResult
 import com.bukovinafilip.gradey.domain.AbsencePredictionSubjectRow
 import com.bukovinafilip.gradey.domain.AbsencePresentationState
+import com.bukovinafilip.gradey.domain.AbsenceRiskLevel
 import com.bukovinafilip.gradey.domain.AbsenceRiskSummary
 import com.bukovinafilip.gradey.domain.AbsenceSubjectResolutionProgress
 import com.bukovinafilip.gradey.domain.AbsenceSubjectSummary
@@ -80,6 +82,7 @@ import com.bukovinafilip.gradey.domain.AbsenceTimelineSummary
 import com.bukovinafilip.gradey.domain.TimetableDates
 import com.bukovinafilip.gradey.model.AbsenceCounts
 import com.bukovinafilip.gradey.model.AbsenceResponse
+import com.bukovinafilip.gradey.ui.GradeyColors
 import java.time.format.FormatStyle
 import java.time.format.DateTimeFormatter
 import java.time.LocalDate
@@ -96,6 +99,7 @@ private val ExcusedGreen = Color(0xFF1DA565)
 private val RiskOrange = Color(0xFFFF8D28)
 private val LateOrange = Color(0xFFD98F10)
 private val MissedRed = Color(0xFFD95461)
+private val RiskWatchOrange = Color(0xFFFF9500)
 private val MutedText = Color(0xFF8A8A8E)
 private val CardWhite = Color.White
 private val DividerColor = Color(0xFFC6C6C8)
@@ -104,7 +108,6 @@ private val SoftGreen = Color(0xFFDFF2E9)
 private val SoftOrange = Color(0xFFF9EEDD)
 private val SoftRed = Color(0xFFF7E4E6)
 private val SoftGray = Color(0xFFF2F2F7)
-private val ProgressRail = Color(0xFFEFEFF0)
 private enum class AbsenceMode {
     Subjects,
     Days,
@@ -1287,10 +1290,7 @@ private fun ManualAbsenceLessonSelectionSheet(
 
 @Composable
 private fun SubjectRow(subject: AbsenceSubjectSummary, locale: java.util.Locale) {
-    val warning = subject.absencePercentage >= 15.0
-    val color = if (warning) RiskOrange else AccentTeal
-    val threshold = subject.threshold ?: 100.0
-    val progress = (subject.absencePercentage / threshold).toFloat().coerceIn(0f, 1f)
+    val color = subject.level.riskColor()
     val missedLabel = stringResource(R.string.absence_subject_missed, subject.base, subject.lessonsCount)
     val limitLabel = subject.missesUntilLimit?.let {
         stringResource(R.string.absence_more_until_limit, it)
@@ -1322,19 +1322,11 @@ private fun SubjectRow(subject: AbsenceSubjectSummary, locale: java.util.Locale)
             )
         }
         Spacer(Modifier.height(5.dp))
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(6.dp)
-                .background(ProgressRail, RoundedCornerShape(3.dp)),
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth(progress)
-                    .height(6.dp)
-                    .background(color, RoundedCornerShape(3.dp)),
-            )
-        }
+        RiskCapsuleBar(
+            percentage = subject.absencePercentage,
+            threshold = subject.threshold,
+            color = color,
+        )
         Spacer(Modifier.height(6.dp))
         Text(
             text = buildAnnotatedString {
@@ -1350,6 +1342,56 @@ private fun SubjectRow(subject: AbsenceSubjectSummary, locale: java.util.Locale)
             maxLines = 1,
         )
     }
+}
+
+@Composable
+private fun RiskCapsuleBar(
+    percentage: Double,
+    threshold: Double?,
+    color: Color,
+) {
+    val fraction = (
+        if (threshold != null && threshold > 0.0) {
+            percentage / threshold
+        } else {
+            percentage / 100.0
+        }
+    ).coerceIn(0.0, 1.0).toFloat()
+    val fillColor = if (threshold == null) {
+        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+    } else {
+        color
+    }
+    val railColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.12f)
+
+    Canvas(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(6.dp),
+    ) {
+        val cornerRadius = CornerRadius(size.height / 2f)
+        drawRoundRect(
+            color = railColor,
+            size = size,
+            cornerRadius = cornerRadius,
+        )
+        if (fraction > 0f) {
+            val fillWidth = max(size.width * fraction, minOf(6.dp.toPx(), size.width))
+            drawRoundRect(
+                color = fillColor,
+                size = Size(fillWidth, size.height),
+                cornerRadius = cornerRadius,
+            )
+        }
+    }
+}
+
+@Composable
+private fun AbsenceRiskLevel.riskColor(): Color = when (this) {
+    AbsenceRiskLevel.SAFE -> GradeyColors.Primary
+    AbsenceRiskLevel.WATCH -> RiskWatchOrange
+    AbsenceRiskLevel.HIGH, AbsenceRiskLevel.OVER_LIMIT -> GradeyColors.Poor
+    AbsenceRiskLevel.UNAVAILABLE -> MaterialTheme.colorScheme.onSurfaceVariant
 }
 
 @Composable

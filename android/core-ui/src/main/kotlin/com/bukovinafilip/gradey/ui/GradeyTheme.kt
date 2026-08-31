@@ -1,6 +1,7 @@
 package com.bukovinafilip.gradey.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -25,6 +26,7 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.Font
@@ -44,8 +46,10 @@ object GradeyColors {
     val SystemPurple = Color(0xFFAF52DE)
     val LightGroupedBackground = Color(0xFFF2F2F7)
     val LightGroupedSurface = Color(0xFFFFFFFF)
+    val LightTertiaryGroupedSurface = Color(0xFFF2F2F7)
     val DarkGroupedBackground = Color(0xFF080B0A)
     val DarkGroupedSurface = Color(0xFF171C1B)
+    val DarkTertiaryGroupedSurface = Color(0xFF2C2C2E)
 
     val AuroraGlows = listOf(
         Primary.copy(alpha = 0.30f),
@@ -77,6 +81,7 @@ private val LightScheme = lightColorScheme(
     background = GradeyColors.LightGroupedBackground,
     surface = GradeyColors.LightGroupedSurface,
     surfaceContainer = GradeyColors.LightGroupedSurface,
+    surfaceContainerHigh = GradeyColors.LightTertiaryGroupedSurface,
     surfaceContainerLow = Color(0xFFF8FAF9),
     surfaceVariant = Color(0xFFE8EEEC),
     onPrimary = GradeyColors.OnAccent,
@@ -90,6 +95,7 @@ private val DarkScheme = darkColorScheme(
     background = GradeyColors.DarkGroupedBackground,
     surface = GradeyColors.DarkGroupedSurface,
     surfaceContainer = GradeyColors.DarkGroupedSurface,
+    surfaceContainerHigh = GradeyColors.DarkTertiaryGroupedSurface,
     surfaceContainerLow = Color(0xFF111615),
     surfaceVariant = Color(0xFF28312F),
     onPrimary = GradeyColors.OnAccent,
@@ -160,7 +166,7 @@ fun GradeyHero(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(GradeyRadius.card))
-            .background(Brush.linearGradient(listOf(GradeyColors.Primary, GradeyColors.Secondary)))
+            .background(gradeyBrandGradient())
             .padding(GradeySpacing.xl),
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(GradeySpacing.sm)) {
@@ -175,14 +181,41 @@ fun GradeySectionCard(
     modifier: Modifier = Modifier,
     title: String? = null,
     content: @Composable () -> Unit,
+) = GradeySectionCard(
+    modifier = modifier,
+    title = title,
+    surfaceLevel = GradeyGroupedSurfaceLevel.SECONDARY,
+    content = content,
+)
+
+@Composable
+fun GradeySectionCard(
+    modifier: Modifier = Modifier,
+    title: String? = null,
+    surfaceLevel: GradeyGroupedSurfaceLevel,
+    content: @Composable () -> Unit,
 ) {
+    val shape = RoundedCornerShape(GradeyCardTokens.CornerRadius)
     Card(
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(GradeyRadius.card),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+        modifier = modifier
+            .fillMaxWidth()
+            .shadow(
+                elevation = GradeyCardTokens.ComposeElevation,
+                shape = shape,
+                clip = false,
+                ambientColor = Color.Black.copy(alpha = GradeyCardTokens.ShadowOpacity),
+                spotColor = Color.Black.copy(alpha = GradeyCardTokens.ShadowOpacity),
+            ),
+        shape = shape,
+        colors = CardDefaults.cardColors(containerColor = surfaceLevel.containerColor()),
+        border = BorderStroke(
+            GradeyCardTokens.OutlineWidth,
+            MaterialTheme.colorScheme.onSurface.copy(alpha = GradeyCardTokens.OutlineOpacity),
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         Column(
-            modifier = Modifier.padding(GradeySpacing.lg),
+            modifier = Modifier.padding(GradeyCardTokens.ContentPadding),
             verticalArrangement = Arrangement.spacedBy(GradeySpacing.md),
         ) {
             if (title != null) {

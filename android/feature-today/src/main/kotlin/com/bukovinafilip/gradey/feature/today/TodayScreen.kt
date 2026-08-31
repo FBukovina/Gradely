@@ -36,6 +36,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -49,6 +50,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.graphics.Brush
@@ -98,6 +100,7 @@ import com.bukovinafilip.gradey.model.NewMarkEvent
 import com.bukovinafilip.gradey.model.ScheduledLesson
 import com.bukovinafilip.gradey.model.StravaCZMenu
 import com.bukovinafilip.gradey.model.TimetableWeek
+import com.bukovinafilip.gradey.ui.GradeyColors
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -120,6 +123,7 @@ private val SoftMint = Color(0xFFDDF4EF)
 private val SoftGray = Color(0xFFF0F0F2)
 private val WarningOrange = Color(0xFFFF8D28)
 private val DangerRed = Color(0xFFE5545D)
+private val RiskWatchOrange = Color(0xFFFF9500)
 private val PragueZone = ZoneId.of("Europe/Prague")
 
 @Composable
@@ -1336,7 +1340,8 @@ private fun RiskRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         RiskRing(
-            progress = if (threshold != null && threshold > 0.0) percentage / threshold else percentage / 100.0,
+            percentage = percentage,
+            threshold = threshold,
             color = color,
         )
         Spacer(Modifier.width(3.dp))
@@ -1373,21 +1378,48 @@ private fun RiskRow(
 }
 
 @Composable
-private fun RiskRing(progress: Double, color: Color) {
-    Canvas(modifier = Modifier.size(58.dp)) {
-        val strokeWidth = 6.dp.toPx()
+private fun RiskRing(
+    percentage: Double,
+    threshold: Double?,
+    color: Color,
+) {
+    val progress = (
+        if (threshold != null && threshold > 0.0) {
+            percentage / threshold
+        } else {
+            percentage / 100.0
+        }
+    ).coerceIn(0.0, 1.0)
+    val fillColor = if (threshold == null) {
+        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+    } else {
+        color
+    }
+    val railColor = fillColor.copy(alpha = fillColor.alpha * 0.22f)
+
+    Canvas(modifier = Modifier.size(38.dp)) {
+        val strokeWidth = 4.5.dp.toPx()
+        val strokeInset = strokeWidth / 2f
+        val arcSize = Size(
+            width = size.width - strokeWidth,
+            height = size.height - strokeWidth,
+        )
         drawArc(
-            color = color.copy(alpha = 0.28f),
+            color = railColor,
             startAngle = -90f,
             sweepAngle = 360f,
             useCenter = false,
+            topLeft = Offset(strokeInset, strokeInset),
+            size = arcSize,
             style = Stroke(width = strokeWidth, cap = StrokeCap.Round),
         )
         drawArc(
-            color = color,
+            color = fillColor,
             startAngle = -90f,
-            sweepAngle = (progress.coerceIn(0.0, 1.0) * 360.0).toFloat(),
+            sweepAngle = (progress * 360.0).toFloat(),
             useCenter = false,
+            topLeft = Offset(strokeInset, strokeInset),
+            size = arcSize,
             style = Stroke(width = strokeWidth, cap = StrokeCap.Round),
         )
     }
@@ -1930,12 +1962,12 @@ private fun ScheduledLesson.displayTitle(fallback: String): String =
 private fun ScheduledLesson.details(): String =
     listOf(timeRange.takeIf { it.isNotBlank() }, roomTitle).filterNotNull().joinToString(" · ")
 
+@Composable
 private fun AbsenceRiskLevel.riskColor(): Color = when (this) {
-    AbsenceRiskLevel.SAFE -> AccentTeal
-    AbsenceRiskLevel.WATCH -> WarningOrange
-    AbsenceRiskLevel.HIGH -> WarningOrange
-    AbsenceRiskLevel.OVER_LIMIT -> DangerRed
-    AbsenceRiskLevel.UNAVAILABLE -> MutedText
+    AbsenceRiskLevel.SAFE -> GradeyColors.Primary
+    AbsenceRiskLevel.WATCH -> RiskWatchOrange
+    AbsenceRiskLevel.HIGH, AbsenceRiskLevel.OVER_LIMIT -> GradeyColors.Poor
+    AbsenceRiskLevel.UNAVAILABLE -> MaterialTheme.colorScheme.onSurfaceVariant
 }
 
 @Composable

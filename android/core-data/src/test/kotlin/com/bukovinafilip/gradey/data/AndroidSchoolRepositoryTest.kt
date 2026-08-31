@@ -794,6 +794,34 @@ class AndroidSchoolRepositoryTest {
     }
 
     @Test
+    fun absenceFallbackPropagatesTerminalTimetableSessionExpiry() = runTest {
+        val session = validSession()
+        val sessions = InMemorySchoolSessionStorage(session)
+        val cache = RoomGradeyCache(InMemoryCacheEntryDao(), GradeyJson)
+        cache.saveMarks(session.cacheScope, MarksResponse())
+        val client = FakeBakalariClient().apply {
+            timetable = { _, _, _ -> throw BakalariApiException(401, "expired") }
+            refresh = { _, _ -> throw BakalariApiException(400, "invalid_grant") }
+            loginResult = { _, _, _ -> throw BakalariApiException(400, "invalid credentials") }
+        }
+        val repository = repository(
+            client = client,
+            sessions = sessions,
+            cache = cache,
+            dateProvider = { LocalDate.of(2026, 2, 1) },
+        )
+
+        val failure = runCatching {
+            repository.resolveAbsenceSubjects(
+                AbsenceResponse(absences = listOf(Absence("2026-02-01", ok = 1))),
+            )
+        }.exceptionOrNull()
+
+        assertThat(failure).isInstanceOf(SchoolSessionExpiredException::class.java)
+        assertThat(sessions.load()).isNull()
+    }
+
+    @Test
     fun manualSelectionsPersistInSchoolScopeAndRecomputePartialDay() = runTest {
         val session = validSession()
         val otherSession = validSession().copy(linkedAccountID = "other-school")
@@ -906,6 +934,27 @@ class AndroidSchoolRepositoryTest {
     }
 
     @Test
+    fun predictionLessonSubjectLookupPropagatesTerminalSessionExpiry() = runTest {
+        val session = validSession()
+        val sessions = InMemorySchoolSessionStorage(session)
+        val cache = RoomGradeyCache(InMemoryCacheEntryDao(), GradeyJson)
+        cache.saveRawTimetable(session.cacheScope, "2026-06-15", TimetableResponse())
+        val client = FakeBakalariClient().apply {
+            marks = { _, _ -> throw BakalariApiException(401, "expired") }
+            refresh = { _, _ -> throw BakalariApiException(400, "invalid_grant") }
+            loginResult = { _, _, _ -> throw BakalariApiException(400, "invalid credentials") }
+        }
+        val repository = repository(client, sessions, cache)
+
+        val failure = runCatching {
+            repository.loadAbsencePredictionLessons("2026-06-16")
+        }.exceptionOrNull()
+
+        assertThat(failure).isInstanceOf(SchoolSessionExpiredException::class.java)
+        assertThat(sessions.load()).isNull()
+    }
+
+    @Test
     fun `what-if prediction uses the authenticated endpoint and parses its returned average`() = runTest {
         val subject = Subject(
             subjectInfo = SubjectInfo(id = "math", name = "Mathematics"),
@@ -993,6 +1042,12 @@ class AndroidSchoolRepositoryTest {
         val cache = RoomGradeyCache(InMemoryCacheEntryDao(), GradeyJson)
         val cached = DashboardData(MarksResponse(), user = UserResponse("Cached Student"))
         cache.saveDashboard(session.cacheScope, cached)
+        cache.saveNextLessonSnapshot(
+            NextLessonWidgetSnapshot(
+                cachedAtEpochMillis = 1,
+                lessons = listOf(NextLessonWidgetLesson("stale-lesson", 1)),
+            ),
+        )
         val client = FakeBakalariClient().apply {
             refresh = { _, _ -> throw BakalariApiException(400, "invalid_grant") }
             loginResult = { _, _, _ -> throw BakalariApiException(400, "invalid credentials") }
@@ -1004,6 +1059,7 @@ class AndroidSchoolRepositoryTest {
         assertThat(failure).isInstanceOf(SchoolSessionExpiredException::class.java)
         assertThat(sessions.load()).isNull()
         assertThat(cache.loadDashboard(session.cacheScope)).isEqualTo(cached)
+        assertThat(cache.loadNextLessonSnapshot()).isNull()
     }
 
     @Test
@@ -1019,6 +1075,48 @@ class AndroidSchoolRepositoryTest {
         assertThat(failure).isInstanceOf(SchoolSessionExpiredException::class.java)
         assertThat(client.loginCalls).isEqualTo(0)
         assertThat(sessions.load()).isNull()
+    }
+
+    @Test
+    fun damagedWidgetCacheCannotMaskUnrecoverableSessionExpiry() = runTest {
+        val backingDao = InMemoryCacheEntryDao()
+        val failingDao = object : CacheEntryDao by backingDao {
+            override suspend fun clear(key: String) {
+                if (key == "next-lesson-widget-snapshot") error("damaged cache")
+                backingDao.clear(key)
+            }
+        }
+        val client = FakeBakalariClient().apply {
+            refresh = { _, _ -> throw BakalariApiException(401, "invalid refresh token") }
+        }
+        val sessions = InMemorySchoolSessionStorage(expiredSession().copy(bakalari = null))
+        val repository = repository(client, sessions, RoomGradeyCache(failingDao, GradeyJson))
+
+        val failure = runCatching { repository.loadDashboard() }.exceptionOrNull()
+
+        assertThat(failure).isInstanceOf(SchoolSessionExpiredException::class.java)
+        assertThat(sessions.load()).isNull()
+    }
+
+    @Test
+    fun signedOutProjectionCleanupCannotClearAReplacementSessionsWidget() = runTest {
+        val session = validSession()
+        val sessions = InMemorySchoolSessionStorage(session)
+        val cache = RoomGradeyCache(InMemoryCacheEntryDao(), GradeyJson)
+        val snapshot = NextLessonWidgetSnapshot(
+            cachedAtEpochMillis = 1,
+            lessons = listOf(NextLessonWidgetLesson("replacement-lesson", 1)),
+        )
+        cache.saveNextLessonSnapshot(snapshot)
+        val repository = repository(FakeBakalariClient(), sessions, cache)
+
+        assertThat(repository.clearNextLessonSnapshotIfSignedOut()).isFalse()
+        assertThat(cache.loadNextLessonSnapshot()).isEqualTo(snapshot)
+
+        sessions.clear()
+
+        assertThat(repository.clearNextLessonSnapshotIfSignedOut()).isTrue()
+        assertThat(cache.loadNextLessonSnapshot()).isNull()
     }
 
     @Test

@@ -164,6 +164,24 @@ import java.io.File
 import java.time.LocalDate
 import java.time.ZoneId
 
+internal fun activeSchoolSessionForScope(
+    requestedSchoolScope: String,
+    currentSession: StoredSession?,
+): StoredSession? = currentSession?.takeIf { it.cacheScope == requestedSchoolScope }
+
+internal fun shouldRouteToSchoolReconnect(currentSession: StoredSession?): Boolean =
+    currentSession == null
+
+internal data class SchoolMutationOwner(
+    val gradeyAccountID: String?,
+    val isGuestMode: Boolean,
+)
+
+internal fun SchoolMutationOwner.isCurrent(
+    currentGradeyAccountID: String?,
+    currentGuestMode: Boolean,
+): Boolean = gradeyAccountID == currentGradeyAccountID && isGuestMode == currentGuestMode
+
 class MainActivity : ComponentActivity() {
     private var deepLinkSequence = 0L
     private val deepLinkRequests = MutableStateFlow(DeepLinkRequest())
@@ -778,6 +796,73 @@ private fun GradeyApp(
         gradeHistoryRefreshError = null
     }
 
+    suspend fun clearSchoolPlatformProjectionsAfterAccountChange(
+        onlyWhileSignedOut: Boolean = false,
+    ) = withContext(NonCancellable) {
+        val shouldPublishSignedOut = if (onlyWhileSignedOut) {
+            // This check and clear share the repository's session/publication mutex. A replacement
+            // session therefore either prevents the clear or commits after it; old cleanup cannot
+            // delete a newly published widget snapshot.
+            graph.schoolRepository.clearNextLessonSnapshotIfSignedOut()
+        } else {
+            try {
+                graph.cache?.clearNextLessonSnapshot()
+            } catch (_: Throwable) {
+                // A disposable widget-cache failure must not block the authoritative account change.
+            }
+            true
+        }
+        if (!shouldPublishSignedOut) return@withContext
+        try {
+            updateNextLessonWidgets(context.applicationContext)
+        } catch (_: Throwable) {
+            // A launcher host failure must not undo activation or reconnect routing.
+        }
+        try {
+            PhoneWearSyncPublisher.publish(
+                context.applicationContext,
+                com.bukovinafilip.gradey.model.GradeyWearSyncPayload.signedOut(),
+                isStillCurrent = {
+                    !onlyWhileSignedOut || graph.schoolRepository.currentStoredSession() == null
+                },
+            )
+        } catch (_: Throwable) {
+            // The phone session is authoritative even when no Wear OS device is paired.
+        }
+    }
+
+    suspend fun routeToSchoolReconnect() {
+        // A stale request from account A can report its terminal expiry after account B has already
+        // been activated. In that case B is authoritative and the old continuation must not tear it
+        // down or publish signed-out state over it.
+        if (!shouldRouteToSchoolReconnect(graph.schoolRepository.currentStoredSession())) return
+        dashboardViewModel.expireSession()
+        absence = null
+        resetAbsenceSubjectResolution()
+        resetTimetableState()
+        gradeHistorySnapshot = null
+        gradeHistoryRefreshError = null
+        activeLinkedAccountID = null
+        currentSchoolBaseURL = ""
+        reconnectLinkedAccount = null
+        reconnectLinkedAccountID = null
+        applyReconnectPrefill(null)
+        isAddingSchool = false
+        resetSignedInNavigation()
+        dataError = null
+        absenceRefreshError = null
+        schoolLoginError = context.getString(R.string.school_session_expired)
+        phase = AppPhase.NEEDS_SCHOOL
+        clearSchoolPlatformProjectionsAfterAccountChange(onlyWhileSignedOut = true)
+    }
+
+    suspend fun <T> withSchoolSessionRecovery(block: suspend () -> T): T = try {
+        block()
+    } catch (error: SchoolSessionExpiredException) {
+        routeToSchoolReconnect()
+        throw error
+    }
+
     fun startAbsenceSubjectResolution(response: AbsenceResponse) {
         absenceSubjectResolutionAttempt += 1
         val attempt = absenceSubjectResolutionAttempt
@@ -813,6 +898,8 @@ private fun GradeyApp(
                 }
             } catch (error: CancellationException) {
                 throw error
+            } catch (_: SchoolSessionExpiredException) {
+                if (attempt == absenceSubjectResolutionAttempt) routeToSchoolReconnect()
             } catch (error: Throwable) {
                 if (attempt == absenceSubjectResolutionAttempt) {
                     absenceSubjectError = error.userFacingMessage(context)
@@ -832,6 +919,9 @@ private fun GradeyApp(
         null
     } catch (error: CancellationException) {
         throw error
+    } catch (error: SchoolSessionExpiredException) {
+        routeToSchoolReconnect()
+        error.userFacingMessage(context)
     } catch (error: Throwable) {
         error.userFacingMessage(context)
     }
@@ -1013,7 +1103,35 @@ private fun GradeyApp(
         }
     }
 
-    suspend fun applyFreshTimetable(loaded: TimetableWeek) {
+    suspend fun applyFreshTimetable(loaded: TimetableWeek, requestedSchoolScope: String) {
+        // Resolve any current-week fallback before touching presentation state. If the account
+        // changes while that cache read is suspended, the final owner check below discards every
+        // projection from the old account rather than repopulating state cleared by the switch.
+        if (
+            activeSchoolSessionForScope(
+                requestedSchoolScope,
+                graph.schoolRepository.currentStoredSession(),
+            ) == null
+        ) return
+        val today = TimetableDates.today()
+        val currentWeekStart = TimetableDates.apiDateString(TimetableDates.monday(today))
+        val cachedCurrent = if (WearPayloadBuilder.currentWeekProjection(loaded, null, today) == null) {
+            try {
+                graph.schoolRepository.loadCachedTimetable(currentWeekStart)
+            } catch (error: CancellationException) {
+                throw error
+            } catch (_: Throwable) {
+                null
+            }
+        } else {
+            null
+        }
+        val publicationSession = activeSchoolSessionForScope(
+            requestedSchoolScope,
+            graph.schoolRepository.currentStoredSession(),
+        ) ?: return
+        // There is intentionally no suspension between this owner check and the assignments. An
+        // account switch therefore either wins afterwards by clearing them, or is observed above.
         timetable = loaded
         timetableRequestedWeek = loaded.weekStart
         timetableError = null
@@ -1024,31 +1142,23 @@ private fun GradeyApp(
         } catch (_: Throwable) {
             // A launcher/widget host failure must not hide a successful timetable refresh.
         }
+        val wearTimetable = WearPayloadBuilder.currentWeekProjection(loaded, cachedCurrent, today)
+            ?: return
         try {
             PhoneWearSyncPublisher.publish(
                 context.applicationContext,
-                WearPayloadBuilder.signedIn(loaded, dashboardViewModel.currentDashboard?.user, supportTier),
+                WearPayloadBuilder.signedIn(wearTimetable, dashboardViewModel.currentDashboard?.user, supportTier),
+                isStillCurrent = {
+                    activeSchoolSessionForScope(
+                        publicationSession.cacheScope,
+                        graph.schoolRepository.currentStoredSession(),
+                    ) != null
+                },
             )
         } catch (error: CancellationException) {
             throw error
         } catch (_: Throwable) {
             // A missing/unpaired watch must not hide a successful timetable refresh.
-        }
-    }
-
-    suspend fun clearSchoolPlatformProjectionsAfterAccountChange() = withContext(NonCancellable) {
-        try {
-            updateNextLessonWidgets(context.applicationContext)
-        } catch (_: Throwable) {
-            // The Room snapshot is already cleared; a launcher host failure must not undo activation.
-        }
-        try {
-            PhoneWearSyncPublisher.publish(
-                context.applicationContext,
-                com.bukovinafilip.gradey.model.GradeyWearSyncPayload.signedOut(),
-            )
-        } catch (_: Throwable) {
-            // The phone session is authoritative even when no Wear OS device is paired.
         }
     }
 
@@ -1066,16 +1176,30 @@ private fun GradeyApp(
         return session
     }
 
-    suspend fun loadTimetable(weekContaining: String): Throwable? = try {
-        timetableRequestedWeek = TimetableDates.apiDateString(
-            TimetableDates.monday(TimetableDates.parseApiDate(weekContaining) ?: TimetableDates.today()),
-        )
-        applyFreshTimetable(graph.schoolRepository.loadTimetable(weekContaining))
-        null
-    } catch (error: CancellationException) {
-        throw error
-    } catch (error: Throwable) {
-        error
+    suspend fun loadTimetable(weekContaining: String): Throwable? {
+        return try {
+            val requestedSchoolScope = graph.schoolRepository.currentStoredSession()?.cacheScope
+                ?: throw SchoolSessionExpiredException()
+            timetableRequestedWeek = TimetableDates.apiDateString(
+                TimetableDates.monday(TimetableDates.parseApiDate(weekContaining) ?: TimetableDates.today()),
+            )
+            val loaded = graph.schoolRepository.loadTimetable(weekContaining)
+            if (
+                activeSchoolSessionForScope(
+                    requestedSchoolScope,
+                    graph.schoolRepository.currentStoredSession(),
+                ) == null
+            ) return null
+            applyFreshTimetable(loaded, requestedSchoolScope)
+            null
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: SchoolSessionExpiredException) {
+            routeToSchoolReconnect()
+            error
+        } catch (error: Throwable) {
+            error
+        }
     }
 
     suspend fun loadTimetableCacheFirst(weekContaining: String): Throwable? {
@@ -1085,34 +1209,33 @@ private fun GradeyApp(
         timetableRequestedWeek = requested
         timetableError = null
         return try {
-            timetable = graph.schoolRepository.loadCachedTimetable(requested)
-            applyFreshTimetable(graph.schoolRepository.loadTimetable(requested))
+            val requestedSchoolScope = graph.schoolRepository.currentStoredSession()?.cacheScope
+                ?: throw SchoolSessionExpiredException()
+            val cached = graph.schoolRepository.loadCachedTimetable(requested)
+            if (
+                activeSchoolSessionForScope(
+                    requestedSchoolScope,
+                    graph.schoolRepository.currentStoredSession(),
+                ) == null
+            ) return null
+            timetable = cached
+            val loaded = graph.schoolRepository.loadTimetable(requested)
+            if (
+                activeSchoolSessionForScope(
+                    requestedSchoolScope,
+                    graph.schoolRepository.currentStoredSession(),
+                ) == null
+            ) return null
+            applyFreshTimetable(loaded, requestedSchoolScope)
             null
         } catch (error: CancellationException) {
             throw error
+        } catch (error: SchoolSessionExpiredException) {
+            routeToSchoolReconnect()
+            error
         } catch (error: Throwable) {
             error
         }
-    }
-
-    fun routeToSchoolReconnect() {
-        dashboardViewModel.expireSession()
-        absence = null
-        resetAbsenceSubjectResolution()
-        resetTimetableState()
-        gradeHistorySnapshot = null
-        gradeHistoryRefreshError = null
-        activeLinkedAccountID = null
-        currentSchoolBaseURL = ""
-        reconnectLinkedAccount = null
-        reconnectLinkedAccountID = null
-        applyReconnectPrefill(null)
-        isAddingSchool = false
-        resetSignedInNavigation()
-        dataError = null
-        absenceRefreshError = null
-        schoolLoginError = context.getString(R.string.school_session_expired)
-        phase = AppPhase.NEEDS_SCHOOL
     }
 
     suspend fun disconnectSchool() {
@@ -1313,6 +1436,7 @@ private fun GradeyApp(
         if (mutatingLinkedAccountID != null) {
             return context.getString(R.string.school_account_change_in_progress)
         }
+        val mutationOwner = SchoolMutationOwner(account?.id, isGuestMode)
         val previousSession = graph.schoolRepository.currentStoredSession()
 
         suspend fun rollback() {
@@ -1354,7 +1478,15 @@ private fun GradeyApp(
             if (previousSession?.cacheScope != associatedSession.cacheScope) {
                 clearSchoolPlatformProjectionsAfterAccountChange()
             }
-            null
+            // Reconcile any older expiry continuation that observed the sessionless handoff while
+            // this committed replacement was still waiting for the repository mutation boundary.
+            if (mutationOwner.isCurrent(account?.id, isGuestMode)) {
+                schoolLoginError = null
+                phase = AppPhase.SIGNED_IN
+                null
+            } else {
+                context.getString(R.string.school_account_change_in_progress)
+            }
         } catch (error: CancellationException) {
             if (!reconnectCommitted) rollback()
             throw error
@@ -1368,6 +1500,7 @@ private fun GradeyApp(
 
     suspend fun activateLinkedAccount(linked: LinkedSchoolAccount): Boolean {
         if (mutatingLinkedAccountID != null) return false
+        val mutationOwner = SchoolMutationOwner(account?.id, isGuestMode)
         mutatingLinkedAccountID = linked.id
         linkedAccountError = null
         try {
@@ -1383,7 +1516,14 @@ private fun GradeyApp(
                 clearSchoolPlatformProjectionsAfterAccountChange()
             }
             loadCachedSignedInData()
-            return true
+            // A stale expiry callback can transiently route while activation is in flight but before
+            // this session is stored. Successful activation is authoritative and restores the gate.
+            val ownerIsCurrent = mutationOwner.isCurrent(account?.id, isGuestMode)
+            if (ownerIsCurrent) {
+                schoolLoginError = null
+                phase = AppPhase.SIGNED_IN
+            }
+            return ownerIsCurrent
         } catch (error: CancellationException) {
             throw error
         } catch (error: Throwable) {
@@ -2075,7 +2215,25 @@ private fun GradeyApp(
     }
 
     suspend fun publishCurrentWearState() {
-        val currentTimetable = timetable ?: return
+        val publicationSession = graph.schoolRepository.currentStoredSession() ?: return
+        val displayedTimetable = timetable
+        val today = TimetableDates.today()
+        val currentWeekStart = TimetableDates.apiDateString(TimetableDates.monday(today))
+        val cachedCurrent = if (
+            WearPayloadBuilder.currentWeekProjection(displayedTimetable, null, today) == null
+        ) {
+            try {
+                graph.schoolRepository.loadCachedTimetable(currentWeekStart)
+            } catch (error: CancellationException) {
+                throw error
+            } catch (_: Throwable) {
+                null
+            }
+        } else {
+            null
+        }
+        val currentTimetable = WearPayloadBuilder.currentWeekProjection(displayedTimetable, cachedCurrent, today)
+            ?: return
         try {
             PhoneWearSyncPublisher.publish(
                 context.applicationContext,
@@ -2084,6 +2242,12 @@ private fun GradeyApp(
                     dashboardViewModel.currentDashboard?.user,
                     supportTier,
                 ),
+                isStillCurrent = {
+                    activeSchoolSessionForScope(
+                        publicationSession.cacheScope,
+                        graph.schoolRepository.currentStoredSession(),
+                    ) != null
+                },
             )
         } catch (error: CancellationException) {
             throw error
@@ -2368,6 +2532,12 @@ private fun GradeyApp(
         ) {
             linkedAccounts = runCatching { graph.linkedAccountRepository.localAccounts() }
                 .getOrDefault(linkedAccounts)
+        }
+        if (schoolSession == null) {
+            // Reconcile durable platform surfaces on every cold start. A process can die after the
+            // secure session is cleared but before the expiring request redraws the widget or sends
+            // signed-out Wear state; startup is the next authoritative chance to finish that work.
+            clearSchoolPlatformProjectionsAfterAccountChange(onlyWhileSignedOut = true)
         }
         activeLinkedAccountID = schoolSession?.linkedAccountID
         currentSchoolBaseURL = schoolSession?.baseURL.orEmpty()
@@ -3288,7 +3458,9 @@ private fun GradeyApp(
                         ?.trends
                         .orEmpty(),
                     onPredictSubjectAverage = { subject, markText, weight ->
-                        graph.schoolRepository.predictSubjectAverage(subject, markText, weight)
+                        withSchoolSessionRecovery {
+                            graph.schoolRepository.predictSubjectAverage(subject, markText, weight)
+                        }
                     },
                     refreshErrorMessage = marksRefreshError,
                     isRefreshing = isDashboardLoading,
@@ -3358,7 +3530,11 @@ private fun GradeyApp(
                             },
                             onSaveManualSelections = ::saveManualAbsenceSelections,
                             predictorScopeKey = "$currentSchoolBaseURL:${activeLinkedAccountID.orEmpty()}",
-                            onLoadPredictionLessons = graph.schoolRepository::loadAbsencePredictionLessons,
+                            onLoadPredictionLessons = { date ->
+                                withSchoolSessionRecovery {
+                                    graph.schoolRepository.loadAbsencePredictionLessons(date)
+                                }
+                            },
                             onOpenAccount = {
                                 signedInNavController.navigateToMainDestination(MainDestination.ACCOUNT)
                             },

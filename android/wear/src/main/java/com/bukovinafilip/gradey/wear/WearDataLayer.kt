@@ -13,11 +13,24 @@ import kotlinx.coroutines.tasks.await
 class WearDataLayerListenerService : WearableListenerService() {
     override fun onDataChanged(dataEvents: DataEventBuffer) {
         val store = (application as WearGradeyApplication).payloadStore
-        dataEvents.forEach { event ->
-            if (event.dataItem.uri.path != GradeyWearSyncContract.DATA_PATH) return@forEach
-            when (event.type) {
-                DataEvent.TYPE_CHANGED -> store.updateFrom(event.dataItem)
-                DataEvent.TYPE_DELETED -> store.clear()
+        // Apply deletions before replacements so a same-batch item from another node can become
+        // authoritative even when its generation is older than the removed node's payload.
+        for (index in 0 until dataEvents.count) {
+            val event = dataEvents[index]
+            if (
+                event.dataItem.uri.path == GradeyWearSyncContract.DATA_PATH &&
+                event.type == DataEvent.TYPE_DELETED
+            ) {
+                store.deleteSource(event.dataItem.uri.host)
+            }
+        }
+        for (index in 0 until dataEvents.count) {
+            val event = dataEvents[index]
+            if (
+                event.dataItem.uri.path == GradeyWearSyncContract.DATA_PATH &&
+                event.type == DataEvent.TYPE_CHANGED
+            ) {
+                store.updateFrom(event.dataItem)
             }
         }
     }
@@ -31,22 +44,36 @@ internal enum class WearRefreshResult {
 internal suspend fun refreshWearPayload(context: Context, store: WearPayloadStore): WearRefreshResult {
     val items = Wearable.getDataClient(context.applicationContext).dataItems.await()
     return try {
-        var updated = false
+        val results = mutableListOf<WearPayloadUpdateResult>()
+        val matchingSources = buildSet {
+            for (index in 0 until items.count) {
+                val item = items[index]
+                if (item.uri.path == GradeyWearSyncContract.DATA_PATH) item.uri.host?.let(::add)
+            }
+        }
+        store.retainOnlySources(matchingSources)
         for (index in 0 until items.count) {
             val item = items[index]
             if (item.uri.path == GradeyWearSyncContract.DATA_PATH) {
-                updated = store.updateFrom(item) || updated
+                results += store.updateFrom(item)
             }
         }
-        if (updated) WearRefreshResult.UPDATED else WearRefreshResult.NO_PHONE_PAYLOAD
+        wearRefreshResult(results)
     } finally {
         items.release()
     }
 }
 
-private fun WearPayloadStore.updateFrom(item: DataItem): Boolean {
-    val encoded = DataMapItem.fromDataItem(item).dataMap
-        .getByteArray(GradeyWearSyncContract.PAYLOAD_KEY)
-        ?: return false
-    return update(encoded)
+internal fun wearRefreshResult(results: Iterable<WearPayloadUpdateResult>): WearRefreshResult =
+    if (results.any { it != WearPayloadUpdateResult.INVALID }) {
+        WearRefreshResult.UPDATED
+    } else {
+        WearRefreshResult.NO_PHONE_PAYLOAD
+    }
+
+private fun WearPayloadStore.updateFrom(item: DataItem): WearPayloadUpdateResult {
+    val encoded = runCatching {
+        DataMapItem.fromDataItem(item).dataMap.getByteArray(GradeyWearSyncContract.PAYLOAD_KEY)
+    }.getOrNull() ?: return WearPayloadUpdateResult.INVALID
+    return update(encoded, item.uri.host)
 }

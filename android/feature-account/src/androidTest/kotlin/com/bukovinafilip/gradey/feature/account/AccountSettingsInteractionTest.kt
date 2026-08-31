@@ -7,13 +7,20 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotSelected
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import com.bukovinafilip.gradey.model.NotificationPreferences
 import com.bukovinafilip.gradey.ui.GradeyTheme
 import java.util.concurrent.atomic.AtomicInteger
 import org.junit.Assert.assertEquals
@@ -90,6 +97,38 @@ class AccountSettingsInteractionTest {
         composeRule.onNodeWithText(context.getString(R.string.support_open)).assertIsDisplayed()
     }
 
+    @Test
+    fun expandedOverviewExposesAndUpdatesItsSelectedTab() {
+        composeRule.setContent {
+            var destination by remember { mutableStateOf(AccountSettingsDestination.ACCOUNT) }
+            GradeyTheme {
+                AccountSettingsOverview(
+                    account = null,
+                    linkedAccounts = emptyList(),
+                    notificationPreferences = NotificationPreferences.Default,
+                    isStravaConnectedOnDevice = false,
+                    hasBakalariConnectionOnDevice = true,
+                    activeLinkedAccountID = null,
+                    notificationPermissionGranted = false,
+                    notificationsAvailable = false,
+                    selectedDestination = destination,
+                    onSelect = { destination = it },
+                )
+            }
+        }
+
+        destinationNode(AccountSettingsDestination.ACCOUNT)
+            .assert(tabRoleMatcher)
+            .assertIsSelected()
+        destinationNode(AccountSettingsDestination.CONNECTED_SERVICES)
+            .performScrollTo()
+            .assert(tabRoleMatcher)
+            .assertIsNotSelected()
+            .performClick()
+            .assertIsSelected()
+        destinationNode(AccountSettingsDestination.ACCOUNT).assertIsNotSelected()
+    }
+
     @Composable
     private fun TestAccountScreen(
         selectedDestination: AccountSettingsDestination?,
@@ -129,5 +168,9 @@ class AccountSettingsInteractionTest {
 
     private companion object {
         const val ReturnFromSupport = "Return from Support"
+        val tabRoleMatcher = SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Tab)
     }
+
+    private fun destinationNode(destination: AccountSettingsDestination) =
+        composeRule.onNodeWithText(context.getString(destination.titleResource))
 }

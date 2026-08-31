@@ -46,6 +46,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -768,16 +771,39 @@ private fun GradeyAIContextCard(controller: GradeyAIController, modifier: Modifi
                     )
                 }
             }
-            IconButton(
-                enabled = !controller.isRefreshingContext && !controller.isSending,
-                onClick = { scope.launch { controller.refreshContext() } },
-            ) {
-                if (controller.isRefreshingContext) {
-                    CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
-                } else {
-                    Icon(GradeyIcons.Refresh, contentDescription = stringResource(R.string.gradey_ai_context_refresh))
-                }
-            }
+            GradeyAIContextRefreshButton(
+                isRefreshing = controller.isRefreshingContext,
+                isSending = controller.isSending,
+                onRefresh = { scope.launch { controller.refreshContext() } },
+            )
+        }
+    }
+}
+
+@Composable
+internal fun GradeyAIContextRefreshButton(
+    isRefreshing: Boolean,
+    isSending: Boolean,
+    onRefresh: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val refreshDescription = stringResource(R.string.gradey_ai_context_refresh)
+    IconButton(
+        enabled = !isRefreshing && !isSending,
+        onClick = onRefresh,
+        modifier = modifier
+            .size(48.dp)
+            .semantics { contentDescription = refreshDescription },
+    ) {
+        if (isRefreshing) {
+            CircularProgressIndicator(
+                modifier = Modifier
+                    .size(20.dp)
+                    .clearAndSetSemantics {},
+                strokeWidth = 2.dp,
+            )
+        } else {
+            Icon(GradeyIcons.Refresh, contentDescription = null)
         }
     }
 }

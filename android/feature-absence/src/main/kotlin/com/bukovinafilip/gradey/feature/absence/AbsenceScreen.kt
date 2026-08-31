@@ -101,6 +101,8 @@ private val RiskOrange = Color(0xFFFF8D28)
 private val LateOrange = Color(0xFFD98F10)
 private val MissedRed = Color(0xFFD95461)
 private const val ManualDraftsSaveVersion = "manual-drafts-v1"
+private const val PredictionLessonsSaveVersion = "prediction-lessons-v1"
+private const val PredictionLessonFieldCount = 7
 internal const val ABSENCE_MODE_PICKER_TEST_TAG = "absence-mode-picker"
 internal const val ABSENCE_MODE_TEST_TAG_PREFIX = "absence-mode-"
 
@@ -130,6 +132,51 @@ private fun restoreManualDrafts(saved: List<String>): Map<String, Set<String>> {
         index += lessonCount
     }
     return restored
+}
+
+private val PredictionLessonsSaver = listSaver<List<AbsenceLessonCandidate>, String>(
+    save = { lessons -> savePredictionLessons(lessons) },
+    restore = ::restorePredictionLessons,
+)
+
+private val PredictionLessonCacheSaver = listSaver<Map<String, AbsenceLessonCandidate>, String>(
+    save = { lessonsByID -> savePredictionLessons(lessonsByID.values.sortedBy(AbsenceLessonCandidate::id)) },
+    restore = { saved -> restorePredictionLessons(saved).associateBy(AbsenceLessonCandidate::id) },
+)
+
+private val PredictionLessonIDsSaver = listSaver<Set<String>, String>(
+    save = { lessonIDs -> lessonIDs.sorted() },
+    restore = { lessonIDs -> lessonIDs.toSet() },
+)
+
+private fun savePredictionLessons(lessons: Iterable<AbsenceLessonCandidate>): List<String> = buildList {
+    add(PredictionLessonsSaveVersion)
+    lessons.forEach { lesson ->
+        add(lesson.id)
+        add(lesson.dateKey)
+        add(lesson.hourID)
+        add(lesson.hourCaption)
+        add(lesson.timeRange)
+        add(lesson.subjectKey)
+        add(lesson.subjectName)
+    }
+}
+
+private fun restorePredictionLessons(saved: List<String>): List<AbsenceLessonCandidate> {
+    if (saved.firstOrNull() != PredictionLessonsSaveVersion) return emptyList()
+    val fields = saved.drop(1)
+    if (fields.size % PredictionLessonFieldCount != 0) return emptyList()
+    return fields.chunked(PredictionLessonFieldCount).map { lesson ->
+        AbsenceLessonCandidate(
+            id = lesson[0],
+            dateKey = lesson[1],
+            hourID = lesson[2],
+            hourCaption = lesson[3],
+            timeRange = lesson[4],
+            subjectKey = lesson[5],
+            subjectName = lesson[6],
+        )
+    }
 }
 
 private fun reconcileManualDrafts(
@@ -260,8 +307,16 @@ fun AbsenceScreen(
     var manualSelectionError by remember(predictorScopeKey) { mutableStateOf<String?>(null) }
     var isSavingManualSelections by remember(predictorScopeKey) { mutableStateOf(false) }
     var savedPredictionSheetPresented by rememberSaveable(predictorScopeKey) { mutableStateOf(false) }
-    var predictionSelectedDate by remember(predictorScopeKey) { mutableStateOf(TimetableDates.today()) }
-    var predictionSelectedLessons by remember(predictorScopeKey) {
+    var predictionSelectedDateKey by rememberSaveable(predictorScopeKey) {
+        mutableStateOf(TimetableDates.apiDateString(TimetableDates.today()))
+    }
+    val predictionSelectedDate = remember(predictionSelectedDateKey) {
+        LocalDate.parse(predictionSelectedDateKey)
+    }
+    var predictionSelectedLessons by rememberSaveable(
+        predictorScopeKey,
+        stateSaver = PredictionLessonsSaver,
+    ) {
         mutableStateOf<List<AbsenceLessonCandidate>>(emptyList())
     }
     val scope = rememberCoroutineScope()
@@ -273,15 +328,30 @@ fun AbsenceScreen(
             if (isCurrentInteractionScope) manualDrafts else emptyMap(),
         )
     }
+    val currentPredictionSelectedLessons = if (isCurrentInteractionScope) {
+        predictionSelectedLessons
+    } else {
+        emptyList()
+    }
+    val currentPredictionSelectedDate = if (isCurrentInteractionScope) {
+        predictionSelectedDate
+    } else {
+        TimetableDates.today()
+    }
     val timeline = remember(response) { AbsenceTimeline.make(response) }
     val riskSummary = remember(response) {
         AbsenceRiskSummary.make(response, response.absencesPerSubject)
     }
-    val predictionResult = remember(timeline.total, riskSummary.subjects, predictionSelectedLessons, response.percentageThreshold) {
+    val predictionResult = remember(
+        timeline.total,
+        riskSummary.subjects,
+        currentPredictionSelectedLessons,
+        response.percentageThreshold,
+    ) {
         AbsencePrediction.project(
             currentTotalCounts = timeline.total,
             subjectRows = riskSummary.subjects,
-            selectedLessons = predictionSelectedLessons,
+            selectedLessons = currentPredictionSelectedLessons,
             threshold = response.percentageThreshold,
         )
     }
@@ -291,6 +361,8 @@ fun AbsenceScreen(
             savedManualSheetPresented = false
             savedPredictionSheetPresented = false
             manualDrafts = emptyMap()
+            predictionSelectedDateKey = TimetableDates.apiDateString(TimetableDates.today())
+            predictionSelectedLessons = emptyList()
         }
     }
 
@@ -425,14 +497,14 @@ fun AbsenceScreen(
 
     if (isCurrentInteractionScope && savedPredictionSheetPresented) {
         AbsencePredictionSheet(
-            initialDate = predictionSelectedDate,
+            initialDate = currentPredictionSelectedDate,
             minimumDate = TimetableDates.today(),
-            initialSelectedLessons = predictionSelectedLessons,
+            initialSelectedLessons = currentPredictionSelectedLessons,
             locale = locale,
             onLoadLessons = onLoadPredictionLessons,
             onDismiss = { savedPredictionSheetPresented = false },
             onDone = { selectedDate, lessons ->
-                predictionSelectedDate = selectedDate
+                predictionSelectedDateKey = TimetableDates.apiDateString(selectedDate)
                 predictionSelectedLessons = lessons
                 savedPredictionSheetPresented = false
             },
@@ -1054,13 +1126,19 @@ private fun AbsencePredictionSheet(
     onDismiss: () -> Unit,
     onDone: (LocalDate, List<AbsenceLessonCandidate>) -> Unit,
 ) {
-    var selectedDate by remember { mutableStateOf(maxOf(initialDate, minimumDate)) }
+    var selectedDateKey by rememberSaveable {
+        mutableStateOf(TimetableDates.apiDateString(maxOf(initialDate, minimumDate)))
+    }
+    val selectedDate = remember(selectedDateKey) { LocalDate.parse(selectedDateKey) }
     var lessons by remember { mutableStateOf<List<AbsenceLessonCandidate>>(emptyList()) }
     var lessonsByDate by remember { mutableStateOf<Map<String, List<AbsenceLessonCandidate>>>(emptyMap()) }
-    var lessonCacheByID by remember(initialSelectedLessons) {
+    var lessonCacheByID by rememberSaveable(
+        initialSelectedLessons,
+        stateSaver = PredictionLessonCacheSaver,
+    ) {
         mutableStateOf(initialSelectedLessons.associateBy(AbsenceLessonCandidate::id))
     }
-    var draftLessonIDs by remember(initialSelectedLessons) {
+    var draftLessonIDs by rememberSaveable(stateSaver = PredictionLessonIDsSaver) {
         mutableStateOf<Set<String>>(initialSelectedLessons.mapTo(mutableSetOf(), AbsenceLessonCandidate::id))
     }
     var isLoading by remember { mutableStateOf(false) }
@@ -1124,7 +1202,9 @@ private fun AbsencePredictionSheet(
                 ) {
                     TextButton(
                         enabled = selectedDate > minimumDate,
-                        onClick = { selectedDate = selectedDate.minusDays(1) },
+                        onClick = {
+                            selectedDateKey = TimetableDates.apiDateString(selectedDate.minusDays(1))
+                        },
                     ) {
                         Text(stringResource(R.string.absence_predictor_previous_day))
                     }
@@ -1137,7 +1217,11 @@ private fun AbsencePredictionSheet(
                         lineHeight = 20.sp,
                         fontWeight = FontWeight.SemiBold,
                     )
-                    TextButton(onClick = { selectedDate = selectedDate.plusDays(1) }) {
+                    TextButton(
+                        onClick = {
+                            selectedDateKey = TimetableDates.apiDateString(selectedDate.plusDays(1))
+                        },
+                    ) {
                         Text(stringResource(R.string.absence_predictor_next_day))
                     }
                 }

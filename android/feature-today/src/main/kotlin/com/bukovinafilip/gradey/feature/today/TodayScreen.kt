@@ -13,7 +13,9 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -131,6 +133,9 @@ private val PragueZone = ZoneId.of("Europe/Prague")
 
 internal const val TODAY_TRENDS_BACK_TEST_TAG = "todayTrendsBack"
 internal const val TODAY_RANGE_TEST_TAG_PREFIX = "todayTrendRange:"
+internal const val TODAY_ACTION_PILL_VISUAL_TEST_TAG = "todayActionPillVisual"
+internal const val TODAY_ABSENCE_PREDICTOR_CARD_TEST_TAG = "todayAbsencePredictorCard"
+internal const val TODAY_ABSENCE_PREDICTOR_ACTION_TEST_TAG = "todayAbsencePredictorAction"
 
 @Composable
 fun TodayStateScreen(
@@ -781,7 +786,7 @@ private fun LunchCard(
                         .weight(1f)
                         .padding(end = 8.dp),
                 )
-                ActionPill(text = stringResource(R.string.today_open), onClick = onOpenMeals)
+                TodayActionPill(text = stringResource(R.string.today_open), onClick = onOpenMeals)
             }
             Spacer(Modifier.height(12.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1347,7 +1352,7 @@ private fun AbsenceRiskCard(
                         .weight(1f)
                         .padding(end = 8.dp),
                 )
-                ActionPill(text = stringResource(R.string.today_open), onClick = onOpenAbsence)
+                TodayActionPill(text = stringResource(R.string.today_open), onClick = onOpenAbsence)
             }
             Spacer(Modifier.height(5.dp))
             if (rows.isEmpty()) {
@@ -1454,25 +1459,49 @@ private fun RiskRow(
 }
 
 @Composable
-private fun AbsencePredictorCard(onPlanAbsence: () -> Unit) {
-    DashboardSurface(modifier = Modifier.height(138.dp)) {
+internal fun AbsencePredictorCard(onPlanAbsence: () -> Unit) {
+    DashboardSurface(
+        modifier = Modifier
+            .heightIn(min = 138.dp)
+            .testTag(TODAY_ABSENCE_PREDICTOR_CARD_TEST_TAG),
+    ) {
         Column(
             modifier = Modifier
-                .fillMaxSize()
+                .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 15.dp),
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                GradeySectionHeader(
-                    text = stringResource(R.string.today_absence_predictor),
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(end = 8.dp),
-                )
-                ActionPill(text = stringResource(R.string.today_plan_absence), onClick = onPlanAbsence)
+            BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                val shouldStackHeader = LocalDensity.current.fontScale >= 1.5f || maxWidth < 300.dp
+                if (shouldStackHeader) {
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        GradeySectionHeader(text = stringResource(R.string.today_absence_predictor))
+                        TodayActionPill(
+                            text = stringResource(R.string.today_plan_absence),
+                            onClick = onPlanAbsence,
+                            modifier = Modifier
+                                .align(Alignment.End)
+                                .testTag(TODAY_ABSENCE_PREDICTOR_ACTION_TEST_TAG),
+                        )
+                    }
+                } else {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        GradeySectionHeader(
+                            text = stringResource(R.string.today_absence_predictor),
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(end = 8.dp),
+                        )
+                        TodayActionPill(
+                            text = stringResource(R.string.today_plan_absence),
+                            onClick = onPlanAbsence,
+                            modifier = Modifier.testTag(TODAY_ABSENCE_PREDICTOR_ACTION_TEST_TAG),
+                        )
+                    }
+                }
             }
             Spacer(Modifier.height(13.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1488,7 +1517,7 @@ private fun AbsencePredictorCard(onPlanAbsence: () -> Unit) {
                     )
                 }
                 Spacer(Modifier.width(13.dp))
-                Column {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = stringResource(R.string.today_no_planned_absences),
                         color = MaterialTheme.colorScheme.onSurface,
@@ -1498,8 +1527,6 @@ private fun AbsencePredictorCard(onPlanAbsence: () -> Unit) {
                     )
                     Text(
                         text = stringResource(R.string.today_plan_absence_body),
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 13.sp,
                         lineHeight = 17.sp,
@@ -1536,7 +1563,7 @@ private fun NewMarksAndTrendsCard(
                         .weight(1f)
                         .padding(end = 8.dp),
                 )
-                ActionPill(text = stringResource(R.string.today_view_all), onClick = onOpenTrends)
+                TodayActionPill(text = stringResource(R.string.today_view_all), onClick = onOpenTrends)
             }
             Spacer(Modifier.height(6.dp))
             newMarks.forEachIndexed { index, mark ->
@@ -1549,7 +1576,7 @@ private fun NewMarksAndTrendsCard(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable(onClick = onOpenMarks)
+                        .clickable(role = Role.Button, onClick = onOpenMarks)
                         .padding(horizontal = 16.dp, vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
@@ -1996,23 +2023,38 @@ private fun DashboardSurface(
 }
 
 @Composable
-private fun ActionPill(text: String, onClick: () -> Unit) {
-    Surface(
-        modifier = Modifier.height(28.dp),
-        onClick = onClick,
-        shape = RoundedCornerShape(18.dp),
-        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+internal fun TodayActionPill(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val shape = RoundedCornerShape(24.dp)
+    Box(
+        modifier = modifier
+            .widthIn(min = 48.dp)
+            .heightIn(min = 48.dp)
+            .clip(shape)
+            .clickable(role = Role.Button, onClick = onClick)
+            .semantics(mergeDescendants = true) {},
+        contentAlignment = Alignment.Center,
     ) {
-        Box(
-            modifier = Modifier.padding(horizontal = 14.dp),
-            contentAlignment = Alignment.Center,
+        Surface(
+            modifier = Modifier
+                .width(IntrinsicSize.Max)
+                .testTag(TODAY_ACTION_PILL_VISUAL_TEST_TAG),
+            shape = shape,
+            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
         ) {
             Text(
                 text = text,
+                modifier = Modifier
+                    .heightIn(min = 28.dp)
+                    .padding(horizontal = 14.dp, vertical = 6.dp),
                 color = MaterialTheme.colorScheme.primary,
                 fontSize = 13.sp,
                 lineHeight = 16.sp,
                 fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
             )
         }
     }

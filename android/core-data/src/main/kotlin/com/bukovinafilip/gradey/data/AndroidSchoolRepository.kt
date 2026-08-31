@@ -32,9 +32,11 @@ import com.bukovinafilip.gradey.network.BakalariApiException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import java.time.LocalDate
 
@@ -219,6 +221,8 @@ class AndroidSchoolRepository(
             }.subjects
         } catch (error: CancellationException) {
             throw error
+        } catch (error: SchoolSessionExpiredException) {
+            throw error
         } catch (_: Throwable) {
             emptyList()
         }
@@ -288,6 +292,8 @@ class AndroidSchoolRepository(
             }.subjects
         } catch (error: CancellationException) {
             throw error
+        } catch (error: SchoolSessionExpiredException) {
+            throw error
         } catch (_: Throwable) {
             emptyList()
         }
@@ -299,6 +305,17 @@ class AndroidSchoolRepository(
         val monday = TimetableDates.apiDateString(TimetableDates.monday(LocalDate.parse(weekContaining)))
         return cache.loadTimetable(session.cacheScope, monday)
     }
+
+    override suspend fun clearNextLessonSnapshotIfSignedOut(): Boolean =
+        sessionMutationMutex.withLock {
+            if (sessionStore.load() != null) return@withLock false
+            try {
+                cache.clearNextLessonSnapshot()
+            } catch (_: Throwable) {
+                // Session absence remains authoritative if the disposable projection is damaged.
+            }
+            true
+        }
 
     override suspend fun loadTimetable(weekContaining: String): TimetableWeek {
         val session = validSession()
@@ -398,8 +415,15 @@ class AndroidSchoolRepository(
             block(refreshed)
         }
 
-    private fun expireSession(cause: Throwable): Nothing {
+    private suspend fun expireSession(cause: Throwable): Nothing {
         sessionStore.clear()
+        // A rejected refresh/login makes the global launcher projection unsafe even though the
+        // account-scoped caches remain useful for reconnect/offline recovery.
+        try {
+            withContext(NonCancellable) { cache.clearNextLessonSnapshot() }
+        } catch (_: Throwable) {
+            // The rejected session remains authoritative if the disposable widget cache is damaged.
+        }
         throw SchoolSessionExpiredException(cause)
     }
 
@@ -496,6 +520,8 @@ class AndroidSchoolRepository(
             }
         }
     } catch (error: CancellationException) {
+        throw error
+    } catch (error: SchoolSessionExpiredException) {
         throw error
     } catch (_: Throwable) {
         null

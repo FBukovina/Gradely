@@ -17,6 +17,45 @@ import org.junit.Test
 
 class WearPayloadBuilderTest {
     @Test
+    fun currentWeekProjectionPrefersFreshCurrentWeek() {
+        val fresh = week("2026-08-31")
+        val cached = week("2026-08-31")
+
+        assertThat(
+            WearPayloadBuilder.currentWeekProjection(
+                preferred = fresh,
+                cachedCurrent = cached,
+                today = LocalDate.parse("2026-09-02"),
+            ),
+        ).isSameInstanceAs(fresh)
+    }
+
+    @Test
+    fun currentWeekProjectionUsesCacheInsteadOfBrowsedWeek() {
+        val browsed = week("2026-09-07")
+        val cached = week("2026-08-31")
+
+        assertThat(
+            WearPayloadBuilder.currentWeekProjection(
+                preferred = browsed,
+                cachedCurrent = cached,
+                today = LocalDate.parse("2026-09-02"),
+            ),
+        ).isSameInstanceAs(cached)
+    }
+
+    @Test
+    fun currentWeekProjectionReturnsNullWithoutCurrentCandidate() {
+        assertThat(
+            WearPayloadBuilder.currentWeekProjection(
+                preferred = week("2026-09-07"),
+                cachedCurrent = week("not-a-date"),
+                today = LocalDate.parse("2026-09-02"),
+            ),
+        ).isNull()
+    }
+
+    @Test
     fun buildsPhonePayloadWithoutCopyingSchoolCredentials() {
         val user = UserResponse(
             fullName = "Student Name",
@@ -92,6 +131,12 @@ class WearPayloadBuilderTest {
         dayType = dayType,
         lessons = listOf(lesson),
         isToday = false,
+    )
+
+    private fun week(weekStart: String) = TimetableWeek(
+        weekStart = weekStart,
+        days = emptyList(),
+        hours = emptyList(),
     )
 
     private fun lesson(changeKind: LessonChangeKind = LessonChangeKind.NONE) = ScheduledLesson(

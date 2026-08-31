@@ -50,6 +50,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -278,7 +281,10 @@ fun AccountScreen(
                     }
                 }
             }
-            Button(onClick = { showSignOutConfirmation = true }) {
+            Button(
+                onClick = { showSignOutConfirmation = true },
+                enabled = mutatingLinkedAccountID == null,
+            ) {
                 Text(
                     stringResource(
                         if (account == null) R.string.account_disconnect_bakalari else R.string.account_sign_out,
@@ -657,6 +663,7 @@ fun AccountScreen(
             },
             confirmButton = {
                 Button(
+                    enabled = mutatingLinkedAccountID == null,
                     onClick = {
                         pendingUnlink = null
                         onUnlinkLinkedAccount(linked)
@@ -702,6 +709,7 @@ fun AccountScreen(
                         showSignOutConfirmation = false
                         onSignOut()
                     },
+                    enabled = mutatingLinkedAccountID == null,
                 ) {
                     Text(
                         stringResource(
@@ -767,7 +775,7 @@ fun AccountScreen(
 }
 
 @Composable
-private fun AccountSettingsOverview(
+internal fun AccountSettingsOverview(
     account: GradeyAccount?,
     linkedAccounts: List<LinkedSchoolAccount>,
     notificationPreferences: NotificationPreferences,
@@ -806,76 +814,91 @@ private fun AccountSettingsOverview(
             stringResource(R.string.settings_overview_title),
             stringResource(R.string.settings_overview_subtitle),
         )
-        AccountSettingsDestination.entries.forEach { destination ->
-            val hasAttention = destination == AccountSettingsDestination.CONNECTED_SERVICES &&
-                (
-                    servicesOverview.bakalari == AccountSettingsServiceStatus.ACTION_REQUIRED ||
-                        servicesOverview.strava == AccountSettingsServiceStatus.ACTION_REQUIRED
-                )
-            val subtitle = when (destination) {
-                AccountSettingsDestination.ACCOUNT -> account?.email
-                    ?: stringResource(R.string.account_local_only_mode)
-                AccountSettingsDestination.NOTIFICATIONS -> notificationOverviewText(
-                    status = notificationStatus,
-                    quietHoursEndMinute = notificationPreferences.quietHoursEndMinute,
-                )
-                AccountSettingsDestination.CONNECTED_SERVICES -> servicesOverviewText(servicesOverview)
-                else -> stringResource(destination.subtitleResource)
-            }
-            Surface(
-                onClick = { onSelect(destination) },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(18.dp),
-                color = if (selectedDestination == destination) {
-                    MaterialTheme.colorScheme.primaryContainer
-                } else {
-                    MaterialTheme.colorScheme.surfaceContainer
-                },
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 18.dp, vertical = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(14.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Icon(
-                        imageVector = destination.icon,
-                        contentDescription = null,
-                        tint = if (hasAttention) {
-                            MaterialTheme.colorScheme.error
-                        } else {
-                            MaterialTheme.colorScheme.primary
-                        },
-                        modifier = Modifier.size(26.dp),
+        Column(
+            modifier = if (selectedDestination != null) Modifier.selectableGroup() else Modifier,
+            verticalArrangement = Arrangement.spacedBy(GradeySpacing.lg),
+        ) {
+            AccountSettingsDestination.entries.forEach { destination ->
+                val hasAttention = destination == AccountSettingsDestination.CONNECTED_SERVICES &&
+                    (
+                        servicesOverview.bakalari == AccountSettingsServiceStatus.ACTION_REQUIRED ||
+                            servicesOverview.strava == AccountSettingsServiceStatus.ACTION_REQUIRED
                     )
-                    Column(
-                        modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(3.dp),
+                val subtitle = when (destination) {
+                    AccountSettingsDestination.ACCOUNT -> account?.email
+                        ?: stringResource(R.string.account_local_only_mode)
+                    AccountSettingsDestination.NOTIFICATIONS -> notificationOverviewText(
+                        status = notificationStatus,
+                        quietHoursEndMinute = notificationPreferences.quietHoursEndMinute,
+                    )
+                    AccountSettingsDestination.CONNECTED_SERVICES -> servicesOverviewText(servicesOverview)
+                    else -> stringResource(destination.subtitleResource)
+                }
+                val selectionSemantics = if (selectedDestination != null) {
+                    Modifier.semantics {
+                        selected = selectedDestination == destination
+                        role = Role.Tab
+                    }
+                } else {
+                    Modifier
+                }
+                Surface(
+                    onClick = { onSelect(destination) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .then(selectionSemantics),
+                    shape = RoundedCornerShape(18.dp),
+                    color = if (selectedDestination == destination) {
+                        MaterialTheme.colorScheme.primaryContainer
+                    } else {
+                        MaterialTheme.colorScheme.surfaceContainer
+                    },
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 18.dp, vertical = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text(
-                            text = stringResource(destination.titleResource),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold,
+                        Icon(
+                            imageVector = destination.icon,
+                            contentDescription = null,
+                            tint = if (hasAttention) {
+                                MaterialTheme.colorScheme.error
+                            } else {
+                                MaterialTheme.colorScheme.primary
+                            },
+                            modifier = Modifier.size(26.dp),
                         )
-                        Text(
-                            text = subtitle,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(3.dp),
+                        ) {
+                            Text(
+                                text = stringResource(destination.titleResource),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold,
+                            )
+                            Text(
+                                text = subtitle,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        Icon(
+                            imageVector = if (hasAttention) GradeyIcons.ErrorCircle else GradeyIcons.ArrowRight,
+                            contentDescription = if (hasAttention) {
+                                stringResource(R.string.account_status_action_required)
+                            } else {
+                                null
+                            },
+                            tint = if (hasAttention) {
+                                MaterialTheme.colorScheme.error
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
+                            modifier = Modifier.size(22.dp),
                         )
                     }
-                    Icon(
-                        imageVector = if (hasAttention) GradeyIcons.ErrorCircle else GradeyIcons.ArrowRight,
-                        contentDescription = if (hasAttention) {
-                            stringResource(R.string.account_status_action_required)
-                        } else {
-                            null
-                        },
-                        tint = if (hasAttention) {
-                            MaterialTheme.colorScheme.error
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        },
-                        modifier = Modifier.size(22.dp),
-                    )
                 }
             }
         }

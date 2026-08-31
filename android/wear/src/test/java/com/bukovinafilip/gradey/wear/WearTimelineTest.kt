@@ -84,6 +84,31 @@ class WearTimelineTest {
     }
 
     @Test
+    fun priorWeekIsStaleAfterRolloverEvenWhenRepublishedWithFreshTimestamp() {
+        val priorWeek = timetable(
+            today to listOf(lesson("old", today, 10, 0, 10, 45)),
+        )
+        val nextMondayNow = today.plusWeeks(1)
+            .atTime(9, 15)
+            .atZone(zone)
+            .toInstant()
+            .toEpochMilli()
+        val freshlyRepublished = priorWeek.copy(cachedAtEpochMillis = nextMondayNow)
+        val payload = GradeyWearSyncPayload(
+            generatedAtEpochMillis = nextMondayNow,
+            isSignedIn = true,
+            timetable = freshlyRepublished,
+        )
+
+        assertThat(WearTimeline.nowPage(freshlyRepublished, nextMondayNow, zone))
+            .isEqualTo(WearNowPage.Stale)
+        assertThat(WearTimeline.remainingLessonsToday(freshlyRepublished, nextMondayNow, zone))
+            .isEmpty()
+        assertThat(WearTimeline.nowAndNext(payload, nextMondayNow, zone))
+            .isEqualTo(WearNowNext(null, null))
+    }
+
+    @Test
     fun nowAndNext_usesRealSignedInPayloadAndRejectsSignedOutPayload() {
         val current = lesson("current", today, 9, 0, 9, 30)
         val next = lesson("next", today, 10, 0, 10, 45)

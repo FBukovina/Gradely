@@ -58,6 +58,7 @@ interface SchoolRepository {
     suspend fun disassociateCurrentSession(accountID: String): StoredSession?
     suspend fun logout()
     suspend fun clearLocalCaches() = Unit
+    suspend fun clearNextLessonSnapshotIfSignedOut(): Boolean = currentStoredSession() == null
     suspend fun loadCachedDashboard(): DashboardData?
     suspend fun loadCachedAbsence(): AbsenceResponse?
     suspend fun loadDashboard(forceRefresh: Boolean = false): DashboardData

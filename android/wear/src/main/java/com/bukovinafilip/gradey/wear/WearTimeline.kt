@@ -34,15 +34,16 @@ internal data class WearNowNext(
 /** Pure watch presentation rules, kept here so UI and complications always agree. */
 internal object WearTimeline {
     const val StaleIntervalMillis = 7L * 24 * 60 * 60 * 1_000
+    private val SchoolZone: ZoneId = ZoneId.of("Europe/Prague")
 
     fun nowPage(
         timetable: GradeyWearTimetable?,
         nowEpochMillis: Long = System.currentTimeMillis(),
-        zoneId: ZoneId = ZoneId.systemDefault(),
+        zoneId: ZoneId = SchoolZone,
         staleIntervalMillis: Long = StaleIntervalMillis,
     ): WearNowPage {
         if (timetable == null) return WearNowPage.NoTimetable
-        if (isStale(timetable, nowEpochMillis, staleIntervalMillis)) return WearNowPage.Stale
+        if (isStale(timetable, nowEpochMillis, zoneId, staleIntervalMillis)) return WearNowPage.Stale
 
         val lessons = todaysLessons(timetable, nowEpochMillis, zoneId)
         if (lessons.isEmpty()) return WearNowPage.DoneForToday
@@ -77,10 +78,13 @@ internal object WearTimeline {
     fun remainingLessonsToday(
         timetable: GradeyWearTimetable?,
         nowEpochMillis: Long = System.currentTimeMillis(),
-        zoneId: ZoneId = ZoneId.systemDefault(),
+        zoneId: ZoneId = SchoolZone,
         staleIntervalMillis: Long = StaleIntervalMillis,
     ): List<GradeyWearTimetableLesson> {
-        if (timetable == null || isStale(timetable, nowEpochMillis, staleIntervalMillis)) return emptyList()
+        if (
+            timetable == null ||
+            isStale(timetable, nowEpochMillis, zoneId, staleIntervalMillis)
+        ) return emptyList()
         return todaysLessons(timetable, nowEpochMillis, zoneId).filter { lesson ->
             lesson.changeKind != NextLessonWidgetChangeKind.CANCELED &&
                 (lesson.startEpochMillis?.let { it > nowEpochMillis } ?: (lesson.sortEpochMillis > nowEpochMillis))
@@ -90,10 +94,14 @@ internal object WearTimeline {
     fun nowAndNext(
         payload: GradeyWearSyncPayload?,
         nowEpochMillis: Long = System.currentTimeMillis(),
+        zoneId: ZoneId = SchoolZone,
         staleIntervalMillis: Long = StaleIntervalMillis,
     ): WearNowNext {
         val timetable = payload?.takeIf { it.isSignedIn }?.timetable
-        if (timetable == null || isStale(timetable, nowEpochMillis, staleIntervalMillis)) {
+        if (
+            timetable == null ||
+            isStale(timetable, nowEpochMillis, zoneId, staleIntervalMillis)
+        ) {
             return WearNowNext(current = null, next = null)
         }
         val lessons = timetable.days
@@ -138,8 +146,16 @@ internal object WearTimeline {
     private fun isStale(
         timetable: GradeyWearTimetable,
         nowEpochMillis: Long,
+        zoneId: ZoneId,
         staleIntervalMillis: Long,
-    ): Boolean = nowEpochMillis - timetable.cachedAtEpochMillis > staleIntervalMillis
+    ): Boolean {
+        val today = Instant.ofEpochMilli(nowEpochMillis).atZone(zoneId).toLocalDate()
+        val currentMonday = today.minusDays((today.dayOfWeek.value - 1).toLong())
+        val payloadMonday = runCatching { LocalDate.parse(timetable.weekStart) }.getOrNull()
+            ?: return true
+        return payloadMonday != currentMonday ||
+            nowEpochMillis - timetable.cachedAtEpochMillis > staleIntervalMillis
+    }
 }
 
 /**

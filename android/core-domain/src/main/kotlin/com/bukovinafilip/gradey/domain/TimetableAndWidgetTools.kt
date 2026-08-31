@@ -262,6 +262,18 @@ object WearLessonSelector {
 }
 
 object WearPayloadBuilder {
+    fun currentWeekProjection(
+        preferred: TimetableWeek?,
+        cachedCurrent: TimetableWeek?,
+        today: LocalDate = TimetableDates.today(),
+    ): TimetableWeek? {
+        val currentMonday = TimetableDates.monday(today)
+        return listOfNotNull(preferred, cachedCurrent).firstOrNull { week ->
+            TimetableDates.parseApiDate(week.weekStart)
+                ?.let(TimetableDates::monday) == currentMonday
+        }
+    }
+
     fun signedIn(
         week: TimetableWeek,
         user: UserResponse? = null,

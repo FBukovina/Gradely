@@ -44,4 +44,22 @@ jobs:
         uses: gradle/actions/setup-gradle@v6
 
       - name: Verify Android phone and Wear projects
-        run: ./gradlew :app:lintDebug :app:assembleDebug :wear:assembleDebug test --stacktrace
+        run: >-
+          ./gradlew
+          :app:lintDebug
+          :app:assembleDebug
+          :wear:assembleDebug
+          test
+          :app:compileDebugAndroidTestKotlin
+          :core-data:compileDebugAndroidTestKotlin
+          :core-ui:compileDebugAndroidTestKotlin
+          :feature-absence:compileDebugAndroidTestKotlin
+          :feature-account:compileDebugAndroidTestKotlin
+          :feature-auth:compileDebugAndroidTestKotlin
+          :feature-gradey-ai:compileDebugAndroidTestKotlin
+          :feature-login:compileDebugAndroidTestKotlin
+          :feature-stravacz:compileDebugAndroidTestKotlin
+          :feature-subjects:compileDebugAndroidTestKotlin
+          :feature-timetable:compileDebugAndroidTestKotlin
+          :feature-today:compileDebugAndroidTestKotlin
+          --stacktrace

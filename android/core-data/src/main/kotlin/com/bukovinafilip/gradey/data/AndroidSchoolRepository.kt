@@ -45,101 +45,110 @@ class AndroidSchoolRepository(
     private val timetableFallbackTimeoutMillis: Long = 12_000L,
     private val timetableFallbackBatchSize: Int = 4,
 ) : SchoolRepository {
-    private val refreshMutex = Mutex()
+    // Token rotation and explicit session changes share one ordering boundary so
+    // a late refresh cannot restore a signed-out or previously active account.
+    private val sessionMutationMutex = Mutex()
 
     override suspend fun bootstrapSession(): StoredSession? = sessionStore.load()
 
     override suspend fun currentStoredSession(): StoredSession? = sessionStore.load()
 
-    override suspend fun login(schoolURL: String, username: String, password: String): StoredSession {
-        require(username.trim().isNotEmpty() && password.isNotEmpty()) { "Missing username or password." }
-        val baseURL = SchoolURLNormalizer.normalizedBaseURL(schoolURL)
-        val trimmedUsername = username.trim()
-        val response = bakalariClient.login(baseURL, trimmedUsername, password)
-        val session = StoredSession(
-            accessToken = response.accessToken,
-            refreshToken = response.refreshToken,
-            tokenType = response.tokenType,
-            expiresAtEpochMillis = System.currentTimeMillis() + response.expiresIn * 1000L,
-            baseURL = baseURL,
-            provider = SchoolProvider.BAKALARI,
-            bakalari = BakalariCredentials(trimmedUsername, password),
-        )
-        sessionStore.save(session)
-        return session
-    }
-
-    override suspend fun restoreSession(session: StoredSession): StoredSession {
-        sessionStore.save(session)
-        return session
-    }
-
-    override suspend fun activateLinkedSchoolAccount(session: StoredSession): StoredSession {
-        val existing = sessionStore.load()
-        if (
-            existing != null &&
-            existing.provider == session.provider &&
-            existing.baseURL == session.baseURL &&
-            existing.linkedAccountID != null &&
-            existing.linkedAccountID == session.linkedAccountID
-        ) {
-            val preserved = existing.copy(
-                bakalari = existing.bakalari ?: session.bakalari,
-                linkedAccountID = session.linkedAccountID,
-                linkedAccountDisplayName = session.linkedAccountDisplayName,
-                linkedAccountSchoolName = session.linkedAccountSchoolName,
-            )
-            sessionStore.save(preserved)
-            return preserved
-        }
-
-        val credentials = session.bakalari
-        val activated = if (credentials != null) {
-            val response = bakalariClient.login(
-                session.baseURL,
-                credentials.username,
-                credentials.password,
-            )
-            session.copy(
+    override suspend fun login(schoolURL: String, username: String, password: String): StoredSession =
+        sessionMutationMutex.withLock {
+            require(username.trim().isNotEmpty() && password.isNotEmpty()) { "Missing username or password." }
+            val baseURL = SchoolURLNormalizer.normalizedBaseURL(schoolURL)
+            val trimmedUsername = username.trim()
+            val response = bakalariClient.login(baseURL, trimmedUsername, password)
+            val session = StoredSession(
                 accessToken = response.accessToken,
                 refreshToken = response.refreshToken,
                 tokenType = response.tokenType,
-                expiresAtEpochMillis = System.currentTimeMillis() + response.expiresIn * 1_000L,
+                expiresAtEpochMillis = System.currentTimeMillis() + response.expiresIn * 1000L,
+                baseURL = baseURL,
+                provider = SchoolProvider.BAKALARI,
+                bakalari = BakalariCredentials(trimmedUsername, password),
             )
-        } else {
+            saveReplacingSchoolScope(session)
             session
         }
-        sessionStore.save(activated)
-        return activated
-    }
 
-    override suspend fun associateCurrentSession(account: LinkedSchoolAccount): StoredSession {
-        val current = sessionStore.load() ?: throw SchoolSessionExpiredException()
-        require(account.provider == LinkedAccountProvider.from(current.provider)) {
-            "The linked account provider does not match the current school session."
+    override suspend fun restoreSession(session: StoredSession): StoredSession =
+        sessionMutationMutex.withLock {
+            saveReplacingSchoolScope(session)
+            session
         }
-        val associated = current.copy(
-            linkedAccountID = account.id,
-            linkedAccountDisplayName = account.displayName,
-            linkedAccountSchoolName = account.schoolName,
-        )
-        sessionStore.save(associated)
-        return associated
-    }
 
-    override suspend fun disassociateCurrentSession(accountID: String): StoredSession? {
-        val current = sessionStore.load() ?: return null
-        if (current.linkedAccountID != accountID) return current
-        val local = current.copy(
-            linkedAccountID = null,
-            linkedAccountDisplayName = null,
-            linkedAccountSchoolName = null,
-        )
-        sessionStore.save(local)
-        return local
-    }
+    override suspend fun activateLinkedSchoolAccount(session: StoredSession): StoredSession =
+        sessionMutationMutex.withLock {
+            val existing = sessionStore.load()
+            if (
+                existing != null &&
+                existing.provider == session.provider &&
+                existing.baseURL == session.baseURL &&
+                existing.linkedAccountID != null &&
+                existing.linkedAccountID == session.linkedAccountID
+            ) {
+                val preserved = existing.copy(
+                    bakalari = existing.bakalari ?: session.bakalari,
+                    linkedAccountID = session.linkedAccountID,
+                    linkedAccountDisplayName = session.linkedAccountDisplayName,
+                    linkedAccountSchoolName = session.linkedAccountSchoolName,
+                )
+                saveReplacingSchoolScope(preserved)
+                return@withLock preserved
+            }
 
-    override suspend fun logout() {
+            val credentials = session.bakalari
+            val activated = if (credentials != null) {
+                val response = bakalariClient.login(
+                    session.baseURL,
+                    credentials.username,
+                    credentials.password,
+                )
+                session.copy(
+                    accessToken = response.accessToken,
+                    refreshToken = response.refreshToken,
+                    tokenType = response.tokenType,
+                    expiresAtEpochMillis = System.currentTimeMillis() + response.expiresIn * 1_000L,
+                )
+            } else {
+                session
+            }
+            saveReplacingSchoolScope(activated)
+            activated
+        }
+
+    override suspend fun associateCurrentSession(account: LinkedSchoolAccount): StoredSession =
+        sessionMutationMutex.withLock {
+            val current = sessionStore.load() ?: throw SchoolSessionExpiredException()
+            require(account.provider == LinkedAccountProvider.from(current.provider)) {
+                "The linked account provider does not match the current school session."
+            }
+            val associated = current.copy(
+                linkedAccountID = account.id,
+                linkedAccountDisplayName = account.displayName,
+                linkedAccountSchoolName = account.schoolName,
+            )
+            // This only relabels the same provider session; its widget data still belongs to this student.
+            sessionStore.save(associated)
+            associated
+        }
+
+    override suspend fun disassociateCurrentSession(accountID: String): StoredSession? =
+        sessionMutationMutex.withLock {
+            val current = sessionStore.load() ?: return@withLock null
+            if (current.linkedAccountID != accountID) return@withLock current
+            val local = current.copy(
+                linkedAccountID = null,
+                linkedAccountDisplayName = null,
+                linkedAccountSchoolName = null,
+            )
+            // Detaching cloud metadata does not change the underlying local student.
+            sessionStore.save(local)
+            local
+        }
+
+    override suspend fun logout() = sessionMutationMutex.withLock {
         sessionStore.clear()
         clearLocalCaches()
     }
@@ -158,11 +167,9 @@ class AndroidSchoolRepository(
         val cachedAbsence = cache.loadAbsence(session.cacheScope)
 
         val marks = fetchMarks(session)
-        cache.saveMarks(session.cacheScope, marks)
         val absence = async { optionalAbsence(session) }
         val user = async { optionalUser(session) }
         val absenceResult = absence.await()
-        if (absenceResult != null) cache.saveAbsence(session.cacheScope, absenceResult)
         val data = DashboardData(
             marksResponse = marks,
             absencesPerSubject = absenceResult?.absencesPerSubject
@@ -170,14 +177,20 @@ class AndroidSchoolRepository(
                 ?: cachedDashboard?.absencesPerSubject.orEmpty(),
             user = user.await()?.resolvedFor(session) ?: cachedDashboard?.user,
         )
-        cache.saveDashboard(session.cacheScope, data)
+        publishForActiveSession(session) {
+            cache.saveMarks(session.cacheScope, marks)
+            if (absenceResult != null) cache.saveAbsence(session.cacheScope, absenceResult)
+            cache.saveDashboard(session.cacheScope, data)
+        }
         data
     }
 
     override suspend fun loadAbsence(forceRefresh: Boolean): AbsenceResponse {
         val session = validSession()
         val response = fetchAbsence(session)
-        cache.saveAbsence(session.cacheScope, response)
+        publishForActiveSession(session) {
+            cache.saveAbsence(session.cacheScope, response)
+        }
         return response
     }
 
@@ -199,7 +212,9 @@ class AndroidSchoolRepository(
         val term = AbsenceTerms.resolve(response, dateProvider())
         val markSubjects = try {
             cache.loadMarks(session.cacheScope)?.subjects ?: fetchMarks(session).also {
-                cache.saveMarks(session.cacheScope, it)
+                publishForActiveSession(session) {
+                    cache.saveMarks(session.cacheScope, it)
+                }
             }.subjects
         } catch (error: CancellationException) {
             throw error
@@ -242,15 +257,17 @@ class AndroidSchoolRepository(
 
     override suspend fun saveManualAbsenceLessonSelections(selections: Map<String, Set<String>>) {
         val session = validSession()
-        val current = cache.loadAbsenceLessonSelections(session.cacheScope) ?: AbsenceLessonSelections()
-        val merged = current.selectedLessonIDsByDate.toMutableMap()
-        selections.forEach { (dateKey, lessonIDs) ->
-            merged[dateKey] = lessonIDs.sorted()
+        publishForActiveSession(session) {
+            val current = cache.loadAbsenceLessonSelections(session.cacheScope) ?: AbsenceLessonSelections()
+            val merged = current.selectedLessonIDsByDate.toMutableMap()
+            selections.forEach { (dateKey, lessonIDs) ->
+                merged[dateKey] = lessonIDs.sorted()
+            }
+            cache.saveAbsenceLessonSelections(
+                session.cacheScope,
+                AbsenceLessonSelections(merged.toSortedMap()),
+            )
         }
-        cache.saveAbsenceLessonSelections(
-            session.cacheScope,
-            AbsenceLessonSelections(merged.toSortedMap()),
-        )
     }
 
     override suspend fun loadAbsencePredictionLessons(on: String): List<AbsenceLessonCandidate> {
@@ -258,11 +275,15 @@ class AndroidSchoolRepository(
         val session = validSession()
         val weekStart = TimetableDates.apiDateString(TimetableDates.monday(date))
         val timetable = cache.loadRawTimetable(session.cacheScope, weekStart) ?: fetchTimetable(session, weekStart).also {
-            cache.saveRawTimetable(session.cacheScope, weekStart, it)
+            publishForActiveSession(session) {
+                cache.saveRawTimetable(session.cacheScope, weekStart, it)
+            }
         }
         val markSubjects = try {
             cache.loadMarks(session.cacheScope)?.subjects ?: fetchMarks(session).also {
-                cache.saveMarks(session.cacheScope, it)
+                publishForActiveSession(session) {
+                    cache.saveMarks(session.cacheScope, it)
+                }
             }.subjects
         } catch (error: CancellationException) {
             throw error
@@ -282,15 +303,17 @@ class AndroidSchoolRepository(
         val session = validSession()
         val monday = TimetableDates.apiDateString(TimetableDates.monday(LocalDate.parse(weekContaining)))
         val response = fetchTimetable(session, monday)
-        cache.saveRawTimetable(session.cacheScope, monday, response)
         val week = TimetableMapper.makeWeek(response, monday, TimetableDates.apiDateString(dateProvider()))
-        cache.saveTimetable(session.cacheScope, monday, week)
-        try {
-            cache.updateNextLessonSnapshot(week)
-        } catch (error: CancellationException) {
-            throw error
-        } catch (_: Throwable) {
-            // Widget publication is best-effort and must not hide a successful timetable refresh.
+        publishForActiveSession(session) {
+            cache.saveRawTimetable(session.cacheScope, monday, response)
+            cache.saveTimetable(session.cacheScope, monday, week)
+            try {
+                cache.updateNextLessonSnapshot(week)
+            } catch (error: CancellationException) {
+                throw error
+            } catch (_: Throwable) {
+                // Widget publication is best-effort and must not hide a successful timetable refresh.
+            }
         }
         return week
     }
@@ -303,10 +326,28 @@ class AndroidSchoolRepository(
         return GradeMath.parseAverageText(predicted.averageText)
     }
 
+    private suspend fun saveReplacingSchoolScope(session: StoredSession) {
+        if (sessionStore.load()?.cacheScope != session.cacheScope) {
+            cache.clearNextLessonSnapshot()
+        }
+        sessionStore.save(session)
+    }
+
+    private suspend fun <T> publishForActiveSession(
+        session: StoredSession,
+        publication: suspend () -> T,
+    ): T = sessionMutationMutex.withLock {
+        val active = sessionStore.load()
+        if (active == null || active.cacheScope != session.cacheScope) {
+            throw CancellationException("The active school account changed before data publication.")
+        }
+        publication()
+    }
+
     private suspend fun validSession(): StoredSession {
         val session = sessionStore.load() ?: throw SchoolSessionExpiredException()
         if (!session.isExpired()) return session
-        return refreshMutex.withLock {
+        return sessionMutationMutex.withLock {
             val latest = sessionStore.load() ?: throw SchoolSessionExpiredException()
             if (!latest.isExpired()) latest else refreshBakalari(latest)
         }
@@ -346,8 +387,11 @@ class AndroidSchoolRepository(
             throw error
         } catch (error: Throwable) {
             if (!isAccessTokenRejected(error)) throw error
-            val refreshed = refreshMutex.withLock {
+            val refreshed = sessionMutationMutex.withLock {
                 val latest = sessionStore.load() ?: throw SchoolSessionExpiredException()
+                if (latest.cacheScope != session.cacheScope) {
+                    throw CancellationException("The active school account changed during a retry.")
+                }
                 if (latest.accessToken != session.accessToken && !latest.isExpired()) latest else refreshBakalari(latest)
             }
             block(refreshed)
@@ -444,7 +488,11 @@ class AndroidSchoolRepository(
     ): TimetableResponse? = try {
         withTimeoutOrNull(timetableFallbackTimeoutMillis) {
             val key = TimetableDates.apiDateString(weekStart)
-            fetchTimetable(session, key).also { cache.saveRawTimetable(session.cacheScope, key, it) }
+            fetchTimetable(session, key).also {
+                publishForActiveSession(session) {
+                    cache.saveRawTimetable(session.cacheScope, key, it)
+                }
+            }
         }
     } catch (error: CancellationException) {
         throw error

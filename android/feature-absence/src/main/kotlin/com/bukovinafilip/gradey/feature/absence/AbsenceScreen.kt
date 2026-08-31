@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
@@ -52,6 +53,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -99,6 +101,8 @@ private val RiskOrange = Color(0xFFFF8D28)
 private val LateOrange = Color(0xFFD98F10)
 private val MissedRed = Color(0xFFD95461)
 private const val ManualDraftsSaveVersion = "manual-drafts-v1"
+internal const val ABSENCE_MODE_PICKER_TEST_TAG = "absence-mode-picker"
+internal const val ABSENCE_MODE_TEST_TAG_PREFIX = "absence-mode-"
 
 private val ManualDraftsSaver = listSaver<Map<String, Set<String>>, String>(
     save = { drafts ->
@@ -136,7 +140,7 @@ private fun reconcileManualDrafts(
     day.dateKey to drafts[day.dateKey].orEmpty().filterTo(linkedSetOf()) { it in currentLessonIDs }
 }
 
-private enum class AbsenceMode {
+internal enum class AbsenceMode {
     Subjects,
     Days,
     Months,
@@ -679,31 +683,39 @@ private fun SummaryPills(counts: AbsenceCounts) {
 }
 
 @Composable
-private fun AbsenceModePicker(
+internal fun AbsenceModePicker(
     selected: AbsenceMode,
     onSelect: (AbsenceMode) -> Unit,
 ) {
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .height(33.dp),
-        shape = RoundedCornerShape(17.dp),
+            .heightIn(min = 48.dp),
+        shape = RoundedCornerShape(24.dp),
         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f),
     ) {
-        Row(modifier = Modifier.padding(2.dp)) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 48.dp)
+                .testTag(ABSENCE_MODE_PICKER_TEST_TAG)
+                .selectableGroup()
+                .padding(horizontal = 2.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             AbsenceMode.entries.forEach { mode ->
                 val label = mode.localizedLabel()
                 Surface(
                     modifier = Modifier
                         .weight(1f)
-                        .fillMaxSize()
+                        .heightIn(min = 48.dp)
+                        .testTag(ABSENCE_MODE_TEST_TAG_PREFIX + mode.name)
                         .selectable(
                             selected = selected == mode,
                             role = Role.Tab,
                             onClick = { onSelect(mode) },
-                        )
-                        .semantics { contentDescription = label },
-                    shape = RoundedCornerShape(15.dp),
+                        ),
+                    shape = RoundedCornerShape(22.dp),
                     color = if (selected == mode) {
                         MaterialTheme.colorScheme.surfaceContainerHigh
                     } else {
@@ -711,13 +723,19 @@ private fun AbsenceModePicker(
                     },
                     shadowElevation = if (selected == mode) 1.dp else 0.dp,
                 ) {
-                    Box(contentAlignment = Alignment.Center) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 4.dp, vertical = 6.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
                         Text(
                             text = label,
                             color = MaterialTheme.colorScheme.onSurface,
                             fontSize = 15.sp,
                             lineHeight = 18.sp,
                             fontWeight = if (selected == mode) FontWeight.SemiBold else FontWeight.Medium,
+                            textAlign = TextAlign.Center,
                         )
                     }
                 }

@@ -125,6 +125,7 @@ import com.bukovinafilip.gradey.model.OnboardingJourney
 import com.bukovinafilip.gradey.model.OnboardingProgress
 import com.bukovinafilip.gradey.model.OnboardingStep
 import com.bukovinafilip.gradey.model.SchoolDirectorySchool
+import com.bukovinafilip.gradey.model.StoredSession
 import com.bukovinafilip.gradey.model.StravaCZMenu
 import com.bukovinafilip.gradey.model.StravaCZMeal
 import com.bukovinafilip.gradey.model.StravaCZStoredSession
@@ -739,6 +740,17 @@ private fun GradeyApp(
         timetableError = null
     }
 
+    fun clearSchoolPresentationAfterAccountChange() {
+        dashboard = null
+        marksRefreshError = null
+        absence = null
+        resetAbsenceSubjectResolution()
+        absenceRefreshError = null
+        resetTimetableState()
+        gradeHistorySnapshot = null
+        gradeHistoryRefreshError = null
+    }
+
     fun startAbsenceSubjectResolution(response: AbsenceResponse) {
         absenceSubjectResolutionAttempt += 1
         val attempt = absenceSubjectResolutionAttempt
@@ -992,6 +1004,36 @@ private fun GradeyApp(
         } catch (_: Throwable) {
             // A missing/unpaired watch must not hide a successful timetable refresh.
         }
+    }
+
+    suspend fun clearSchoolPlatformProjectionsAfterAccountChange() = withContext(NonCancellable) {
+        try {
+            updateNextLessonWidgets(context.applicationContext)
+        } catch (_: Throwable) {
+            // The Room snapshot is already cleared; a launcher host failure must not undo activation.
+        }
+        try {
+            PhoneWearSyncPublisher.publish(
+                context.applicationContext,
+                com.bukovinafilip.gradey.model.GradeyWearSyncPayload.signedOut(),
+            )
+        } catch (_: Throwable) {
+            // The phone session is authoritative even when no Wear OS device is paired.
+        }
+    }
+
+    suspend fun loginReplacingSchoolSession(
+        schoolURL: String,
+        username: String,
+        password: String,
+    ): StoredSession {
+        val previousScope = graph.schoolRepository.currentStoredSession()?.cacheScope
+        val session = graph.schoolRepository.login(schoolURL, username, password)
+        if (previousScope != session.cacheScope) {
+            clearSchoolPresentationAfterAccountChange()
+            clearSchoolPlatformProjectionsAfterAccountChange()
+        }
+        return session
     }
 
     suspend fun loadTimetable(weekContaining: String): Throwable? = try {
@@ -1250,6 +1292,7 @@ private fun GradeyApp(
 
         mutatingLinkedAccountID = linked.id
         linkedAccountError = null
+        var reconnectCommitted = false
         return try {
             val candidateSession = graph.schoolRepository.login(schoolURL, username, password)
             val candidateDashboard = graph.schoolRepository.loadDashboard(forceRefresh = false)
@@ -1259,13 +1302,9 @@ private fun GradeyApp(
                 candidateDashboard.user,
             )
             val associatedSession = graph.schoolRepository.associateCurrentSession(updated)
+            reconnectCommitted = true
+            clearSchoolPresentationAfterAccountChange()
             dashboard = candidateDashboard
-            absence = null
-            resetAbsenceSubjectResolution()
-            absenceRefreshError = null
-            resetTimetableState()
-            gradeHistorySnapshot = null
-            gradeHistoryRefreshError = null
             activeLinkedAccountID = updated.id
             currentSchoolBaseURL = associatedSession.baseURL
             linkedAccounts = linkedAccounts
@@ -1277,12 +1316,15 @@ private fun GradeyApp(
             reconnectSchoolURL = ""
             linkedAccountError = null
             resetSignedInNavigation()
+            if (previousSession?.cacheScope != associatedSession.cacheScope) {
+                clearSchoolPlatformProjectionsAfterAccountChange()
+            }
             null
         } catch (error: CancellationException) {
-            rollback()
+            if (!reconnectCommitted) rollback()
             throw error
         } catch (error: Throwable) {
-            rollback()
+            if (!reconnectCommitted) rollback()
             error.userFacingMessage(context).also { linkedAccountError = it }
         } finally {
             mutatingLinkedAccountID = null
@@ -1294,20 +1336,17 @@ private fun GradeyApp(
         mutatingLinkedAccountID = linked.id
         linkedAccountError = null
         try {
+            val previousSchoolScope = graph.schoolRepository.currentStoredSession()?.cacheScope
             val activation = graph.linkedAccountRepository.activateSchoolAccount(linked.id)
-            graph.schoolRepository.activateLinkedSchoolAccount(
+            val activatedSession = graph.schoolRepository.activateLinkedSchoolAccount(
                 activation.tokenPayload.makeStoredSession(activation.account),
             )
-            dashboard = null
-            marksRefreshError = null
-            absence = null
-            resetAbsenceSubjectResolution()
-            absenceRefreshError = null
-            resetTimetableState()
-            gradeHistorySnapshot = null
-            gradeHistoryRefreshError = null
+            clearSchoolPresentationAfterAccountChange()
             activeLinkedAccountID = activation.account.id
             resetSignedInNavigation()
+            if (previousSchoolScope != activatedSession.cacheScope) {
+                clearSchoolPlatformProjectionsAfterAccountChange()
+            }
             loadCachedSignedInData()
             return true
         } catch (error: CancellationException) {
@@ -2531,7 +2570,7 @@ private fun GradeyApp(
                     },
                     onLogin = { school, username, password ->
                         launchSchoolLogin {
-                            graph.schoolRepository.login(school, username, password)
+                            loginReplacingSchoolSession(school, username, password)
                             dashboard = runCatching {
                                 graph.schoolRepository.loadDashboard(forceRefresh = false)
                             }.getOrNull()
@@ -3003,7 +3042,7 @@ private fun GradeyApp(
                             refreshSignedInData()
                         }
                     } else {
-                        graph.schoolRepository.login(school, username, password)
+                        loginReplacingSchoolSession(school, username, password)
                         dashboard = runCatching {
                             graph.schoolRepository.loadDashboard(forceRefresh = false)
                         }.getOrNull()

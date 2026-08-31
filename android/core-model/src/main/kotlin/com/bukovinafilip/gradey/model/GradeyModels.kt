@@ -4,8 +4,10 @@ package com.bukovinafilip.gradey.model
 
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.Required
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.descriptors.PrimitiveKind
 import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
@@ -16,10 +18,13 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonDecoder
 import kotlinx.serialization.json.JsonEncoder
 import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.encodeToJsonElement
+import kotlinx.serialization.json.longOrNull
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 import java.text.Normalizer
@@ -180,8 +185,10 @@ data class SubjectInfo(
     @SerialName("Id")
     val id: String,
     @SerialName("Abbrev")
+    @Required
     val abbrev: String = "",
     @SerialName("Name")
+    @Required
     val name: String = "",
 )
 
@@ -202,7 +209,8 @@ internal object NullAsGeneratedMarkIDSerializer : KSerializer<String> {
 @Serializable
 data class Mark(
     @SerialName("MarkDate")
-    val markDate: String? = "",
+    @Serializable(with = NullAsEmptyStringSerializer::class)
+    val markDate: String = "",
     @SerialName("EditDate")
     val editDate: String? = null,
     @SerialName("Caption")
@@ -214,7 +222,8 @@ data class Mark(
     @SerialName("TeacherId")
     val teacherID: String? = null,
     @SerialName("Type")
-    val type: String? = "",
+    @Serializable(with = NullAsEmptyStringSerializer::class)
+    val type: String = "",
     @SerialName("TypeNote")
     val typeNote: String? = null,
     @SerialName("Weight")
@@ -273,8 +282,10 @@ data class UserResponse(
 @Serializable
 data class ClassInfo(
     @SerialName("Id")
+    @Required
     val id: String = "",
     @SerialName("Abbrev")
+    @Required
     val abbrev: String = "",
     @SerialName("Name")
     val name: String? = null,
@@ -469,6 +480,8 @@ data class TimetableGroup(
     val abbrev: String? = null,
     @SerialName("Name")
     val name: String? = null,
+    @SerialName("ClassId")
+    val classID: String? = null,
 )
 
 @Serializable
@@ -1102,7 +1115,32 @@ object FlexibleStringSerializer : KSerializer<String> {
     override fun deserialize(decoder: Decoder): String {
         val jsonDecoder = decoder as? JsonDecoder ?: return decoder.decodeString()
         val value = jsonDecoder.decodeJsonElement()
-        return if (value is JsonPrimitive && value !is JsonNull) value.content else ""
+        return when {
+            value is JsonNull -> ""
+            value !is JsonPrimitive -> throw SerializationException("Expected a string or numeric identifier")
+            value.isString -> value.content
+            value.booleanOrNull != null -> throw SerializationException("Boolean identifiers are not supported")
+            value.longOrNull != null || value.doubleOrNull != null -> value.content
+            else -> throw SerializationException("Expected a string or numeric identifier")
+        }
+    }
+
+    override fun serialize(encoder: Encoder, value: String) = encoder.encodeString(value)
+}
+
+@OptIn(ExperimentalSerializationApi::class)
+object NullAsEmptyStringSerializer : KSerializer<String> {
+    override val descriptor: SerialDescriptor =
+        PrimitiveSerialDescriptor("NullAsEmptyString", PrimitiveKind.STRING)
+
+    override fun deserialize(decoder: Decoder): String {
+        val jsonDecoder = decoder as? JsonDecoder ?: return decoder.decodeString()
+        return when (val value = jsonDecoder.decodeJsonElement()) {
+            JsonNull -> ""
+            is JsonPrimitive -> value.content.takeIf { value.isString }
+                ?: throw SerializationException("Expected a string or null")
+            else -> throw SerializationException("Expected a string or null")
+        }
     }
 
     override fun serialize(encoder: Encoder, value: String) = encoder.encodeString(value)
@@ -1155,12 +1193,14 @@ object FlexibleNullableClassInfoSerializer : KSerializer<ClassInfo?> {
             ?: return decoder.decodeSerializableValue(ClassInfo.serializer())
         return when (val value = jsonDecoder.decodeJsonElement()) {
             JsonNull -> null
-            is JsonPrimitive -> value.content.trim().takeIf(String::isNotEmpty)?.let { abbrev ->
-                ClassInfo(abbrev = abbrev, name = abbrev)
+            is JsonPrimitive -> {
+                if (!value.isString) throw SerializationException("Expected Class to be an object, string, or null")
+                val abbrev = value.content.trim()
+                if (abbrev.isEmpty()) throw SerializationException("Class string must not be blank")
+                ClassInfo(id = "", abbrev = abbrev, name = abbrev)
             }
-            else -> runCatching {
-                jsonDecoder.json.decodeFromJsonElement(ClassInfo.serializer(), value)
-            }.getOrNull()
+            is JsonObject -> jsonDecoder.json.decodeFromJsonElement(ClassInfo.serializer(), value)
+            else -> throw SerializationException("Expected Class to be an object, string, or null")
         }
     }
 

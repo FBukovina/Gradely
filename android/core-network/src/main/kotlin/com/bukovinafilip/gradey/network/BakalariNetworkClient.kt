@@ -34,12 +34,6 @@ private val BakalariWhatIfJson = Json(GradeyJson) {
     explicitNulls = true
 }
 
-private val BakalariResponseJson = Json(GradeyJson) {
-    // iOS uses decodeIfPresent plus defaults for Bakaláři's optional scalar fields.
-    // Some installations send those fields as explicit null rather than omitting them.
-    coerceInputValues = true
-}
-
 enum class BakalariErrorKind {
     INVALID_RESPONSE,
     HTTP,
@@ -226,7 +220,7 @@ class BakalariNetworkClient(
         if (body.isBlank()) throw BakalariInvalidResponseException()
 
         return try {
-            BakalariResponseJson.decodeFromString(body)
+            GradeyJson.decodeFromString(body)
         } catch (error: SerializationException) {
             throw BakalariDecodingException(error)
         } catch (error: IllegalArgumentException) {

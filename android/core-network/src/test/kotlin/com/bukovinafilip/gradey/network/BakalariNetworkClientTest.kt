@@ -71,7 +71,7 @@ class BakalariNetworkClientTest {
     fun whatIfSendsAuthenticatedJsonPayload() = runTest {
         server.enqueue(
             jsonResponse(
-                """{"Marks":[],"Subject":{"Id":"math","Name":"Mathematics"}}""",
+                """{"Marks":[],"Subject":{"Id":"math","Abbrev":"M","Name":"Mathematics"}}""",
             ),
         )
 
@@ -146,7 +146,7 @@ class BakalariNetworkClientTest {
                       "Theme":null,
                       "MarkText":"2",
                       "TeacherId":null,
-                      "Type":"",
+                      "Type":null,
                       "TypeNote":null,
                       "Weight":2,
                       "SubjectId":"math",
@@ -184,7 +184,9 @@ class BakalariNetworkClientTest {
         assertThat(result.marks.first().id).isEqualTo("existing-mark")
         assertThat(predictedMark.id).isNotEmpty()
         assertThat(predictedMark.id).isNotEqualTo("existing-mark")
+        assertThat(predictedMark.markDate).isEmpty()
         assertThat(predictedMark.markText).isEqualTo("2")
+        assertThat(predictedMark.type).isEmpty()
         assertThat(predictedMark.subjectID).isEqualTo("math")
     }
 
@@ -435,68 +437,6 @@ class BakalariNetworkClientTest {
     }
 
     @Test
-    fun optionalScalarNullsUseIOSCompatibleDefaults() = runTest {
-        server.enqueue(
-            jsonResponse(
-                """
-                {
-                  "Subjects":[{
-                    "Marks":[{
-                      "MarkText":null,
-                      "SubjectId":null,
-                      "IsNew":null,
-                      "IsPoints":null
-                    }],
-                    "Subject":{"Id":"math","Abbrev":null,"Name":null},
-                    "PointsOnly":null,
-                    "MarkPredictionEnabled":null
-                  }]
-                }
-                """.trimIndent(),
-            ),
-        )
-        server.enqueue(
-            jsonResponse(
-                """
-                {
-                  "Hours":[{"Id":null,"Caption":null,"BeginTime":null,"EndTime":null}],
-                  "Days":[{
-                    "Atoms":[{"HourId":null}],
-                    "DayOfWeek":null,
-                    "Date":null,
-                    "DayDescription":null,
-                    "DayType":null
-                  }]
-                }
-                """.trimIndent(),
-            ),
-        )
-
-        val subject = client.fetchMarks(baseURL(), "token").subjects.single()
-        val mark = subject.marks.single()
-        val timetable = client.fetchTimetable(baseURL(), "token", "2026-08-24")
-
-        assertThat(subject.subjectInfo.id).isEqualTo("math")
-        assertThat(subject.subjectInfo.abbrev).isEmpty()
-        assertThat(subject.subjectInfo.name).isEmpty()
-        assertThat(subject.pointsOnly).isFalse()
-        assertThat(subject.markPredictionEnabled).isFalse()
-        assertThat(mark.markText).isEmpty()
-        assertThat(mark.subjectID).isEmpty()
-        assertThat(mark.isNew).isFalse()
-        assertThat(mark.isPoints).isFalse()
-        assertThat(timetable.hours.single().id).isEmpty()
-        assertThat(timetable.hours.single().caption).isEmpty()
-        assertThat(timetable.hours.single().beginTime).isEmpty()
-        assertThat(timetable.hours.single().endTime).isEmpty()
-        assertThat(timetable.days.single().atoms.single().hourID).isEmpty()
-        assertThat(timetable.days.single().dayOfWeek).isEqualTo(0)
-        assertThat(timetable.days.single().date).isEmpty()
-        assertThat(timetable.days.single().dayDescription).isEmpty()
-        assertThat(timetable.days.single().dayType).isEqualTo("WorkDay")
-    }
-
-    @Test
     fun absenceTreatsExplicitNullCollectionsAsEmptyDefaults() = runTest {
         server.enqueue(
             jsonResponse(
@@ -515,6 +455,30 @@ class BakalariNetworkClientTest {
         assertThat(absence.percentageThreshold).isEqualTo(25.5)
         assertThat(absence.absences).isEmpty()
         assertThat(absence.absencesPerSubject).isEmpty()
+    }
+
+    @Test
+    fun explicitNullRequiredAbsenceCountRemainsADecodingError() = runTest {
+        server.enqueue(
+            jsonResponse(
+                """
+                {
+                  "Absences":[],
+                  "AbsencesPerSubject":[{
+                    "SubjectName":"Mathematics",
+                    "LessonsCount":80,
+                    "Base":12,
+                    "Late":null
+                  }]
+                }
+                """.trimIndent(),
+            ),
+        )
+
+        val failure = runCatching { client.fetchAbsences(baseURL(), "token") }.exceptionOrNull()
+
+        assertThat(failure).isInstanceOf(BakalariDecodingException::class.java)
+        assertThat((failure as BakalariDecodingException).kind).isEqualTo(BakalariErrorKind.DECODING)
     }
 
     @Test
@@ -583,7 +547,12 @@ class BakalariNetworkClientTest {
             """{"Subjects":[{"Marks":{},"Subject":{"Id":"math","Abbrev":"M","Name":"Mathematics"}}]}""",
             """{"Subjects":[{"Marks":[],"Subject":null}]}""",
             """{"Subjects":[{"Marks":null,"Subject":{"Id":null,"Abbrev":"M","Name":"Mathematics"}}]}""",
-            """{"Subjects":[{"Marks":[{"MarkText":{}}],"Subject":{"Id":"math"}}]}""",
+            """{"Subjects":[{"Marks":null,"Subject":{"Id":"math","Abbrev":null,"Name":"Mathematics"}}]}""",
+            """{"Subjects":[{"Marks":null,"Subject":{"Id":"math","Abbrev":"M","Name":null}}]}""",
+            """{"Subjects":[{"Marks":null,"Subject":{"Abbrev":"M","Name":"Mathematics"}}]}""",
+            """{"Subjects":[{"Marks":null,"Subject":{"Id":"math","Name":"Mathematics"}}]}""",
+            """{"Subjects":[{"Marks":null,"Subject":{"Id":"math","Abbrev":"M"}}]}""",
+            """{"Subjects":[{"Marks":[{"MarkText":{}}],"Subject":{"Id":"math","Abbrev":"M","Name":"Mathematics"}}]}""",
         ).forEach { responseBody ->
             server.enqueue(jsonResponse(responseBody))
 
@@ -626,10 +595,33 @@ class BakalariNetworkClientTest {
     @Test
     fun userAcceptsLegacyStringClassFromExistingAndroidCacheShape() = runTest {
         server.enqueue(jsonResponse("""{"FullName":"Student","Class":"4.B"}"""))
+        server.enqueue(jsonResponse("""{"FullName":"Student","Class":null}"""))
 
-        val user = client.fetchUser(baseURL(), "token")
+        val legacyUser = client.fetchUser(baseURL(), "token")
+        val noClassUser = client.fetchUser(baseURL(), "token")
 
-        assertThat(user.classAbbrev).isEqualTo("4.B")
+        assertThat(legacyUser.classAbbrev).isEqualTo("4.B")
+        assertThat(noClassUser.userClass).isNull()
+    }
+
+    @Test
+    fun userRejectsMalformedClassShapesAndRequiredObjectFields() = runTest {
+        listOf(
+            """{"FullName":"Student","Class":true}""",
+            """{"FullName":"Student","Class":7}""",
+            """{"FullName":"Student","Class":"  "}""",
+            """{"FullName":"Student","Class":[]}""",
+            """{"FullName":"Student","Class":{}}""",
+            """{"FullName":"Student","Class":{"Id":null,"Abbrev":"3.A"}}""",
+            """{"FullName":"Student","Class":{"Id":"class-id","Abbrev":null}}""",
+        ).forEach { responseBody ->
+            server.enqueue(jsonResponse(responseBody))
+
+            val failure = runCatching { client.fetchUser(baseURL(), "token") }.exceptionOrNull()
+
+            assertThat(failure).isInstanceOf(BakalariDecodingException::class.java)
+            assertThat((failure as BakalariDecodingException).kind).isEqualTo(BakalariErrorKind.DECODING)
+        }
     }
 
     @Test
@@ -659,14 +651,15 @@ class BakalariNetworkClientTest {
     }
 
     @Test
-    fun timetableAcceptsNumericHourIdsAndMissingDisplayFields() = runTest {
+    fun timetableAcceptsNumericStringAndNullHourIdsAndRetainsGroupClass() = runTest {
         server.enqueue(
             jsonResponse(
                 """
                 {
-                  "Hours":[{"Id":1}],
-                  "Days":[{"Atoms":[{"HourId":1}]}],
-                  "Classes":[]
+                  "Hours":[{"Id":1},{"Id":"2"},{"Id":null}],
+                  "Days":[{"Atoms":[{"HourId":1},{"HourId":"2"},{"HourId":null}]}],
+                  "Classes":[],
+                  "Groups":[{"ClassId":"XL","Id":"0C","Abbrev":"X.a","Name":" X. a"}]
                 }
                 """.trimIndent(),
             ),
@@ -677,11 +670,33 @@ class BakalariNetworkClientTest {
 
         assertThat(request.path).isEqualTo("/api/3/timetable/actual?date=2026-08-24")
         assertThat(request.getHeader("Authorization")).isEqualTo("Bearer token")
-        assertThat(timetable.hours.single().id).isEqualTo("1")
-        assertThat(timetable.hours.single().caption).isEmpty()
-        assertThat(timetable.days.single().atoms.single().hourID).isEqualTo("1")
+        assertThat(timetable.hours.map { it.id }).containsExactly("1", "2", "").inOrder()
+        assertThat(timetable.hours.map { it.caption }).containsExactly("", "", "").inOrder()
+        assertThat(timetable.days.single().atoms.map { it.hourID }).containsExactly("1", "2", "").inOrder()
         assertThat(timetable.days.single().dayType).isEqualTo("WorkDay")
         assertThat(timetable.classes).isEmpty()
+        assertThat(timetable.groups.single().classID).isEqualTo("XL")
+    }
+
+    @Test
+    fun timetableRejectsBooleanObjectAndArrayHourIds() = runTest {
+        listOf(
+            """{"Hours":[{"Id":true}]}""",
+            """{"Hours":[{"Id":{}}]}""",
+            """{"Hours":[{"Id":[]}]}""",
+            """{"Days":[{"Atoms":[{"HourId":false}]}]}""",
+            """{"Days":[{"Atoms":[{"HourId":{}}]}]}""",
+            """{"Days":[{"Atoms":[{"HourId":[]}]}]}""",
+        ).forEach { responseBody ->
+            server.enqueue(jsonResponse(responseBody))
+
+            val failure = runCatching {
+                client.fetchTimetable(baseURL(), "token", "2026-08-24")
+            }.exceptionOrNull()
+
+            assertThat(failure).isInstanceOf(BakalariDecodingException::class.java)
+            assertThat((failure as BakalariDecodingException).kind).isEqualTo(BakalariErrorKind.DECODING)
+        }
     }
 
     private fun baseURL(): String = server.url("/").toString().removeSuffix("/")

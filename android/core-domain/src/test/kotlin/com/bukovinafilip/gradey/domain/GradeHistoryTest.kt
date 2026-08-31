@@ -198,7 +198,7 @@ class GradeHistoryTest {
         date: String,
         weight: Double? = null,
         isPoints: Boolean = false,
-        type: String? = "exam",
+        type: String = "exam",
     ) = Mark(
         id = id,
         markText = text,

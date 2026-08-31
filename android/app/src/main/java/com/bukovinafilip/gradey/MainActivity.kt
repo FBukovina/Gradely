@@ -47,6 +47,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -240,6 +243,7 @@ private fun GradeyApp(
     deepLinkRequest: DeepLinkRequest,
 ) {
     val context = LocalContext.current
+    val activeLanguageCode = LocalConfiguration.current.locales[0].language
     val scope = rememberCoroutineScope()
     var phase by remember { mutableStateOf(AppPhase.CHECKING) }
     var selectedTab by rememberSaveable { mutableStateOf(initialTab) }
@@ -1621,7 +1625,7 @@ private fun GradeyApp(
                     context.startActivity(
                         Intent(
                             Intent.ACTION_VIEW,
-                            Uri.parse("https://help.bukovinafilip.com/en/articles/10-privacy-policy"),
+                            Uri.parse(privacyPolicyUrl(activeLanguageCode)),
                         ),
                     )
                 }
@@ -1691,7 +1695,7 @@ private fun GradeyApp(
                         }
                     },
                     onOpenHelp = {
-                        val language = if (appLanguage.pickerLanguage == AppLanguage.CZECH) "cs" else "en"
+                        val language = helpCenterLanguageCode(activeLanguageCode)
                         runCatching {
                             activity.startActivity(
                                 Intent(
@@ -1721,7 +1725,7 @@ private fun GradeyApp(
                     onLoadDirectory = { scope.launch { loadSchoolDirectory() } },
                     onRetryDirectory = { scope.launch { loadSchoolDirectory(forceRefresh = true) } },
                     onOpenHelp = {
-                        val language = if (appLanguage.pickerLanguage == AppLanguage.CZECH) "cs" else "en"
+                        val language = helpCenterLanguageCode(activeLanguageCode)
                         runCatching {
                             activity.startActivity(
                                 Intent(
@@ -1886,7 +1890,7 @@ private fun GradeyApp(
                 }
             },
             onOpenHelp = {
-                val language = if (appLanguage.pickerLanguage == AppLanguage.CZECH) "cs" else "en"
+                val language = helpCenterLanguageCode(activeLanguageCode)
                 runCatching {
                     activity.startActivity(
                         Intent(
@@ -1925,7 +1929,7 @@ private fun GradeyApp(
             onLoadDirectory = { scope.launch { loadSchoolDirectory() } },
             onRetryDirectory = { scope.launch { loadSchoolDirectory(forceRefresh = true) } },
             onOpenHelp = {
-                val language = if (appLanguage.pickerLanguage == AppLanguage.CZECH) "cs" else "en"
+                val language = helpCenterLanguageCode(activeLanguageCode)
                 runCatching {
                     activity.startActivity(
                         Intent(
@@ -2280,7 +2284,7 @@ private fun GradeyApp(
                             }
                         },
                         onOpenHelpCenter = {
-                            val language = if (appLanguage.pickerLanguage == AppLanguage.CZECH) "cs" else "en"
+                            val language = helpCenterLanguageCode(activeLanguageCode)
                             runCatching {
                                 activity.startActivity(
                                     Intent(
@@ -2305,18 +2309,17 @@ private fun GradeyApp(
                             }
                         },
                         onOpenPrivacyPolicy = {
-                            val language = if (appLanguage.pickerLanguage == AppLanguage.CZECH) "cs" else "en"
                             runCatching {
                                 activity.startActivity(
                                     Intent(
                                         Intent.ACTION_VIEW,
-                                        Uri.parse("https://help.bukovinafilip.com/$language/articles/10-privacy-policy"),
+                                        Uri.parse(privacyPolicyUrl(activeLanguageCode)),
                                     ),
                                 )
                             }
                         },
                         onOpenTermsOfUse = {
-                            val language = if (appLanguage.pickerLanguage == AppLanguage.CZECH) "cs" else "en"
+                            val language = helpCenterLanguageCode(activeLanguageCode)
                             runCatching {
                                 activity.startActivity(
                                     Intent(
@@ -2546,18 +2549,17 @@ private fun GradeyApp(
                         scope.launch { retryStravaCloudLink() }
                     },
                     onOpenPrivacyPolicy = {
-                        val language = if (appLanguage.pickerLanguage == AppLanguage.CZECH) "cs" else "en"
                         runCatching {
                             context.startActivity(
                                 Intent(
                                     Intent.ACTION_VIEW,
-                                    Uri.parse("https://help.bukovinafilip.com/$language/articles/10-privacy-policy"),
+                                    Uri.parse(privacyPolicyUrl(activeLanguageCode)),
                                 ),
                             )
                         }
                     },
                     onOpenTermsOfUse = {
-                        val language = if (appLanguage.pickerLanguage == AppLanguage.CZECH) "cs" else "en"
+                        val language = helpCenterLanguageCode(activeLanguageCode)
                         runCatching {
                             context.startActivity(
                                 Intent(
@@ -2669,6 +2671,12 @@ private fun GradeyApp(
         }
     }
 }
+
+internal fun helpCenterLanguageCode(languageCode: String?): String =
+    if (languageCode.equals("cs", ignoreCase = true)) "cs" else "en"
+
+internal fun privacyPolicyUrl(languageCode: String?): String =
+    "https://help.bukovinafilip.com/${helpCenterLanguageCode(languageCode)}/articles/10-privacy-policy"
 
 private suspend fun requestGoogleCredential(
     context: android.content.Context,
@@ -2814,10 +2822,12 @@ private fun androidx.compose.foundation.layout.RowScope.BottomNavigationItem(
         MaterialTheme.colorScheme.onSurfaceVariant
     }
     Surface(
+        selected = selected,
+        onClick = onClick,
         modifier = Modifier
             .weight(1f)
-            .height(54.dp),
-        onClick = onClick,
+            .height(54.dp)
+            .semantics { role = Role.Tab },
         shape = RoundedCornerShape(27.dp),
         color = if (selected) {
             MaterialTheme.colorScheme.surfaceVariant
@@ -2836,7 +2846,7 @@ private fun androidx.compose.foundation.layout.RowScope.BottomNavigationItem(
             ) {
                 Icon(
                     imageVector = tab.icon(),
-                    contentDescription = label,
+                    contentDescription = null,
                     tint = foreground,
                     modifier = Modifier.size(24.dp),
                 )

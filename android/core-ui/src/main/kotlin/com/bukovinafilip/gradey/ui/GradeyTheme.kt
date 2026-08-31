@@ -29,6 +29,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -170,7 +172,13 @@ fun GradeyHero(
             .padding(GradeySpacing.xl),
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(GradeySpacing.sm)) {
-            Text(title, style = MaterialTheme.typography.headlineMedium, color = GradeyColors.OnAccent, fontWeight = FontWeight.Bold)
+            Text(
+                title,
+                modifier = Modifier.semantics { heading() },
+                style = MaterialTheme.typography.headlineMedium,
+                color = GradeyColors.OnAccent,
+                fontWeight = FontWeight.Bold,
+            )
             Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = GradeyColors.OnAccent.copy(alpha = 0.84f))
         }
     }
@@ -219,7 +227,12 @@ fun GradeySectionCard(
             verticalArrangement = Arrangement.spacedBy(GradeySpacing.md),
         ) {
             if (title != null) {
-                Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Text(
+                    title,
+                    modifier = Modifier.semantics { heading() },
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
                 Spacer(Modifier.height(GradeySpacing.xs))
             }
             content()

@@ -64,7 +64,9 @@ import com.bukovinafilip.gradey.ui.GradeyIcons
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -613,8 +615,11 @@ private fun SortSegment(
     onClick: () -> Unit,
 ) {
     Surface(
-        modifier = modifier.height(29.dp),
+        selected = selected,
         onClick = onClick,
+        modifier = modifier
+            .height(29.dp)
+            .semantics { role = Role.Tab },
         shape = RoundedCornerShape(15.dp),
         color = if (selected) MaterialTheme.colorScheme.surface else Color.Transparent,
         shadowElevation = if (selected) 1.dp else 0.dp,

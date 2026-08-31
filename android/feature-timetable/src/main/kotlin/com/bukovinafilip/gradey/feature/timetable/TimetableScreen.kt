@@ -59,6 +59,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -735,6 +736,7 @@ private fun LessonRow(
                 .alpha(if (isCanceled) 0.68f else 1f)
                 .testTag(TIMETABLE_LESSON_CARD_TEST_TAG_PREFIX + lesson.id)
                 .semantics {
+                    role = Role.Button
                     contentDescription = buildString {
                         append(detailDescription)
                         lesson.changeDescription?.takeIf { it.isNotBlank() }?.let { append(", $it") }

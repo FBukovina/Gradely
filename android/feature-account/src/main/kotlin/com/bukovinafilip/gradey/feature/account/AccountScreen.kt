@@ -45,6 +45,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -391,9 +392,14 @@ fun AccountScreen(
                 onSelectionChange = onAppLanguageChange,
             )
         }
-                            GradeySectionCard(title = stringResource(R.string.meals_tab_setting_title)) {
-            Text(stringResource(R.string.meals_tab_setting_message))
-            Switch(checked = showMealsTab, onCheckedChange = onShowMealsTabChange)
+                            GradeySectionCard {
+            SettingsSwitchRow(
+                label = stringResource(R.string.meals_tab_setting_title),
+                supportingText = stringResource(R.string.meals_tab_setting_message),
+                checked = showMealsTab,
+                enabled = true,
+                onCheckedChange = onShowMealsTabChange,
+            )
                             }
                         }
                         if (effectiveDestination == AccountSettingsDestination.CONNECTED_SERVICES) {
@@ -602,22 +608,17 @@ fun AccountScreen(
                             }
                         }
                         if (linked.provider.isSupportedSchoolProvider) {
-                            MetadataRow(
-                                stringResource(R.string.account_new_mark_notifications),
-                                stringResource(
-                                    if (linked.notificationsEnabled) {
-                                        R.string.notifications_enabled
-                                    } else {
-                                        R.string.notifications_disabled
-                                    },
-                                ),
-                            )
-                            Switch(
+                            SettingsSwitchRow(
+                                label = stringResource(R.string.account_new_mark_notifications),
+                                supportingText = stringResource(R.string.account_new_mark_notifications_message),
                                 checked = linked.notificationsEnabled,
                                 onCheckedChange = { onToggleLinkedNotifications(linked, it) },
                                 enabled = notificationPreferences.newMarksEnabled &&
                                     !isMutating &&
                                     mutatingLinkedAccountID == null,
+                                modifier = Modifier.testTag(
+                                    "$ACCOUNT_LINKED_NOTIFICATIONS_TEST_TAG_PREFIX${linked.id}",
+                                ),
                             )
                         } else if (linked.provider == LinkedAccountProvider.STRAVA_CZ) {
                             Text(stringResource(R.string.meals_manage_from_tab))
@@ -1041,6 +1042,7 @@ private fun NotificationLockScreenDetail.labelResource(): Int = when (this) {
 @Composable
 private fun SettingsSwitchRow(
     label: String,
+    supportingText: String? = null,
     checked: Boolean,
     enabled: Boolean,
     onCheckedChange: (Boolean) -> Unit,
@@ -1059,10 +1061,16 @@ private fun SettingsSwitchRow(
         horizontalArrangement = Arrangement.spacedBy(GradeySpacing.sm),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(
-            text = label,
-            modifier = Modifier.weight(1f),
-        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(text = label)
+            supportingText?.let { supporting ->
+                Text(
+                    text = supporting,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+        }
         Switch(
             checked = checked,
             onCheckedChange = null,
@@ -1110,6 +1118,9 @@ private fun formatMinute(minuteOfDay: Int): String = String.format(
     minuteOfDay.coerceIn(0, 1439) / 60,
     minuteOfDay.coerceIn(0, 1439) % 60,
 )
+
+internal const val ACCOUNT_LINKED_NOTIFICATIONS_TEST_TAG_PREFIX =
+    "account-linked-notifications:"
 
 private fun formatSyncTimestamp(value: String): String = runCatching {
     DateTimeFormatter.ofLocalizedDateTime(FormatStyle.SHORT)

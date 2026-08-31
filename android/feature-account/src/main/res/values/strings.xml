@@ -194,6 +194,7 @@
     <string name="account_switching">Switching…</string>
     <string name="account_use_this_school">Use this school</string>
     <string name="account_new_mark_notifications">New-mark notifications</string>
+    <string name="account_new_mark_notifications_message">Allow new-mark alerts from this school.</string>
     <string name="account_provider_unavailable">This provider is not available in Gradey for Android yet.</string>
     <string name="account_unlink">Unlink</string>
     <string name="account_unlink_title">Unlink %1$s?</string>

@@ -194,6 +194,7 @@
     <string name="account_switching">přepínání…</string>
     <string name="account_use_this_school">použít tuhle školu</string>
     <string name="account_new_mark_notifications">notifikace na nový známky</string>
+    <string name="account_new_mark_notifications_message">povolit upozornění na nové známky z této školy.</string>
     <string name="account_provider_unavailable">tenhle provider zatím v Gradey pro Android není.</string>
     <string name="account_unlink">odpojit</string>
     <string name="account_unlink_title">odpojit %1$s?</string>

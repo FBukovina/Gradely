@@ -266,21 +266,12 @@ internal object FirebaseGradeyAIErrorMapper {
             )
         }
         if (error is FirebaseFunctionsException) {
-            val details = error.details as? Map<*, *>
-            val detailCode = details?.string("code")
-            val code = detailCode ?: error.code.name.lowercase()
-            val message = details?.string("message") ?: error.message ?: "Gradey AI request failed."
-            if (error.code == FirebaseFunctionsException.Code.UNAUTHENTICATED) {
-                return GradeyAIException(
-                    GradeyAIErrorKind.UNAUTHENTICATED,
-                    "Gradey AI couldn’t start a secure session. Try again.",
-                    retryable = true,
-                    serverCode = code,
-                    cause = error,
-                )
-            }
-            val retryable = details?.boolean("retryable") ?: (error.code in RetryableCodes)
-            return GradeyAIErrorClassifier.server(code, message, retryable, error)
+            return mapFunctionsFailure(
+                firebaseCode = error.code.name.lowercase(),
+                details = error.details as? Map<*, *>,
+                fallbackMessage = error.message ?: "Gradey AI request failed.",
+                cause = error,
+            )
         }
         if (error is IOException || error is FirebaseException) {
             return GradeyAIException(
@@ -298,13 +289,34 @@ internal object FirebaseGradeyAIErrorMapper {
         )
     }
 
-    private val RetryableCodes = setOf(
-        FirebaseFunctionsException.Code.CANCELLED,
-        FirebaseFunctionsException.Code.DEADLINE_EXCEEDED,
-        FirebaseFunctionsException.Code.RESOURCE_EXHAUSTED,
-        FirebaseFunctionsException.Code.ABORTED,
-        FirebaseFunctionsException.Code.INTERNAL,
-        FirebaseFunctionsException.Code.UNAVAILABLE,
+    internal fun mapFunctionsFailure(
+        firebaseCode: String,
+        details: Map<*, *>?,
+        fallbackMessage: String,
+        cause: Throwable? = null,
+    ): GradeyAIException {
+        val code = details?.string("code") ?: firebaseCode
+        val message = details?.string("message") ?: fallbackMessage
+        if (firebaseCode == "unauthenticated") {
+            return GradeyAIException(
+                GradeyAIErrorKind.UNAUTHENTICATED,
+                "Gradey AI couldn’t start a secure session. Try again.",
+                retryable = true,
+                serverCode = code,
+                cause = cause,
+            )
+        }
+        val retryable = details?.boolean("retryable") ?: (firebaseCode in RetryableCodeNames)
+        return GradeyAIErrorClassifier.server(code, message, retryable, cause)
+    }
+
+    private val RetryableCodeNames = setOf(
+        "cancelled",
+        "deadline_exceeded",
+        "resource_exhausted",
+        "aborted",
+        "internal",
+        "unavailable",
     )
 }
 

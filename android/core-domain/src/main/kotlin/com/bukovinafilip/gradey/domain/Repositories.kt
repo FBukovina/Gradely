@@ -285,8 +285,7 @@ object GradeyAIErrorClassifier {
                 ("context" in normalizedMessage && ("missing" in normalizedMessage || "unavailable" in normalizedMessage)) -> {
                 GradeyAIErrorKind.NO_CONTEXT
             }
-            normalizedCode in LimitCodes ||
-                ("limit" in normalizedMessage && ("reached" in normalizedMessage || "exhausted" in normalizedMessage)) -> {
+            normalizedCode in LimitCodes -> {
                 GradeyAIErrorKind.LIMIT_REACHED
             }
             normalizedCode in OversizeCodes || "too large" in normalizedMessage -> {
@@ -305,7 +304,7 @@ object GradeyAIErrorClassifier {
 
     private val AuthenticationCodes = setOf("unauthenticated", "authentication_required", "auth_required")
     private val ContextCodes = setOf("no_context", "missing_context", "context_unavailable", "invalid_context")
-    private val LimitCodes = setOf("over_limit", "daily_limit", "limit_reached", "resource_exhausted")
+    private val LimitCodes = setOf("over_limit", "daily_limit", "limit_reached")
     private val OversizeCodes = setOf("request_too_large", "payload_too_large", "context_too_large", "oversize")
 }
 

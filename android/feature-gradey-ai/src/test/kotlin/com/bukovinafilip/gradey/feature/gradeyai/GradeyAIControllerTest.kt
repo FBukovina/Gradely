@@ -16,6 +16,7 @@ import com.bukovinafilip.gradey.model.GradeyAIStatus
 import com.bukovinafilip.gradey.model.GradeyAIStreamEvent
 import com.bukovinafilip.gradey.model.GradeySupportTier
 import com.google.common.truth.Truth.assertThat
+import java.io.IOException
 import java.util.ArrayDeque
 import java.util.Locale
 import kotlin.coroutines.Continuation
@@ -406,6 +407,139 @@ class GradeyAIControllerTest {
             .containsExactly(GradeyAIMessageRole.USER, GradeyAIMessageRole.ASSISTANT).inOrder()
         assertThat(controller.messages.last()).isEqualTo(persisted)
         assertThat(controller.status?.remaining).isEqualTo(2)
+        assertThat(controller.isStreaming).isFalse()
+    }
+
+    @Test
+    fun `zero remaining quota blocks before creating or requesting a stream`() = runTest {
+        val repository = FakeRepository(
+            status = status().copy(dailyUsed = 5, remaining = 0),
+        )
+        val controller = controller(repository = repository)
+        controller.bootstrap()
+        controller.draft = "Do not send"
+
+        controller.send()
+
+        assertThat(repository.createdTitles).isEmpty()
+        assertThat(repository.streamRequests).isEmpty()
+        assertThat(controller.messages).isEmpty()
+        assertThat(controller.failure)
+            .isEqualTo(GradeyAIFailure(GradeyAIErrorKind.LIMIT_REACHED))
+        assertThat(failureMessageResource(controller.failure!!.kind))
+            .isEqualTo(R.string.gradey_ai_limit_reached)
+        assertThat(controller.status?.remaining).isEqualTo(0)
+        assertThat(controller.draft).isEqualTo("Do not send")
+        assertThat(controller.canSend).isFalse()
+        assertThat(controller.isSending).isFalse()
+    }
+
+    @Test
+    fun `streamed over limit error exhausts quota and presents a non retryable limit failure`() = runTest {
+        val repository = FakeRepository().apply {
+            streams += flowOf(
+                GradeyAIStreamEvent.Start("assistant", 2),
+                GradeyAIStreamEvent.Error(
+                    code = "over_limit",
+                    message = "Daily limit reached",
+                    retryable = false,
+                    remaining = 0,
+                ),
+            )
+        }
+        val controller = controller(repository = repository)
+        controller.bootstrap()
+
+        controller.send("Explain this")
+
+        val failed = controller.messages.last()
+        assertThat(failed.id).isEqualTo("assistant")
+        assertThat(failed.status).isEqualTo(GradeyAIMessageStatus.FAILED)
+        assertThat(controller.failure)
+            .isEqualTo(GradeyAIFailure(GradeyAIErrorKind.LIMIT_REACHED))
+        assertThat(failureMessageResource(controller.failure!!.kind))
+            .isEqualTo(R.string.gradey_ai_limit_reached)
+        assertThat(controller.status?.dailyUsed).isEqualTo(5)
+        assertThat(controller.status?.remaining).isEqualTo(0)
+        controller.draft = "Try another prompt"
+        assertThat(controller.canSend).isFalse()
+        assertThat(controller.canRetry(failed)).isFalse()
+        assertThat(controller.isStreaming).isFalse()
+    }
+
+    @Test
+    fun `transport failure before start creates one retryable failed assistant response`() = runTest {
+        val repository = FakeRepository().apply {
+            streams += flow { throw IOException("offline before start") }
+        }
+        val controller = controller(repository = repository)
+        controller.bootstrap()
+
+        controller.send("Help")
+
+        assertThat(repository.streamRequests).hasSize(1)
+        assertThat(controller.messages.map { it.role })
+            .containsExactly(GradeyAIMessageRole.USER, GradeyAIMessageRole.ASSISTANT).inOrder()
+        val failed = controller.messages.last()
+        assertThat(failed.content).isEmpty()
+        assertThat(failed.status).isEqualTo(GradeyAIMessageStatus.FAILED)
+        assertThat(controller.failure)
+            .isEqualTo(GradeyAIFailure(GradeyAIErrorKind.TRANSPORT, retryable = true))
+        assertThat(controller.status?.remaining).isEqualTo(3)
+        assertThat(controller.canRetry(failed)).isTrue()
+        assertThat(controller.isStreaming).isFalse()
+    }
+
+    @Test
+    fun `transport failure after start preserves partial response and remains retryable`() = runTest {
+        val repository = FakeRepository().apply {
+            streams += flow {
+                emit(GradeyAIStreamEvent.Start("assistant", 2))
+                emit(GradeyAIStreamEvent.Delta("Partial answer"))
+                throw IOException("offline after start")
+            }
+        }
+        val controller = controller(repository = repository)
+        controller.bootstrap()
+
+        controller.send("Help")
+
+        assertThat(controller.messages.map { it.role })
+            .containsExactly(GradeyAIMessageRole.USER, GradeyAIMessageRole.ASSISTANT).inOrder()
+        val failed = controller.messages.last()
+        assertThat(failed.id).isEqualTo("assistant")
+        assertThat(failed.content).isEqualTo("Partial answer")
+        assertThat(failed.status).isEqualTo(GradeyAIMessageStatus.FAILED)
+        assertThat(controller.failure)
+            .isEqualTo(GradeyAIFailure(GradeyAIErrorKind.TRANSPORT, retryable = true))
+        assertThat(controller.status?.remaining).isEqualTo(2)
+        assertThat(controller.canRetry(failed)).isTrue()
+        assertThat(controller.isStreaming).isFalse()
+    }
+
+    @Test
+    fun `stream ending without terminal event fails partial response without retry`() = runTest {
+        val repository = FakeRepository().apply {
+            streams += flowOf(
+                GradeyAIStreamEvent.Start("assistant", 2),
+                GradeyAIStreamEvent.Delta("Incomplete answer"),
+            )
+        }
+        val controller = controller(repository = repository)
+        controller.bootstrap()
+
+        controller.send("Help")
+
+        val failed = controller.messages.last()
+        assertThat(failed.id).isEqualTo("assistant")
+        assertThat(failed.content).isEqualTo("Incomplete answer")
+        assertThat(failed.status).isEqualTo(GradeyAIMessageStatus.FAILED)
+        assertThat(controller.failure)
+            .isEqualTo(GradeyAIFailure(GradeyAIErrorKind.MALFORMED_RESPONSE))
+        assertThat(failureMessageResource(controller.failure!!.kind))
+            .isEqualTo(R.string.gradey_ai_error_invalid_response)
+        assertThat(controller.status?.remaining).isEqualTo(2)
+        assertThat(controller.canRetry(failed)).isFalse()
         assertThat(controller.isStreaming).isFalse()
     }
 

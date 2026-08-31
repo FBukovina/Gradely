@@ -172,6 +172,38 @@ class FirebaseGradeyAIWireTest {
     }
 
     @Test
+    fun `completed stream ignores malformed optional persisted message so deltas remain usable`() {
+        val delta = FirebaseGradeyAIWire.decodeStreamEvent(
+            mapOf("type" to "delta", "text" to "Streamed answer"),
+            "chat",
+        )
+        val done = FirebaseGradeyAIWire.decodeStreamEvent(
+            mapOf(
+                "type" to "completed",
+                "status" to mapOf("remaining" to 2),
+                "usage" to mapOf("inputTokens" to 5, "outputTokens" to 3),
+                "message" to mapOf(
+                    "conversationID" to "chat",
+                    "role" to "assistant",
+                    "content" to "Malformed because the identifier is missing",
+                ),
+            ),
+            "chat",
+        )
+
+        assertThat(delta).isEqualTo(GradeyAIStreamEvent.Delta("Streamed answer"))
+        assertThat(done).isEqualTo(
+            GradeyAIStreamEvent.Done(
+                finishReason = "stop",
+                remaining = 2,
+                inputTokens = 5,
+                outputTokens = 3,
+                persistedMessage = null,
+            ),
+        )
+    }
+
+    @Test
     fun `stream request trims prompt preserves identity and stays within limits`() {
         val payload = FirebaseGradeyAIRequestBuilder.streamPayload(
             conversationID = "chat",
@@ -237,6 +269,27 @@ class FirebaseGradeyAIWireTest {
             .isEqualTo(GradeyAIErrorKind.REQUEST_TOO_LARGE)
         assertThat(GradeyAIErrorClassifier.server("unavailable", "Down", true).kind)
             .isEqualTo(GradeyAIErrorKind.SERVER)
+    }
+
+    @Test
+    fun `generic Firebase resource exhaustion stays retryable unless daily limit code is explicit`() {
+        val generic = GradeyAIErrorClassifier.server(
+            code = "resource_exhausted",
+            message = "Daily limit reached",
+            retryable = true,
+        )
+
+        assertThat(generic.kind).isEqualTo(GradeyAIErrorKind.SERVER)
+        assertThat(generic.retryable).isTrue()
+        listOf("over_limit", "daily_limit", "limit_reached").forEach { code ->
+            val dailyLimit = GradeyAIErrorClassifier.server(
+                code = code,
+                message = "Daily limit reached",
+                retryable = false,
+            )
+            assertThat(dailyLimit.kind).isEqualTo(GradeyAIErrorKind.LIMIT_REACHED)
+            assertThat(dailyLimit.retryable).isFalse()
+        }
     }
 
     private fun context(

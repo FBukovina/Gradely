@@ -76,7 +76,14 @@ internal object FirebaseGradeyAIWire {
                     ?: throw malformed("Gradey AI completed a reply without usage status.")
                 val usage = values.value("usage") as? Map<*, *>
                 val persisted = (values.value("message", "persistedMessage", "persisted_message") as? Map<*, *>)
-                    ?.let { decodeMessage(it, fallbackConversationID) }
+                    ?.let { message ->
+                        try {
+                            decodeMessage(message, fallbackConversationID)
+                        } catch (error: GradeyAIException) {
+                            if (error.kind != GradeyAIErrorKind.MALFORMED_RESPONSE) throw error
+                            null
+                        }
+                    }
                 GradeyAIStreamEvent.Done(
                     finishReason = values.string("finishReason", "finish_reason") ?: "stop",
                     remaining = remaining,

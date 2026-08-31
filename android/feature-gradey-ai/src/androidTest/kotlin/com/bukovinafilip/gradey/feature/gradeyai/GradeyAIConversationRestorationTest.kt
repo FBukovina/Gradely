@@ -1,12 +1,13 @@
 package com.bukovinafilip.gradey.feature.gradeyai
 
+import androidx.activity.ComponentActivity
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.StateRestorationTester
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -15,6 +16,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.text.AnnotatedString
+import androidx.lifecycle.Lifecycle
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.bukovinafilip.gradey.domain.GradeyAIContextBuilding
@@ -39,7 +41,40 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class GradeyAIConversationRestorationTest {
     @get:Rule
-    val composeRule = createComposeRule()
+    val composeRule = createAndroidComposeRule<ComponentActivity>()
+
+    @Test
+    fun activityStopAndStartDeliverOneAuthoritativeForegroundBootstrap() {
+        val repository = RestorationRepository()
+        val contextBuilder = RestorationContextBuilder()
+        composeRule.setContent {
+            GradeyTheme {
+                GradeyAIScreen(
+                    repository = repository,
+                    contextBuilder = contextBuilder,
+                    isGradeyCloudConfigured = true,
+                    hasGradeyAccount = true,
+                    isGuestMode = false,
+                    onOpenAccount = {},
+                    onClose = {},
+                )
+            }
+        }
+
+        waitForText(ConversationTitle)
+        composeRule.runOnIdle {
+            assertEquals(1, repository.statusCalls.get())
+        }
+
+        composeRule.activityRule.scenario.moveToState(Lifecycle.State.CREATED)
+        assertEquals(1, repository.statusCalls.get())
+
+        composeRule.activityRule.scenario.moveToState(Lifecycle.State.STARTED)
+        composeRule.waitUntil(timeoutMillis = 10_000) {
+            repository.statusCalls.get() == 2
+        }
+        assertEquals(2, repository.statusCalls.get())
+    }
 
     @Test
     fun openConversationAndUnsentDraftSurviveStateRestorationWithoutSending() {

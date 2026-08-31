@@ -492,13 +492,16 @@ private fun GradeyApp(
         onboardingNotificationPreferenceSyncPending = false
         onboardingNotificationPushRegistrationPending = false
     }
-    fun expireGradeyIdentity(error: GradeySessionExpiredException) {
+    suspend fun expireGradeyIdentity(error: GradeySessionExpiredException) {
         graph.pushRegistrationStore.clear()
         notificationPreferencesError = null
         account = null
         authError = error.userFacingMessage(context)
         resetSignedInNavigation()
         phase = AppPhase.SIGNED_OUT
+        // A rejected cloud session cannot authenticate an unregister call. Invalidate the local
+        // FCM token so delivery to the former account's still-active backend row starts failing.
+        GradeyPushRegistration.invalidateCurrentToken()
     }
     suspend fun persistOnboardingNotificationPreference(enabled: Boolean): Boolean {
         val updated = prepareNotificationPreferencesForUpdate(
@@ -1955,6 +1958,10 @@ private fun GradeyApp(
             clearOnboardingNotificationRecovery()
             notificationPreferences = NotificationPreferences.Default
             notificationPreferencesError = null
+            // There is no authenticated unregister-device endpoint. Deleting the FCM token makes
+            // the prior account's backend row unusable until delivery marks it invalid, while the
+            // existing eligible-registration path obtains a fresh token after the next sign-in.
+            GradeyPushRegistration.invalidateCurrentToken()
         }
     }
 

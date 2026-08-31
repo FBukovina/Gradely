@@ -9,16 +9,17 @@ class PushRegistrationStoreTest {
         var stored: String? = null
         val store = PushRegistrationStore({ stored }, { stored = it })
 
-        assertThat(store.needsRegistration("token-a", "account-a", "debug")).isTrue()
-        store.markRegistered("token-a", "account-a", "debug")
+        assertThat(store.needsRegistration("token-a", "account-a", "sandbox")).isTrue()
+        store.markRegistered("token-a", "account-a", "sandbox")
 
-        assertThat(store.needsRegistration("token-a", "account-a", "debug")).isFalse()
-        assertThat(store.needsRegistration("token-b", "account-a", "debug")).isTrue()
-        assertThat(store.needsRegistration("token-a", "account-b", "debug")).isTrue()
+        assertThat(store.needsRegistration("token-a", "account-a", "sandbox")).isFalse()
+        assertThat(store.needsRegistration("token-b", "account-a", "sandbox")).isTrue()
+        assertThat(store.needsRegistration("token-a", "account-b", "sandbox")).isTrue()
         assertThat(store.needsRegistration("token-a", "account-a", "production")).isTrue()
 
         store.clear()
-        assertThat(store.needsRegistration("token-a", "account-a", "debug")).isTrue()
+        assertThat(store.needsRegistration("token-a", "account-a", "sandbox")).isTrue()
+        assertThat(store.needsRegistration("fresh-token", "account-b", "sandbox")).isTrue()
         assertThat(stored).isNull()
     }
 }

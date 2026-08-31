@@ -38,7 +38,7 @@ object GradeyPushRegistration {
         return try {
             registrationMutex.withLock {
                 val session = graph.gradeyAuthRepository.validSession()
-                val environment = if (BuildConfig.DEBUG) "debug" else "production"
+                val environment = pushEnvironment(BuildConfig.DEBUG)
                 if (!graph.pushRegistrationStore.needsRegistration(token, session.account.id, environment)) {
                     return@withLock true
                 }
@@ -59,6 +59,10 @@ object GradeyPushRegistration {
         }
     }
 
+    suspend fun invalidateCurrentToken(): Boolean = invalidatePushToken {
+        FirebaseMessaging.getInstance().deleteToken().await()
+    }
+
     private fun canRegister(context: Context, graph: AndroidGradeyGraph): Boolean =
         graph.isGradeyCloudConfigured &&
             FirebaseApp.getApps(context).isNotEmpty() &&
@@ -67,4 +71,16 @@ object GradeyPushRegistration {
                     ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) ==
                     PackageManager.PERMISSION_GRANTED
                 )
+}
+
+internal fun pushEnvironment(isDebugBuild: Boolean): String =
+    if (isDebugBuild) "sandbox" else "production"
+
+internal suspend fun invalidatePushToken(deleteToken: suspend () -> Unit): Boolean = try {
+    deleteToken()
+    true
+} catch (error: CancellationException) {
+    throw error
+} catch (_: Throwable) {
+    false
 }

@@ -97,9 +97,11 @@ import com.bukovinafilip.gradey.domain.TodayPresentationStates
 import com.bukovinafilip.gradey.domain.WearPayloadBuilder
 import com.bukovinafilip.gradey.domain.refreshRetainingContent
 import com.bukovinafilip.gradey.domain.reconcileOnboardingProgress
+import com.bukovinafilip.gradey.domain.isCurrentSchoolCloudLinked
 import com.bukovinafilip.gradey.domain.selectGradeyStartupDestination
 import com.bukovinafilip.gradey.domain.selectRestorableSchoolAccount
 import com.bukovinafilip.gradey.domain.selectSchoolAccountRequiringReconnect
+import com.bukovinafilip.gradey.domain.shouldShowOnboardingSchoolCloudLinkWarning
 import com.bukovinafilip.gradey.domain.SubjectGradeTrend
 import com.bukovinafilip.gradey.model.AbsenceResponse
 import com.bukovinafilip.gradey.model.AgeAttestationKind
@@ -108,9 +110,11 @@ import com.bukovinafilip.gradey.model.DashboardData
 import com.bukovinafilip.gradey.model.GradeyAccount
 import com.bukovinafilip.gradey.model.GradeySupportTier
 import com.bukovinafilip.gradey.model.LinkedAccountProvider
+import com.bukovinafilip.gradey.model.LinkedAccountStatus
 import com.bukovinafilip.gradey.model.LinkedSchoolAccount
 import com.bukovinafilip.gradey.model.NewMarkEvent
 import com.bukovinafilip.gradey.model.NotificationPreferences
+import com.bukovinafilip.gradey.model.OnboardingAccountIntent
 import com.bukovinafilip.gradey.model.OnboardingJourney
 import com.bukovinafilip.gradey.model.OnboardingProgress
 import com.bukovinafilip.gradey.model.OnboardingStep
@@ -272,6 +276,9 @@ private fun GradeyApp(
     var ageAttestationKind by remember { mutableStateOf(graph.ageAttestationStore.kind) }
     var isGuestMode by remember { mutableStateOf(graph.guestModeStore.isEnabled) }
     var onboardingProgress by remember { mutableStateOf<OnboardingProgress?>(null) }
+    var onboardingAccountIntent by rememberSaveable {
+        mutableStateOf(OnboardingAccountIntent.GET_STARTED)
+    }
     var account by remember { mutableStateOf<GradeyAccount?>(null) }
     var accountSettingsDestination by rememberSaveable(account?.id, isGuestMode) {
         mutableStateOf<AccountSettingsDestination?>(null)
@@ -284,6 +291,10 @@ private fun GradeyApp(
     var reconnectSchoolURL by rememberSaveable { mutableStateOf("") }
     var isAddingSchool by rememberSaveable { mutableStateOf(false) }
     var linkedAccountError by remember { mutableStateOf<String?>(null) }
+    var onboardingSchoolCloudLinkFailed by rememberSaveable { mutableStateOf(false) }
+    var onboardingSchoolCloudLinkError by remember { mutableStateOf<String?>(null) }
+    var isRetryingOnboardingSchoolCloudLink by remember { mutableStateOf(false) }
+    var onboardingNotificationsReturnToReady by rememberSaveable { mutableStateOf(false) }
     var isRefreshingLinkedAccounts by remember { mutableStateOf(false) }
     var mutatingLinkedAccountID by remember { mutableStateOf<String?>(null) }
     var schoolLoginJob by remember { mutableStateOf<Job?>(null) }
@@ -322,24 +333,188 @@ private fun GradeyApp(
     var notificationPermissionGranted by remember {
         mutableStateOf(context.notificationsAreEnabled())
     }
+    var isHandlingOnboardingNotificationChoice by remember { mutableStateOf(false) }
+    var onboardingNotificationNeedsSystemSettings by rememberSaveable {
+        mutableStateOf(graph.onboardingProgressStore.notificationPermissionRecoveryNeeded)
+    }
+    var onboardingNotificationPreferenceSyncPending by remember {
+        mutableStateOf(graph.onboardingProgressStore.notificationPreferenceSyncPending)
+    }
+    var onboardingNotificationPushRegistrationPending by remember {
+        mutableStateOf(graph.onboardingProgressStore.notificationPushRegistrationPending)
+    }
+    fun setOnboardingNotificationPermissionRecoveryNeeded(value: Boolean) {
+        onboardingNotificationNeedsSystemSettings = value
+        if (value) {
+            account?.id?.let { ownerAccountID ->
+                graph.onboardingProgressStore.notificationSyncOwnerAccountID = ownerAccountID
+            }
+        }
+        graph.onboardingProgressStore.notificationPermissionRecoveryNeeded = value
+        if (
+            !value &&
+            !onboardingNotificationPreferenceSyncPending &&
+            !onboardingNotificationPushRegistrationPending
+        ) {
+            graph.onboardingProgressStore.notificationSyncOwnerAccountID = null
+        }
+    }
+    fun setOnboardingNotificationPreferenceSyncPending(value: Boolean) {
+        onboardingNotificationPreferenceSyncPending = value
+        if (value) {
+            account?.id?.let { ownerAccountID ->
+                graph.onboardingProgressStore.notificationSyncOwnerAccountID = ownerAccountID
+            }
+        }
+        graph.onboardingProgressStore.notificationPreferenceSyncPending = value
+        if (
+            !value &&
+            !onboardingNotificationNeedsSystemSettings &&
+            !onboardingNotificationPushRegistrationPending
+        ) {
+            graph.onboardingProgressStore.notificationSyncOwnerAccountID = null
+        }
+    }
+    fun setOnboardingNotificationPushRegistrationPending(value: Boolean) {
+        onboardingNotificationPushRegistrationPending = value
+        if (value) {
+            account?.id?.let { ownerAccountID ->
+                graph.onboardingProgressStore.notificationSyncOwnerAccountID = ownerAccountID
+            }
+        }
+        graph.onboardingProgressStore.notificationPushRegistrationPending = value
+        if (
+            !value &&
+            !onboardingNotificationNeedsSystemSettings &&
+            !onboardingNotificationPreferenceSyncPending
+        ) {
+            graph.onboardingProgressStore.notificationSyncOwnerAccountID = null
+        }
+    }
+    fun clearOnboardingNotificationRecovery() {
+        graph.onboardingProgressStore.clearNotificationRecovery()
+        onboardingNotificationNeedsSystemSettings = false
+        onboardingNotificationPreferenceSyncPending = false
+        onboardingNotificationPushRegistrationPending = false
+    }
+    fun expireGradeyIdentity(error: GradeySessionExpiredException) {
+        graph.pushRegistrationStore.clear()
+        notificationPreferencesError = null
+        account = null
+        authError = error.userFacingMessage(context)
+        phase = AppPhase.SIGNED_OUT
+    }
+    suspend fun persistOnboardingNotificationPreference(enabled: Boolean): Boolean {
+        val updated = prepareNotificationPreferencesForUpdate(
+            preferences = onboardingNotificationPreferences(notificationPreferences, enabled),
+            timeZoneID = ZoneId.systemDefault().id,
+        )
+        notificationPreferences = updated
+        graph.notificationPreferencesStore.preferences = updated
+        notificationPreferencesError = null
+
+        if (account == null || isGuestMode || !graph.isGradeyCloudConfigured) {
+            setOnboardingNotificationPreferenceSyncPending(false)
+            setOnboardingNotificationPushRegistrationPending(false)
+            return true
+        }
+        if (!updated.newMarksEnabled || !notificationPermissionGranted) {
+            setOnboardingNotificationPushRegistrationPending(false)
+        }
+        setOnboardingNotificationPreferenceSyncPending(true)
+        return try {
+            val session = graph.gradeyAuthRepository.validSession()
+            graph.devicePushTokenClient.updateNotificationPreferences(updated, session)
+            setOnboardingNotificationPreferenceSyncPending(false)
+            true
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: GradeySessionExpiredException) {
+            expireGradeyIdentity(error)
+            onboardingProgress?.let { current ->
+                val accountStep = current.copy(step = OnboardingStep.ACCOUNT)
+                graph.onboardingProgressStore.saveProgress(accountStep)
+                onboardingProgress = accountStep
+            }
+            false
+        } catch (error: Throwable) {
+            // Keep the local choice and surface a retryable warning on Ready.
+            notificationPreferencesError = error.userFacingMessage(context)
+            true
+        }
+    }
+    suspend fun refreshOnboardingPushRegistration() {
+        setOnboardingNotificationPushRegistrationPending(true)
+        try {
+            if (GradeyPushRegistration.refreshIfEligible(context.applicationContext, graph)) {
+                setOnboardingNotificationPushRegistrationPending(false)
+                if (!onboardingNotificationPreferenceSyncPending) {
+                    notificationPreferencesError = null
+                }
+            }
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Throwable) {
+            notificationPreferencesError = error.userFacingMessage(context)
+        }
+    }
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
     ) { granted ->
+        isHandlingOnboardingNotificationChoice = true
         notificationPermissionGranted = granted || context.notificationsAreEnabled()
-        if (notificationPermissionGranted) {
-            scope.launch { GradeyPushRegistration.refreshIfEligible(context.applicationContext, graph) }
+        if (!notificationPermissionGranted) {
+            setOnboardingNotificationPermissionRecoveryNeeded(true)
         }
-        onboardingProgress?.let { current ->
-            val ready = current.copy(step = OnboardingStep.READY)
-            graph.onboardingProgressStore.saveProgress(ready)
-            onboardingProgress = ready
+        scope.launch {
+            try {
+                val canAdvance = persistOnboardingNotificationPreference(notificationPermissionGranted)
+                if (notificationPermissionGranted) {
+                    setOnboardingNotificationPermissionRecoveryNeeded(false)
+                }
+                if (canAdvance) {
+                    val current = onboardingProgress ?: graph.onboardingProgressStore.loadProgress()
+                    if (current?.step == OnboardingStep.NOTIFICATIONS) {
+                        onboardingNotificationsReturnToReady = false
+                        val ready = current.copy(step = OnboardingStep.READY)
+                        graph.onboardingProgressStore.saveProgress(ready)
+                        onboardingProgress = ready
+                    }
+                }
+                if (canAdvance && notificationPermissionGranted) {
+                    refreshOnboardingPushRegistration()
+                }
+            } finally {
+                isHandlingOnboardingNotificationChoice = false
+            }
         }
     }
     val notificationSettingsLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult(),
     ) {
         notificationPermissionGranted = context.notificationsAreEnabled()
-        if (notificationPermissionGranted) {
+        val currentProgress = onboardingProgress ?: graph.onboardingProgressStore.loadProgress()
+        val shouldEnableFromOnboarding =
+            currentProgress?.step == OnboardingStep.READY &&
+            (
+                onboardingNotificationNeedsSystemSettings ||
+                    graph.onboardingProgressStore.notificationPermissionRecoveryNeeded
+                ) &&
+            notificationPermissionGranted
+        if (shouldEnableFromOnboarding && !isHandlingOnboardingNotificationChoice) {
+            isHandlingOnboardingNotificationChoice = true
+            scope.launch {
+                try {
+                    val canContinue = persistOnboardingNotificationPreference(enabled = true)
+                    setOnboardingNotificationPermissionRecoveryNeeded(false)
+                    if (canContinue) {
+                        refreshOnboardingPushRegistration()
+                    }
+                } finally {
+                    isHandlingOnboardingNotificationChoice = false
+                }
+            }
+        } else if (notificationPermissionGranted) {
             scope.launch { GradeyPushRegistration.refreshIfEligible(context.applicationContext, graph) }
         }
     }
@@ -354,6 +529,64 @@ private fun GradeyApp(
     LaunchedEffect(account?.id, notificationPermissionGranted) {
         if (account != null && notificationPermissionGranted) {
             GradeyPushRegistration.refreshIfEligible(context.applicationContext, graph)
+        }
+    }
+
+    LaunchedEffect(
+        phase,
+        account?.id,
+        isGuestMode,
+        notificationPermissionGranted,
+    ) {
+        if (phase == AppPhase.CHECKING) return@LaunchedEffect
+        val currentAccountID = account?.id
+        val hasPendingNotificationRecovery =
+            onboardingNotificationNeedsSystemSettings ||
+                onboardingNotificationPreferenceSyncPending ||
+                onboardingNotificationPushRegistrationPending
+        if (
+            hasPendingNotificationRecovery &&
+            currentAccountID != null &&
+            graph.onboardingProgressStore.notificationSyncOwnerAccountID != currentAccountID
+        ) {
+            clearOnboardingNotificationRecovery()
+            return@LaunchedEffect
+        }
+        if (
+            (
+                onboardingNotificationPreferenceSyncPending ||
+                    onboardingNotificationPushRegistrationPending
+                ) &&
+            account != null &&
+            !isGuestMode &&
+            graph.isGradeyCloudConfigured &&
+            !isHandlingOnboardingNotificationChoice
+        ) {
+            isHandlingOnboardingNotificationChoice = true
+            try {
+                val canContinue = persistOnboardingNotificationPreference(
+                    enabled = notificationPreferences.newMarksEnabled,
+                )
+                val current = onboardingProgress ?: graph.onboardingProgressStore.loadProgress()
+                if (
+                    canContinue &&
+                    !onboardingNotificationPreferenceSyncPending &&
+                    current?.step == OnboardingStep.NOTIFICATIONS
+                ) {
+                    val ready = current.copy(step = OnboardingStep.READY)
+                    graph.onboardingProgressStore.saveProgress(ready)
+                    onboardingProgress = ready
+                }
+                if (
+                    canContinue &&
+                    notificationPreferences.newMarksEnabled &&
+                    notificationPermissionGranted
+                ) {
+                    refreshOnboardingPushRegistration()
+                }
+            } finally {
+                isHandlingOnboardingNotificationChoice = false
+            }
         }
     }
 
@@ -792,9 +1025,7 @@ private fun GradeyApp(
         } catch (error: CancellationException) {
             throw error
         } catch (error: GradeySessionExpiredException) {
-            account = null
-            authError = error.userFacingMessage(context)
-            phase = AppPhase.SIGNED_OUT
+            expireGradeyIdentity(error)
         } catch (error: Throwable) {
             linkedAccountError = error.userFacingMessage(context)
         } finally {
@@ -811,10 +1042,9 @@ private fun GradeyApp(
         ) return
 
         val previous = notificationPreferences
-        val prepared = updated.copy(
-            quietHoursStartMinute = updated.quietHoursStartMinute.coerceIn(0, 1439),
-            quietHoursEndMinute = updated.quietHoursEndMinute.coerceIn(0, 1439),
-            quietHoursTimeZone = ZoneId.systemDefault().id,
+        val prepared = prepareNotificationPreferencesForUpdate(
+            preferences = updated,
+            timeZoneID = ZoneId.systemDefault().id,
         )
         notificationPreferences = prepared
         graph.notificationPreferencesStore.preferences = prepared
@@ -830,10 +1060,7 @@ private fun GradeyApp(
         } catch (error: GradeySessionExpiredException) {
             notificationPreferences = previous
             graph.notificationPreferencesStore.preferences = previous
-            graph.pushRegistrationStore.clear()
-            account = null
-            authError = error.userFacingMessage(context)
-            phase = AppPhase.SIGNED_OUT
+            expireGradeyIdentity(error)
         } catch (error: Throwable) {
             notificationPreferences = previous
             graph.notificationPreferencesStore.preferences = previous
@@ -870,7 +1097,14 @@ private fun GradeyApp(
         if (account == null || isGuestMode || !graph.isGradeyCloudConfigured) return true
         val session = graph.schoolRepository.currentStoredSession() ?: return false
         val cachedAccounts = graph.linkedAccountRepository.localAccounts()
-        if (session.linkedAccountID != null && cachedAccounts.any { it.id == session.linkedAccountID }) {
+        if (
+            session.linkedAccountID != null &&
+            cachedAccounts.any {
+                it.id == session.linkedAccountID &&
+                    it.provider.isSupportedSchoolProvider &&
+                    it.status == LinkedAccountStatus.ACTIVE
+            }
+        ) {
             activeLinkedAccountID = session.linkedAccountID
             linkedAccounts = cachedAccounts
             linkedAccountError = null
@@ -879,6 +1113,14 @@ private fun GradeyApp(
 
         return try {
             val linked = graph.linkedAccountRepository.linkSchoolAccount(session, dashboard?.user)
+            if (
+                !linked.provider.isSupportedSchoolProvider ||
+                linked.status != LinkedAccountStatus.ACTIVE
+            ) {
+                linkedAccounts = graph.linkedAccountRepository.localAccounts()
+                linkedAccountError = context.getString(R.string.error_linked_account)
+                return false
+            }
             graph.schoolRepository.associateCurrentSession(linked)
             activeLinkedAccountID = linked.id
             linkedAccounts = graph.linkedAccountRepository.localAccounts()
@@ -887,9 +1129,7 @@ private fun GradeyApp(
         } catch (error: CancellationException) {
             throw error
         } catch (error: GradeySessionExpiredException) {
-            account = null
-            authError = error.userFacingMessage(context)
-            phase = AppPhase.SIGNED_OUT
+            expireGradeyIdentity(error)
             false
         } catch (error: Throwable) {
             linkedAccountError = error.userFacingMessage(context)
@@ -1139,6 +1379,7 @@ private fun GradeyApp(
     suspend fun advanceOnboardingAfterAccountChoice() {
         val current = onboardingProgress ?: return
         val hasSchool = graph.schoolRepository.bootstrapSession() != null
+        var isSchoolCloudLinked = true
         if (hasSchool && account != null && !isGuestMode) {
             graph.schoolRepository.loadCachedDashboard()?.let { dashboard = it }
             if (dashboard == null) {
@@ -1146,26 +1387,41 @@ private fun GradeyApp(
                     graph.schoolRepository.loadDashboard(forceRefresh = false)
                 }.getOrNull()
             }
-            linkCurrentSchoolIfNeeded()
+            isSchoolCloudLinked = linkCurrentSchoolIfNeeded()
         }
+        onboardingSchoolCloudLinkFailed =
+            current.journey == OnboardingJourney.NEW_USER &&
+            hasSchool &&
+            account != null &&
+            !isGuestMode &&
+            !isSchoolCloudLinked
+        onboardingSchoolCloudLinkError = linkedAccountError.takeIf { onboardingSchoolCloudLinkFailed }
         persistOnboarding(
             reconcileOnboardingProgress(
                 progress = current.copy(step = OnboardingStep.ACCOUNT),
                 isGuestMode = isGuestMode,
                 hasGradeySession = account != null,
                 hasSchoolSession = hasSchool,
+                isSchoolCloudLinked = isSchoolCloudLinked,
             ),
         )
     }
 
-    suspend fun advanceOnboardingAfterSchoolConnection() {
+    suspend fun advanceOnboardingAfterSchoolConnection(isSchoolCloudLinked: Boolean = true) {
         val current = onboardingProgress ?: return
+        onboardingSchoolCloudLinkFailed =
+            current.journey == OnboardingJourney.NEW_USER &&
+            account != null &&
+            !isGuestMode &&
+            !isSchoolCloudLinked
+        onboardingSchoolCloudLinkError = linkedAccountError.takeIf { onboardingSchoolCloudLinkFailed }
         persistOnboarding(
             reconcileOnboardingProgress(
                 progress = current.copy(step = OnboardingStep.SCHOOL),
                 isGuestMode = isGuestMode,
                 hasGradeySession = account != null,
                 hasSchoolSession = true,
+                isSchoolCloudLinked = isSchoolCloudLinked,
             ),
         )
     }
@@ -1176,8 +1432,21 @@ private fun GradeyApp(
             OnboardingStep.WELCOME -> return
             OnboardingStep.ACCOUNT -> OnboardingStep.WELCOME
             OnboardingStep.SCHOOL -> OnboardingStep.ACCOUNT
-            OnboardingStep.NOTIFICATIONS -> OnboardingStep.SCHOOL
-            OnboardingStep.READY -> if (isGuestMode) OnboardingStep.SCHOOL else OnboardingStep.NOTIFICATIONS
+            OnboardingStep.NOTIFICATIONS -> {
+                if (onboardingNotificationsReturnToReady) {
+                    onboardingNotificationsReturnToReady = false
+                    OnboardingStep.READY
+                } else {
+                    OnboardingStep.SCHOOL
+                }
+            }
+            OnboardingStep.READY -> {
+                if (isGuestMode || onboardingSchoolCloudLinkFailed) {
+                    OnboardingStep.SCHOOL
+                } else {
+                    OnboardingStep.NOTIFICATIONS
+                }
+            }
             OnboardingStep.SUPPORT -> OnboardingStep.ACCOUNT
         }
         persistOnboarding(current.copy(step = previous))
@@ -1185,6 +1454,7 @@ private fun GradeyApp(
 
     suspend fun finishOnboarding() {
         graph.onboardingProgressStore.complete()
+        onboardingNotificationNeedsSystemSettings = false
         onboardingProgress = null
         openStoredSchoolOrLogin()
     }
@@ -1195,6 +1465,7 @@ private fun GradeyApp(
         } finally {
             graph.pushRegistrationStore.clear()
             graph.notificationPreferencesStore.clear()
+            clearOnboardingNotificationRecovery()
             notificationPreferences = NotificationPreferences.Default
             notificationPreferencesError = null
         }
@@ -1248,10 +1519,7 @@ private fun GradeyApp(
         } catch (error: CancellationException) {
             throw error
         } catch (error: GradeySessionExpiredException) {
-            graph.pushRegistrationStore.clear()
-            account = null
-            authError = error.userFacingMessage(context)
-            phase = AppPhase.SIGNED_OUT
+            expireGradeyIdentity(error)
         } catch (error: Throwable) {
             privacyDataError = error.userFacingMessage(context)
         } finally {
@@ -1304,10 +1572,7 @@ private fun GradeyApp(
         } catch (error: CancellationException) {
             throw error
         } catch (error: GradeySessionExpiredException) {
-            graph.pushRegistrationStore.clear()
-            account = null
-            authError = error.userFacingMessage(context)
-            phase = AppPhase.SIGNED_OUT
+            expireGradeyIdentity(error)
         } catch (error: Throwable) {
             privacyDataError = error.userFacingMessage(context)
         } finally {
@@ -1474,7 +1739,8 @@ private fun GradeyApp(
                         valid.copy(account = graph.gradeyAuthRepository.refreshAccount())
                     } catch (error: CancellationException) {
                         throw error
-                    } catch (_: GradeySessionExpiredException) {
+                    } catch (error: GradeySessionExpiredException) {
+                        expireGradeyIdentity(error)
                         null
                     } catch (_: Throwable) {
                         // Profile refresh is opportunistic; retain the encrypted account snapshot.
@@ -1482,7 +1748,8 @@ private fun GradeyApp(
                     }
                 } catch (error: CancellationException) {
                     throw error
-                } catch (_: GradeySessionExpiredException) {
+                } catch (error: GradeySessionExpiredException) {
+                    expireGradeyIdentity(error)
                     null
                 } catch (_: Throwable) {
                     // A temporary cloud outage must not discard the restored account or school session.
@@ -1493,6 +1760,19 @@ private fun GradeyApp(
             null
         }
         account = authSession?.account
+        val storedNotificationRecoveryOwner =
+            graph.onboardingProgressStore.notificationSyncOwnerAccountID
+        val hasStoredNotificationRecovery =
+            graph.onboardingProgressStore.notificationPermissionRecoveryNeeded ||
+                graph.onboardingProgressStore.notificationPreferenceSyncPending ||
+                graph.onboardingProgressStore.notificationPushRegistrationPending
+        if (
+            hasStoredNotificationRecovery &&
+            account != null &&
+            storedNotificationRecoveryOwner != account?.id
+        ) {
+            clearOnboardingNotificationRecovery()
+        }
         var schoolSession = try {
             graph.schoolRepository.bootstrapSession()
         } catch (error: CancellationException) {
@@ -1500,6 +1780,7 @@ private fun GradeyApp(
         } catch (_: Throwable) {
             null
         }
+        var refreshedLinkedAccounts: List<LinkedSchoolAccount>? = null
         if (authSession != null && !isGuestMode) {
             val snapshot = try {
                 graph.linkedAccountRepository.refreshAccounts()
@@ -1508,7 +1789,10 @@ private fun GradeyApp(
             } catch (_: Throwable) {
                 null
             }
-            if (snapshot != null) linkedAccounts = snapshot.linkedAccounts
+            if (snapshot != null) {
+                refreshedLinkedAccounts = snapshot.linkedAccounts
+                linkedAccounts = snapshot.linkedAccounts
+            }
             if (schoolSession == null) {
                 val preferred = selectRestorableSchoolAccount(
                     accounts = snapshot?.linkedAccounts ?: linkedAccounts,
@@ -1555,6 +1839,10 @@ private fun GradeyApp(
             GradeyStartupDestination.NEEDS_SCHOOL -> AppPhase.NEEDS_SCHOOL
             GradeyStartupDestination.SIGNED_IN -> AppPhase.SIGNED_IN
         }
+        val isSchoolCloudLinked = isCurrentSchoolCloudLinked(
+            linkedAccountID = schoolSession?.linkedAccountID,
+            refreshedAccounts = refreshedLinkedAccounts,
+        )
         val resolvedOnboarding = graph.onboardingProgressStore.resolve(
             hasSchoolSession = schoolSession != null,
         )?.let { progress ->
@@ -1563,12 +1851,52 @@ private fun GradeyApp(
                 isGuestMode = isGuestMode,
                 hasGradeySession = authSession != null,
                 hasSchoolSession = schoolSession != null,
+                isSchoolCloudLinked = isSchoolCloudLinked,
             )
         }
         if (resolvedOnboarding != null) {
             graph.onboardingProgressStore.saveProgress(resolvedOnboarding)
         }
         onboardingProgress = resolvedOnboarding
+        val notificationPermissionRecoveryWasPending =
+            graph.onboardingProgressStore.notificationPermissionRecoveryNeeded
+        notificationPermissionGranted = context.notificationsAreEnabled()
+        onboardingNotificationNeedsSystemSettings =
+            notificationPermissionRecoveryWasPending && !notificationPermissionGranted
+        onboardingNotificationPreferenceSyncPending =
+            graph.onboardingProgressStore.notificationPreferenceSyncPending
+        onboardingNotificationPushRegistrationPending =
+            graph.onboardingProgressStore.notificationPushRegistrationPending
+        val notificationRecoveryProgress = resolvedOnboarding
+        if (
+            notificationPermissionRecoveryWasPending &&
+            notificationPermissionGranted &&
+            notificationRecoveryProgress != null &&
+            notificationRecoveryProgress.step in
+            setOf(OnboardingStep.NOTIFICATIONS, OnboardingStep.READY)
+        ) {
+            isHandlingOnboardingNotificationChoice = true
+            try {
+                val canAdvance = persistOnboardingNotificationPreference(enabled = true)
+                setOnboardingNotificationPermissionRecoveryNeeded(false)
+                if (canAdvance && notificationRecoveryProgress.step == OnboardingStep.NOTIFICATIONS) {
+                    val ready = notificationRecoveryProgress.copy(step = OnboardingStep.READY)
+                    graph.onboardingProgressStore.saveProgress(ready)
+                    onboardingProgress = ready
+                }
+                if (canAdvance) refreshOnboardingPushRegistration()
+            } finally {
+                isHandlingOnboardingNotificationChoice = false
+            }
+        }
+        onboardingSchoolCloudLinkFailed = shouldShowOnboardingSchoolCloudLinkWarning(
+            progress = resolvedOnboarding,
+            isGuestMode = isGuestMode,
+            hasGradeySession = authSession != null,
+            hasSchoolSession = schoolSession != null,
+            isSchoolCloudLinked = isSchoolCloudLinked,
+        )
+        onboardingSchoolCloudLinkError = null
 
         if (resolvedOnboarding == null) {
             val restoredSchoolRoute = restoreSchoolRoute(
@@ -1640,10 +1968,15 @@ private fun GradeyApp(
                     appLanguage = appLanguage,
                     onAppLanguageChange = onAppLanguageChange,
                     onContinue = {
+                        onboardingAccountIntent = OnboardingAccountIntent.GET_STARTED
                         persistOnboarding(progress.copy(step = OnboardingStep.ACCOUNT))
                         if (account != null || isGuestMode) {
                             scope.launch { advanceOnboardingAfterAccountChoice() }
                         }
+                    },
+                    onLogIn = {
+                        onboardingAccountIntent = OnboardingAccountIntent.LOG_IN
+                        persistOnboarding(progress.copy(step = OnboardingStep.ACCOUNT))
                     },
                     modifier = Modifier.fillMaxSize(),
                 )
@@ -1652,6 +1985,9 @@ private fun GradeyApp(
                     isLoading = isLoading,
                     errorMessage = authError,
                     isGoogleSignInAvailable = graph.isGradeyCloudConfigured,
+                    accountIntent = onboardingAccountIntent,
+                    progressPosition = 1,
+                    progressCount = if (progress.journey == OnboardingJourney.UPGRADE) 2 else 4,
                     onGoogleSignIn = {
                         scope.launch {
                             isLoading = true
@@ -1751,9 +2087,9 @@ private fun GradeyApp(
                             dashboard = runCatching {
                                 graph.schoolRepository.loadDashboard(forceRefresh = false)
                             }.getOrNull()
-                            linkCurrentSchoolIfNeeded()
+                            val isSchoolCloudLinked = linkCurrentSchoolIfNeeded()
                             phase = AppPhase.SIGNED_IN
-                            advanceOnboardingAfterSchoolConnection()
+                            advanceOnboardingAfterSchoolConnection(isSchoolCloudLinked)
                         }
                     },
                     onCancelLogin = ::cancelSchoolLogin,
@@ -1764,40 +2100,194 @@ private fun GradeyApp(
 
                 OnboardingStep.NOTIFICATIONS -> OnboardingNotificationsScreen(
                     onEnable = {
-                        if (
-                            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-                            !notificationPermissionGranted
-                        ) {
-                            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                        } else {
-                            persistOnboarding(progress.copy(step = OnboardingStep.READY))
+                        if (!isHandlingOnboardingNotificationChoice) {
+                            isHandlingOnboardingNotificationChoice = true
+                            setOnboardingNotificationPermissionRecoveryNeeded(true)
+                            if (
+                                Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                                !notificationPermissionGranted
+                            ) {
+                                runCatching {
+                                    notificationPermissionLauncher.launch(
+                                        Manifest.permission.POST_NOTIFICATIONS,
+                                    )
+                                }.onFailure { error ->
+                                    isHandlingOnboardingNotificationChoice = false
+                                    notificationPreferencesError = error.userFacingMessage(context)
+                                }
+                            } else {
+                                scope.launch {
+                                    try {
+                                        notificationPermissionGranted = context.notificationsAreEnabled()
+                                        val canAdvance = persistOnboardingNotificationPreference(enabled = true)
+                                        if (notificationPermissionGranted) {
+                                            setOnboardingNotificationPermissionRecoveryNeeded(false)
+                                        }
+                                        if (canAdvance) {
+                                            onboardingNotificationsReturnToReady = false
+                                            persistOnboarding(progress.copy(step = OnboardingStep.READY))
+                                        }
+                                        if (canAdvance && notificationPermissionGranted) {
+                                            refreshOnboardingPushRegistration()
+                                        }
+                                    } finally {
+                                        isHandlingOnboardingNotificationChoice = false
+                                    }
+                                }
+                            }
                         }
                     },
                     onNotNow = {
-                        persistOnboarding(progress.copy(step = OnboardingStep.READY))
+                        if (!isHandlingOnboardingNotificationChoice) {
+                            isHandlingOnboardingNotificationChoice = true
+                            scope.launch {
+                                try {
+                                    setOnboardingNotificationPermissionRecoveryNeeded(false)
+                                    val canAdvance = persistOnboardingNotificationPreference(enabled = false)
+                                    if (canAdvance) {
+                                        onboardingNotificationsReturnToReady = false
+                                        persistOnboarding(progress.copy(step = OnboardingStep.READY))
+                                    }
+                                } finally {
+                                    isHandlingOnboardingNotificationChoice = false
+                                }
+                            }
+                        }
                     },
-                    onBack = ::goBackInOnboarding,
+                    onBack = {
+                        if (onboardingNotificationsReturnToReady) {
+                            onboardingNotificationsReturnToReady = false
+                            persistOnboarding(progress.copy(step = OnboardingStep.READY))
+                        } else {
+                            goBackInOnboarding()
+                        }
+                    },
+                    isWorking = isHandlingOnboardingNotificationChoice,
+                    progressPosition = 3,
+                    progressCount = 4,
                     modifier = Modifier.fillMaxSize(),
                 )
 
                 OnboardingStep.READY -> OnboardingReadyScreen(
                     isGuestMode = isGuestMode,
-                    notificationsEnabled = notificationPermissionGranted,
-                    onFinish = {
-                        scope.launch {
-                            isLoading = true
-                            try {
-                                finishOnboarding()
-                            } catch (error: CancellationException) {
-                                throw error
-                            } catch (error: Throwable) {
-                                dataError = error.userFacingMessage(context)
-                            } finally {
-                                isLoading = false
+                    notificationsEnabled = onboardingNotificationsEnabled(
+                        preferences = notificationPreferences,
+                        permissionGranted = notificationPermissionGranted,
+                    ) && !onboardingSchoolCloudLinkFailed,
+                    schoolCloudLinkFailed = onboardingSchoolCloudLinkFailed,
+                    schoolCloudLinkErrorMessage = onboardingSchoolCloudLinkError,
+                    isRetryingSchoolCloudLink = isRetryingOnboardingSchoolCloudLink,
+                    onRetrySchoolCloudLink = {
+                        if (
+                            !isRetryingOnboardingSchoolCloudLink &&
+                            !isHandlingOnboardingNotificationChoice
+                        ) {
+                            isRetryingOnboardingSchoolCloudLink = true
+                            scope.launch {
+                                try {
+                                    val linked = linkCurrentSchoolIfNeeded()
+                                    if (onboardingProgress?.step != OnboardingStep.READY) {
+                                        return@launch
+                                    } else if (!linked && account == null && !isGuestMode) {
+                                        onboardingSchoolCloudLinkFailed = false
+                                        onboardingSchoolCloudLinkError = null
+                                        persistOnboarding(progress.copy(step = OnboardingStep.ACCOUNT))
+                                    } else if (linked) {
+                                        onboardingSchoolCloudLinkFailed = false
+                                        onboardingSchoolCloudLinkError = null
+                                        onboardingNotificationsReturnToReady = true
+                                        persistOnboarding(progress.copy(step = OnboardingStep.NOTIFICATIONS))
+                                    } else {
+                                        onboardingSchoolCloudLinkFailed = true
+                                        onboardingSchoolCloudLinkError = linkedAccountError
+                                    }
+                                } finally {
+                                    isRetryingOnboardingSchoolCloudLink = false
+                                }
                             }
                         }
                     },
-                    onBack = ::goBackInOnboarding,
+                    notificationSyncErrorMessage = notificationPreferencesError.takeIf {
+                        !isGuestMode && !onboardingSchoolCloudLinkFailed
+                    },
+                    notificationSyncPending =
+                        (
+                            onboardingNotificationPreferenceSyncPending ||
+                                onboardingNotificationPushRegistrationPending
+                            ) &&
+                        !isGuestMode &&
+                        !onboardingSchoolCloudLinkFailed,
+                    isRetryingNotificationSync = isHandlingOnboardingNotificationChoice,
+                    isFinishing = isLoading,
+                    onRetryNotificationSync = {
+                        if (
+                            !isHandlingOnboardingNotificationChoice &&
+                            !isRetryingOnboardingSchoolCloudLink
+                        ) {
+                            isHandlingOnboardingNotificationChoice = true
+                            scope.launch {
+                                try {
+                                    val canContinue = persistOnboardingNotificationPreference(
+                                        enabled = notificationPreferences.newMarksEnabled,
+                                    )
+                                    if (
+                                        canContinue &&
+                                        notificationPreferences.newMarksEnabled &&
+                                        notificationPermissionGranted
+                                    ) {
+                                        refreshOnboardingPushRegistration()
+                                    }
+                                } finally {
+                                    isHandlingOnboardingNotificationChoice = false
+                                }
+                            }
+                        }
+                    },
+                    showNotificationSettingsAction =
+                        onboardingNotificationNeedsSystemSettings &&
+                        !isGuestMode &&
+                        !onboardingSchoolCloudLinkFailed,
+                    onOpenNotificationSettings = {
+                        notificationSettingsLauncher.launch(
+                            Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(
+                                Settings.EXTRA_APP_PACKAGE,
+                                context.packageName,
+                            ),
+                        )
+                    },
+                    progressPosition = if (
+                        isGuestMode || onboardingSchoolCloudLinkFailed
+                    ) 3 else 4,
+                    progressCount = if (
+                        isGuestMode || onboardingSchoolCloudLinkFailed
+                    ) 3 else 4,
+                    onFinish = {
+                        if (
+                            !isRetryingOnboardingSchoolCloudLink &&
+                            !isHandlingOnboardingNotificationChoice
+                        ) {
+                            scope.launch {
+                                isLoading = true
+                                try {
+                                    finishOnboarding()
+                                } catch (error: CancellationException) {
+                                    throw error
+                                } catch (error: Throwable) {
+                                    dataError = error.userFacingMessage(context)
+                                } finally {
+                                    isLoading = false
+                                }
+                            }
+                        }
+                    },
+                    onBack = {
+                        if (
+                            !isRetryingOnboardingSchoolCloudLink &&
+                            !isHandlingOnboardingNotificationChoice
+                        ) {
+                            goBackInOnboarding()
+                        }
+                    },
                     modifier = Modifier.fillMaxSize(),
                 )
 
@@ -1830,6 +2320,8 @@ private fun GradeyApp(
                         }
                     },
                     onBack = ::goBackInOnboarding,
+                    progressPosition = 2,
+                    progressCount = 2,
                     modifier = Modifier.fillMaxSize(),
                 )
         }
@@ -2383,6 +2875,7 @@ private fun GradeyApp(
                                 }
                                 val restarted = OnboardingProgress.initial(journey)
                                 graph.onboardingProgressStore.restart(restarted)
+                                clearOnboardingNotificationRecovery()
                                 isSupportPresented = false
                                 onboardingProgress = restarted
                             }
@@ -2399,12 +2892,14 @@ private fun GradeyApp(
                         onDebugRestartNewUser = {
                             val restarted = OnboardingProgress.initial(OnboardingJourney.NEW_USER)
                             graph.onboardingProgressStore.restart(restarted)
+                            clearOnboardingNotificationRecovery()
                             isSupportPresented = false
                             onboardingProgress = restarted
                         },
                         onDebugRestartUpgrade = {
                             val restarted = OnboardingProgress.initial(OnboardingJourney.UPGRADE)
                             graph.onboardingProgressStore.restart(restarted)
+                            clearOnboardingNotificationRecovery()
                             isSupportPresented = false
                             onboardingProgress = restarted
                         },
@@ -2415,6 +2910,7 @@ private fun GradeyApp(
                                     graph.cache?.clearAll()
                                     val restarted = OnboardingProgress.initial(OnboardingJourney.NEW_USER)
                                     graph.onboardingProgressStore.restart(restarted)
+                                    clearOnboardingNotificationRecovery()
                                     isSupportPresented = false
                                     onboardingProgress = restarted
                                 } catch (error: CancellationException) {
@@ -2474,10 +2970,8 @@ private fun GradeyApp(
                             } catch (error: CancellationException) {
                                 throw error
                             } catch (error: GradeySessionExpiredException) {
-                                account = null
-                                authError = error.userFacingMessage(context)
+                                expireGradeyIdentity(error)
                                 selectedTab = AppTab.TODAY
-                                phase = AppPhase.SIGNED_OUT
                             } catch (error: Throwable) {
                                 profileError = error.userFacingMessage(context)
                             } finally {

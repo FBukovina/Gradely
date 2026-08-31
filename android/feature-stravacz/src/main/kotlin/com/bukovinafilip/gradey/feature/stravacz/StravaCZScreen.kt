@@ -40,6 +40,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -216,6 +218,7 @@ private fun MealsToolbar(
     onOpenAccount: () -> Unit,
     onOpenGradeyTools: () -> Unit,
 ) {
+    val refreshDescription = stringResource(R.string.stravacz_refresh)
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -239,13 +242,17 @@ private fun MealsToolbar(
             textAlign = androidx.compose.ui.text.style.TextAlign.Center,
         )
         if (connected) {
-            IconButton(onClick = onRefresh, enabled = !busy) {
+            IconButton(
+                onClick = onRefresh,
+                enabled = !busy,
+                modifier = Modifier.semantics { contentDescription = refreshDescription },
+            ) {
                 if (busy) {
                     CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp)
                 } else {
                     Icon(
                         GradeyIcons.Refresh,
-                        contentDescription = stringResource(R.string.stravacz_refresh),
+                        contentDescription = null,
                         tint = MaterialTheme.colorScheme.primary,
                     )
                 }

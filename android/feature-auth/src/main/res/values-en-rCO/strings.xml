@@ -12,6 +12,12 @@
     <string name="onboarding_welcome_benefit_extras_title">help and pings</string>
     <string name="onboarding_welcome_benefit_extras_body">ask Gradey AI about marks or the timetable, then stay in the loop with notifications and widgets.</string>
     <string name="onboarding_get_started">let’s go</string>
+    <string name="onboarding_log_in">log in</string>
+    <string name="onboarding_progress">step %1$d of %2$d</string>
+    <string name="onboarding_account_title">make your Gradey ID</string>
+    <string name="onboarding_account_body">make a private Gradey ID with Google to sync settings across Android devices and turn on notifications. or skip it and connect school now.</string>
+    <string name="onboarding_account_login_title">log in to Gradey</string>
+    <string name="onboarding_account_login_body">sign in with the same Google account you used to create Gradey ID. there is no separate password.</string>
     <string name="onboarding_upgrade_continue">check the account stuff</string>
     <string name="auth_restoring_account">restoring your account…</string>
     <string name="auth_back">back</string>
@@ -29,6 +35,12 @@
     <string name="onboarding_ready_account_gradey_id">account · Gradey ID</string>
     <string name="onboarding_ready_notifications_enabled">notifications · on</string>
     <string name="onboarding_ready_notifications_off">notifications · off</string>
+    <string name="onboarding_school_link_warning_title">Gradey ID link needs another try</string>
+    <string name="onboarding_school_link_warning_body">your local Bakaláři connection is safe, but Gradey ID couldn’t link it yet. retry now or keep going and sort it later.</string>
+    <string name="onboarding_notification_sync_warning_title">notification sync needs another try</string>
+    <string name="onboarding_notification_sync_warning_body">your choice is saved here, but Gradey ID couldn’t sync it yet.</string>
+    <string name="onboarding_notification_sync_retry">retry notification sync</string>
+    <string name="onboarding_open_notification_settings">open notification settings</string>
     <string name="onboarding_ready_open">open Gradey</string>
     <string name="onboarding_upgrade_ready_title">your connection is ready</string>
     <string name="onboarding_upgrade_ready_body">your existing Bakaláři session stayed safe through the upgrade.</string>

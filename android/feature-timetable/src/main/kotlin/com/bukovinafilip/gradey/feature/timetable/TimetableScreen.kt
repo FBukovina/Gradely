@@ -316,28 +316,35 @@ private fun TimetableHeader(
             .padding(horizontal = 16.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Surface(
+        Box(
             modifier = Modifier
                 .align(Alignment.CenterStart)
-                .size(44.dp),
-            onClick = onOpenGradeyTools,
-            shape = CircleShape,
-            color = MaterialTheme.colorScheme.surfaceContainerHigh,
-            shadowElevation = 2.dp,
+                .size(48.dp)
+                .clip(CircleShape)
+                .semantics { contentDescription = openToolsDescription }
+                .clickable(role = Role.Button, onClick = onOpenGradeyTools),
+            contentAlignment = Alignment.CenterStart,
         ) {
-            Box(contentAlignment = Alignment.Center) {
-                Surface(
-                    modifier = Modifier.size(30.dp),
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f),
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = GradeyIcons.Sparkles,
-                            contentDescription = openToolsDescription,
-                            tint = AccentTeal,
-                            modifier = Modifier.size(22.dp),
-                        )
+            Surface(
+                modifier = Modifier.size(44.dp),
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                shadowElevation = 2.dp,
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Surface(
+                        modifier = Modifier.size(30.dp),
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f),
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = GradeyIcons.Sparkles,
+                                contentDescription = null,
+                                tint = AccentTeal,
+                                modifier = Modifier.size(22.dp),
+                            )
+                        }
                     }
                 }
             }
@@ -351,57 +358,74 @@ private fun TimetableHeader(
             fontWeight = FontWeight.SemiBold,
         )
 
-        Surface(
+        Box(
             modifier = Modifier
                 .align(Alignment.CenterEnd)
                 .width(106.dp)
-                .height(44.dp),
-            shape = RoundedCornerShape(22.dp),
-            color = MaterialTheme.colorScheme.surfaceContainerHigh,
-            shadowElevation = 2.dp,
+                .height(48.dp),
         ) {
+            Surface(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .fillMaxWidth()
+                    .height(44.dp),
+                shape = RoundedCornerShape(22.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                shadowElevation = 2.dp,
+            ) {}
             Row(
-                modifier = Modifier.padding(horizontal = 7.dp, vertical = 4.dp),
+                modifier = Modifier.fillMaxSize(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                Surface(
-                    modifier = Modifier.size(34.dp),
-                    onClick = onRefresh,
-                    enabled = !isRefreshing,
-                    shape = CircleShape,
-                    color = Color.Transparent,
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .semantics { contentDescription = refreshDescription }
+                        .clickable(
+                            enabled = !isRefreshing,
+                            role = Role.Button,
+                            onClick = onRefresh,
+                        ),
+                    contentAlignment = Alignment.Center,
                 ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        if (isRefreshing) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(21.dp),
-                                color = AccentTeal,
-                                strokeWidth = 2.5.dp,
-                            )
-                        } else {
-                            Icon(
-                                imageVector = GradeyIcons.Refresh,
-                                contentDescription = refreshDescription,
-                                tint = AccentTeal,
-                                modifier = Modifier.size(27.dp),
-                            )
-                        }
+                    if (isRefreshing) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(21.dp),
+                            color = AccentTeal,
+                            strokeWidth = 2.5.dp,
+                        )
+                    } else {
+                        Icon(
+                            imageVector = GradeyIcons.Refresh,
+                            contentDescription = null,
+                            tint = AccentTeal,
+                            modifier = Modifier.size(27.dp),
+                        )
                     }
                 }
-                Surface(
-                    modifier = Modifier.size(36.dp),
-                    onClick = onOpenAccount,
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f),
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .semantics { contentDescription = openAccountDescription }
+                        .clickable(role = Role.Button, onClick = onOpenAccount),
+                    contentAlignment = Alignment.Center,
                 ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = GradeyIcons.User,
-                            contentDescription = openAccountDescription,
-                            tint = AccentTeal,
-                            modifier = Modifier.size(22.dp),
-                        )
+                    Surface(
+                        modifier = Modifier.size(36.dp),
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f),
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = GradeyIcons.User,
+                                contentDescription = null,
+                                tint = AccentTeal,
+                                modifier = Modifier.size(22.dp),
+                            )
+                        }
                     }
                 }
             }

@@ -50,6 +50,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.focus.FocusDirection
@@ -63,6 +64,9 @@ import com.bukovinafilip.gradey.ui.GradeyIcons
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -803,34 +807,44 @@ private fun TodayHeader(
     onOpenAccount: () -> Unit,
     onOpenGradeyTools: () -> Unit,
 ) {
+    val openToolsDescription = stringResource(R.string.today_open_gradey_ai)
+    val refreshDescription = stringResource(R.string.today_refresh)
+    val openAccountDescription = stringResource(R.string.today_open_account)
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .height(62.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Surface(
+        Box(
             modifier = Modifier
                 .align(Alignment.CenterStart)
-                .size(44.dp),
-            onClick = onOpenGradeyTools,
-            shape = CircleShape,
-            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.10f),
-            shadowElevation = 2.dp,
+                .size(48.dp)
+                .clip(CircleShape)
+                .semantics { contentDescription = openToolsDescription }
+                .clickable(role = Role.Button, onClick = onOpenGradeyTools),
+            contentAlignment = Alignment.CenterStart,
         ) {
-            Box(contentAlignment = Alignment.Center) {
-                Surface(
-                    modifier = Modifier.size(30.dp),
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = GradeyIcons.Sparkles,
-                            contentDescription = stringResource(R.string.today_open_gradey_ai),
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(22.dp),
-                        )
+            Surface(
+                modifier = Modifier.size(44.dp),
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.10f),
+                shadowElevation = 2.dp,
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Surface(
+                        modifier = Modifier.size(30.dp),
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = GradeyIcons.Sparkles,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(22.dp),
+                            )
+                        }
                     }
                 }
             }
@@ -844,57 +858,74 @@ private fun TodayHeader(
             fontWeight = FontWeight.SemiBold,
         )
 
-        Surface(
+        Box(
             modifier = Modifier
                 .align(Alignment.CenterEnd)
                 .width(106.dp)
-                .height(44.dp),
-            shape = RoundedCornerShape(25.dp),
-            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.10f),
-            shadowElevation = 2.dp,
+                .height(48.dp),
         ) {
+            Surface(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .fillMaxWidth()
+                    .height(44.dp),
+                shape = RoundedCornerShape(25.dp),
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.10f),
+                shadowElevation = 2.dp,
+            ) {}
             Row(
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
+                modifier = Modifier.fillMaxSize(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                Surface(
-                    modifier = Modifier.size(34.dp),
-                    onClick = onRefresh,
-                    enabled = !isRefreshing,
-                    shape = CircleShape,
-                    color = Color.Transparent,
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .semantics { contentDescription = refreshDescription }
+                        .clickable(
+                            enabled = !isRefreshing,
+                            role = Role.Button,
+                            onClick = onRefresh,
+                        ),
+                    contentAlignment = Alignment.Center,
                 ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        if (isRefreshing) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(21.dp),
-                                color = MaterialTheme.colorScheme.primary,
-                                strokeWidth = 2.5.dp,
-                            )
-                        } else {
-                            Icon(
-                                imageVector = GradeyIcons.Refresh,
-                                contentDescription = stringResource(R.string.today_refresh),
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(27.dp),
-                            )
-                        }
+                    if (isRefreshing) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(21.dp),
+                            color = MaterialTheme.colorScheme.primary,
+                            strokeWidth = 2.5.dp,
+                        )
+                    } else {
+                        Icon(
+                            imageVector = GradeyIcons.Refresh,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(27.dp),
+                        )
                     }
                 }
-                Surface(
-                    modifier = Modifier.size(34.dp),
-                    onClick = onOpenAccount,
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .semantics { contentDescription = openAccountDescription }
+                        .clickable(role = Role.Button, onClick = onOpenAccount),
+                    contentAlignment = Alignment.Center,
                 ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = GradeyIcons.User,
-                            contentDescription = stringResource(R.string.today_open_account),
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(23.dp),
-                        )
+                    Surface(
+                        modifier = Modifier.size(34.dp),
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = GradeyIcons.User,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(23.dp),
+                            )
+                        }
                     }
                 }
             }

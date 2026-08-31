@@ -71,9 +71,50 @@ class OnboardingProgressStoreTest {
         assertThat(backend.progress).isNull()
     }
 
+    @Test
+    fun `notification recovery state survives recreation and restart clears it`() {
+        val backend = Backend()
+        val store = backend.store()
+        store.notificationPermissionRecoveryNeeded = true
+        store.notificationPreferenceSyncPending = true
+        store.notificationPushRegistrationPending = true
+        store.notificationSyncOwnerAccountID = " account-a "
+
+        assertThat(backend.store().notificationPermissionRecoveryNeeded).isTrue()
+        assertThat(backend.store().notificationPreferenceSyncPending).isTrue()
+        assertThat(backend.store().notificationPushRegistrationPending).isTrue()
+        assertThat(backend.store().notificationSyncOwnerAccountID).isEqualTo("account-a")
+
+        store.complete()
+        assertThat(backend.store().notificationPermissionRecoveryNeeded).isFalse()
+        assertThat(backend.store().notificationPreferenceSyncPending).isTrue()
+        assertThat(backend.store().notificationPushRegistrationPending).isTrue()
+        assertThat(backend.store().notificationSyncOwnerAccountID).isEqualTo("account-a")
+
+        store.clearNotificationRecovery()
+        assertThat(backend.store().notificationPermissionRecoveryNeeded).isFalse()
+        assertThat(backend.store().notificationPreferenceSyncPending).isFalse()
+        assertThat(backend.store().notificationPushRegistrationPending).isFalse()
+        assertThat(backend.store().notificationSyncOwnerAccountID).isNull()
+
+        store.notificationPermissionRecoveryNeeded = true
+        store.notificationPreferenceSyncPending = true
+        store.notificationPushRegistrationPending = true
+        store.notificationSyncOwnerAccountID = "account-b"
+        store.restart(OnboardingProgress(OnboardingJourney.NEW_USER, OnboardingStep.WELCOME))
+        assertThat(backend.store().notificationPermissionRecoveryNeeded).isFalse()
+        assertThat(backend.store().notificationPreferenceSyncPending).isFalse()
+        assertThat(backend.store().notificationPushRegistrationPending).isFalse()
+        assertThat(backend.store().notificationSyncOwnerAccountID).isNull()
+    }
+
     private class Backend(
         var progress: String? = null,
         var completed: Boolean = false,
+        var notificationPermissionRecoveryNeeded: Boolean = false,
+        var notificationPreferenceSyncPending: Boolean = false,
+        var notificationPushRegistrationPending: Boolean = false,
+        var notificationSyncOwnerAccountID: String? = null,
     ) {
         fun store() = OnboardingProgressStore(
             readProgress = { progress },
@@ -82,6 +123,14 @@ class OnboardingProgressStoreTest {
             readCompleted = { completed },
             writeCompleted = { completed = it },
             json = Json { ignoreUnknownKeys = true },
+            readNotificationPermissionRecovery = { notificationPermissionRecoveryNeeded },
+            writeNotificationPermissionRecovery = { notificationPermissionRecoveryNeeded = it },
+            readNotificationPreferenceSyncPending = { notificationPreferenceSyncPending },
+            writeNotificationPreferenceSyncPending = { notificationPreferenceSyncPending = it },
+            readNotificationPushRegistrationPending = { notificationPushRegistrationPending },
+            writeNotificationPushRegistrationPending = { notificationPushRegistrationPending = it },
+            readNotificationSyncOwnerAccountID = { notificationSyncOwnerAccountID },
+            writeNotificationSyncOwnerAccountID = { notificationSyncOwnerAccountID = it },
         )
     }
 }

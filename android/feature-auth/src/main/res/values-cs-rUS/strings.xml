@@ -12,6 +12,12 @@
     <string name="onboarding_welcome_benefit_extras_title">pomoc a pingy</string>
     <string name="onboarding_welcome_benefit_extras_body">zeptej se Gradey AI na známky nebo rozvrh a zůstaň v obraze díky notifikacím a widgetům.</string>
     <string name="onboarding_get_started">jdem na to</string>
+    <string name="onboarding_log_in">přihlásit se</string>
+    <string name="onboarding_progress">krok %1$d z %2$d</string>
+    <string name="onboarding_account_title">udělej si Gradey ID</string>
+    <string name="onboarding_account_body">udělej si soukromé Gradey ID přes Google, ať se nastavení syncne mezi Android zařízeními a notifikace fungujou. nebo pokračuj bez něj a školu připoj hned.</string>
+    <string name="onboarding_account_login_title">přihlas se do Gradey</string>
+    <string name="onboarding_account_login_body">přihlas se stejným Google účtem, kterej jsi použil při vytváření Gradey ID. žádný další heslo nepotřebuješ.</string>
     <string name="onboarding_upgrade_continue">mrkni na možnosti účtu</string>
     <string name="auth_restoring_account">obnovování účtu…</string>
     <string name="auth_back">zpět</string>
@@ -29,6 +35,12 @@
     <string name="onboarding_ready_account_gradey_id">účet · Gradey ID</string>
     <string name="onboarding_ready_notifications_enabled">notifikace · zapnuto</string>
     <string name="onboarding_ready_notifications_off">notifikace · vypnuto</string>
+    <string name="onboarding_school_link_warning_title">propojení s Gradey ID to chce zkusit znova</string>
+    <string name="onboarding_school_link_warning_body">lokální připojení k Bakalářům je v pohodě, jen se zatím nepropojilo s Gradey ID. zkus to znova teď, nebo pokračuj a dořeš to potom.</string>
+    <string name="onboarding_notification_sync_warning_title">sync notifikací to chce zkusit znova</string>
+    <string name="onboarding_notification_sync_warning_body">tvoje volba je uložená tady, ale do Gradey ID se zatím nesyncnula.</string>
+    <string name="onboarding_notification_sync_retry">zkusit sync notifikací znova</string>
+    <string name="onboarding_open_notification_settings">otevřít nastavení notifikací</string>
     <string name="onboarding_ready_open">otevřít Gradey</string>
     <string name="onboarding_upgrade_ready_title">připojení je ready</string>
     <string name="onboarding_upgrade_ready_body">tvoje relace Bakalářů přežila upgrade safe.</string>

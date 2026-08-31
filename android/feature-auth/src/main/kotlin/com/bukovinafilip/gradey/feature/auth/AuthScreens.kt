@@ -6,6 +6,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -13,6 +15,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.TextButton
@@ -26,10 +29,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import com.bukovinafilip.gradey.model.AgeAttestationKind
 import com.bukovinafilip.gradey.model.AppLanguage
+import com.bukovinafilip.gradey.model.OnboardingAccountIntent
 import com.bukovinafilip.gradey.model.OnboardingJourney
 import com.bukovinafilip.gradey.ui.AppLanguagePicker
 import com.bukovinafilip.gradey.ui.GradeyColors
@@ -81,6 +86,7 @@ fun OnboardingWelcomeScreen(
     onAppLanguageChange: (AppLanguage) -> Unit,
     onContinue: () -> Unit,
     modifier: Modifier = Modifier,
+    onLogIn: (() -> Unit)? = null,
 ) {
     GradeyScreen(modifier = modifier.statusBarsPadding().verticalScroll(rememberScrollState())) {
         GradeyHero(
@@ -131,6 +137,14 @@ fun OnboardingWelcomeScreen(
                 ),
             )
         }
+        if (onLogIn != null) {
+            OutlinedButton(
+                modifier = Modifier.fillMaxWidth(),
+                onClick = onLogIn,
+            ) {
+                Text(stringResource(R.string.onboarding_log_in))
+            }
+        }
     }
 }
 
@@ -147,14 +161,59 @@ private fun OnboardingBenefit(title: String, body: String) {
 }
 
 @Composable
+private fun OnboardingProgressHeader(
+    position: Int,
+    count: Int,
+    onBack: (() -> Unit)?,
+    backEnabled: Boolean = true,
+) {
+    val safeCount = count.coerceAtLeast(1)
+    val safePosition = position.coerceIn(1, safeCount)
+    Column(verticalArrangement = Arrangement.spacedBy(GradeySpacing.sm)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (onBack != null) {
+                TextButton(onClick = onBack, enabled = backEnabled) {
+                    Text(stringResource(R.string.auth_back))
+                }
+            }
+            Spacer(Modifier.weight(1f))
+            Text(
+                text = stringResource(R.string.onboarding_progress, safePosition, safeCount),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
+        }
+        LinearProgressIndicator(
+            progress = { safePosition.toFloat() / safeCount.toFloat() },
+            modifier = Modifier
+                .fillMaxWidth()
+                .clearAndSetSemantics {},
+            color = MaterialTheme.colorScheme.primary,
+            trackColor = MaterialTheme.colorScheme.surfaceVariant,
+        )
+    }
+}
+
+@Composable
 fun OnboardingNotificationsScreen(
     onEnable: () -> Unit,
     onNotNow: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    isWorking: Boolean = false,
+    progressPosition: Int? = null,
+    progressCount: Int? = null,
 ) {
     GradeyScreen(modifier = modifier.statusBarsPadding().verticalScroll(rememberScrollState())) {
-        TextButton(onClick = onBack) { Text(stringResource(R.string.auth_back)) }
+        if (progressPosition != null && progressCount != null) {
+            OnboardingProgressHeader(progressPosition, progressCount, onBack, backEnabled = !isWorking)
+        } else {
+            TextButton(onClick = onBack, enabled = !isWorking) { Text(stringResource(R.string.auth_back)) }
+        }
         GradeyHero(
             title = stringResource(R.string.onboarding_notifications_title),
             subtitle = stringResource(R.string.onboarding_notifications_body),
@@ -162,10 +221,15 @@ fun OnboardingNotificationsScreen(
         GradeySectionCard(title = stringResource(R.string.onboarding_notifications_control_title)) {
             Text(stringResource(R.string.onboarding_notifications_control_body))
         }
-        Button(modifier = Modifier.fillMaxWidth(), onClick = onEnable) {
+        if (isWorking) {
+            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+        }
+        Button(modifier = Modifier.fillMaxWidth(), enabled = !isWorking, onClick = onEnable) {
             Text(stringResource(R.string.onboarding_notifications_enable))
         }
-        OutlinedButton(modifier = Modifier.fillMaxWidth(), onClick = onNotNow) {
+        OutlinedButton(modifier = Modifier.fillMaxWidth(), enabled = !isWorking, onClick = onNotNow) {
             Text(stringResource(R.string.onboarding_notifications_not_now))
         }
     }
@@ -178,9 +242,27 @@ fun OnboardingReadyScreen(
     onFinish: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    schoolCloudLinkFailed: Boolean = false,
+    schoolCloudLinkErrorMessage: String? = null,
+    isRetryingSchoolCloudLink: Boolean = false,
+    onRetrySchoolCloudLink: (() -> Unit)? = null,
+    notificationSyncErrorMessage: String? = null,
+    notificationSyncPending: Boolean = false,
+    isRetryingNotificationSync: Boolean = false,
+    isFinishing: Boolean = false,
+    onRetryNotificationSync: (() -> Unit)? = null,
+    showNotificationSettingsAction: Boolean = false,
+    onOpenNotificationSettings: (() -> Unit)? = null,
+    progressPosition: Int? = null,
+    progressCount: Int? = null,
 ) {
+    val isWorking = isRetryingSchoolCloudLink || isRetryingNotificationSync || isFinishing
     GradeyScreen(modifier = modifier.statusBarsPadding().verticalScroll(rememberScrollState())) {
-        TextButton(onClick = onBack) { Text(stringResource(R.string.auth_back)) }
+        if (progressPosition != null && progressCount != null) {
+            OnboardingProgressHeader(progressPosition, progressCount, onBack, backEnabled = !isWorking)
+        } else {
+            TextButton(onClick = onBack, enabled = !isWorking) { Text(stringResource(R.string.auth_back)) }
+        }
         GradeyHero(
             title = stringResource(R.string.onboarding_ready_title),
             subtitle = stringResource(R.string.onboarding_ready_body),
@@ -202,7 +284,80 @@ fun OnboardingReadyScreen(
                 ),
             )
         }
-        Button(modifier = Modifier.fillMaxWidth(), onClick = onFinish) {
+        if (schoolCloudLinkFailed) {
+            GradeySectionCard(title = stringResource(R.string.onboarding_school_link_warning_title)) {
+                Text(
+                    text = stringResource(R.string.onboarding_school_link_warning_body),
+                    color = MaterialTheme.colorScheme.error,
+                )
+                if (!schoolCloudLinkErrorMessage.isNullOrBlank()) {
+                    Text(
+                        text = schoolCloudLinkErrorMessage,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+                if (onRetrySchoolCloudLink != null) {
+                    Button(
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !isWorking,
+                        onClick = onRetrySchoolCloudLink,
+                    ) {
+                        Text(
+                            stringResource(
+                                if (isRetryingSchoolCloudLink) {
+                                    R.string.onboarding_upgrade_retrying
+                                } else {
+                                    R.string.onboarding_upgrade_retry
+                                },
+                            ),
+                        )
+                    }
+                }
+            }
+        }
+        if (notificationSyncPending || !notificationSyncErrorMessage.isNullOrBlank()) {
+            GradeySectionCard(title = stringResource(R.string.onboarding_notification_sync_warning_title)) {
+                Text(
+                    text = stringResource(R.string.onboarding_notification_sync_warning_body),
+                    color = MaterialTheme.colorScheme.error,
+                )
+                if (!notificationSyncErrorMessage.isNullOrBlank()) {
+                    Text(
+                        text = notificationSyncErrorMessage,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+                if (onRetryNotificationSync != null) {
+                    Button(
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !isWorking,
+                        onClick = onRetryNotificationSync,
+                    ) {
+                        Text(
+                            stringResource(
+                                if (isRetryingNotificationSync) {
+                                    R.string.onboarding_upgrade_retrying
+                                } else {
+                                    R.string.onboarding_notification_sync_retry
+                                },
+                            ),
+                        )
+                    }
+                }
+            }
+        }
+        if (showNotificationSettingsAction && onOpenNotificationSettings != null) {
+            OutlinedButton(
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !isWorking,
+                onClick = onOpenNotificationSettings,
+            ) {
+                Text(stringResource(R.string.onboarding_open_notification_settings))
+            }
+        }
+        Button(modifier = Modifier.fillMaxWidth(), enabled = !isWorking, onClick = onFinish) {
             Text(stringResource(R.string.onboarding_ready_open))
         }
     }
@@ -211,15 +366,21 @@ fun OnboardingReadyScreen(
 @Composable
 fun OnboardingUpgradeSupportScreen(
     isGuestMode: Boolean,
-    cloudLinkErrorMessage: String? = null,
-    isRetryingCloudLink: Boolean = false,
     onRetryCloudLink: () -> Unit,
     onFinish: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    cloudLinkErrorMessage: String? = null,
+    isRetryingCloudLink: Boolean = false,
+    progressPosition: Int? = null,
+    progressCount: Int? = null,
 ) {
     GradeyScreen(modifier = modifier.statusBarsPadding().verticalScroll(rememberScrollState())) {
-        TextButton(onClick = onBack) { Text(stringResource(R.string.auth_back)) }
+        if (progressPosition != null && progressCount != null) {
+            OnboardingProgressHeader(progressPosition, progressCount, onBack)
+        } else {
+            TextButton(onClick = onBack) { Text(stringResource(R.string.auth_back)) }
+        }
         GradeyHero(
             title = stringResource(R.string.onboarding_upgrade_ready_title),
             subtitle = stringResource(R.string.onboarding_upgrade_ready_body),
@@ -374,24 +535,46 @@ private fun AgeChoiceButton(
 @Composable
 fun GradeyIdLoginScreen(
     isLoading: Boolean,
-    errorMessage: String? = null,
-    isGoogleSignInAvailable: Boolean = true,
     onGoogleSignIn: () -> Unit,
-    onContinueWithoutAccount: (() -> Unit)? = null,
     onOpenHelp: () -> Unit,
     onOpenGitHub: () -> Unit,
-    onBack: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
+    errorMessage: String? = null,
+    isGoogleSignInAvailable: Boolean = true,
+    accountIntent: OnboardingAccountIntent? = null,
+    progressPosition: Int? = null,
+    progressCount: Int? = null,
+    onContinueWithoutAccount: (() -> Unit)? = null,
+    onBack: (() -> Unit)? = null,
 ) {
     GradeyScreen(modifier = modifier.verticalScroll(rememberScrollState())) {
-        if (onBack != null) {
+        if (progressPosition != null && progressCount != null) {
+            OnboardingProgressHeader(
+                position = progressPosition,
+                count = progressCount,
+                onBack = onBack,
+                backEnabled = !isLoading,
+            )
+        } else if (onBack != null) {
             TextButton(onClick = onBack, enabled = !isLoading) {
                 Text(stringResource(R.string.auth_back))
             }
         }
         GradeyHero(
-            title = stringResource(R.string.gradey_id_title),
-            subtitle = stringResource(R.string.gradey_id_body),
+            title = stringResource(
+                when (accountIntent) {
+                    OnboardingAccountIntent.GET_STARTED -> R.string.onboarding_account_title
+                    OnboardingAccountIntent.LOG_IN -> R.string.onboarding_account_login_title
+                    null -> R.string.gradey_id_title
+                },
+            ),
+            subtitle = stringResource(
+                when (accountIntent) {
+                    OnboardingAccountIntent.GET_STARTED -> R.string.onboarding_account_body
+                    OnboardingAccountIntent.LOG_IN -> R.string.onboarding_account_login_body
+                    null -> R.string.gradey_id_body
+                },
+            ),
         )
 
         GradeySectionCard(title = stringResource(R.string.gradey_id_sign_in)) {

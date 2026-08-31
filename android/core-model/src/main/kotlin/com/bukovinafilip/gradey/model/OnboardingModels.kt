@@ -33,6 +33,11 @@ enum class OnboardingStep {
     SUPPORT,
 }
 
+enum class OnboardingAccountIntent {
+    GET_STARTED,
+    LOG_IN,
+}
+
 @Serializable
 data class OnboardingProgress(
     val journey: OnboardingJourney,

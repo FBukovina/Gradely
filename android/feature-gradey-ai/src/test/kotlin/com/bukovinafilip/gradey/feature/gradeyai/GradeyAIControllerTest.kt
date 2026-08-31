@@ -70,6 +70,301 @@ class GradeyAIControllerTest {
     }
 
     @Test
+    fun `bootstrap reloads a restored conversation and preserves its unsent draft`() = runTest {
+        val existing = conversation("existing", "Existing chat")
+        val repository = FakeRepository(conversations = mutableListOf(existing))
+        val controller = controller(
+            repository = repository,
+            scope = this,
+            restorationState = GradeyAIRestorationState(
+                schoolScope = existing.schoolScope,
+                conversation = existing,
+                isDraftChat = false,
+                draft = "Keep this exact draft",
+            ),
+        )
+
+        assertThat(controller.currentConversation).isNull()
+        assertThat(controller.draft).isEmpty()
+        controller.bootstrap()
+
+        assertThat(controller.currentConversation).isEqualTo(existing)
+        assertThat(controller.draft).isEqualTo("Keep this exact draft")
+        assertThat(repository.loadedIDs).containsExactly(existing.id)
+    }
+
+    @Test
+    fun `bootstrap clears restored conversation and draft when the school scope changed`() = runTest {
+        val priorSchoolConversation = conversation("prior", "Prior school").copy(
+            schoolScope = "prior-scope",
+        )
+        val repository = FakeRepository()
+        val controller = controller(
+            repository = repository,
+            scope = this,
+            restorationState = GradeyAIRestorationState(
+                schoolScope = priorSchoolConversation.schoolScope,
+                conversation = priorSchoolConversation,
+                isDraftChat = false,
+                draft = "Private prior-school draft",
+            ),
+        )
+
+        controller.bootstrap()
+
+        assertThat(controller.currentConversation).isNull()
+        assertThat(controller.draft).isEmpty()
+        assertThat(repository.loadedIDs).isEmpty()
+    }
+
+    @Test
+    fun `bootstrap retains a restored local draft chat without requesting server detail`() = runTest {
+        val draftConversation = conversation("draft", "New chat")
+        val repository = FakeRepository()
+        val controller = controller(
+            repository = repository,
+            scope = this,
+            restorationState = GradeyAIRestorationState(
+                schoolScope = draftConversation.schoolScope,
+                conversation = draftConversation,
+                isDraftChat = true,
+                draft = "Unsent local prompt",
+            ),
+        )
+
+        assertThat(controller.currentConversation).isNull()
+        assertThat(controller.draft).isEmpty()
+        controller.bootstrap()
+
+        assertThat(controller.currentConversation).isEqualTo(draftConversation)
+        assertThat(controller.isDraftChat).isTrue()
+        assertThat(controller.draft).isEqualTo("Unsent local prompt")
+        assertThat(repository.loadedIDs).isEmpty()
+    }
+
+    @Test
+    fun `scope failure keeps restoration private and a later bootstrap can apply it`() = runTest {
+        val existing = conversation("existing", "Private prior title")
+        val restoration = GradeyAIRestorationState(
+            schoolScope = existing.schoolScope,
+            conversation = existing,
+            isDraftChat = false,
+            draft = "Private unsent draft",
+        )
+        val contextBuilder = FakeContextBuilder().apply {
+            schoolScopeFailure = GradeyAIContextException(GradeyAIContextError.NO_SCHOOL_ACCOUNT)
+        }
+        val repository = FakeRepository(conversations = mutableListOf(existing))
+        val controller = controller(
+            repository = repository,
+            contextBuilder = contextBuilder,
+            scope = this,
+            restorationState = restoration,
+        )
+
+        controller.bootstrap()
+
+        assertThat(controller.currentConversation).isNull()
+        assertThat(controller.draft).isEmpty()
+        assertThat(controller.restorationState()).isEqualTo(restoration)
+        assertThat(repository.statusLoadCalls).isEqualTo(0)
+
+        contextBuilder.schoolScopeFailure = null
+        controller.bootstrap()
+
+        assertThat(controller.currentConversation).isEqualTo(existing)
+        assertThat(controller.draft).isEqualTo("Private unsent draft")
+        assertThat(repository.loadedIDs).containsExactly(existing.id)
+    }
+
+    @Test
+    fun `restored pending prompt returns to composer when server history does not contain it`() = runTest {
+        val existing = conversation("existing", "Existing chat")
+        val repository = FakeRepository(conversations = mutableListOf(existing))
+        val controller = controller(
+            repository = repository,
+            scope = this,
+            restorationState = GradeyAIRestorationState(
+                schoolScope = existing.schoolScope,
+                conversation = existing,
+                isDraftChat = false,
+                draft = "",
+                pendingPrompt = GradeyAIPendingPromptRestoration(
+                    conversationID = existing.id,
+                    clientMessageID = "pending-client-message",
+                    text = "Restore this prompt",
+                ),
+            ),
+        )
+
+        controller.bootstrap()
+
+        assertThat(controller.draft).isEqualTo("Restore this prompt")
+        assertThat(controller.messages).isEmpty()
+        assertThat(repository.loadedIDs).containsExactly(existing.id)
+    }
+
+    @Test
+    fun `restored pending prompt is not duplicated when server history contains it`() = runTest {
+        val existing = conversation("existing", "Existing chat")
+        val persisted = message(
+            id = "persisted-user",
+            role = GradeyAIMessageRole.USER,
+            content = "Already persisted",
+            status = GradeyAIMessageStatus.COMPLETE,
+        ).copy(
+            conversationID = existing.id,
+            clientMessageID = "pending-client-message",
+        )
+        val repository = FakeRepository(conversations = mutableListOf(existing)).apply {
+            loadedMessagesByID[existing.id] = listOf(persisted)
+        }
+        val controller = controller(
+            repository = repository,
+            scope = this,
+            restorationState = GradeyAIRestorationState(
+                schoolScope = existing.schoolScope,
+                conversation = existing,
+                isDraftChat = false,
+                draft = "",
+                pendingPrompt = GradeyAIPendingPromptRestoration(
+                    conversationID = existing.id,
+                    clientMessageID = "pending-client-message",
+                    text = "Already persisted",
+                ),
+            ),
+        )
+
+        controller.bootstrap()
+
+        assertThat(controller.draft).isEmpty()
+        assertThat(controller.messages).containsExactly(persisted)
+        assertThat(repository.loadedIDs).containsExactly(existing.id)
+    }
+
+    @Test
+    fun `restored pending create becomes a local draft chat and sends once`() = runTest {
+        val repository = FakeRepository()
+        val controller = controller(
+            repository = repository,
+            scope = this,
+            restorationState = GradeyAIRestorationState(
+                schoolScope = "scope",
+                conversation = null,
+                isDraftChat = false,
+                draft = "",
+                pendingPrompt = GradeyAIPendingPromptRestoration(
+                    conversationID = null,
+                    clientMessageID = "pending-create",
+                    text = "Pending new conversation",
+                ),
+            ),
+        )
+
+        controller.bootstrap()
+
+        assertThat(controller.currentConversation?.id).isEqualTo("pending-create")
+        assertThat(controller.isDraftChat).isTrue()
+        assertThat(controller.draft).isEqualTo("Pending new conversation")
+        assertThat(repository.loadedIDs).isEmpty()
+
+        controller.send()
+
+        assertThat(repository.createdTitles).containsExactly("Pending new conversation")
+        assertThat(repository.streamRequests.map { it.text }).containsExactly("Pending new conversation")
+    }
+
+    @Test
+    fun `restored pending create preserves an existing local draft chat`() = runTest {
+        val draftConversation = conversation("local-draft", "New chat")
+        val repository = FakeRepository()
+        val controller = controller(
+            repository = repository,
+            scope = this,
+            restorationState = GradeyAIRestorationState(
+                schoolScope = draftConversation.schoolScope,
+                conversation = draftConversation,
+                isDraftChat = true,
+                draft = "",
+                pendingPrompt = GradeyAIPendingPromptRestoration(
+                    conversationID = null,
+                    clientMessageID = "pending-create",
+                    text = "Pending draft-chat prompt",
+                ),
+            ),
+        )
+
+        controller.bootstrap()
+
+        assertThat(controller.currentConversation).isEqualTo(draftConversation)
+        assertThat(controller.isDraftChat).isTrue()
+        assertThat(controller.draft).isEqualTo("Pending draft-chat prompt")
+        assertThat(repository.loadedIDs).isEmpty()
+    }
+
+    @Test
+    fun `live oversized draft stays intact while its saved copy is unicode safe and bounded`() = runTest {
+        val existing = conversation("existing", "Existing chat")
+        val oversized = "x".repeat(GRADEY_AI_MAXIMUM_PROMPT_LENGTH + 500)
+        val repository = FakeRepository(conversations = mutableListOf(existing))
+        val controller = controller(
+            repository = repository,
+            scope = this,
+            restorationState = GradeyAIRestorationState(
+                schoolScope = existing.schoolScope,
+                conversation = existing,
+                isDraftChat = false,
+                draft = oversized,
+            ),
+        )
+
+        controller.bootstrap()
+
+        assertThat(controller.draft).hasLength(GRADEY_AI_MAXIMUM_PROMPT_LENGTH)
+        val liveDraft = "x".repeat(GRADEY_AI_MAXIMUM_PROMPT_LENGTH - 1) + "😀" + "tail"
+        controller.draft = liveDraft
+        assertThat(controller.draft).isEqualTo(liveDraft)
+        assertThat(controller.canSend).isFalse()
+        controller.send()
+        assertThat(controller.failure?.kind).isEqualTo(GradeyAIErrorKind.INVALID_PROMPT)
+
+        val saved = controller.restorationState()
+        assertThat(saved.draft).hasLength(GRADEY_AI_MAXIMUM_PROMPT_LENGTH - 1)
+        assertThat(saved.draft.last().isHighSurrogate()).isFalse()
+        val restored = controller(
+            repository = repository,
+            scope = this,
+            restorationState = saved,
+        )
+        restored.bootstrap()
+        assertThat(restored.draft).isEqualTo(saved.draft)
+    }
+
+    @Test
+    fun `concurrent bootstrap requests in one foreground generation are coalesced`() = runTest {
+        val contextBuilder = FakeContextBuilder().apply { holdRefresh = true }
+        val repository = FakeRepository()
+        val controller = controller(
+            repository = repository,
+            contextBuilder = contextBuilder,
+            scope = this,
+        )
+
+        val first = launch { controller.bootstrap() }
+        runCurrent()
+        val duplicate = launch { controller.bootstrap() }
+        runCurrent()
+
+        assertThat(repository.statusLoadCalls).isEqualTo(1)
+        assertThat(repository.listScopes).containsExactly("scope")
+        contextBuilder.releaseRefresh()
+        advanceUntilIdle()
+        first.join()
+        duplicate.join()
+        assertThat(repository.statusLoadCalls).isEqualTo(1)
+    }
+
+    @Test
     fun `unresolved free support state preserves the server reported limit`() = runTest {
         val repository = FakeRepository(
             status = status().copy(dailyLimit = 25, dailyUsed = 4, remaining = 21),
@@ -353,6 +648,91 @@ class GradeyAIControllerTest {
         assertThat(controller.draft).isEqualTo("Help me")
         assertThat(repository.streamRequests).isEmpty()
         send.join()
+    }
+
+    @Test
+    fun `backgrounded starter create saves a visible local draft recovery marker`() = runTest {
+        val firstRepository = FakeRepository().apply { holdCreate = true }
+        val firstController = controller(repository = firstRepository, scope = this)
+        firstController.bootstrap()
+        val send = launch { firstController.send("Starter prompt") }
+        runCurrent()
+
+        firstController.onAppBackgrounded()
+        val saved = firstController.restorationState()
+
+        assertThat(saved.pendingPrompt?.conversationID).isNull()
+        assertThat(saved.pendingPrompt?.text).isEqualTo("Starter prompt")
+        assertThat(saved.isDraftChat).isTrue()
+        assertThat(saved.conversation).isNotNull()
+        assertThat(saved.draft).isEqualTo("Starter prompt")
+
+        firstRepository.releaseCreate()
+        advanceUntilIdle()
+        send.join()
+
+        val restoredController = controller(
+            repository = FakeRepository(),
+            scope = this,
+            restorationState = saved,
+        )
+        restoredController.bootstrap()
+
+        assertThat(restoredController.isDraftChat).isTrue()
+        assertThat(restoredController.currentConversation).isEqualTo(saved.conversation)
+        assertThat(restoredController.draft).isEqualTo("Starter prompt")
+    }
+
+    @Test
+    fun `edited recovered starter draft survives a second restoration`() = runTest {
+        val firstRepository = FakeRepository().apply { holdCreate = true }
+        val firstController = controller(repository = firstRepository, scope = this)
+        firstController.bootstrap()
+        val send = launch { firstController.send("Original pending prompt") }
+        runCurrent()
+
+        firstController.onAppBackgrounded()
+        firstRepository.releaseCreate()
+        advanceUntilIdle()
+        send.join()
+        assertThat(firstController.onAppForegrounded()).isTrue()
+        firstController.bootstrap()
+        assertThat(firstController.draft).isEqualTo("Original pending prompt")
+
+        firstController.draft = "Latest edited draft"
+        val editedState = firstController.restorationState()
+
+        assertThat(editedState.draft).isEqualTo("Latest edited draft")
+        assertThat(editedState.pendingPrompt?.conversationID).isNull()
+        assertThat(editedState.pendingPrompt?.text).isEqualTo("Original pending prompt")
+        assertThat(editedState.pendingPromptDraftWasEdited).isTrue()
+
+        val restoredController = controller(
+            repository = FakeRepository(),
+            scope = this,
+            restorationState = editedState,
+        )
+        restoredController.bootstrap()
+
+        assertThat(restoredController.isDraftChat).isTrue()
+        assertThat(restoredController.currentConversation).isEqualTo(editedState.conversation)
+        assertThat(restoredController.draft).isEqualTo("Latest edited draft")
+        assertThat(restoredController.restorationState().pendingPrompt)
+            .isEqualTo(editedState.pendingPrompt)
+
+        restoredController.draft = ""
+        val clearedState = restoredController.restorationState()
+        val clearedController = controller(
+            repository = FakeRepository(),
+            scope = this,
+            restorationState = clearedState,
+        )
+        clearedController.bootstrap()
+
+        assertThat(clearedState.pendingPromptDraftWasEdited).isTrue()
+        assertThat(clearedController.draft).isEmpty()
+        assertThat(clearedController.restorationState().pendingPrompt)
+            .isEqualTo(editedState.pendingPrompt)
     }
 
     @Test
@@ -812,6 +1192,7 @@ class GradeyAIControllerTest {
         contextBuilder: FakeContextBuilder = FakeContextBuilder(),
         scope: kotlinx.coroutines.CoroutineScope? = null,
         initiallyForegrounded: Boolean = true,
+        restorationState: GradeyAIRestorationState? = null,
     ): GradeyAIController {
         var nextID = 0
         val resolvedScope = scope ?: kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Unconfined)
@@ -823,12 +1204,14 @@ class GradeyAIControllerTest {
             idProvider = { "id-${nextID++}" },
             localeProvider = { Locale.US },
             initiallyForegrounded = initiallyForegrounded,
+            restorationState = restorationState,
         )
     }
 
     private class FakeContextBuilder(
         var snapshot: GradeyAIContextSnapshot = context(),
     ) : GradeyAIContextBuilding {
+        var schoolScopeFailure: Throwable? = null
         var refreshFailure: Throwable? = null
         var holdRefresh = false
         private var refreshContinuation: Continuation<Unit>? = null
@@ -839,7 +1222,10 @@ class GradeyAIControllerTest {
             refreshContinuation = null
         }
 
-        override suspend fun currentSchoolScope(): String = snapshot.schoolScope
+        override suspend fun currentSchoolScope(): String {
+            schoolScopeFailure?.let { throw it }
+            return snapshot.schoolScope
+        }
         override suspend fun cachedContext(): GradeyAIContextSnapshot? = null
         override suspend fun refreshContext(): GradeyAIContextSnapshot {
             refreshFailure?.let { throw it }

@@ -13,6 +13,17 @@
     <string name="wear_status_up_next">Up next</string>
     <string name="wear_status_in">In %1$s</string>
     <string name="wear_status_canceled">Canceled</string>
+    <string name="wear_status_substitution">Substitution</string>
+    <string name="wear_status_room_changed">Room change</string>
+    <string name="wear_status_added">Added</string>
+    <string name="wear_compact_now_canceled">Now/X</string>
+    <string name="wear_compact_now_substitution">Now/Sub</string>
+    <string name="wear_compact_now_room_changed">Now/Rm</string>
+    <string name="wear_compact_now_added">Now/Add</string>
+    <string name="wear_compact_next_canceled">Nxt/X</string>
+    <string name="wear_compact_next_substitution">Nxt/Sub</string>
+    <string name="wear_compact_next_room_changed">Nxt/Rm</string>
+    <string name="wear_compact_next_added">Nxt/Add</string>
     <string name="wear_lesson_fallback">Lesson</string>
     <string name="wear_break">Break</string>
     <string name="wear_start">Start</string>

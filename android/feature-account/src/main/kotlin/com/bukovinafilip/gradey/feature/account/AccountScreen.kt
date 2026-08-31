@@ -604,6 +604,7 @@ fun AccountScreen(
                     )
                 }
                 Button(
+                    modifier = Modifier.testTag(ACCOUNT_DELETE_ENTRY_TEST_TAG),
                     onClick = { deleteConfirmationStage = 1 },
                     enabled = !isExportingData && !isDeletingAccount,
                     colors = ButtonDefaults.buttonColors(
@@ -1228,6 +1229,7 @@ internal const val ACCOUNT_LINKED_NOTIFICATIONS_TEST_TAG_PREFIX =
     "account-linked-notifications:"
 internal const val ACCOUNT_FULL_NAME_FIELD_TEST_TAG = "account-full-name-field"
 internal const val ACCOUNT_SAVE_FULL_NAME_TEST_TAG = "account-save-full-name"
+internal const val ACCOUNT_DELETE_ENTRY_TEST_TAG = "account-delete-entry"
 
 private fun formatSyncTimestamp(value: String): String = runCatching {
     DateTimeFormatter.ofLocalizedDateTime(FormatStyle.SHORT)

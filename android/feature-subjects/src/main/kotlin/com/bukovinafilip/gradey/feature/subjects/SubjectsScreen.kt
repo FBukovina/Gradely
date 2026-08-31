@@ -136,6 +136,10 @@ private val PragueZone = ZoneId.of("Europe/Prague")
 
 internal const val SUBJECT_SORT_TEST_TAG_PREFIX = "subjectSort:"
 internal const val SUBJECT_ROW_TEST_TAG_PREFIX = "subjectRow:"
+internal const val SUBJECT_TITLE_TEST_TAG_PREFIX = "subjectTitle:"
+internal const val SUBJECT_INLINE_MARK_TEST_TAG_PREFIX = "subjectInlineMark:"
+internal const val SUBJECT_SUMMARY_TEST_TAG_PREFIX = "subjectSummary:"
+internal const val SUBJECT_ABSENCE_SUMMARY_TEST_TAG_PREFIX = "subjectAbsenceSummary:"
 internal const val SUBJECT_DETAIL_BACK_TEST_TAG = "subjectDetailBack"
 internal const val SUBJECT_STEPPER_DECREASE_TEST_TAG = "subjectStepperDecrease"
 internal const val SUBJECT_STEPPER_INCREASE_TEST_TAG = "subjectStepperIncrease"
@@ -798,6 +802,7 @@ private fun SubjectsCard(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun SubjectRow(
     subject: Subject,
@@ -816,58 +821,151 @@ private fun SubjectRow(
         )
     }
 
-    Row(
+    BoxWithConstraints(
         modifier = Modifier
             .fillMaxWidth()
-            .height(68.dp)
+            .heightIn(min = 68.dp)
             .testTag(SUBJECT_ROW_TEST_TAG_PREFIX + subject.id)
             .clickable(role = Role.Button, onClick = onClick)
             .padding(start = 12.dp, end = 7.dp),
-        verticalAlignment = Alignment.CenterVertically,
+        contentAlignment = Alignment.CenterStart,
     ) {
-        Surface(
-            modifier = Modifier
-                .width(44.dp)
-                .height(40.dp),
-            shape = RoundedCornerShape(12.dp),
-            color = bandBackground,
-        ) {
-            Box(contentAlignment = Alignment.Center) {
-                Text(
-                    text = subject.subjectInfo.abbrev.ifBlank { subject.displayName.take(2) },
-                    color = bandForeground,
-                    fontSize = 17.sp,
-                    lineHeight = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1,
+        val useStackedSummary = maxWidth / LocalDensity.current.fontScale < 240.dp
+        val absenceText = absencePercentage?.let {
+            stringResource(R.string.marks_row_absence, it.roundToInt())
+        } ?: stringResource(R.string.subject_absence_unavailable)
+
+        if (useStackedSummary) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 10.dp),
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    SubjectRowBadge(subject, bandBackground, bandForeground)
+                    Spacer(Modifier.weight(1f))
+                    SubjectRowArrow(subject)
+                }
+                Spacer(Modifier.height(8.dp))
+                SubjectRowDetails(
+                    subject = subject,
+                    latestMark = latestMark,
+                    trendDelta = trendDelta,
+                    trendDescription = trendDescription,
+                    wrapTitle = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Spacer(Modifier.height(4.dp))
+                SubjectRowSummary(
+                    subjectID = subject.id,
+                    average = average,
+                    averageColor = bandForeground,
+                    absenceText = absenceText,
+                    stacked = true,
                 )
             }
-        }
-        Spacer(Modifier.width(12.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = subject.displayName,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                color = MaterialTheme.colorScheme.onSurface,
-                fontSize = 18.sp,
-                lineHeight = 21.sp,
-                fontWeight = FontWeight.Bold,
-            )
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                val markCount = subject.marks.size
-                Text(
-                    text = pluralStringResource(R.plurals.subject_mark_count, markCount, markCount),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontSize = 16.sp,
-                    lineHeight = 19.sp,
+        } else {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                SubjectRowBadge(subject, bandBackground, bandForeground)
+                Spacer(Modifier.width(12.dp))
+                SubjectRowDetails(
+                    subject = subject,
+                    latestMark = latestMark,
+                    trendDelta = trendDelta,
+                    trendDescription = trendDescription,
+                    wrapTitle = false,
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(vertical = 10.dp),
                 )
-                latestMark?.let {
-                    Spacer(Modifier.width(8.dp))
-                    InlineMarkPill(mark = it)
-                }
-                trendDelta?.let { delta ->
-                    Spacer(Modifier.width(6.dp))
+                SubjectRowSummary(
+                    subjectID = subject.id,
+                    average = average,
+                    averageColor = bandForeground,
+                    absenceText = absenceText,
+                    stacked = false,
+                )
+                Spacer(Modifier.width(4.dp))
+                SubjectRowArrow(subject)
+            }
+        }
+    }
+}
+
+@Composable
+private fun SubjectRowBadge(
+    subject: Subject,
+    backgroundColor: Color,
+    foregroundColor: Color,
+) {
+    Surface(
+        modifier = Modifier
+            .width(44.dp)
+            .height(40.dp),
+        shape = RoundedCornerShape(12.dp),
+        color = backgroundColor,
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Text(
+                text = subject.subjectInfo.abbrev.ifBlank { subject.displayName.take(2) },
+                color = foregroundColor,
+                fontSize = 17.sp,
+                lineHeight = 20.sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun SubjectRowDetails(
+    subject: Subject,
+    latestMark: Mark?,
+    trendDelta: Double?,
+    trendDescription: String?,
+    wrapTitle: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier) {
+        Text(
+            text = subject.displayName,
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag(SUBJECT_TITLE_TEST_TAG_PREFIX + subject.id),
+            maxLines = if (wrapTitle) Int.MAX_VALUE else 1,
+            overflow = if (wrapTitle) TextOverflow.Clip else TextOverflow.Ellipsis,
+            color = MaterialTheme.colorScheme.onSurface,
+            fontSize = 18.sp,
+            lineHeight = 21.sp,
+            fontWeight = FontWeight.Bold,
+        )
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            val markCount = subject.marks.size
+            Text(
+                text = pluralStringResource(R.plurals.subject_mark_count, markCount, markCount),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontSize = 16.sp,
+                lineHeight = 19.sp,
+            )
+            latestMark?.let {
+                InlineMarkPill(mark = it)
+            }
+            trendDelta?.let { delta ->
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
                     Icon(
                         imageVector = if (delta < 0) {
                             GradeyIcons.TrendingDown
@@ -891,34 +989,68 @@ private fun SubjectRow(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun SubjectRowArrow(subject: Subject) {
+    Icon(
+        imageVector = GradeyIcons.ArrowRight,
+        contentDescription = stringResource(R.string.marks_open_subject, subject.displayName),
+        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.size(22.dp),
+    )
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun SubjectRowSummary(
+    subjectID: String,
+    average: Double?,
+    averageColor: Color,
+    absenceText: String,
+    stacked: Boolean,
+) {
+    val modifier = Modifier.testTag(SUBJECT_SUMMARY_TEST_TAG_PREFIX + subjectID)
+    val averageContent: @Composable () -> Unit = {
+        Text(
+            text = formatAverage(average),
+            color = averageColor,
+            fontSize = 20.sp,
+            lineHeight = 23.sp,
+            fontWeight = FontWeight.Bold,
+        )
+    }
+    val absenceContent: @Composable () -> Unit = {
+        Text(
+            text = absenceText,
+            modifier = Modifier
+                .then(if (stacked) Modifier.fillMaxWidth() else Modifier)
+                .testTag(SUBJECT_ABSENCE_SUMMARY_TEST_TAG_PREFIX + subjectID),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            fontSize = 14.sp,
+            lineHeight = 17.sp,
+            fontWeight = FontWeight.SemiBold,
+        )
+    }
+
+    if (stacked) {
+        FlowRow(
+            modifier = modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            averageContent()
+            absenceContent()
+        }
+    } else {
         Column(
-            modifier = Modifier.width(80.dp),
+            modifier = modifier.width(80.dp),
             horizontalAlignment = Alignment.End,
         ) {
-            Text(
-                text = formatAverage(average),
-                color = bandForeground,
-                fontSize = 20.sp,
-                lineHeight = 23.sp,
-                fontWeight = FontWeight.Bold,
-            )
-            Text(
-                text = absencePercentage?.let { stringResource(R.string.marks_row_absence, it.roundToInt()) }
-                    ?: stringResource(R.string.subject_absence_unavailable),
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                fontSize = 14.sp,
-                lineHeight = 17.sp,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
-            )
+            averageContent()
+            absenceContent()
         }
-        Spacer(Modifier.width(4.dp))
-        Icon(
-            imageVector = GradeyIcons.ArrowRight,
-            contentDescription = stringResource(R.string.marks_open_subject, subject.displayName),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(22.dp),
-        )
     }
 }
 
@@ -1941,7 +2073,9 @@ private fun EmptyMarksCard() {
 private fun InlineMarkPill(mark: Mark) {
     val (background, foreground) = mark.gradeColors()
     Surface(
-        modifier = Modifier.height(23.dp),
+        modifier = Modifier
+            .heightIn(min = 23.dp)
+            .testTag(SUBJECT_INLINE_MARK_TEST_TAG_PREFIX + mark.id),
         shape = RoundedCornerShape(12.dp),
         color = background,
     ) {

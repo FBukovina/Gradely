@@ -36,6 +36,8 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
@@ -49,7 +51,6 @@ import androidx.wear.compose.material.Text
 import com.bukovinafilip.gradey.model.GradeySupportTier
 import com.bukovinafilip.gradey.model.GradeyWearSyncPayload
 import com.bukovinafilip.gradey.model.GradeyWearTimetableLesson
-import com.bukovinafilip.gradey.model.NextLessonWidgetChangeKind
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -335,7 +336,9 @@ private fun CurrentLessonHero(
     status: String,
     subtitlePrefix: String? = null,
 ) {
-    val canceled = lesson.isCanceled
+    val change = lesson.changeKind.toWearLessonChangePresentation()
+    val changeLabel = change.label?.let { stringResource(it.stringResourceId()) }
+    val canceled = change.isCanceled
     val accent = if (canceled) WatchColors.canceled else WatchColors.primary
     Column(
         modifier = Modifier
@@ -360,11 +363,22 @@ private fun CurrentLessonHero(
                 )
                 Text(
                     text = status,
+                    modifier = if (status == changeLabel) {
+                        Modifier.clearAndSetSemantics { contentDescription = status }
+                    } else {
+                        Modifier
+                    },
                     color = accent,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
                     style = MaterialTheme.typography.caption2,
                 )
+                if (changeLabel != null && status != changeLabel) {
+                    LessonChangeLabel(
+                        label = changeLabel,
+                        color = changeColor(change),
+                    )
+                }
                 val meta = buildList {
                     subtitlePrefix?.let(::add)
                     lesson.room?.takeIf(String::isNotBlank)?.let(::add)
@@ -445,6 +459,8 @@ private fun TimeEdge(value: String, label: String, alignEnd: Boolean, canceled: 
 
 @Composable
 private fun RemainingLessonRow(lesson: GradeyWearTimetableLesson) {
+    val change = lesson.changeKind.toWearLessonChangePresentation()
+    val changeLabel = change.label?.let { stringResource(it.stringResourceId()) }
     Row(
         modifier = Modifier
             .fillMaxWidth(0.88f)
@@ -452,7 +468,7 @@ private fun RemainingLessonRow(lesson: GradeyWearTimetableLesson) {
             .padding(horizontal = 10.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(modifier = Modifier.size(5.dp).background(changeColor(lesson.changeKind), CircleShape))
+        Box(modifier = Modifier.size(5.dp).background(changeColor(change), CircleShape))
         Spacer(Modifier.width(7.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
@@ -463,6 +479,12 @@ private fun RemainingLessonRow(lesson: GradeyWearTimetableLesson) {
                 overflow = TextOverflow.Ellipsis,
                 style = MaterialTheme.typography.body2,
             )
+            if (changeLabel != null) {
+                LessonChangeLabel(
+                    label = changeLabel,
+                    color = changeColor(change),
+                )
+            }
             val meta = listOfNotNull(lesson.room, lesson.teacher)
                 .filter(String::isNotBlank)
                 .joinToString(" · ")
@@ -487,6 +509,19 @@ private fun RemainingLessonRow(lesson: GradeyWearTimetableLesson) {
 }
 
 @Composable
+private fun LessonChangeLabel(label: String, color: Color) {
+    Text(
+        text = label,
+        modifier = Modifier.clearAndSetSemantics { contentDescription = label },
+        color = color,
+        fontWeight = FontWeight.Bold,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        style = MaterialTheme.typography.caption2,
+    )
+}
+
+@Composable
 private fun SupporterBadge(tier: GradeySupportTier) {
     val label = when (tier) {
         GradeySupportTier.PLUS -> stringResource(R.string.wear_support_plus)
@@ -505,7 +540,7 @@ private fun SupporterBadge(tier: GradeySupportTier) {
 }
 
 private val GradeyWearTimetableLesson.isCanceled: Boolean
-    get() = changeKind == NextLessonWidgetChangeKind.CANCELED
+    get() = changeKind.toWearLessonChangePresentation().isCanceled
 
 private fun timeText(epochMillis: Long?): String {
     if (epochMillis == null) return "--:--"
@@ -524,12 +559,15 @@ private fun remainingText(untilEpochMillis: Long, nowEpochMillis: Long): String 
     }
 }
 
-private fun changeColor(kind: NextLessonWidgetChangeKind): Color = when (kind) {
-    NextLessonWidgetChangeKind.NONE -> WatchColors.primary
-    NextLessonWidgetChangeKind.CANCELED -> WatchColors.canceled
-    NextLessonWidgetChangeKind.SUBSTITUTION -> WatchColors.amber
-    NextLessonWidgetChangeKind.ROOM_CHANGED -> WatchColors.teal
-    NextLessonWidgetChangeKind.ADDED -> WatchColors.purple
+private fun changeColor(change: WearLessonChangePresentation): Color = when (change.label) {
+    null -> WatchColors.primary
+    WearLessonPresentationLabel.CANCELED -> WatchColors.canceled
+    WearLessonPresentationLabel.SUBSTITUTION -> WatchColors.amber
+    WearLessonPresentationLabel.ROOM_CHANGED -> WatchColors.teal
+    WearLessonPresentationLabel.ADDED -> WatchColors.purple
+    WearLessonPresentationLabel.NOW,
+    WearLessonPresentationLabel.NEXT,
+    -> WatchColors.primary
 }
 
 private object WatchColors {

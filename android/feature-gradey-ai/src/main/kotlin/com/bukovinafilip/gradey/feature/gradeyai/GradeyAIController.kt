@@ -34,6 +34,23 @@ internal data class GradeyAIFailure(
     val retryable: Boolean = false,
 )
 
+internal data class GradeyAIRestorationState(
+    val schoolScope: String?,
+    val conversation: GradeyAIConversation?,
+    val isDraftChat: Boolean,
+    val draft: String,
+    val pendingPrompt: GradeyAIPendingPromptRestoration? = null,
+    val pendingPromptDraftWasEdited: Boolean = false,
+)
+
+internal data class GradeyAIPendingPromptRestoration(
+    val conversationID: String?,
+    val clientMessageID: String,
+    val text: String,
+)
+
+internal const val GRADEY_AI_MAXIMUM_PROMPT_LENGTH = 2_000
+
 internal enum class GradeyAIStarterPromptKind { IMPROVE_SUBJECT, PREPARE_SUBJECT, SUMMARIZE_MARKS, UPCOMING_TIMETABLE }
 
 internal data class GradeyAIStarterPrompt(
@@ -49,6 +66,7 @@ internal class GradeyAIController(
     private val idProvider: () -> String = { UUID.randomUUID().toString() },
     private val localeProvider: () -> Locale = Locale::getDefault,
     initiallyForegrounded: Boolean = true,
+    restorationState: GradeyAIRestorationState? = null,
 ) {
     var conversations by mutableStateOf<List<GradeyAIConversation>>(emptyList())
         private set
@@ -56,7 +74,18 @@ internal class GradeyAIController(
         private set
     var status by mutableStateOf<GradeyAIStatus?>(null)
         private set
-    var draft by mutableStateOf("")
+    private val draftState = mutableStateOf("")
+    var draft: String
+        get() = draftState.value
+        set(value) {
+            if (
+                draftState.value != value &&
+                pendingPromptReconciliation?.let { it.conversationID == null } == true
+            ) {
+                pendingPromptDraftWasEdited = true
+            }
+            draftState.value = value
+        }
     var currentConversation by mutableStateOf<GradeyAIConversation?>(null)
         private set
     var contextSnapshot by mutableStateOf<GradeyAIContextSnapshot?>(null)
@@ -95,6 +124,10 @@ internal class GradeyAIController(
     private var activeSchoolScope: String? = null
     private var lastFailedRequest: FailedRequest? = null
     private var draftConversationID: String? = null
+    private var pendingRestorationState: GradeyAIRestorationState? = restorationState?.saveableBounded()
+    private var pendingPromptDraftWasEdited = false
+    private var activeBootstrapGeneration: Int? = null
+    private var queuedBootstrapGeneration: Int? = null
     private var serverStatus: GradeyAIStatus? = null
     private var reportedDailyLimit = 0
     private var reportedUsed = 0
@@ -108,12 +141,21 @@ internal class GradeyAIController(
             val text = draft.trim()
             return isAppForegrounded && !isSending && !isOpeningConversation &&
                 !isPerformingDestructiveOperation &&
-                text.isNotEmpty() && text.length <= MaximumPromptLength &&
+                text.isNotEmpty() && text.length <= GRADEY_AI_MAXIMUM_PROMPT_LENGTH &&
                 contextSnapshot != null && status?.canSend == true
         }
     val canStartNewChat: Boolean
         get() = isAppForegrounded && status?.canSend == true && !isSending &&
             !isPerformingDestructiveOperation
+
+    fun restorationState(): GradeyAIRestorationState = pendingRestorationState ?: GradeyAIRestorationState(
+        schoolScope = activeSchoolScope ?: currentConversation?.schoolScope,
+        conversation = currentConversation,
+        isDraftChat = isDraftChat,
+        draft = draft,
+        pendingPrompt = pendingPromptForRestoration(),
+        pendingPromptDraftWasEdited = pendingPromptDraftWasEdited,
+    ).saveableBounded()
 
     fun onAppBackgrounded() {
         if (!isAppForegrounded) return
@@ -148,8 +190,32 @@ internal class GradeyAIController(
     }
 
     suspend fun bootstrap() {
+        val requestedGeneration = foregroundGeneration
+        activeBootstrapGeneration?.let { activeGeneration ->
+            if (activeGeneration != requestedGeneration) {
+                queuedBootstrapGeneration = requestedGeneration
+            }
+            return
+        }
+        activeBootstrapGeneration = requestedGeneration
+        try {
+            bootstrap(requestedGeneration)
+        } finally {
+            activeBootstrapGeneration = null
+            val queuedGeneration = queuedBootstrapGeneration
+            queuedBootstrapGeneration = null
+            if (
+                queuedGeneration != null &&
+                queuedGeneration == foregroundGeneration &&
+                isAppForegrounded
+            ) {
+                scope.launch { bootstrap() }
+            }
+        }
+    }
+
+    private suspend fun bootstrap(generation: Int) {
         if (!isAppForegrounded || isPerformingDestructiveOperation) return
-        val generation = foregroundGeneration
         cancelOpen()
         cancelSend(reconcileStatus = true)
         failure = null
@@ -168,7 +234,17 @@ internal class GradeyAIController(
         try {
             val schoolScope = builder.currentSchoolScope()
             if (!isCurrentForegroundOperation(generation)) return
-            if (activeSchoolScope != null && activeSchoolScope != schoolScope) clearSchoolState()
+            val restored = pendingRestorationState
+            if (restored != null) {
+                val restoredScope = restored.schoolScope ?: restored.conversation?.schoolScope
+                if (restoredScope == schoolScope) {
+                    applyPendingRestoration(restored, schoolScope)
+                } else {
+                    clearSchoolState()
+                }
+            } else if (activeSchoolScope != null && activeSchoolScope != schoolScope) {
+                clearSchoolState()
+            }
             activeSchoolScope = schoolScope
             if (contextSnapshot == null) {
                 val cachedContext = builder.cachedContext()
@@ -280,6 +356,8 @@ internal class GradeyAIController(
             messages = emptyList()
             currentConversation = null
             draftConversationID = null
+            pendingPromptReconciliation = null
+            pendingPromptDraftWasEdited = false
             reportedUsed = 0
             (serverStatus ?: status)?.copy(
                 consentRequired = true,
@@ -302,6 +380,7 @@ internal class GradeyAIController(
         cancelSend(reconcileStatus = true)
         conversationDetailNeedsReloadID = null
         pendingPromptReconciliation = null
+        pendingPromptDraftWasEdited = false
         failure = null
         val schoolScope = activeSchoolScope
         if (schoolScope == null) {
@@ -329,6 +408,7 @@ internal class GradeyAIController(
         cancelOpen()
         conversationDetailNeedsReloadID = null
         pendingPromptReconciliation = null
+        pendingPromptDraftWasEdited = false
         failure = null
         draftConversationID = null
         currentConversation = conversation
@@ -373,6 +453,7 @@ internal class GradeyAIController(
         cancelSend(reconcileStatus = true)
         conversationDetailNeedsReloadID = null
         pendingPromptReconciliation = null
+        pendingPromptDraftWasEdited = false
         draftConversationID?.let { draftID ->
             conversations = conversations.filterNot { it.id == draftID }
         }
@@ -389,7 +470,7 @@ internal class GradeyAIController(
         ) return
         val text = proposedText.trim()
         when {
-            text.isEmpty() || text.length > MaximumPromptLength -> {
+            text.isEmpty() || text.length > GRADEY_AI_MAXIMUM_PROMPT_LENGTH -> {
                 failure = GradeyAIFailure(GradeyAIErrorKind.INVALID_PROMPT)
                 return
             }
@@ -530,6 +611,8 @@ internal class GradeyAIController(
             currentConversation = null
             lastFailedRequest = null
             draftConversationID = null
+            pendingPromptReconciliation = null
+            pendingPromptDraftWasEdited = false
         } catch (error: CancellationException) {
             throw error
         } catch (error: Throwable) {
@@ -650,6 +733,8 @@ internal class GradeyAIController(
             text = text,
             clientMessageID = clientMessageID,
         )
+        pendingPromptReconciliation = null
+        pendingPromptDraftWasEdited = false
         lastFailedRequest = null
 
         if (needsServerCreate) {
@@ -881,6 +966,7 @@ internal class GradeyAIController(
         messages = emptyList()
         currentConversation = null
         draftConversationID = null
+        draft = ""
         status = null
         serverStatus = null
         reportedDailyLimit = 0
@@ -891,6 +977,80 @@ internal class GradeyAIController(
         pendingPromptReconciliation = null
         activeOptimisticSend = null
         consentReconciliationRequired = false
+        pendingRestorationState = null
+        pendingPromptDraftWasEdited = false
+    }
+
+    private fun applyPendingRestoration(
+        restored: GradeyAIRestorationState,
+        schoolScope: String,
+    ) {
+        pendingRestorationState = null
+        currentConversation = restored.conversation
+        draftConversationID = restored.conversation
+            ?.takeIf { restored.isDraftChat }
+            ?.id
+        draft = restored.draft
+        conversationDetailNeedsReloadID = null
+        pendingPromptReconciliation = null
+        pendingPromptDraftWasEdited = false
+
+        val pending = restored.pendingPrompt
+        when {
+            pending == null && !restored.isDraftChat -> {
+                conversationDetailNeedsReloadID = restored.conversation?.id
+            }
+            pending?.conversationID != null -> {
+                pendingPromptReconciliation = PendingPromptReconciliation(
+                    conversationID = pending.conversationID,
+                    clientMessageID = pending.clientMessageID,
+                    text = pending.text,
+                )
+                conversationDetailNeedsReloadID = pending.conversationID
+            }
+            pending != null -> {
+                val localDraft = restored.conversation?.takeIf { restored.isDraftChat }
+                    ?: GradeyAIConversation(
+                        id = pending.clientMessageID,
+                        schoolScope = schoolScope,
+                        title = title(pending.text),
+                        createdAtEpochMillis = nowEpochMillis(),
+                        updatedAtEpochMillis = nowEpochMillis(),
+                    )
+                currentConversation = localDraft
+                draftConversationID = localDraft.id
+                draft = when {
+                    restored.pendingPromptDraftWasEdited -> restored.draft
+                    restored.draft.isNotBlank() -> restored.draft
+                    else -> pending.text
+                }
+                pendingPromptReconciliation = PendingPromptReconciliation(
+                    conversationID = null,
+                    clientMessageID = pending.clientMessageID,
+                    text = pending.text,
+                )
+                pendingPromptDraftWasEdited = restored.pendingPromptDraftWasEdited
+            }
+        }
+    }
+
+    private fun pendingPromptForRestoration(): GradeyAIPendingPromptRestoration? {
+        pendingPromptReconciliation?.let { pending ->
+            return GradeyAIPendingPromptRestoration(
+                conversationID = pending.conversationID,
+                clientMessageID = pending.clientMessageID,
+                text = pending.text,
+            )
+        }
+        return activeOptimisticSend
+            ?.takeUnless(ActiveOptimisticSend::assistantStarted)
+            ?.let { pending ->
+                GradeyAIPendingPromptRestoration(
+                    conversationID = pending.conversationID,
+                    clientMessageID = pending.clientMessageID,
+                    text = pending.text,
+                )
+            }
     }
 
     private fun prepareUnstartedSendForForegroundReconciliation(): Boolean {
@@ -900,7 +1060,30 @@ internal class GradeyAIController(
 
         messages = messages.filterNot { it.id == pending.clientMessageID }
         val conversationID = pending.conversationID
-        if (conversationID == null || currentConversation?.id != conversationID) {
+        if (conversationID == null) {
+            val schoolScope = activeSchoolScope
+            if (schoolScope != null) {
+                val localDraft = currentConversation?.takeIf { it.id == draftConversationID }
+                    ?: GradeyAIConversation(
+                        id = pending.clientMessageID,
+                        schoolScope = schoolScope,
+                        title = title(pending.text),
+                        createdAtEpochMillis = nowEpochMillis(),
+                        updatedAtEpochMillis = nowEpochMillis(),
+                    )
+                currentConversation = localDraft
+                draftConversationID = localDraft.id
+            }
+            restoreDraftIfEmpty(pending.text)
+            pendingPromptReconciliation = PendingPromptReconciliation(
+                conversationID = null,
+                clientMessageID = pending.clientMessageID,
+                text = pending.text,
+            )
+            pendingPromptDraftWasEdited = false
+            return false
+        }
+        if (currentConversation?.id != conversationID) {
             restoreDraftIfEmpty(pending.text)
             return false
         }
@@ -909,6 +1092,7 @@ internal class GradeyAIController(
             clientMessageID = pending.clientMessageID,
             text = pending.text,
         )
+        pendingPromptDraftWasEdited = false
         conversationDetailNeedsReloadID = conversationID
         return true
     }
@@ -920,6 +1104,7 @@ internal class GradeyAIController(
                 ?.takeIf { it.conversationID == conversationID }
                 ?.let { restoreDraftIfEmpty(it.text) }
             pendingPromptReconciliation = null
+            pendingPromptDraftWasEdited = false
             conversationDetailNeedsReloadID = null
             return
         }
@@ -952,6 +1137,7 @@ internal class GradeyAIController(
                             if (!wasPersisted) restoreDraftIfEmpty(pending.text)
                         }
                     pendingPromptReconciliation = null
+                    pendingPromptDraftWasEdited = false
                     conversationDetailNeedsReloadID = null
                 },
                 onFailure = { failure = failure(it) },
@@ -1035,12 +1221,31 @@ internal class GradeyAIController(
     )
 
     private data class PendingPromptReconciliation(
-        val conversationID: String,
+        val conversationID: String?,
         val clientMessageID: String,
         val text: String,
     )
 
-    private companion object {
-        const val MaximumPromptLength = 2_000
+}
+
+private fun GradeyAIRestorationState.saveableBounded(): GradeyAIRestorationState = copy(
+    draft = draft.gradeyAISaveablePrefix(),
+    pendingPrompt = pendingPrompt?.copy(
+        text = pendingPrompt.text.gradeyAISaveablePrefix(),
+    ),
+    pendingPromptDraftWasEdited = pendingPromptDraftWasEdited &&
+        pendingPrompt?.conversationID == null,
+)
+
+internal fun String.gradeyAISaveablePrefix(): String {
+    val candidate = if (length <= GRADEY_AI_MAXIMUM_PROMPT_LENGTH) {
+        this
+    } else {
+        substring(0, GRADEY_AI_MAXIMUM_PROMPT_LENGTH)
+    }
+    return if (candidate.lastOrNull()?.isHighSurrogate() == true) {
+        candidate.dropLast(1)
+    } else {
+        candidate
     }
 }

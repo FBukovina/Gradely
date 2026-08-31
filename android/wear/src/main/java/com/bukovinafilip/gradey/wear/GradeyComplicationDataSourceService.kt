@@ -59,27 +59,49 @@ class GradeyComplicationDataSourceService : SuspendingComplicationDataSourceServ
     ): ComplicationData {
         val nowNext = WearTimeline.nowAndNext(payload, nowEpochMillis)
         val lesson = nowNext.current ?: nowNext.next
-        val status = if (nowNext.current != null) {
-            getString(R.string.wear_complication_now)
+        val position = if (nowNext.current != null) {
+            WearComplicationPosition.CURRENT
         } else {
-            getString(R.string.wear_complication_next)
+            WearComplicationPosition.NEXT
         }
+        val presentation = lesson?.let {
+            wearComplicationLessonPresentation(position, it.changeKind)
+        }
+        val temporalStatus = presentation?.temporalLabel?.localizedText()
+        val compactTitle = presentation?.compactFields?.titleToken
+            ?.localizedCompactText()
+            ?.toWearComplicationCompactToken()
+        val compactBody = when (presentation?.compactFields?.bodyRole) {
+            null -> null
+            WearComplicationCompactBodyRole.BOUNDED_SUBJECT ->
+                lesson?.localizedTitle()?.toWearComplicationCompactToken()
+        }
+        val compactNoLessons = getString(R.string.wear_complication_no_lessons)
+            .toWearComplicationCompactToken()
+        val changeLabel = presentation?.change?.label?.localizedText()
         val contentDescription = lesson?.let {
-            listOf(status, it.localizedDetailTitle(), it.timeRange, it.room)
+            listOf(
+                temporalStatus,
+                changeLabel,
+                it.localizedDetailTitle(),
+                it.timeRange ?: it.startEpochMillis?.let(::timeText),
+                it.room,
+            )
                 .filterNotNull()
                 .filter(String::isNotBlank)
+                .distinct()
                 .joinToString(", ")
         } ?: getString(R.string.wear_complication_no_lessons)
 
         return when (type) {
             ComplicationType.SHORT_TEXT -> shortText(
-                title = if (lesson == null) null else status,
-                lessonTitle = lesson?.localizedTitle() ?: getString(R.string.wear_complication_no_lessons),
+                title = compactTitle,
+                lessonTitle = compactBody ?: compactNoLessons,
                 contentDescription = contentDescription,
             )
 
             ComplicationType.LONG_TEXT -> longText(
-                text = lesson?.longText(status) ?: listOf(
+                text = lesson?.longText(temporalStatus.orEmpty(), changeLabel) ?: listOf(
                     getString(R.string.wear_complication_no_lessons),
                     getString(R.string.wear_complication_free_time),
                 ).joinToString(" · "),
@@ -87,15 +109,15 @@ class GradeyComplicationDataSourceService : SuspendingComplicationDataSourceServ
             )
 
             ComplicationType.RANGED_VALUE -> rangedValue(
-                title = lesson?.localizedTitle() ?: "—",
-                text = if (lesson == null) getString(R.string.wear_complication_no_lessons) else status,
+                title = compactTitle ?: "—",
+                text = compactBody ?: compactNoLessons,
                 progress = lesson?.takeIf { nowNext.current != null }?.progress(nowEpochMillis) ?: 0f,
                 contentDescription = contentDescription,
             )
 
             else -> shortText(
-                title = null,
-                lessonTitle = lesson?.localizedTitle() ?: getString(R.string.wear_complication_no_lessons),
+                title = compactTitle,
+                lessonTitle = compactBody ?: compactNoLessons,
                 contentDescription = contentDescription,
             )
         }
@@ -146,11 +168,17 @@ class GradeyComplicationDataSourceService : SuspendingComplicationDataSourceServ
         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
     )
 
-    private fun GradeyWearTimetableLesson.longText(status: String): String =
-        listOf(status, localizedDetailTitle(), timeRange ?: startEpochMillis?.let(::timeText), room)
+    private fun GradeyWearTimetableLesson.longText(status: String, changeLabel: String?): String =
+        listOf(status, changeLabel, localizedDetailTitle(), timeRange ?: startEpochMillis?.let(::timeText), room)
             .filterNotNull()
             .filter(String::isNotBlank)
+            .distinct()
             .joinToString(" · ")
+
+    private fun WearLessonPresentationLabel.localizedText(): String = getString(stringResourceId())
+
+    private fun WearComplicationCompactTitleToken.localizedCompactText(): String =
+        getString(stringResourceId())
 
     private fun GradeyWearTimetableLesson.localizedTitle(): String =
         title ?: getString(R.string.wear_lesson_fallback)

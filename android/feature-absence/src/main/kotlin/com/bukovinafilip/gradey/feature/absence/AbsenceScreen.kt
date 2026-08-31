@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
@@ -55,6 +56,7 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.res.stringResource
@@ -105,6 +107,7 @@ private const val PredictionLessonsSaveVersion = "prediction-lessons-v1"
 private const val PredictionLessonFieldCount = 7
 internal const val ABSENCE_MODE_PICKER_TEST_TAG = "absence-mode-picker"
 internal const val ABSENCE_MODE_TEST_TAG_PREFIX = "absence-mode-"
+internal const val ABSENCE_MANUAL_LESSON_TEST_TAG_PREFIX = "absence-manual-lesson:"
 
 private val ManualDraftsSaver = listSaver<Map<String, Set<String>>, String>(
     save = { drafts ->
@@ -1441,9 +1444,14 @@ private fun ManualAbsenceLessonSelectionSheet(
                             Surface(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clickable(enabled = !isSaving) {
-                                        onToggle(day.dateKey, lesson.id)
-                                    },
+                                    .heightIn(min = 48.dp)
+                                    .testTag(ABSENCE_MANUAL_LESSON_TEST_TAG_PREFIX + lesson.id)
+                                    .toggleable(
+                                        value = isSelected,
+                                        enabled = !isSaving,
+                                        role = Role.Checkbox,
+                                        onValueChange = { onToggle(day.dateKey, lesson.id) },
+                                    ),
                                 shape = RoundedCornerShape(14.dp),
                                 color = if (isSelected) {
                                     MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)
@@ -1475,6 +1483,7 @@ private fun ManualAbsenceLessonSelectionSheet(
                                     }
                                     Text(
                                         if (isSelected) "✓" else "○",
+                                        modifier = Modifier.clearAndSetSemantics {},
                                         color = if (isSelected) {
                                             MaterialTheme.colorScheme.primary
                                         } else {

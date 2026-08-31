@@ -80,6 +80,7 @@ internal const val STRAVACZ_USERNAME_FIELD_TEST_TAG = "stravaCZUsernameField"
 internal const val STRAVACZ_PASSWORD_FIELD_TEST_TAG = "stravaCZPasswordField"
 internal const val STRAVACZ_PASSWORD_VISIBILITY_TEST_TAG = "stravaCZPasswordVisibility"
 internal const val STRAVACZ_CONNECT_BUTTON_TEST_TAG = "stravaCZConnectButton"
+internal const val STRAVACZ_MEAL_ACTION_TEST_TAG_PREFIX = "stravaCZMealAction:"
 
 @Composable
 fun StravaCZScreen(
@@ -100,6 +101,7 @@ fun StravaCZScreen(
     var pendingReplacement by remember { mutableStateOf<StravaCZMeal?>(null) }
     var pendingExistingMeal by remember { mutableStateOf<StravaCZMeal?>(null) }
     var showDisconnectConfirmation by rememberSaveable { mutableStateOf(false) }
+    val connectedActionsEnabled = !isLoading && !isRefreshing && submittingMealID == null
 
     Box(modifier = modifier.fillMaxSize()) {
         GradeyAuroraBackground(
@@ -116,7 +118,7 @@ fun StravaCZScreen(
         ) {
             MealsToolbar(
                 connected = session != null,
-                busy = isLoading || isRefreshing || submittingMealID != null,
+                busy = !connectedActionsEnabled,
                 onRefresh = onRefresh,
                 onDisconnect = { showDisconnectConfirmation = true },
                 onOpenAccount = onOpenAccount,
@@ -141,19 +143,22 @@ fun StravaCZScreen(
                     menu = menu,
                     isRefreshing = isRefreshing,
                     submittingMealID = submittingMealID,
+                    actionsEnabled = connectedActionsEnabled,
                     errorMessage = errorMessage,
                     onToggle = { meal ->
-                        if (meal.ordered) {
-                            onSetMeal(meal, false)
-                        } else {
-                            val existing = menu.days
-                                .firstOrNull { it.date == meal.dateKey }
-                                ?.orderedMainMeal
-                            if (existing != null && existing.id != meal.id) {
-                                pendingExistingMeal = existing
-                                pendingReplacement = meal
+                        if (connectedActionsEnabled) {
+                            if (meal.ordered) {
+                                onSetMeal(meal, false)
                             } else {
-                                onSetMeal(meal, true)
+                                val existing = menu.days
+                                    .firstOrNull { it.date == meal.dateKey }
+                                    ?.orderedMainMeal
+                                if (existing != null && existing.id != meal.id) {
+                                    pendingExistingMeal = existing
+                                    pendingReplacement = meal
+                                } else {
+                                    onSetMeal(meal, true)
+                                }
                             }
                         }
                     },
@@ -177,7 +182,9 @@ fun StravaCZScreen(
             },
             confirmButton = {
                 Button(
+                    enabled = connectedActionsEnabled,
                     onClick = {
+                        if (!connectedActionsEnabled) return@Button
                         pendingReplacement = null
                         pendingExistingMeal = null
                         onSetMeal(replacement, true)
@@ -202,7 +209,9 @@ fun StravaCZScreen(
             text = { Text(stringResource(R.string.stravacz_disconnect_message)) },
             confirmButton = {
                 Button(
+                    enabled = connectedActionsEnabled,
                     onClick = {
+                        if (!connectedActionsEnabled) return@Button
                         showDisconnectConfirmation = false
                         onDisconnect()
                     },
@@ -403,6 +412,7 @@ private fun MenuContent(
     menu: StravaCZMenu,
     isRefreshing: Boolean,
     submittingMealID: Int?,
+    actionsEnabled: Boolean,
     errorMessage: String?,
     onToggle: (StravaCZMeal) -> Unit,
     modifier: Modifier = Modifier,
@@ -443,7 +453,7 @@ private fun MenuContent(
             }
         } else {
             items(menu.days, key = StravaCZMenuDay::id) { day ->
-                DayCard(day, submittingMealID, onToggle)
+                DayCard(day, submittingMealID, actionsEnabled, onToggle)
             }
         }
     }
@@ -503,6 +513,7 @@ private fun MetadataRowOnAccent(label: String, value: String) {
 private fun DayCard(
     day: StravaCZMenuDay,
     submittingMealID: Int?,
+    actionsEnabled: Boolean,
     onToggle: (StravaCZMeal) -> Unit,
 ) {
     val locale = androidx.compose.ui.platform.LocalConfiguration.current.locales[0]
@@ -519,14 +530,24 @@ private fun DayCard(
             )
             day.meals.forEachIndexed { index, meal ->
                 if (index > 0) HorizontalDivider(Modifier.padding(vertical = 8.dp))
-                MealRow(meal, submittingMealID == meal.id, onToggle)
+                MealRow(
+                    meal = meal,
+                    isSubmitting = submittingMealID == meal.id,
+                    actionsEnabled = actionsEnabled,
+                    onToggle = onToggle,
+                )
             }
         }
     }
 }
 
 @Composable
-private fun MealRow(meal: StravaCZMeal, isSubmitting: Boolean, onToggle: (StravaCZMeal) -> Unit) {
+private fun MealRow(
+    meal: StravaCZMeal,
+    isSubmitting: Boolean,
+    actionsEnabled: Boolean,
+    onToggle: (StravaCZMeal) -> Unit,
+) {
     val locale = androidx.compose.ui.platform.LocalConfiguration.current.locales[0]
     Row(
         modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
@@ -562,7 +583,10 @@ private fun MealRow(meal: StravaCZMeal, isSubmitting: Boolean, onToggle: (Strava
         when {
             meal.canModify -> OutlinedButton(
                 onClick = { onToggle(meal) },
-                enabled = !isSubmitting,
+                modifier = Modifier.testTag(
+                    "$STRAVACZ_MEAL_ACTION_TEST_TAG_PREFIX${meal.dateKey}:${meal.id}",
+                ),
+                enabled = actionsEnabled,
                 contentPadding = PaddingValues(horizontal = 12.dp),
             ) {
                 if (isSubmitting) {

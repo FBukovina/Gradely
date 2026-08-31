@@ -42,10 +42,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -95,7 +98,7 @@ fun GradeyAIScreen(
 ) {
     val coroutineScope = rememberCoroutineScope()
     val lifecycleOwner = LocalLifecycleOwner.current
-    val controller = remember(repository, contextBuilder) {
+    val createController = { restorationState: GradeyAIRestorationState? ->
         GradeyAIController(
             repository = repository,
             contextBuilder = contextBuilder,
@@ -103,8 +106,18 @@ fun GradeyAIScreen(
             initiallyForegrounded = GradeyAILifecyclePolicy.isForeground(
                 lifecycleOwner.lifecycle.currentState,
             ),
+            restorationState = restorationState,
         )
     }
+    val controller = rememberSaveable(
+        repository,
+        contextBuilder,
+        saver = Saver(
+            save = { it.restorationState().toSaveableList() },
+            restore = { saved -> restoreGradeyAIState(saved)?.let(createController) },
+        ),
+        init = { createController(null) },
+    )
     val entryState = GradeyAIEntryPolicy.resolve(
         isServiceConfigured = repository.isConfigured,
         isGradeyCloudConfigured = isGradeyCloudConfigured,
@@ -590,7 +603,9 @@ private fun GradeyAIComposer(controller: GradeyAIController) {
                 OutlinedTextField(
                     value = controller.draft,
                     onValueChange = { controller.draft = it },
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier
+                        .weight(1f)
+                        .testTag(GRADEY_AI_COMPOSER_TEST_TAG),
                     placeholder = { Text(stringResource(R.string.gradey_ai_composer_placeholder)) },
                     minLines = 1,
                     maxLines = 4,
@@ -614,9 +629,9 @@ private fun GradeyAIComposer(controller: GradeyAIController) {
                 GradeyAILimitText(controller)
                 if (controller.draft.length > 1_800) {
                     Text(
-                        "${controller.draft.length}/2000",
+                        "${controller.draft.length}/$GRADEY_AI_MAXIMUM_PROMPT_LENGTH",
                         style = MaterialTheme.typography.bodySmall,
-                        color = if (controller.draft.length > 2_000) {
+                        color = if (controller.draft.length > GRADEY_AI_MAXIMUM_PROMPT_LENGTH) {
                             MaterialTheme.colorScheme.error
                         } else {
                             MaterialTheme.colorScheme.onSurfaceVariant
@@ -627,6 +642,88 @@ private fun GradeyAIComposer(controller: GradeyAIController) {
         }
     }
 }
+
+private fun GradeyAIRestorationState.toSaveableList(): ArrayList<String> {
+    val selected = conversation
+    val pending = pendingPrompt
+    return arrayListOf(
+        "3",
+        (selected != null).toString(),
+        selected?.id.orEmpty(),
+        selected?.schoolScope.orEmpty(),
+        selected?.title.orEmpty(),
+        selected?.createdAtEpochMillis?.toString().orEmpty(),
+        selected?.updatedAtEpochMillis?.toString().orEmpty(),
+        (selected?.lastMessageAtEpochMillis != null).toString(),
+        selected?.lastMessageAtEpochMillis?.toString().orEmpty(),
+        isDraftChat.toString(),
+        draft.gradeyAISaveablePrefix(),
+        schoolScope.orEmpty(),
+        (pending != null).toString(),
+        (pending?.conversationID != null).toString(),
+        pending?.conversationID.orEmpty(),
+        pending?.clientMessageID.orEmpty(),
+        pending?.text?.gradeyAISaveablePrefix().orEmpty(),
+        pendingPromptDraftWasEdited.toString(),
+    )
+}
+
+private fun restoreGradeyAIState(saved: ArrayList<String>): GradeyAIRestorationState? {
+    if (saved.size != 18 || saved[0] != "3") return null
+    val hasConversation = saved[1].toBooleanStrictOrNull() ?: return null
+    val hasLastMessage = saved[7].toBooleanStrictOrNull() ?: return null
+    val isDraftChat = saved[9].toBooleanStrictOrNull() ?: return null
+    val hasPendingPrompt = saved[12].toBooleanStrictOrNull() ?: return null
+    val pendingHasConversation = saved[13].toBooleanStrictOrNull() ?: return null
+    val pendingPromptDraftWasEdited = saved[17].toBooleanStrictOrNull() ?: return null
+    if (isDraftChat && !hasConversation) return null
+    if (!hasPendingPrompt && pendingHasConversation) return null
+    if (pendingPromptDraftWasEdited && (!hasPendingPrompt || pendingHasConversation)) return null
+
+    val conversation = if (hasConversation) {
+        val createdAt = saved[5].toLongOrNull() ?: return null
+        val updatedAt = saved[6].toLongOrNull() ?: return null
+        val lastMessageAt = if (hasLastMessage) saved[8].toLongOrNull() ?: return null else null
+        if (saved[2].isBlank() || saved[3].isBlank()) return null
+        GradeyAIConversation(
+            id = saved[2],
+            schoolScope = saved[3],
+            title = saved[4],
+            createdAtEpochMillis = createdAt,
+            updatedAtEpochMillis = updatedAt,
+            lastMessageAtEpochMillis = lastMessageAt,
+        )
+    } else {
+        if (hasLastMessage) return null
+        null
+    }
+    val schoolScope = saved[11].takeIf(String::isNotBlank) ?: conversation?.schoolScope
+    if (schoolScope == null || conversation?.schoolScope?.let { it != schoolScope } == true) return null
+    val pendingPrompt = if (hasPendingPrompt) {
+        val conversationID = saved[14].takeIf(String::isNotBlank)
+        if (pendingHasConversation != (conversationID != null)) return null
+        if (saved[15].isBlank() || saved[16].isBlank()) return null
+        if (conversationID != null && conversation?.id != conversationID) return null
+        if (conversationID == null && conversation != null && !isDraftChat) return null
+        GradeyAIPendingPromptRestoration(
+            conversationID = conversationID,
+            clientMessageID = saved[15],
+            text = saved[16].gradeyAISaveablePrefix(),
+        )
+    } else {
+        null
+    }
+    return GradeyAIRestorationState(
+        schoolScope = schoolScope,
+        conversation = conversation,
+        isDraftChat = isDraftChat,
+        draft = saved[10].gradeyAISaveablePrefix(),
+        pendingPrompt = pendingPrompt,
+        pendingPromptDraftWasEdited = pendingPromptDraftWasEdited,
+    )
+}
+
+internal const val GRADEY_AI_COMPOSER_TEST_TAG = "gradey-ai-composer"
 
 @Composable
 private fun GradeyAIMessageBubble(

@@ -13,6 +13,17 @@
     <string name="wear_status_up_next">Další</string>
     <string name="wear_status_in">Za %1$s</string>
     <string name="wear_status_canceled">Zrušeno</string>
+    <string name="wear_status_substitution">Suplování</string>
+    <string name="wear_status_room_changed">Změna učebny</string>
+    <string name="wear_status_added">Přidáno</string>
+    <string name="wear_compact_now_canceled">Teď/X</string>
+    <string name="wear_compact_now_substitution">Teď/Sup</string>
+    <string name="wear_compact_now_room_changed">Teď/Uč</string>
+    <string name="wear_compact_now_added">Teď/Př</string>
+    <string name="wear_compact_next_canceled">Dal/X</string>
+    <string name="wear_compact_next_substitution">Dal/Sup</string>
+    <string name="wear_compact_next_room_changed">Dal/Uč</string>
+    <string name="wear_compact_next_added">Dal/Př</string>
     <string name="wear_lesson_fallback">Hodina</string>
     <string name="wear_break">Přestávka</string>
     <string name="wear_start">Začátek</string>

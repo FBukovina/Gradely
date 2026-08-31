@@ -110,6 +110,7 @@ import com.bukovinafilip.gradey.model.ScheduledLesson
 import com.bukovinafilip.gradey.model.StravaCZMenu
 import com.bukovinafilip.gradey.model.TimetableWeek
 import com.bukovinafilip.gradey.ui.GradeyAbsenceRiskRing
+import com.bukovinafilip.gradey.ui.GradeyCardTokens
 import com.bukovinafilip.gradey.ui.GradeyColors
 import com.bukovinafilip.gradey.ui.GradeyAuroraBackground
 import com.bukovinafilip.gradey.ui.GradeySectionHeader
@@ -1964,10 +1965,10 @@ private fun DashboardSurface(
     onClick: (() -> Unit)? = null,
     content: @Composable () -> Unit,
 ) {
-    val shape = RoundedCornerShape(20.dp)
+    val shape = RoundedCornerShape(GradeyCardTokens.CornerRadius)
     val border = BorderStroke(
-        1.dp,
-        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f),
+        GradeyCardTokens.OutlineWidth,
+        MaterialTheme.colorScheme.onSurface.copy(alpha = GradeyCardTokens.OutlineOpacity),
     )
     if (onClick == null) {
         Surface(
@@ -1975,7 +1976,7 @@ private fun DashboardSurface(
             shape = shape,
             color = MaterialTheme.colorScheme.surfaceContainer,
             border = border,
-            shadowElevation = 6.dp,
+            shadowElevation = GradeyCardTokens.ComposeElevation,
             content = content,
         )
     } else {
@@ -1985,7 +1986,7 @@ private fun DashboardSurface(
             shape = shape,
             color = MaterialTheme.colorScheme.surfaceContainer,
             border = border,
-            shadowElevation = 6.dp,
+            shadowElevation = GradeyCardTokens.ComposeElevation,
             content = content,
         )
     }

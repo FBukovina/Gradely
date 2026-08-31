@@ -2,6 +2,7 @@ package com.bukovinafilip.gradey.feature.auth
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -10,6 +11,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
@@ -30,8 +32,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.bukovinafilip.gradey.model.AgeAttestationKind
 import com.bukovinafilip.gradey.model.AppLanguage
@@ -504,12 +508,26 @@ fun AgeAttestationScreen(
                 subtitle = stringResource(R.string.age_parent_review_body),
             )
             GradeySectionCard(title = stringResource(R.string.age_parent_confirmation)) {
-                Column(verticalArrangement = Arrangement.spacedBy(GradeySpacing.sm)) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 48.dp)
+                        .toggleable(
+                            value = parentConfirmed,
+                            role = Role.Checkbox,
+                            onValueChange = { parentConfirmed = it },
+                        ),
+                    horizontalArrangement = Arrangement.spacedBy(GradeySpacing.sm),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
                     Checkbox(
                         checked = parentConfirmed,
-                        onCheckedChange = { parentConfirmed = it },
+                        onCheckedChange = null,
                     )
-                    Text(stringResource(R.string.age_parent_agreement))
+                    Text(
+                        text = stringResource(R.string.age_parent_agreement),
+                        modifier = Modifier.weight(1f),
+                    )
                 }
                 TextButton(onClick = onOpenPrivacyPolicy) {
                     Text(stringResource(R.string.age_privacy_policy))

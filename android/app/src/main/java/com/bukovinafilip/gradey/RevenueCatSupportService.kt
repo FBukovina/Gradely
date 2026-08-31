@@ -96,10 +96,27 @@ class RevenueCatSupportService {
         )
     }
 
-    suspend fun purchase(activity: Activity, optionID: String): RevenueCatPurchaseResult = mutex.withLock {
+    suspend fun purchase(
+        activity: Activity,
+        optionID: String,
+        expectedPlan: SupportPlanOption? = null,
+    ): RevenueCatPurchaseResult = mutex.withLock {
         val purchases = configuredPurchases()
         val storePackage = packagesByID[optionID]
             ?: throw SupportServiceException(SupportServiceError.OPTION_UNAVAILABLE)
+        if (expectedPlan != null) {
+            val actualKind = SupportCatalogRules.planKind(
+                storePackage.identifier,
+                storePackage.product.id,
+                storePackage.product.defaultOption?.id,
+            )
+            val stillMatchesRequest = storePackage.product.id == expectedPlan.productIdentifier &&
+                actualKind?.tier == expectedPlan.tier &&
+                actualKind?.interval == expectedPlan.interval
+            if (!stillMatchesRequest) {
+                throw SupportServiceException(SupportServiceError.OPTION_UNAVAILABLE)
+            }
+        }
         try {
             val result = purchases.awaitPurchase(
                 PurchaseParams.Builder(activity, storePackage).build(),

@@ -64,6 +64,14 @@ data class SupportCatalog(
     val isEmpty: Boolean get() = tips.isEmpty() && plans.isEmpty()
 }
 
+object SupportPlanEligibility {
+    fun canPurchase(
+        entitlement: SupportEntitlement,
+        plan: SupportPlanOption,
+    ): Boolean = entitlement.tier.ordinal <= plan.tier.ordinal &&
+        (entitlement.tier != plan.tier || entitlement.interval != plan.interval)
+}
+
 enum class SupportPurchaseOutcome {
     SUCCESS,
     PENDING,

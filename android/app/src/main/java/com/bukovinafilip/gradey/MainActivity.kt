@@ -131,6 +131,7 @@ import com.bukovinafilip.gradey.model.StravaCZStoredSession
 import com.bukovinafilip.gradey.model.SupportCatalog
 import com.bukovinafilip.gradey.model.SupportEntitlement
 import com.bukovinafilip.gradey.model.SupportPlanOption
+import com.bukovinafilip.gradey.model.SupportPlanEligibility
 import com.bukovinafilip.gradey.model.SupportPurchaseOutcome
 import com.bukovinafilip.gradey.model.TimetableWeek
 import com.bukovinafilip.gradey.ui.GradeyTheme
@@ -2027,18 +2028,36 @@ private fun GradeyApp(
         }
     }
 
-    suspend fun purchaseSupportOption(optionID: String, requiresGradeyID: Boolean) {
-        if (purchasingSupportOptionID != null || isRestoringSupport) return
+    suspend fun purchaseSupportOption(
+        optionID: String,
+        requiresGradeyID: Boolean,
+        requestedPlan: SupportPlanOption? = null,
+    ) {
+        if (isSupportLoading || purchasingSupportOptionID != null || isRestoringSupport) return
         if (requiresGradeyID && (account == null || isGuestMode)) {
             supportMessage = context.getString(
                 com.bukovinafilip.gradey.feature.account.R.string.support_sign_in_required,
             )
             return
         }
+        if (requestedPlan != null) {
+            val currentCatalog = supportCatalog ?: return
+            val currentPlan = currentCatalog.plans.firstOrNull { it.id == optionID } ?: return
+            val stillMatchesRequest = currentPlan.productIdentifier == requestedPlan.productIdentifier &&
+                currentPlan.tier == requestedPlan.tier &&
+                currentPlan.interval == requestedPlan.interval
+            if (!stillMatchesRequest || !SupportPlanEligibility.canPurchase(currentCatalog.entitlement, currentPlan)) {
+                return
+            }
+        }
         purchasingSupportOptionID = optionID
         supportMessage = null
         try {
-            val result = supportService.purchase(activity, optionID)
+            val result = supportService.purchase(
+                activity = activity,
+                optionID = optionID,
+                expectedPlan = requestedPlan,
+            )
             applySupportEntitlement(result.entitlement)
             supportMessage = when (result.outcome) {
                 SupportPurchaseOutcome.SUCCESS -> {
@@ -2797,7 +2816,11 @@ private fun GradeyApp(
                                 onReload = { scope.launch { loadSupportCatalog() } },
                                 onPurchasePlan = { plan: SupportPlanOption ->
                                     scope.launch {
-                                        purchaseSupportOption(plan.id, requiresGradeyID = true)
+                                        purchaseSupportOption(
+                                            plan.id,
+                                            requiresGradeyID = true,
+                                            requestedPlan = plan,
+                                        )
                                     }
                                 },
                                 onPurchaseTip = { optionID ->
@@ -3322,7 +3345,13 @@ private fun GradeyApp(
                         onBack = { signedInNavController.popBackStack() },
                         onReload = { scope.launch { loadSupportCatalog() } },
                         onPurchasePlan = { plan: SupportPlanOption ->
-                            scope.launch { purchaseSupportOption(plan.id, requiresGradeyID = true) }
+                            scope.launch {
+                                purchaseSupportOption(
+                                    plan.id,
+                                    requiresGradeyID = true,
+                                    requestedPlan = plan,
+                                )
+                            }
                         },
                         onPurchaseTip = { optionID ->
                             scope.launch { purchaseSupportOption(optionID, requiresGradeyID = false) }

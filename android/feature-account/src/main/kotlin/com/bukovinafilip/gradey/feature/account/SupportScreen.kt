@@ -28,6 +28,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -38,7 +39,9 @@ import androidx.compose.ui.unit.dp
 import com.bukovinafilip.gradey.model.GradeySupportTier
 import com.bukovinafilip.gradey.model.SupportBillingInterval
 import com.bukovinafilip.gradey.model.SupportCatalog
+import com.bukovinafilip.gradey.model.SupportEntitlement
 import com.bukovinafilip.gradey.model.SupportPlanOption
+import com.bukovinafilip.gradey.model.SupportPlanEligibility
 import com.bukovinafilip.gradey.ui.GradeyIcons
 import com.bukovinafilip.gradey.ui.GradeyHero
 import com.bukovinafilip.gradey.ui.GradeySectionCard
@@ -425,7 +428,6 @@ fun OnboardingSupportOptionsContent(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
 ) {
-    var selectedInterval by remember { mutableStateOf(SupportBillingInterval.MONTHLY) }
     val actionsEnabled = enabled && !isLoading && purchasingOptionID == null && !isRestoring
 
     Column(
@@ -463,6 +465,27 @@ fun OnboardingSupportOptionsContent(
 
             else -> {
                 val loadedCatalog = catalog
+                val entitlement = loadedCatalog.entitlement
+                val initialInterval = entitlement.interval ?: SupportBillingInterval.MONTHLY
+                val entitlementIdentity = entitlement.selectionIdentity
+                var selectedEntitlementIdentity by rememberSaveable {
+                    mutableStateOf(entitlementIdentity)
+                }
+                var selectedIntervalName by rememberSaveable {
+                    mutableStateOf(initialInterval.name)
+                }
+                val selectedInterval = if (selectedEntitlementIdentity == entitlementIdentity) {
+                    SupportBillingInterval.entries.firstOrNull { it.name == selectedIntervalName }
+                        ?: initialInterval
+                } else {
+                    initialInterval
+                }
+                LaunchedEffect(entitlementIdentity) {
+                    if (selectedEntitlementIdentity != entitlementIdentity) {
+                        selectedEntitlementIdentity = entitlementIdentity
+                        selectedIntervalName = initialInterval.name
+                    }
+                }
                 if (loadedCatalog.entitlement.tier != GradeySupportTier.NONE) {
                     ActiveSupportCard(
                         catalog = loadedCatalog,
@@ -483,7 +506,10 @@ fun OnboardingSupportOptionsContent(
                             SupportBillingInterval.entries.forEach { interval ->
                                 FilterChip(
                                     selected = selectedInterval == interval,
-                                    onClick = { selectedInterval = interval },
+                                    onClick = {
+                                        selectedEntitlementIdentity = entitlementIdentity
+                                        selectedIntervalName = interval.name
+                                    },
                                     label = {
                                         Text(
                                             stringResource(
@@ -655,11 +681,11 @@ private fun SupportPlanButton(
 ) {
     val current = catalog.entitlement
     val isCurrent = current.tier == plan.tier && current.interval == plan.interval
-    val isDowngrade = current.tier.ordinal > plan.tier.ordinal
+    val canPurchase = SupportPlanEligibility.canPurchase(current, plan)
     OutlinedButton(
         onClick = onPurchase,
         modifier = Modifier.fillMaxWidth(),
-        enabled = isSignedIn && !isBusy && !isCurrent && !isDowngrade,
+        enabled = isSignedIn && !isBusy && canPurchase,
     ) {
         Icon(GradeyIcons.Favourite, contentDescription = null)
         Column(
@@ -694,6 +720,18 @@ private fun formatSupportDate(epochMillis: Long): String = DateTimeFormatter
     .ofLocalizedDate(FormatStyle.MEDIUM)
     .withLocale(Locale.getDefault())
     .format(Instant.ofEpochMilli(epochMillis).atZone(ZoneId.systemDefault()))
+
+/**
+ * Changes only when the active subscription itself changes. Catalog refreshes may replace the
+ * entitlement instance or update renewal metadata without resetting the interval chosen by the
+ * user in the picker.
+ */
+private val SupportEntitlement.selectionIdentity: String
+    get() = listOf(
+        tier.name,
+        productIdentifier.orEmpty(),
+        interval?.name.orEmpty(),
+    ).joinToString(separator = "|")
 
 private enum class DebugAction {
     RESTART_ONBOARDING,

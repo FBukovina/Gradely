@@ -116,6 +116,79 @@ class BakalariNetworkClientTest {
     }
 
     @Test
+    fun whatIfDecodesPredictedMarkWithNullID() = runTest {
+        server.enqueue(
+            jsonResponse(
+                """
+                {
+                  "Marks":[
+                    {
+                      "MarkDate":"2026-08-20T00:00:00+02:00",
+                      "EditDate":"2026-08-20T10:15:00+02:00",
+                      "Caption":"Written test",
+                      "Theme":"Functions",
+                      "MarkText":"3",
+                      "TeacherId":"teacher-1",
+                      "Type":"Written",
+                      "TypeNote":"",
+                      "Weight":1,
+                      "SubjectId":"math",
+                      "IsNew":false,
+                      "IsPoints":false,
+                      "Id":"existing-mark",
+                      "PointsText":"",
+                      "MaxPoints":0
+                    },
+                    {
+                      "MarkDate":null,
+                      "EditDate":null,
+                      "Caption":null,
+                      "Theme":null,
+                      "MarkText":"2",
+                      "TeacherId":null,
+                      "Type":"",
+                      "TypeNote":null,
+                      "Weight":2,
+                      "SubjectId":"math",
+                      "IsNew":false,
+                      "IsPoints":false,
+                      "Id":null,
+                      "PointsText":null,
+                      "MaxPoints":0
+                    }
+                  ],
+                  "Subject":{"Id":"math","Abbrev":"M","Name":"Mathematics"},
+                  "AverageText":"2,59 ",
+                  "TemporaryMark":null,
+                  "SubjectNote":null,
+                  "TemporaryMarkNote":null,
+                  "PointsOnly":false,
+                  "MarkPredictionEnabled":true
+                }
+                """.trimIndent(),
+            ),
+        )
+
+        val result = client.predictSubject(
+            baseURL = baseURL(),
+            accessToken = "access-token",
+            subject = Subject(subjectInfo = SubjectInfo(id = "math", name = "Mathematics")),
+            markText = "2",
+            weight = 2,
+        )
+        val request = server.takeRequest()
+        val predictedMark = result.marks.last()
+
+        assertThat(request.path).isEqualTo("/api/3/marks/what-if")
+        assertThat(result.averageText).isEqualTo("2,59 ")
+        assertThat(result.marks.first().id).isEqualTo("existing-mark")
+        assertThat(predictedMark.id).isNotEmpty()
+        assertThat(predictedMark.id).isNotEqualTo("existing-mark")
+        assertThat(predictedMark.markText).isEqualTo("2")
+        assertThat(predictedMark.subjectID).isEqualTo("math")
+    }
+
+    @Test
     fun absenceUsesAuthenticatedStudentEndpointAndDecodesOfficialSubjects() = runTest {
         server.enqueue(
             jsonResponse(

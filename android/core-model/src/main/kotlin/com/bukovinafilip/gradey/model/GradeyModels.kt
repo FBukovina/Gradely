@@ -185,6 +185,20 @@ data class SubjectInfo(
     val name: String = "",
 )
 
+@OptIn(ExperimentalSerializationApi::class)
+internal object NullAsGeneratedMarkIDSerializer : KSerializer<String> {
+    override val descriptor: SerialDescriptor =
+        PrimitiveSerialDescriptor("NullAsGeneratedMarkID", PrimitiveKind.STRING)
+
+    override fun deserialize(decoder: Decoder): String {
+        if (decoder.decodeNotNullMark()) return decoder.decodeString()
+        decoder.decodeNull()
+        return UUID.randomUUID().toString()
+    }
+
+    override fun serialize(encoder: Encoder, value: String) = encoder.encodeString(value)
+}
+
 @Serializable
 data class Mark(
     @SerialName("MarkDate")
@@ -213,6 +227,7 @@ data class Mark(
     @SerialName("IsPoints")
     val isPoints: Boolean = false,
     @SerialName("Id")
+    @Serializable(with = NullAsGeneratedMarkIDSerializer::class)
     val id: String = UUID.randomUUID().toString(),
     @SerialName("PointsText")
     val pointsText: String? = null,
@@ -1071,8 +1086,15 @@ private fun String?.displayableSchoolName(): String? {
     return trimmed.takeUnless { normalized == "nazev skoly" }
 }
 
-private val unicodeWhitespace = Regex("(?U)\\s+")
-private val unicodeWhitespaceEdges = Regex("(?U)^\\s+|\\s+$")
+// Android's ICU-backed java.util.regex rejects Java's inline `(?U)` flag. Keep the
+// Unicode White_Space set explicit so loading this file cannot break session scope creation.
+private const val unicodeWhitespaceCharacters =
+    "\\u0009-\\u000D\\u0020\\u0085\\u00A0\\u1680" +
+        "\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000"
+private val unicodeWhitespace = Regex("[$unicodeWhitespaceCharacters]+")
+private val unicodeWhitespaceEdges = Regex(
+    "^[$unicodeWhitespaceCharacters]+|[$unicodeWhitespaceCharacters]+$",
+)
 
 object FlexibleStringSerializer : KSerializer<String> {
     override val descriptor: SerialDescriptor = PrimitiveSerialDescriptor("FlexibleString", PrimitiveKind.STRING)

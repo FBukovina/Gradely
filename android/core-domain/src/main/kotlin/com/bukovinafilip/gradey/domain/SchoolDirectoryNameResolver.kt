@@ -49,7 +49,13 @@ object SchoolDirectoryNameResolver {
 
     private val CZECH_LOCALE = Locale.forLanguageTag("cs-CZ")
     private val COMBINING_MARKS = Regex("\\p{M}+")
-    private val UNICODE_WHITESPACE = Regex("(?U)\\s+")
-    private val UNICODE_WHITESPACE_EDGES = Regex("(?U)^\\s+|\\s+$")
+    // Android's ICU regex engine rejects Java's `(?U)` inline flag.
+    private const val UNICODE_WHITESPACE_CHARACTERS =
+        "\\u0009-\\u000D\\u0020\\u0085\\u00A0\\u1680" +
+            "\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000"
+    private val UNICODE_WHITESPACE = Regex("[$UNICODE_WHITESPACE_CHARACTERS]+")
+    private val UNICODE_WHITESPACE_EDGES = Regex(
+        "^[$UNICODE_WHITESPACE_CHARACTERS]+|[$UNICODE_WHITESPACE_CHARACTERS]+$",
+    )
     private val PLACEHOLDER_NAMES = setOf("nazev skoly")
 }

@@ -4,10 +4,13 @@ import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.bukovinafilip.gradey.domain.BakalariDemoAccount
+import com.bukovinafilip.gradey.domain.SchoolDirectoryNameResolver
 import com.bukovinafilip.gradey.model.BakalariCredentials
 import com.bukovinafilip.gradey.model.SchoolProvider
 import com.bukovinafilip.gradey.model.StoredSchoolSessionEnvelope
 import com.bukovinafilip.gradey.model.StoredSession
+import com.bukovinafilip.gradey.network.DemoAwareBakalariClient
 import com.bukovinafilip.gradey.network.GradeyJson
 import com.google.common.truth.Truth.assertThat
 import java.io.FileOutputStream
@@ -21,10 +24,12 @@ import org.junit.runner.RunWith
 class GradeyPersistenceInstrumentedTest {
     private val context: Context = ApplicationProvider.getApplicationContext()
     private val databaseNames = mutableSetOf<String>()
+    private val sharedPreferenceNames = mutableSetOf<String>()
 
     @After
     fun cleanUp() {
         databaseNames.forEach(context::deleteDatabase)
+        sharedPreferenceNames.forEach(context::deleteSharedPreferences)
         context.getSharedPreferences("gradey-test-session-index", Context.MODE_PRIVATE)
             .edit().clear().commit()
     }
@@ -110,8 +115,45 @@ class GradeyPersistenceInstrumentedTest {
         assertThat(secureStore.load("school.session.v2", String.serializer())).isNull()
     }
 
+    @Test
+    fun demoLoginPersistsAndLoadsDashboardOnAndroidRuntime() = runBlocking {
+        val database = buildGradeyDatabase(context, databaseName("demo-login"))
+        try {
+            val sessionStore = SchoolSessionStore(
+                SecureJsonStore(context, sharedPreferenceName("demo-login"), GradeyJson),
+            )
+            val repository = AndroidSchoolRepository(
+                bakalariClient = DemoAwareBakalariClient(),
+                sessionStore = sessionStore,
+                cache = RoomGradeyCache(database.cacheEntries(), GradeyJson),
+            )
+
+            val session = repository.login(
+                schoolURL = BakalariDemoAccount.schoolURL,
+                username = BakalariDemoAccount.username,
+                password = BakalariDemoAccount.password,
+            )
+
+            assertThat(session.cacheScope)
+                .isEqualTo("bakalari-demo.gradely.app-702769b16df31c33250a36d9")
+            assertThat(repository.bootstrapSession()).isEqualTo(session)
+
+            val dashboard = repository.loadDashboard(forceRefresh = false)
+            assertThat(dashboard.user?.fullName).isEqualTo("Alex Novak")
+            assertThat(dashboard.user?.displaySchoolName).isEqualTo("Gradey Demo School")
+            assertThat(
+                SchoolDirectoryNameResolver.displayableName("\u0085Název\u00A0školy\u0085"),
+            ).isNull()
+        } finally {
+            database.close()
+        }
+    }
+
     private fun databaseName(kind: String): String = "gradey-$kind-${System.nanoTime()}.db"
         .also(databaseNames::add)
+
+    private fun sharedPreferenceName(kind: String): String = "gradey-$kind-${System.nanoTime()}"
+        .also(sharedPreferenceNames::add)
 
     private fun session() = StoredSession(
         accessToken = "access",

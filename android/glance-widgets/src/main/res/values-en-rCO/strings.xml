@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_open_gradey">open Gradey</string>
+    <string name="widget_load_timetable">load timetable</string>
+    <string name="widget_no_lessons">no lessons</string>
+    <string name="widget_refresh_timetable">refresh timetable</string>
+    <string name="widget_now">now</string>
+    <string name="widget_next">next</string>
+    <string name="widget_canceled">canceled</string>
+    <string name="widget_substitution">substitution</string>
+    <string name="widget_room_changed">room changed</string>
+    <string name="widget_added">added</string>
+    <string name="widget_lesson_fallback">lesson</string>
+</resources>

@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="stravacz_title">jídelna</string>
+    <string name="stravacz_open_ai">otevřít Gradey AI</string>
+    <string name="stravacz_open_account">otevřít účet</string>
+    <string name="stravacz_refresh">obnovit jídelníček</string>
+    <string name="stravacz_connect_title">připojit školní jídelnu</string>
+    <string name="stravacz_connect_message">přihlášení do školní jídelny je oddělené od bakalářů. heslo neukládáme.</string>
+    <string name="stravacz_canteen_number">číslo jídelny</string>
+    <string name="stravacz_username">uživatelské jméno Strava.cz</string>
+    <string name="stravacz_password">heslo Strava.cz</string>
+    <string name="stravacz_show_password">zobrazit heslo</string>
+    <string name="stravacz_hide_password">skrýt heslo</string>
+    <string name="stravacz_connect">připojit Strava.cz</string>
+    <string name="stravacz_connecting">připojuji…</string>
+    <string name="stravacz_loading">načítám jídelníček…</string>
+    <string name="stravacz_refreshing">obnovuji jídelníček…</string>
+    <string name="stravacz_empty_title">žádný jídelníček</string>
+    <string name="stravacz_empty_message">po obnovení se tu objeví jídla z jídelny.</string>
+    <string name="stravacz_balance">zůstatek</string>
+    <string name="stravacz_ordered">objednáno</string>
+    <string name="stravacz_canteen">jídelna</string>
+    <string name="stravacz_disconnect">odpojit Strava.cz</string>
+    <string name="stravacz_disconnect_title">odpojit Strava.cz?</string>
+    <string name="stravacz_disconnect_message">tímhle z telefonu zmizí přihlášení k jídelně a uložený jídelníček.</string>
+    <string name="stravacz_cancel">zrušit</string>
+    <string name="stravacz_confirm_disconnect">odpojit</string>
+    <string name="stravacz_order">objednat</string>
+    <string name="stravacz_cancel_order">odhlásit</string>
+    <string name="stravacz_meal_ordered">objednáno</string>
+    <string name="stravacz_meal_read_only">pouze pro čtení</string>
+    <string name="stravacz_meal_type_main">oběd</string>
+    <string name="stravacz_meal_type_soup">polévka</string>
+    <string name="stravacz_meal_type_unknown">jídlo</string>
+    <string name="stravacz_order_type_normal">objednatelné</string>
+    <string name="stravacz_order_type_optional">volitelné</string>
+    <string name="stravacz_order_type_restricted">uzavřeno</string>
+    <string name="stravacz_price_included">v ceně</string>
+    <string name="stravacz_allergens">alergeny: %1$s</string>
+    <string name="stravacz_forbidden_allergens">nevhodné alergeny: %1$s</string>
+    <string name="stravacz_replace_title">nahradit oběd?</string>
+    <string name="stravacz_replace_message">už máš objednáno „%1$s“. chceš místo toho objednat „%2$s“?</string>
+    <string name="stravacz_replace_confirm">nahradit objednávku</string>
+    <string name="stravacz_retry">zkusit znovu</string>
+</resources>

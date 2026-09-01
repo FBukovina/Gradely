@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="stravacz_title">meals</string>
+    <string name="stravacz_open_ai">open Gradey AI</string>
+    <string name="stravacz_open_account">open account</string>
+    <string name="stravacz_refresh">refresh menu</string>
+    <string name="stravacz_connect_title">connect your school canteen</string>
+    <string name="stravacz_connect_message">your school canteen login is separate from Bakaláři. Gradey does not store this password.</string>
+    <string name="stravacz_canteen_number">canteen number</string>
+    <string name="stravacz_username">Strava.cz username</string>
+    <string name="stravacz_password">Strava.cz password</string>
+    <string name="stravacz_show_password">show password</string>
+    <string name="stravacz_hide_password">hide password</string>
+    <string name="stravacz_connect">connect Strava.cz</string>
+    <string name="stravacz_connecting">connecting…</string>
+    <string name="stravacz_loading">loading menu…</string>
+    <string name="stravacz_refreshing">refreshing menu…</string>
+    <string name="stravacz_empty_title">no menu</string>
+    <string name="stravacz_empty_message">after a refresh, canteen meals show up here.</string>
+    <string name="stravacz_balance">balance</string>
+    <string name="stravacz_ordered">ordered</string>
+    <string name="stravacz_canteen">canteen</string>
+    <string name="stravacz_disconnect">disconnect Strava.cz</string>
+    <string name="stravacz_disconnect_title">disconnect Strava.cz?</string>
+    <string name="stravacz_disconnect_message">this removes the canteen session and cached menu from this device.</string>
+    <string name="stravacz_cancel">cancel</string>
+    <string name="stravacz_confirm_disconnect">disconnect</string>
+    <string name="stravacz_order">order</string>
+    <string name="stravacz_cancel_order">cancel order</string>
+    <string name="stravacz_meal_ordered">ordered</string>
+    <string name="stravacz_meal_read_only">read only</string>
+    <string name="stravacz_meal_type_main">main</string>
+    <string name="stravacz_meal_type_soup">soup</string>
+    <string name="stravacz_meal_type_unknown">meal</string>
+    <string name="stravacz_order_type_normal">orderable</string>
+    <string name="stravacz_order_type_optional">optional</string>
+    <string name="stravacz_order_type_restricted">closed</string>
+    <string name="stravacz_price_included">included</string>
+    <string name="stravacz_allergens">allergens: %1$s</string>
+    <string name="stravacz_forbidden_allergens">avoid: %1$s</string>
+    <string name="stravacz_replace_title">replace lunch?</string>
+    <string name="stravacz_replace_message">you already ordered “%1$s”. do you want to order “%2$s” instead?</string>
+    <string name="stravacz_replace_confirm">replace order</string>
+    <string name="stravacz_retry">try again</string>
+</resources>

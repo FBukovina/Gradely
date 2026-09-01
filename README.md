@@ -1,6 +1,6 @@
 # Gradely
 
-Gradely is a SwiftUI app for checking school data from Bakaláři and EduPage. It gives students a cleaner, faster view of subjects, weighted averages, recent marks, absences, timetables, and what-if grade calculations.
+Gradely is a native Apple and Android app for checking school data from Bakaláři and EduPage. It gives students a cleaner, faster view of subjects, weighted averages, recent marks, absences, timetables, and what-if grade calculations.
 
 Gradely will be available on the App Store. Source code lives at [FBukovina/Gradely](https://github.com/FBukovina/Gradely).
 
@@ -21,6 +21,8 @@ Gradely will be available on the App Store. Source code lives at [FBukovina/Grad
 - A Bakaláři- or EduPage-compatible school account for live use.
 
 ## Getting Started
+
+### Apple platforms
 
 1. Clone the repository.
 2. Open `Gradely.xcodeproj` in Xcode.
@@ -43,6 +45,21 @@ xcodebuild -project Gradely.xcodeproj -scheme Gradely -destination 'platform=iOS
 ```sh
 xcodebuild -project Gradely.xcodeproj -scheme Gradely -destination 'platform=iOS Simulator,name=iPhone 17' test
 ```
+
+### Android
+
+1. Open the `android` directory in Android Studio.
+2. Select JDK 21 as the Gradle JDK.
+3. Build the phone app, Wear OS app, and tests:
+
+```sh
+cd android
+./gradlew :app:assembleDebug :wear:assembleDebug test
+```
+
+Android uses demo data when local Supabase credentials are not configured. See
+[`android/docs/android-configuration.md`](android/docs/android-configuration.md)
+for optional live-service setup.
 
 ## School URL Setup
 
@@ -90,6 +107,8 @@ Gradely/
   Resources/      Localized strings
 GradelyTests/     Unit tests for decoding, grade math, sessions, and caching
 GradelyUITests/   End-to-end UI tests with mock API data
+android/          Kotlin, Compose, Wear OS, and Glance Android applications
+supabase/         Backend shared by the Apple and Android clients
 ```
 
 ## Testing

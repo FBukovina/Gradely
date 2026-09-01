@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="language_title">jazyk</string>
+    <string name="language_system">použít jazyk zařízení</string>
+    <string name="language_system_subtitle">vezme angličtinu nebo češtinu z tohoto zařízení.</string>
+    <string name="language_standard_subtitle">standardní. jako normálně.</string>
+    <string name="language_chronically_online_title">chronically online</string>
+    <string name="language_chronically_online_subtitle">malá písmena, slang, prostě online</string>
+    <string name="language_english">English</string>
+    <string name="language_czech">Čeština</string>
+</resources>

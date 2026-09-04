@@ -1,64 +1,198 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
-    "watch.change.added" : {
+    "%@ %@" : {
       "localizations" : {
-        "cs" : { "stringUnit" : { "state" : "translated", "value" : "Přidáno" } },
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Added" } }
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ %2$@"
+          }
+        }
+      }
+    },
+    "%@: %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@: %2$@"
+          }
+        }
+      }
+    },
+    "%@: %@ %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@: %2$@ %3$@"
+          }
+        }
+      }
+    },
+    "watch.change.added" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Přidáno"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Added"
+          }
+        }
       }
     },
     "watch.change.canceled" : {
+      "extractionState" : "stale",
       "localizations" : {
-        "cs" : { "stringUnit" : { "state" : "translated", "value" : "Zrušeno" } },
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Canceled" } }
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zrušeno"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Canceled"
+          }
+        }
       }
     },
     "watch.change.changed" : {
+      "extractionState" : "stale",
       "localizations" : {
-        "cs" : { "stringUnit" : { "state" : "translated", "value" : "Změna" } },
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Changed" } }
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Změna"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Changed"
+          }
+        }
       }
     },
     "watch.change.room" : {
+      "extractionState" : "stale",
       "localizations" : {
-        "cs" : { "stringUnit" : { "state" : "translated", "value" : "Učebna" } },
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Room" } }
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Učebna"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Room"
+          }
+        }
       }
     },
     "watch.complication.description" : {
       "localizations" : {
-        "cs" : { "stringUnit" : { "state" : "translated", "value" : "Zobrazí aktuální a další hodinu." } },
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Shows your current and next lesson." } }
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zobrazí aktuální a další hodinu."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shows your current and next lesson."
+          }
+        }
       }
     },
     "watch.complication.freeTime" : {
       "localizations" : {
-        "cs" : { "stringUnit" : { "state" : "translated", "value" : "Užij si volno" } },
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Enjoy your free time" } }
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Užij si volno"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enjoy your free time"
+          }
+        }
       }
     },
     "watch.complication.name" : {
       "localizations" : {
-        "cs" : { "stringUnit" : { "state" : "translated", "value" : "Hodiny" } },
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Lessons" } }
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hodiny"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lessons"
+          }
+        }
       }
     },
     "watch.complication.next" : {
       "localizations" : {
-        "cs" : { "stringUnit" : { "state" : "translated", "value" : "Další" } },
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Next" } }
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Další"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Next"
+          }
+        }
       }
     },
     "watch.complication.noLessons" : {
       "localizations" : {
-        "cs" : { "stringUnit" : { "state" : "translated", "value" : "Žádné hodiny" } },
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "No lessons" } }
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Žádné hodiny"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No lessons"
+          }
+        }
       }
     },
     "watch.complication.now" : {
       "localizations" : {
-        "cs" : { "stringUnit" : { "state" : "translated", "value" : "Teď" } },
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Now" } }
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Teď"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Now"
+          }
+        }
       }
     }
   },

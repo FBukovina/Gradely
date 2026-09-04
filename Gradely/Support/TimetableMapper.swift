@@ -9,11 +9,13 @@ enum TimetableMapper {
         from response: TimetableResponse,
         weekStart: Date,
         today: Date = Date(),
-        calendar: Calendar = .current
+        calendar: Calendar = .current,
+        kind: TimetableKind = .weekly
     ) -> TimetableWeek {
         let subjects = index(response.subjects)
         let teachers = index(response.teachers)
         let rooms = index(response.rooms)
+        let cycles = index(response.cycles)
         let groups = Dictionary(response.groups.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         let hoursByID = Dictionary(response.hours.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         let hourOrder = Dictionary(
@@ -21,8 +23,8 @@ enum TimetableMapper {
         )
 
         let days = response.days.map { dto -> ScheduledDay in
-            let date = MarkDateFormatter.date(from: dto.date)
-            let dayID = dto.date.isEmpty ? "dow-\(dto.dayOfWeek)" : dto.date
+            let date = kind == .permanent ? nil : MarkDateFormatter.date(from: dto.date)
+            let dayID = kind == .permanent || dto.date.isEmpty ? "dow-\(dto.dayOfWeek)" : dto.date
 
             let lessons = dto.atoms.enumerated().map { offset, atom -> ScheduledLesson in
                 let hour = hoursByID[atom.hourID]
@@ -45,7 +47,10 @@ enum TimetableMapper {
                     theme: trimmed(atom.theme),
                     hasHomework: !atom.homeworkIDs.isEmpty,
                     change: atom.change,
-                    changeKind: LessonChangeKind(changeType: atom.change?.changeType)
+                    changeKind: LessonChangeKind(changeType: atom.change?.changeType),
+                    cycles: kind == .permanent && !Set(atom.cycleIDs).isSuperset(of: cycles.keys)
+                        ? atom.cycleIDs.compactMap { cycles[$0] }.compactMap { trimmed($0.name) ?? trimmed($0.abbrev) }
+                        : []
                 )
             }
             .sorted { (hourOrder[$0.hour.id] ?? .max) < (hourOrder[$1.hour.id] ?? .max) }
@@ -56,8 +61,8 @@ enum TimetableMapper {
                 id: dayID,
                 date: date,
                 dayOfWeek: dto.dayOfWeek,
-                dayType: DayType(apiValue: dto.dayType),
-                dayDescription: dto.dayDescription.trimmingCharacters(in: .whitespacesAndNewlines),
+                dayType: kind == .permanent ? .workDay : DayType(apiValue: dto.dayType),
+                dayDescription: kind == .permanent ? "" : dto.dayDescription.trimmingCharacters(in: .whitespacesAndNewlines),
                 lessons: lessons,
                 isToday: isToday
             )

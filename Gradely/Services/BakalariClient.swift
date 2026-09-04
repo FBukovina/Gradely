@@ -7,7 +7,14 @@ protocol BakalariClient {
     func fetchAbsences(baseURL: URL, accessToken: String) async throws -> AbsenceResponse
     func fetchUser(baseURL: URL, accessToken: String) async throws -> UserResponse
     func fetchTimetable(baseURL: URL, accessToken: String, date: Date) async throws -> TimetableResponse
+    func fetchPermanentTimetable(baseURL: URL, accessToken: String) async throws -> TimetableResponse
     func predictSubject(baseURL: URL, accessToken: String, subject: Subject, markText: String, weight: Int) async throws -> Subject
+}
+
+extension BakalariClient {
+    func fetchPermanentTimetable(baseURL: URL, accessToken: String) async throws -> TimetableResponse {
+        throw AppError.unknown(AppL10n.string("timetable.permanent.unavailable"))
+    }
 }
 
 enum BakalariAPIError: LocalizedError, Equatable {
@@ -85,6 +92,10 @@ final class URLSessionBakalariClient: BakalariClient {
             query: ["date": TimetableDates.apiDateString(date)],
             accessToken: accessToken
         )
+    }
+
+    func fetchPermanentTimetable(baseURL: URL, accessToken: String) async throws -> TimetableResponse {
+        try await get(baseURL: baseURL, path: "api/3/timetable/permanent", accessToken: accessToken)
     }
 
     func predictSubject(baseURL: URL, accessToken: String, subject: Subject, markText: String, weight: Int) async throws -> Subject {
@@ -314,6 +325,7 @@ struct MockBakalariClient: BakalariClient {
     var absenceResult: AbsenceResponse
     var userResult: UserResponse?
     var timetableResult: TimetableResponse
+    var permanentTimetableResult: TimetableResponse?
     var loginError: Error?
     var marksError: Error?
     var timetableError: Error?
@@ -335,6 +347,7 @@ struct MockBakalariClient: BakalariClient {
         absenceResult: AbsenceResponse = PreviewData.absenceResponse,
         userResult: UserResponse? = PreviewData.userResponse,
         timetableResult: TimetableResponse = PreviewData.timetableResponse,
+        permanentTimetableResult: TimetableResponse? = nil,
         loginError: Error? = nil,
         marksError: Error? = nil,
         timetableError: Error? = nil,
@@ -347,6 +360,7 @@ struct MockBakalariClient: BakalariClient {
         self.absenceResult = absenceResult
         self.userResult = userResult
         self.timetableResult = timetableResult
+        self.permanentTimetableResult = permanentTimetableResult
         self.loginError = loginError
         self.marksError = marksError
         self.timetableError = timetableError
@@ -382,6 +396,29 @@ struct MockBakalariClient: BakalariClient {
     func fetchTimetable(baseURL: URL, accessToken: String, date: Date) async throws -> TimetableResponse {
         if let timetableError { throw timetableError }
         return Self.rebased(timetableResult, toWeekContaining: date)
+    }
+
+    func fetchPermanentTimetable(baseURL: URL, accessToken: String) async throws -> TimetableResponse {
+        if let timetableError { throw timetableError }
+        if let permanentTimetableResult { return permanentTimetableResult }
+        return TimetableResponse(
+            hours: timetableResult.hours,
+            days: timetableResult.days.map { day in
+                TimetableDayDTO(
+                    atoms: day.atoms.filter { LessonChangeKind(changeType: $0.change?.changeType) != .added }.map { atom in
+                        TimetableAtom(
+                            hourID: atom.hourID, groupIDs: atom.groupIDs, subjectID: atom.subjectID,
+                            teacherID: atom.teacherID, roomID: atom.roomID, cycleIDs: atom.cycleIDs
+                        )
+                    },
+                    dayOfWeek: day.dayOfWeek,
+                    date: ""
+                )
+            },
+            classes: timetableResult.classes, groups: timetableResult.groups,
+            subjects: timetableResult.subjects, teachers: timetableResult.teachers,
+            rooms: timetableResult.rooms, cycles: timetableResult.cycles
+        )
     }
 
     func predictSubject(baseURL: URL, accessToken: String, subject: Subject, markText: String, weight: Int) async throws -> Subject {
@@ -503,6 +540,13 @@ struct DemoAwareBakalariClient: BakalariClient {
         }
 
         return try await liveClient.fetchTimetable(baseURL: baseURL, accessToken: accessToken, date: date)
+    }
+
+    func fetchPermanentTimetable(baseURL: URL, accessToken: String) async throws -> TimetableResponse {
+        if DemoAccount.isDemoBaseURL(baseURL) || DemoAccount.isDemoToken(accessToken) {
+            return try await demoClient.fetchPermanentTimetable(baseURL: baseURL, accessToken: accessToken)
+        }
+        return try await liveClient.fetchPermanentTimetable(baseURL: baseURL, accessToken: accessToken)
     }
 
     func predictSubject(baseURL: URL, accessToken: String, subject: Subject, markText: String, weight: Int) async throws -> Subject {

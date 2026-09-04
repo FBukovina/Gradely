@@ -403,32 +403,39 @@ final class SchoolRepository {
         return try absenceCache.load(scope: SchoolDataScope(session: session))
     }
 
+    var supportsPermanentTimetable: Bool { currentProvider == .bakalari }
+
     /// Cached week for instant/offline display, if it matches the requested week.
-    func loadCachedTimetable(weekContaining date: Date) -> TimetableWeek? {
+    func loadCachedTimetable(weekContaining date: Date, kind: TimetableKind = .weekly) -> TimetableWeek? {
+        guard kind == .weekly || supportsPermanentTimetable else { return nil }
         let monday = TimetableDates.monday(of: date)
         let scope = (try? sessionStore.loadSession()).map(SchoolDataScope.init(session:))
         let cached: CachedTimetable?
         if let scope {
-            cached = try? timetableCache.load(weekStart: monday, scope: scope)
+            cached = try? timetableCache.load(weekStart: monday, scope: scope, kind: kind)
         } else {
-            cached = try? timetableCache.load(weekStart: monday)
+            cached = try? timetableCache.load(weekStart: monday, kind: kind)
         }
         guard let cached else { return nil }
-        let week = TimetableMapper.makeWeek(from: cached.response, weekStart: monday)
-        publishNextLessonWidgetSnapshot(for: week, weekStart: monday)
-        publishWatchTimetable(for: week, cachedAt: cached.cachedAt)
+        let week = TimetableMapper.makeWeek(from: cached.response, weekStart: monday, kind: kind)
+        if kind == .weekly {
+            publishNextLessonWidgetSnapshot(for: week, weekStart: monday)
+            publishWatchTimetable(for: week, cachedAt: cached.cachedAt)
+        }
         return week
     }
 
     /// Fetches and denormalizes the timetable for the week containing `date`, caching the raw response.
-    func loadTimetable(weekContaining date: Date) async throws -> TimetableWeek {
+    func loadTimetable(weekContaining date: Date, kind: TimetableKind = .weekly) async throws -> TimetableWeek {
         let monday = TimetableDates.monday(of: date)
         let session = try await validSession()
-        let response = try await fetchTimetable(session: session, weekStart: monday)
-        try? timetableCache.save(response, weekStart: monday, scope: SchoolDataScope(session: session))
-        let week = TimetableMapper.makeWeek(from: response, weekStart: monday)
-        publishNextLessonWidgetSnapshot(for: week, weekStart: monday)
-        publishWatchTimetable(for: week, cachedAt: dateProvider())
+        let response = try await fetchTimetable(session: session, weekStart: monday, kind: kind)
+        try? timetableCache.save(response, weekStart: monday, scope: SchoolDataScope(session: session), kind: kind)
+        let week = TimetableMapper.makeWeek(from: response, weekStart: monday, kind: kind)
+        if kind == .weekly {
+            publishNextLessonWidgetSnapshot(for: week, weekStart: monday)
+            publishWatchTimetable(for: week, cachedAt: dateProvider())
+        }
         return week
     }
 
@@ -806,17 +813,26 @@ final class SchoolRepository {
         }
     }
 
-    private func fetchTimetable(session: StoredSession, weekStart: Date) async throws -> TimetableResponse {
+    private func fetchTimetable(session: StoredSession, weekStart: Date, kind: TimetableKind = .weekly) async throws -> TimetableResponse {
         switch session.provider {
         case .bakalari:
             return try await withBakalariRetry(session: session) { current in
-                try await self.client.fetchTimetable(
+                if kind == .permanent {
+                    return try await self.client.fetchPermanentTimetable(
+                        baseURL: current.baseURL,
+                        accessToken: current.accessToken
+                    )
+                }
+                return try await self.client.fetchTimetable(
                     baseURL: current.baseURL,
                     accessToken: current.accessToken,
                     date: weekStart
                 )
             }
         case .eduPage:
+            guard kind == .weekly else {
+                throw AppError.unknown(AppL10n.string("timetable.permanent.unavailable"))
+            }
             return try await withEduPageSession(session) { data in
                 try await self.eduPageClient.fetchTimetable(
                     baseURL: session.baseURL,

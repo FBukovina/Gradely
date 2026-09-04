@@ -1,7 +1,32 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "CFBundleDisplayName" : {
+      "comment" : "Bundle display name",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Gradey"
+          }
+        }
+      }
+    },
+    "CFBundleName" : {
+      "comment" : "Bundle name",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Gradey"
+          }
+        }
+      }
+    },
     "NSCameraUsageDescription" : {
+      "comment" : "Privacy - Camera Usage Description",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
@@ -30,6 +55,7 @@
       }
     },
     "NSMicrophoneUsageDescription" : {
+      "comment" : "Privacy - Microphone Usage Description",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
@@ -58,6 +84,7 @@
       }
     },
     "NSPhotoLibraryAddUsageDescription" : {
+      "comment" : "Privacy - Photo Library Additions Usage Description",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
@@ -86,6 +113,7 @@
       }
     },
     "NSPhotoLibraryUsageDescription" : {
+      "comment" : "Privacy - Photo Library Usage Description",
       "localizations" : {
         "cs" : {
           "stringUnit" : {

@@ -18,7 +18,14 @@ struct TimetableView: View {
 
     var body: some View {
         NavigationStack {
-            content
+            VStack(spacing: 0) {
+                if viewModel.supportsPermanentTimetable {
+                    timetableKindPicker
+                }
+                content
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+                .gradelyScreenBackground()
                 .navigationTitle(AppL10n.string("rozvrh.title"))
                 .gradelyNavigationTitleDisplayMode(.inline)
                 .toolbar {
@@ -51,6 +58,24 @@ struct TimetableView: View {
         }
     }
 
+    private var timetableKindPicker: some View {
+        Picker(AppL10n.string("timetable.kind"), selection: Binding(
+            get: { viewModel.kind },
+            set: { kind in
+                if viewModel.setKind(kind) {
+                    Task { await viewModel.refresh() }
+                }
+            }
+        )) {
+            Text("timetable.kind.weekly").tag(TimetableKind.weekly)
+            Text("timetable.kind.permanent").tag(TimetableKind.permanent)
+        }
+        .pickerStyle(.segmented)
+        .padding(.horizontal, Spacing.lg)
+        .padding(.vertical, Spacing.sm)
+        .accessibilityIdentifier("timetableKindPicker")
+    }
+
     @ViewBuilder
     private var content: some View {
         if viewModel.isLoading && viewModel.week == nil {
@@ -80,12 +105,20 @@ struct TimetableView: View {
 
     private var timetable: some View {
         VStack(spacing: 0) {
-            WeekNavBar(viewModel: viewModel)
+            if viewModel.kind == .weekly {
+                WeekNavBar(viewModel: viewModel)
+            } else {
+                Text("timetable.permanent.description")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, Spacing.lg)
+                    .padding(.bottom, Spacing.md)
+            }
             DayStrip(viewModel: viewModel)
             Divider()
             dayContent
         }
-        .gradelyScreenBackground()
     }
 
     private var dayContent: some View {
@@ -352,16 +385,18 @@ private struct DayChip: View {
                 Text(weekdaySymbol)
                     .font(.caption2.weight(.semibold))
                     .textCase(.uppercase)
-                Text(dayNumber)
-                    .font(.headline.weight(.bold))
-                    .monospacedDigit()
-                Circle()
-                    .frame(width: 5, height: 5)
-                    .foregroundStyle(isSelected ? Brand.onAccent : LessonChangeKind.canceled.color)
-                    .opacity(day.hasChanges ? 1 : 0)
+                if day.date != nil {
+                    Text(dayNumber)
+                        .font(.headline.weight(.bold))
+                        .monospacedDigit()
+                    Circle()
+                        .frame(width: 5, height: 5)
+                        .foregroundStyle(isSelected ? Brand.onAccent : LessonChangeKind.canceled.color)
+                        .opacity(day.hasChanges ? 1 : 0)
+                }
             }
             .foregroundStyle(isSelected ? AnyShapeStyle(Brand.onAccent) : AnyShapeStyle(.primary))
-            .frame(width: 52, height: 66)
+            .frame(width: 52, height: day.date == nil ? 44 : 66)
             .background {
                 RoundedRectangle(cornerRadius: Radius.md, style: .continuous)
                     .fill(isSelected ? AnyShapeStyle(Brand.gradient) : AnyShapeStyle(Color.gradelySecondaryGroupedBackground))
@@ -461,6 +496,12 @@ private struct LessonCard: View {
                     }
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
+                }
+
+                if !lesson.cycles.isEmpty {
+                    Text(lesson.cycles.joined(separator: ", "))
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
                 }
 
                 if let theme = lesson.theme {
@@ -588,6 +629,13 @@ private struct LessonDetailSheet: View {
                                     systemImage: "person.3.fill",
                                     title: "timetable.detail.group",
                                     value: lesson.groups.joined(separator: ", ")
+                                )
+                            }
+                            if !lesson.cycles.isEmpty {
+                                DetailRow(
+                                    systemImage: "calendar",
+                                    title: "timetable.detail.cycles",
+                                    value: lesson.cycles.joined(separator: ", ")
                                 )
                             }
                             if let theme = lesson.theme {

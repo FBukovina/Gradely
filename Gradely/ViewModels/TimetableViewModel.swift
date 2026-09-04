@@ -9,6 +9,7 @@ final class TimetableViewModel {
     var week: TimetableWeek?
     var user: UserResponse?
     var errorMessage: String?
+    private(set) var kind: TimetableKind = .weekly
 
     /// The id of the day currently selected in the week strip.
     private(set) var selectedDayID: String?
@@ -18,6 +19,7 @@ final class TimetableViewModel {
     private let repository: SchoolRepository
     private let today: Date
     private var hasLoaded = false
+    private var activeRequestID = UUID()
 
     init(repository: SchoolRepository, today: Date = Date()) {
         self.repository = repository
@@ -26,6 +28,8 @@ final class TimetableViewModel {
     }
 
     // MARK: - Derived state
+
+    var supportsPermanentTimetable: Bool { repository.supportsPermanentTimetable }
 
     var days: [ScheduledDay] { week?.days ?? [] }
 
@@ -42,7 +46,8 @@ final class TimetableViewModel {
     }
 
     var todaySummary: TimetableTodaySummary? {
-        TimetableTodaySummaryBuilder.make(for: selectedDay)
+        guard kind == .weekly else { return nil }
+        return TimetableTodaySummaryBuilder.make(for: selectedDay)
     }
 
     /// Whether the displayed week is the one containing today (used to gate the "Today" button).
@@ -57,7 +62,7 @@ final class TimetableViewModel {
         guard !hasLoaded else { return }
         hasLoaded = true
 
-        if let cached = repository.loadCachedTimetable(weekContaining: weekAnchor) {
+        if let cached = repository.loadCachedTimetable(weekContaining: weekAnchor, kind: kind) {
             apply(cached, preserveSelection: false)
         }
 
@@ -69,6 +74,10 @@ final class TimetableViewModel {
     }
 
     func refresh() async {
+        let requestID = UUID()
+        activeRequestID = requestID
+        let requestedKind = kind
+        let requestedAnchor = weekAnchor
         errorMessage = nil
         if week == nil {
             isLoading = true
@@ -76,18 +85,36 @@ final class TimetableViewModel {
             isRefreshing = true
         }
         defer {
-            isLoading = false
-            isRefreshing = false
+            if activeRequestID == requestID {
+                isLoading = false
+                isRefreshing = false
+            }
         }
 
         do {
-            let loaded = try await repository.loadTimetable(weekContaining: weekAnchor)
+            let loaded = try await repository.loadTimetable(weekContaining: requestedAnchor, kind: requestedKind)
+            guard activeRequestID == requestID else { return }
             apply(loaded, preserveSelection: true)
         } catch {
+            guard activeRequestID == requestID, !(error is CancellationError) else { return }
             if week == nil {
                 errorMessage = userFacingMessage(for: error)
             }
         }
+    }
+
+    /// Picker bindings must update synchronously before starting a network request.
+    @discardableResult
+    func setKind(_ newKind: TimetableKind) -> Bool {
+        guard newKind != kind, newKind == .weekly || supportsPermanentTimetable else { return false }
+        kind = newKind
+        prepareCurrentAnchor()
+        return true
+    }
+
+    func selectKind(_ newKind: TimetableKind) async {
+        guard setKind(newKind) else { return }
+        await refresh()
     }
 
     // MARK: - Navigation
@@ -101,7 +128,7 @@ final class TimetableViewModel {
     }
 
     func goToToday() async {
-        guard !isViewingCurrentWeek else { return }
+        guard kind == .weekly, !isViewingCurrentWeek else { return }
         weekAnchor = today
         await loadCurrentAnchor()
     }
@@ -113,19 +140,28 @@ final class TimetableViewModel {
     // MARK: - Private
 
     private func move(byWeeks count: Int) async {
+        guard kind == .weekly else { return }
         weekAnchor = TimetableDates.addingWeeks(count, to: weekAnchor)
         await loadCurrentAnchor()
     }
 
     /// Loads the week for the current anchor, resetting selection so it lands on today / the first day.
     private func loadCurrentAnchor() async {
+        prepareCurrentAnchor()
+        await refresh()
+    }
+
+    private func prepareCurrentAnchor() {
+        activeRequestID = UUID()
+        isLoading = false
+        isRefreshing = false
+        errorMessage = nil
         selectedDayID = nil
-        if let cached = repository.loadCachedTimetable(weekContaining: weekAnchor) {
+        if let cached = repository.loadCachedTimetable(weekContaining: weekAnchor, kind: kind) {
             apply(cached, preserveSelection: false)
         } else {
             week = nil
         }
-        await refresh()
     }
 
     private func apply(_ loaded: TimetableWeek, preserveSelection: Bool) {

@@ -39,7 +39,7 @@ struct GradeyAuthClientTests {
         #expect(request.url?.path == "/auth/v1/token")
         #expect(request.url?.query == "grant_type=id_token")
         #expect(request.value(forHTTPHeaderField: "apikey") == "sb_publishable_test")
-        #expect(request.value(forHTTPHeaderField: "Authorization") == "Bearer sb_publishable_test")
+        #expect(request.value(forHTTPHeaderField: "Authorization") == nil)
 
         let requestData = try #require(GradeyAuthURLProtocol.lastRequestBody)
         let requestBody = try #require(
@@ -81,6 +81,37 @@ struct GradeyAuthClientTests {
         #expect(request.value(forHTTPHeaderField: "apikey") == "sb_publishable_test")
         #expect(request.value(forHTTPHeaderField: "Authorization") == "Bearer stored-access-token")
         #expect(GradeyAuthURLProtocol.lastRequestBody == nil)
+    }
+
+    @Test func expiredSessionRefreshSendsPublishableKeyOnlyAsAPIKey() async throws {
+        var expiredSession = Self.makeStoredSession()
+        expiredSession.expiresAt = Self.testNow
+        let sessionStore = InMemoryGradeyAuthSessionStore(session: expiredSession)
+        let urlSession = Self.makeURLSession()
+
+        GradeyAuthURLProtocol.reset()
+        GradeyAuthURLProtocol.responseData = Data(Self.appleTokenResponseWithoutName.utf8)
+        defer { GradeyAuthURLProtocol.reset() }
+
+        let client = Self.makeClient(sessionStore: sessionStore, urlSession: urlSession)
+        let refreshed = try await client.validSession()
+
+        #expect(refreshed.accessToken == "access-token")
+        #expect(refreshed.refreshToken == "refresh-token")
+        #expect(sessionStore.session == refreshed)
+
+        let request = try #require(GradeyAuthURLProtocol.lastRequest)
+        #expect(request.httpMethod == "POST")
+        #expect(request.url?.path == "/auth/v1/token")
+        #expect(request.url?.query == "grant_type=refresh_token")
+        #expect(request.value(forHTTPHeaderField: "apikey") == "sb_publishable_test")
+        #expect(request.value(forHTTPHeaderField: "Authorization") == nil)
+
+        let requestData = try #require(GradeyAuthURLProtocol.lastRequestBody)
+        let requestBody = try #require(
+            JSONSerialization.jsonObject(with: requestData) as? [String: Any]
+        )
+        #expect(requestBody["refresh_token"] as? String == "stored-refresh-token")
     }
 
     @Test func updateFullNameSendsNestedMetadataAndPersistsReturnedAccount() async throws {
@@ -213,6 +244,10 @@ struct GradeyAuthClientTests {
         #expect(session.account.fullName == "Apple Student")
         #expect(sessionStore.session == session)
         #expect(GradeyAuthURLProtocol.capturedRequests.count == 2)
+
+        let tokenRequest = GradeyAuthURLProtocol.capturedRequests[0]
+        #expect(tokenRequest.request.value(forHTTPHeaderField: "apikey") == "sb_publishable_test")
+        #expect(tokenRequest.request.value(forHTTPHeaderField: "Authorization") == nil)
 
         let metadataRequest = GradeyAuthURLProtocol.capturedRequests[1]
         #expect(metadataRequest.request.httpMethod == "PUT")

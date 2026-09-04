@@ -1,5 +1,10 @@
 import Foundation
 
+enum TimetableKind: String, CaseIterable {
+    case weekly
+    case permanent
+}
+
 // MARK: - Raw API DTOs
 //
 // Mirrors the Bakalari `GET api/3/timetable/actual` response, which is *normalized*:
@@ -382,6 +387,7 @@ struct ScheduledLesson: Identifiable, Equatable {
     let hasHomework: Bool
     let change: TimetableChange?
     let changeKind: LessonChangeKind
+    var cycles: [String] = []
 
     var isCanceled: Bool { changeKind.isCanceled }
 

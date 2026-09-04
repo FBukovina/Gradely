@@ -302,6 +302,7 @@
 				81EE6C9F2FCDDC4A009D28DE /* Resources */,
 				28E3FBE556724CC49EE2E04A /* Embed Foundation Extensions */,
 				A20000082FCE0000000000A8 /* Embed Watch Content */,
+				E10000012FD4000000000001 /* Validate Release Runtime Configuration */,
 			);
 			buildRules = (
 			);
@@ -385,6 +386,7 @@
 				B40000072FCEF10000000007 /* Frameworks */,
 				B40000092FCEF10000000009 /* Resources */,
 				B50000042FCF000000000004 /* Embed App Extensions */,
+				E10000022FD4000000000002 /* Validate Release Runtime Configuration */,
 			);
 			buildRules = (
 			);
@@ -588,6 +590,61 @@
 		};
 /* End PBXResourcesBuildPhase section */
 
+/* Begin PBXShellScriptBuildPhase section */
+		E10000012FD4000000000001 /* Validate Release Runtime Configuration */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/Scripts/validate-release-configuration.sh",
+				"$(SRCROOT)/Gradely/GoogleService-Info.plist",
+				"$(TARGET_BUILD_DIR)/$(INFOPLIST_PATH)",
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/GoogleService-Info.plist",
+				"$(TARGET_BUILD_DIR)/$(WRAPPER_NAME)/PlugIns/GradelyWidgets.appex/Info.plist",
+				"$(TARGET_BUILD_DIR)/$(WRAPPER_NAME)/Watch/GradelyWatch.app/Info.plist",
+				"$(TARGET_BUILD_DIR)/$(WRAPPER_NAME)/Watch/GradelyWatch.app/PlugIns/GradelyWatchComplications.appex/Info.plist",
+			);
+			name = "Validate Release Runtime Configuration";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${SRCROOT}/Scripts/validate-release-configuration.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+		E10000022FD4000000000002 /* Validate Release Runtime Configuration */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/Scripts/validate-release-configuration.sh",
+				"$(SRCROOT)/Gradely/GoogleService-Info.plist",
+				"$(TARGET_BUILD_DIR)/$(INFOPLIST_PATH)",
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/GoogleService-Info.plist",
+				"$(TARGET_BUILD_DIR)/$(WRAPPER_NAME)/Contents/PlugIns/GradelyMacWidgets.appex/Contents/Info.plist",
+			);
+			name = "Validate Release Runtime Configuration";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${SRCROOT}/Scripts/validate-release-configuration.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+/* End PBXShellScriptBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
 		7BA5A12D94014895BE12F1B3 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
@@ -668,7 +725,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = GradelyWidgets/GradelyWidgets.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 30;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = C2U9S337H8;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = "GradelyWidgets-Info.plist";
@@ -678,7 +735,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 2.0;
+				MARKETING_VERSION = 2.0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.bukovinafilip.BakalariMarks.GradelyWidgets;
 				PRODUCT_MODULE_NAME = GradelyWidgets;
 				PRODUCT_NAME = GradelyWidgets;
@@ -826,7 +883,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Gradely/Gradely.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 31;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = C2U9S337H8;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -838,7 +895,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.0;
+				MARKETING_VERSION = 2.0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.bukovinafilip.BakalariMarks;
 				PRODUCT_MODULE_NAME = Gradely;
 				PRODUCT_NAME = Gradey;
@@ -866,7 +923,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Gradely/Gradely.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 31;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = C2U9S337H8;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -878,7 +935,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.0;
+				MARKETING_VERSION = 2.0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.bukovinafilip.BakalariMarks;
 				PRODUCT_MODULE_NAME = Gradely;
 				PRODUCT_NAME = Gradey;
@@ -989,7 +1046,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = GradelyMac/GradelyMac.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 30;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = C2U9S337H8;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
@@ -1002,7 +1059,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
-				MARKETING_VERSION = 2.0;
+				MARKETING_VERSION = 2.0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.bukovinafilip.BakalariMarks;
 				PRODUCT_MODULE_NAME = Gradely;
 				PRODUCT_NAME = Gradey;
@@ -1028,7 +1085,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = GradelyMac/GradelyMac.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 30;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = C2U9S337H8;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
@@ -1041,7 +1098,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
-				MARKETING_VERSION = 2.0;
+				MARKETING_VERSION = 2.0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.bukovinafilip.BakalariMarks;
 				PRODUCT_MODULE_NAME = Gradely;
 				PRODUCT_NAME = Gradey;
@@ -1064,7 +1121,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = GradelyMacWidgets/GradelyMacWidgets.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 30;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = C2U9S337H8;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -1075,7 +1132,7 @@
 					"@executable_path/../../../../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
-				MARKETING_VERSION = 2.0;
+				MARKETING_VERSION = 2.0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.bukovinafilip.BakalariMarks.GradelyMacWidgets;
 				PRODUCT_MODULE_NAME = GradelyMacWidgets;
 				PRODUCT_NAME = GradelyMacWidgets;
@@ -1098,7 +1155,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = GradelyMacWidgets/GradelyMacWidgets.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 30;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = C2U9S337H8;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -1109,7 +1166,7 @@
 					"@executable_path/../../../../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
-				MARKETING_VERSION = 2.0;
+				MARKETING_VERSION = 2.0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.bukovinafilip.BakalariMarks.GradelyMacWidgets;
 				PRODUCT_MODULE_NAME = GradelyMacWidgets;
 				PRODUCT_NAME = GradelyMacWidgets;
@@ -1132,7 +1189,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = GradelyWidgets/GradelyWidgets.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 30;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = C2U9S337H8;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = "GradelyWidgets-Info.plist";
@@ -1142,7 +1199,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 2.0;
+				MARKETING_VERSION = 2.0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.bukovinafilip.BakalariMarks.GradelyWidgets;
 				PRODUCT_MODULE_NAME = GradelyWidgets;
 				PRODUCT_NAME = GradelyWidgets;

@@ -528,6 +528,44 @@ final class GradelyUITests: XCTestCase {
     }
 
     @MainActor
+    func testTimetableSwitchesBetweenWeeklyAndPermanent() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-uiTestingMockAPI", "-uiTestingLoggedIn"]
+        app.launch()
+        XCTAssertTrue(app.scrollViews["todayScrollView"].waitForExistence(timeout: 5))
+        app.tabBars.buttons.element(boundBy: 3).tap()
+        XCTAssertTrue(app.scrollViews["timetableList"].waitForExistence(timeout: 5))
+
+        let picker = app.segmentedControls["timetableKindPicker"]
+        XCTAssertTrue(picker.waitForExistence(timeout: 5))
+        XCTAssertEqual(picker.buttons.count, 2)
+        app.buttons["weekNext"].tap()
+        XCTAssertTrue(app.buttons["weekToday"].waitForExistence(timeout: 5))
+
+        picker.buttons.element(boundBy: 1).tap()
+        XCTAssertTrue(app.buttons["weekNext"].waitForNonExistence(timeout: 5))
+        XCTAssertTrue(app.scrollViews["timetableList"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["dayChip-1"].exists)
+        XCTAssertFalse(app.buttons["weekPrev"].exists)
+        XCTAssertFalse(app.buttons["weekToday"].exists)
+        XCTAssertFalse(app.descendants(matching: .any)["todaySummaryCard"].exists)
+
+        let screenshot = XCTAttachment(screenshot: app.screenshot())
+        screenshot.name = "Permanent timetable"
+        screenshot.lifetime = .keepAlways
+        add(screenshot)
+
+        app.buttons["dayChip-2"].tap()
+        app.buttons["timetableRefreshButton"].tap()
+        XCTAssertTrue(app.scrollViews["timetableList"].waitForExistence(timeout: 5))
+        picker.buttons.element(boundBy: 0).tap()
+        XCTAssertTrue(app.buttons["weekNext"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["weekToday"].exists)
+        app.buttons["weekToday"].tap()
+        XCTAssertTrue(app.buttons["weekToday"].waitForNonExistence(timeout: 5))
+    }
+
+    @MainActor
     func testSupportTipFlowUsesMockPurchase() throws {
         let app = XCUIApplication()
         app.launchArguments = ["-uiTestingMockAPI", "-uiTestingLoggedIn"]
@@ -561,6 +599,7 @@ final class GradelyUITests: XCTestCase {
         XCTAssertTrue(app.buttons["supportPlan-standard"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["supportPlan-plus"].exists)
         XCTAssertTrue(app.descendants(matching: .any)["supportPlanIntervalPicker"].exists)
+        XCTAssertTrue(app.buttons["supportOfferCodeRedeemButton"].exists)
 
         let supportScroll = app.scrollViews["supportTipsScreen"]
         let smallTip = app.buttons["supportTip-tip_small"]
@@ -612,6 +651,7 @@ final class GradelyUITests: XCTestCase {
 
         XCTAssertTrue(app.buttons["supportPlan-standard"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["supportRestorePurchasesButton"].exists)
+        XCTAssertTrue(app.buttons["supportOfferCodeRedeemButton"].exists)
         app.buttons["supportPlan-standard"].tap()
 
         XCTAssertTrue(app.descendants(matching: .any)["supportTipsThankYou"].waitForExistence(timeout: 5))

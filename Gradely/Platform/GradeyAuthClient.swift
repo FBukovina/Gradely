@@ -309,7 +309,9 @@ final class SupabaseGradeyAuthClient: GradeyAuthClient {
         var request = URLRequest(url: url)
         request.httpMethod = method
         request.setValue(configuration.anonKey, forHTTPHeaderField: "apikey")
-        request.setValue(authorization ?? "Bearer \(configuration.anonKey)", forHTTPHeaderField: "Authorization")
+        if let authorization {
+            request.setValue(authorization, forHTTPHeaderField: "Authorization")
+        }
         request.setValue("application/json", forHTTPHeaderField: "Accept")
 
         if let body {

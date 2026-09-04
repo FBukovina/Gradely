@@ -1,5 +1,8 @@
 import Foundation
 import Observation
+#if canImport(StoreKit)
+import StoreKit
+#endif
 
 enum SupportTipLoadState: Equatable {
     case idle
@@ -25,6 +28,7 @@ final class SupportTipViewModel {
     var purchasingTipID: String?
     var purchasingPlanID: String?
     var isRestoring = false
+    var isRefreshingOfferCode = false
     var purchaseErrorMessage: String?
     var didCompletePurchase = false
     var completedPurchaseKind: SupportPurchaseKind?
@@ -37,7 +41,11 @@ final class SupportTipViewModel {
     }
 
     var isPurchasing: Bool {
-        purchasingTipID != nil || purchasingPlanID != nil || isRestoring
+        purchasingTipID != nil || purchasingPlanID != nil || isRestoring || isRefreshingOfferCode
+    }
+
+    var canRedeemOfferCode: Bool {
+        isSignedIn && !isPurchasing
     }
 
     var managementURL: URL {
@@ -163,6 +171,34 @@ final class SupportTipViewModel {
         }
     }
 
+    func completeOfferCodeRedemption(with result: Result<Void, Error>) async {
+        switch result {
+        case .success:
+            await refreshPurchasesAfterOfferCodeRedemption()
+        case .failure(let error):
+            guard !isUserCancellation(error) else { return }
+            purchaseErrorMessage = userFacingMessage(for: error)
+        }
+    }
+
+    func refreshPurchasesAfterOfferCodeRedemption() async {
+        guard canRedeemOfferCode else { return }
+
+        isRefreshingOfferCode = true
+        purchaseErrorMessage = nil
+        defer { isRefreshingOfferCode = false }
+
+        do {
+            let previousEntitlement = entitlement
+            entitlement = try await supportTipProvider.refreshPurchasesAfterOfferCodeRedemption()
+            if entitlement != previousEntitlement {
+                onEntitlementChanged?()
+            }
+        } catch {
+            purchaseErrorMessage = userFacingMessage(for: error)
+        }
+    }
+
     func canPurchase(_ plan: SupportPlanOption) -> Bool {
         guard isSignedIn else { return false }
         if entitlement.tier > plan.tier { return false }
@@ -195,5 +231,15 @@ final class SupportTipViewModel {
             return message
         }
         return error.localizedDescription
+    }
+
+    private func isUserCancellation(_ error: Error) -> Bool {
+        #if canImport(StoreKit)
+        if let storeKitError = error as? StoreKitError,
+           case .userCancelled = storeKitError {
+            return true
+        }
+        #endif
+        return false
     }
 }

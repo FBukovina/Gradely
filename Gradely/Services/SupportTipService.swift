@@ -26,6 +26,7 @@ enum SupportTipServiceError: Error, Equatable {
     case purchaseFailed(String)
     case accountRequired
     case restoreFailed(String)
+    case offerCodeRefreshFailed(String)
 }
 
 extension SupportTipServiceError: LocalizedError {
@@ -37,7 +38,9 @@ extension SupportTipServiceError: LocalizedError {
             AppL10n.string("support.tips.error.emptyOffering")
         case .productUnavailable:
             AppL10n.string("support.tips.error.productUnavailable")
-        case .purchaseFailed(let message), .restoreFailed(let message):
+        case .purchaseFailed(let message),
+             .restoreFailed(let message),
+             .offerCodeRefreshFailed(let message):
             message
         case .accountRequired:
             AppL10n.string("support.plans.signIn.required")
@@ -57,6 +60,9 @@ protocol SupportTipProviding {
 
     @MainActor
     func restorePurchases() async throws -> SupportEntitlement
+
+    @MainActor
+    func refreshPurchasesAfterOfferCodeRedemption() async throws -> SupportEntitlement
 
     @MainActor
     func currentEntitlement() async -> SupportEntitlement
@@ -252,6 +258,19 @@ final class RevenueCatSupportTipService: SupportTipProviding {
         }
     }
 
+    func refreshPurchasesAfterOfferCodeRedemption() async throws -> SupportEntitlement {
+        guard Purchases.isConfigured else {
+            throw SupportTipServiceError.notConfigured
+        }
+
+        do {
+            let customerInfo = try await Purchases.shared.syncPurchases()
+            return entitlement(from: customerInfo)
+        } catch {
+            throw SupportTipServiceError.offerCodeRefreshFailed(userFacingMessage(for: error))
+        }
+    }
+
     func currentEntitlement() async -> SupportEntitlement {
         guard Purchases.isConfigured else { return .none }
         if let customerInfo = try? await Purchases.shared.customerInfo() {
@@ -425,6 +444,10 @@ final class StoreKitSupportTipService: SupportTipProviding {
         }
     }
 
+    func refreshPurchasesAfterOfferCodeRedemption() async throws -> SupportEntitlement {
+        await currentEntitlement()
+    }
+
     func currentEntitlement() async -> SupportEntitlement {
         var productIdentifiers: [String] = []
         var expirationDate: Date?
@@ -521,6 +544,10 @@ final class UnavailableSupportTipService: SupportTipProviding {
         throw SupportTipServiceError.notConfigured
     }
 
+    func refreshPurchasesAfterOfferCodeRedemption() async throws -> SupportEntitlement {
+        throw SupportTipServiceError.notConfigured
+    }
+
     func currentEntitlement() async -> SupportEntitlement {
         .none
     }
@@ -582,16 +609,19 @@ final class MockSupportTipService: SupportTipProviding {
     var loadResult: Result<SupportCatalog, Error>
     var purchaseResult: Result<SupportTipPurchaseOutcome, Error>
     var restoreResult: Result<SupportEntitlement, Error>
+    var offerCodeRefreshResult: Result<SupportEntitlement, Error>?
     private(set) var purchasedTipIDs: [String] = []
     private(set) var purchasedPlanIDs: [String] = []
     private(set) var didRestorePurchases = false
+    private(set) var didRefreshPurchasesAfterOfferCodeRedemption = false
     private var entitlement: SupportEntitlement
 
     init(
         tips: [SupportTipOption] = MockSupportTipService.previewTips,
         plans: [SupportPlanOption] = MockSupportTipService.previewPlans,
         entitlement: SupportEntitlement = .none,
-        purchaseResult: Result<SupportTipPurchaseOutcome, Error> = .success(.success)
+        purchaseResult: Result<SupportTipPurchaseOutcome, Error> = .success(.success),
+        offerCodeRefreshResult: Result<SupportEntitlement, Error>? = nil
     ) {
         self.loadResult = .success(
             SupportCatalog(
@@ -603,17 +633,20 @@ final class MockSupportTipService: SupportTipProviding {
         )
         self.purchaseResult = purchaseResult
         self.restoreResult = .success(entitlement)
+        self.offerCodeRefreshResult = offerCodeRefreshResult
         self.entitlement = entitlement
     }
 
     init(
         loadResult: Result<SupportCatalog, Error>,
         purchaseResult: Result<SupportTipPurchaseOutcome, Error> = .success(.success),
-        restoreResult: Result<SupportEntitlement, Error> = .success(.none)
+        restoreResult: Result<SupportEntitlement, Error> = .success(.none),
+        offerCodeRefreshResult: Result<SupportEntitlement, Error>? = nil
     ) {
         self.loadResult = loadResult
         self.purchaseResult = purchaseResult
         self.restoreResult = restoreResult
+        self.offerCodeRefreshResult = offerCodeRefreshResult
         self.entitlement = (try? loadResult.get())?.entitlement ?? .none
     }
 
@@ -649,6 +682,14 @@ final class MockSupportTipService: SupportTipProviding {
         let restored = try restoreResult.get()
         entitlement = restored
         return restored
+    }
+
+    func refreshPurchasesAfterOfferCodeRedemption() async throws -> SupportEntitlement {
+        didRefreshPurchasesAfterOfferCodeRedemption = true
+        if let offerCodeRefreshResult {
+            entitlement = try offerCodeRefreshResult.get()
+        }
+        return entitlement
     }
 
     func currentEntitlement() async -> SupportEntitlement {

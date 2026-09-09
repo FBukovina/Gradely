@@ -1,7 +1,7 @@
 GRADEY END USER LICENSE AGREEMENT
 
 English
-=======
+-------
 
 These Terms of Use ("Terms") are an agreement between you and Open Side (openside.tech), operated by Filip Bukovina ("Open Side", "we", "us"), for the Gradey app. By downloading, installing or using Gradey you accept these Terms. If you do not accept them, do not use Gradey.
 
@@ -54,7 +54,7 @@ Open Side / Filip Bukovina — openside.tech. Email: filip@openside.tech.
 
 
 Čeština
-=======
+-------
 
 Tyto Podmínky používání ("Podmínky") jsou smlouvou mezi vámi a Open Side (openside.tech), provozovaným Filipem Bukovinou ("Open Side", "my"), pro aplikaci Gradey. Stažením, instalací nebo používáním Gradey tyto Podmínky přijímáte. Pokud je nepřijímáte, Gradey nepoužívejte.
 

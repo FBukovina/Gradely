@@ -1,0 +1,9 @@
+Gradey 2.1 makes planning your school week easier.
+
+• New Planner for homework, tests, presentations, notes and tasks.
+• Create plans directly from your timetable and set a deadline for the next lesson.
+• Add dated plans to Apple Calendar and keep their events up to date from Gradey.
+• Switch between the weekly and permanent Bakaláři timetable.
+• Improved privacy: this version links Bakaláři accounts without uploading your password to Gradey's servers.
+• Redeem support subscription offer codes directly in the app.
+• Start using Gradey without creating a Gradey ID, and find clearer legal links on macOS.

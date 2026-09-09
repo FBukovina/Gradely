@@ -1,0 +1,9 @@
+Gradey 2.1 usnadňuje plánování školního týdne.
+
+• Nový Plánovač pro domácí úkoly, testy, prezentace, poznámky a další úkoly.
+• Vytvářejte plány přímo z rozvrhu a nastavte termín na příští hodinu.
+• Přidávejte plány s datem do Apple Kalendáře a aktualizujte jejich události z Gradey.
+• Přepínejte mezi týdenním a stálým rozvrhem Bakalářů.
+• Lepší ochrana soukromí: tato verze propojuje účet Bakalářů bez odesílání hesla na servery Gradey.
+• Uplatňujte nabídkové kódy podpůrného předplatného přímo v aplikaci.
+• Začněte používat Gradey bez vytvoření Gradey ID. Na macOS také najdete přehlednější odkazy na právní dokumenty.

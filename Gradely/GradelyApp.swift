@@ -45,6 +45,16 @@ struct GradelyApp: App {
         #if os(macOS)
         .defaultSize(width: 1040, height: 720)
         .windowResizability(.contentMinSize)
+        .commands {
+            CommandGroup(replacing: .help) {
+                Button("legal.privacyPolicy") {
+                    AppLinks.open(AppLinks.privacyPolicyURL)
+                }
+                Button("legal.termsOfUse") {
+                    AppLinks.open(AppLinks.termsOfUseURL)
+                }
+            }
+        }
         #endif
     }
 }

@@ -1,5 +1,6 @@
 import { errorResponse, handleOptions, json } from "../_shared/http.ts";
 import { providerSecretKey, requireUser } from "../_shared/client.ts";
+import { providerSecretForActivation } from "../_shared/provider-secret.ts";
 
 Deno.serve(async (req) => {
   const options = handleOptions(req);
@@ -47,7 +48,7 @@ Deno.serve(async (req) => {
 
     return json({
       account: toLinkedAccount(account),
-      token_payload: tokenPayload,
+      token_payload: providerSecretForActivation({ ...tokenPayload, provider: account.provider }),
     });
   } catch (error) {
     return errorResponse(error, "Could not activate school account");

@@ -31,6 +31,10 @@ final class TimetableViewModel {
 
     var supportsPermanentTimetable: Bool { repository.supportsPermanentTimetable }
 
+    var schoolScope: SchoolDataScope? {
+        (try? repository.currentStoredSession()).map(SchoolDataScope.init(session:))
+    }
+
     var days: [ScheduledDay] { week?.days ?? [] }
 
     var selectedDay: ScheduledDay? {

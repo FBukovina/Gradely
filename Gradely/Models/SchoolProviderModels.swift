@@ -127,6 +127,7 @@ enum SchoolAuthenticationError: LocalizedError, Equatable {
     case parentHasNoLinkedStudents
     case invalidStudent
     case sessionExpired
+    case deviceSignInRequired
     case unsupportedAccount
     case malformedResponse(String)
     case httpStatus(Int)
@@ -153,6 +154,8 @@ enum SchoolAuthenticationError: LocalizedError, Equatable {
             AppL10n.string("edupage.error.invalidChild")
         case .sessionExpired:
             AppL10n.string("edupage.error.sessionExpired")
+        case .deviceSignInRequired:
+            AppL10n.string("school.error.deviceSignInRequired")
         case .unsupportedAccount:
             AppL10n.string("edupage.error.unsupportedAccount")
         case .malformedResponse:

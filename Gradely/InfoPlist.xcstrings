@@ -1,6 +1,35 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "NSCalendarsFullAccessUsageDescription": {
+      "extractionState": "manual",
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gradey potřebuje přístup ke kalendáři, aby mohl vytvářet, upravovat a mazat události, u kterých zapneš synchronizaci. Zdrojem dat zůstává plánovač v Gradey."
+          }
+        },
+        "cs-US": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gradey potřebuje přístup ke kalendáři, aby mohl vytvářet, upravovat a mazat události, u kterých zapneš synchronizaci. Zdrojem dat zůstává plánovač v Gradey."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gradey needs calendar access to create, update, and remove the planner events you choose to sync. Your planner stays the source of truth."
+          }
+        },
+        "en-CO": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gradey needs calendar access to create, update, and remove the planner events you choose to sync. Your planner stays the source of truth."
+          }
+        }
+      }
+    },
     "CFBundleDisplayName" : {
       "comment" : "Bundle display name",
       "extractionState" : "extracted_with_value",

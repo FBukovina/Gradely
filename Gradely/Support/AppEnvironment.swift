@@ -15,6 +15,7 @@ struct AppEnvironment {
     let notificationSettingsStore: MarkNotificationSettingsStore
     let guestModeStore: any GradeyGuestModeStoring
     let requiresGradeyID: Bool
+    let makePlannerStore: @MainActor () -> PlannerStore
 
     init(
         repository: SchoolRepository,
@@ -30,7 +31,10 @@ struct AppEnvironment {
         devicePushTokenClient: any DevicePushTokenClient = MockDevicePushTokenClient(),
         notificationSettingsStore: MarkNotificationSettingsStore = MarkNotificationSettingsStore(userDefaults: .standard),
         guestModeStore: any GradeyGuestModeStoring = GradeyGuestModeStore(),
-        requiresGradeyID: Bool = false
+        requiresGradeyID: Bool = false,
+        makePlannerStore: @escaping @MainActor () -> PlannerStore = {
+            PlannerStore(persistence: InMemoryPlannerPersistence(), calendarService: UnavailablePlannerCalendarService())
+        }
     ) {
         self.repository = repository
         self.stravaCZRepository = stravaCZRepository
@@ -42,6 +46,7 @@ struct AppEnvironment {
         self.notificationSettingsStore = notificationSettingsStore
         self.guestModeStore = guestModeStore
         self.requiresGradeyID = requiresGradeyID
+        self.makePlannerStore = makePlannerStore
         let resolvedLinkedAccountRepository = linkedAccountRepository ?? LinkedAccountRepository(
             store: LinkedAccountStore(userDefaults: .standard),
             client: MockLinkedAccountClient(),
@@ -122,7 +127,8 @@ struct AppEnvironment {
             ),
             devicePushTokenClient: devicePushTokenClient,
             notificationSettingsStore: notificationSettingsStore,
-            requiresGradeyID: true
+            requiresGradeyID: true,
+            makePlannerStore: { PlannerStore.shared }
         )
     }
 

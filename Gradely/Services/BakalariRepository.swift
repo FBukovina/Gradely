@@ -264,29 +264,16 @@ final class SchoolRepository {
             preserved.linkedAccountID = incoming.linkedAccountID
             preserved.linkedAccountDisplayName = incoming.linkedAccountDisplayName
             preserved.linkedAccountSchoolName = incoming.linkedAccountSchoolName
-            if preserved.bakalari == nil {
-                preserved.bakalari = incoming.bakalari
-            }
             try sessionStore.save(session: preserved)
             watchSyncService?.update(session: preserved)
             NotificationCenter.default.post(name: .gradelySchoolAccountDidChange, object: nil)
             return preserved
         }
 
-        if incoming.provider == .bakalari, let credentials = incoming.bakalari {
-            let response = try await client.login(
-                baseURL: incoming.baseURL,
-                username: credentials.username,
-                password: credentials.password
-            )
-            let session = try persistBakalariSession(
-                from: response,
-                baseURL: incoming.baseURL,
-                credentials: credentials,
-                metadataFrom: incoming
-            )
-            NotificationCenter.default.post(name: .gradelySchoolAccountDidChange, object: nil)
-            return session
+        if incoming.provider == .bakalari {
+            // A new device signs in directly to school; it must never adopt the
+            // cloud poller's rotating refresh token or download a password.
+            throw SchoolAuthenticationError.deviceSignInRequired
         }
 
         try sessionStore.save(session: incoming)
@@ -406,7 +393,7 @@ final class SchoolRepository {
     var supportsPermanentTimetable: Bool { currentProvider == .bakalari }
 
     /// Cached week for instant/offline display, if it matches the requested week.
-    func loadCachedTimetable(weekContaining date: Date, kind: TimetableKind = .weekly) -> TimetableWeek? {
+    func loadCachedTimetable(weekContaining date: Date, kind: TimetableKind = .weekly, publishSummaries: Bool = true) -> TimetableWeek? {
         guard kind == .weekly || supportsPermanentTimetable else { return nil }
         let monday = TimetableDates.monday(of: date)
         let scope = (try? sessionStore.loadSession()).map(SchoolDataScope.init(session:))
@@ -418,7 +405,7 @@ final class SchoolRepository {
         }
         guard let cached else { return nil }
         let week = TimetableMapper.makeWeek(from: cached.response, weekStart: monday, kind: kind)
-        if kind == .weekly {
+        if kind == .weekly && publishSummaries {
             publishNextLessonWidgetSnapshot(for: week, weekStart: monday)
             publishWatchTimetable(for: week, cachedAt: cached.cachedAt)
         }
@@ -426,13 +413,13 @@ final class SchoolRepository {
     }
 
     /// Fetches and denormalizes the timetable for the week containing `date`, caching the raw response.
-    func loadTimetable(weekContaining date: Date, kind: TimetableKind = .weekly) async throws -> TimetableWeek {
+    func loadTimetable(weekContaining date: Date, kind: TimetableKind = .weekly, publishSummaries: Bool = true) async throws -> TimetableWeek {
         let monday = TimetableDates.monday(of: date)
         let session = try await validSession()
         let response = try await fetchTimetable(session: session, weekStart: monday, kind: kind)
         try? timetableCache.save(response, weekStart: monday, scope: SchoolDataScope(session: session), kind: kind)
         let week = TimetableMapper.makeWeek(from: response, weekStart: monday, kind: kind)
-        if kind == .weekly {
+        if kind == .weekly && publishSummaries {
             publishNextLessonWidgetSnapshot(for: week, weekStart: monday)
             publishWatchTimetable(for: week, cachedAt: dateProvider())
         }

@@ -468,7 +468,7 @@ struct GradelyTests {
         #expect(store.session?.refreshToken == "local-refresh")
     }
 
-    @Test func activateLogsInWithStoredCredentialsInsteadOfPollerTokens() async throws {
+    @Test func activateOnNewDeviceRequiresSchoolSignInWithoutAdoptingPollerTokens() async throws {
         let account = PreviewData.linkedSchoolAccount
         let store = InMemorySessionStore()
         let client = RefreshSpyBakalariClient(
@@ -502,13 +502,11 @@ struct GradelyTests {
             tokenPayload: ProviderSecretSanitizer.schoolPayload(from: pollerSession)
         )
 
-        let session = try await repository.activateLinkedSchoolAccount(activation)
-
-        #expect(client.loginCallCount == 1)
-        #expect(session.accessToken == "device-access")
-        #expect(session.bakalari?.username == "student")
-        #expect(store.session?.refreshToken == "device-refresh")
-        #expect(store.session?.linkedAccountID == account.id)
+        await #expect(throws: SchoolAuthenticationError.deviceSignInRequired) {
+            try await repository.activateLinkedSchoolAccount(activation)
+        }
+        #expect(client.loginCallCount == 0)
+        #expect(store.session == nil)
     }
 
     @Test func storedSessionDecodesLegacyBlobWithoutCredentials() throws {

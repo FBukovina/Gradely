@@ -1,5 +1,15 @@
 import Foundation
 
+/// Shared timetable clock parsing, including validation before Calendar can normalize bad input.
+enum TimetableLessonTiming {
+    static func date(_ time: String, on day: Date, calendar: Calendar = .current) -> Date? {
+        let parts = time.split(separator: ":")
+        guard parts.count == 2, let hour = Int(parts[0]), let minute = Int(parts[1]),
+              (0...23).contains(hour), (0...59).contains(minute) else { return nil }
+        return calendar.date(bySettingHour: hour, minute: minute, second: 0, of: day)
+    }
+}
+
 enum MarkDateFormatter {
     private static let isoFormatter: ISO8601DateFormatter = {
         let formatter = ISO8601DateFormatter()

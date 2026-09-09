@@ -97,6 +97,7 @@ struct GradeyAccountHubView: View {
     @State private var pendingUnlinkAccount: LinkedAccount?
     @State private var isSupportSheetPresented = false
     @State private var isCreditsPresented = false
+    @State private var isPrivacyChangesPresented = false
     @State private var isStudentPickerPresented = false
     @State private var studentSwitchError: String?
     @State private var retryingCloudLink: OnboardingWarning.Kind?
@@ -250,6 +251,9 @@ struct GradeyAccountHubView: View {
             }
             .sheet(isPresented: $isCreditsPresented) {
                 CreditsView()
+            }
+            .sheet(isPresented: $isPrivacyChangesPresented) {
+                PrivacyPolicyUpdateView(mode: .review)
             }
             .sheet(isPresented: $isStudentPickerPresented) {
                 studentPicker
@@ -1336,6 +1340,21 @@ private extension GradeyAccountHubView {
                     }
                     .buttonStyle(.plain)
                     .accessibilityIdentifier("termsOfUseLink")
+
+                    SettingsRowDivider()
+
+                    Button {
+                        isPrivacyChangesPresented = true
+                    } label: {
+                        SettingsActionRow(
+                            title: "privacy.update.settingsRow.title",
+                            message: "privacy.update.settingsRow.caption",
+                            iconName: "legal-document-01"
+                        )
+                        .padding(20)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("privacyChangesLink")
                 }
             }
 
@@ -2060,6 +2079,8 @@ private extension GradeyAccountHubView {
                 detailPath = []
                 compactPath = []
                 onSchoolLinked()
+            } catch SchoolAuthenticationError.deviceSignInRequired {
+                openSchoolConnection(reconnectAccountID: linkedAccount.id)
             } catch {
                 actionErrorMessage = error.localizedDescription
             }

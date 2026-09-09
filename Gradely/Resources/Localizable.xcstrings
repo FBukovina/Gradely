@@ -21406,6 +21406,2575 @@
           }
         }
       }
+    },
+    "planner.calendar.section" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple Kalendář"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple Kalendář"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple Calendar"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple Calendar"
+          }
+        }
+      }
+    },
+    "planner.details" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Podrobnosti"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Podrobnosti"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Details"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Details"
+          }
+        }
+      }
+    },
+    "planner.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Plánovač"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Plánovač"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Planner"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Planner"
+          }
+        }
+      }
+    },
+    "planner.add" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nová položka plánovače"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nová položka plánovače"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "New planner item"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "New planner item"
+          }
+        }
+      }
+    },
+    "planner.edit" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Upravit položku"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Upravit položku"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Edit planner item"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Edit planner item"
+          }
+        }
+      }
+    },
+    "planner.addFromLesson" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Přidat do plánovače"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Přidat do plánovače"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add to Planner"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add to Planner"
+          }
+        }
+      }
+    },
+    "planner.type.homework" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Domácí úkol"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Domácí úkol"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Homework"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Homework"
+          }
+        }
+      }
+    },
+    "planner.type.test" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Test"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Test"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Test"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Test"
+          }
+        }
+      }
+    },
+    "planner.type.presentation" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prezentace"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prezentace"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Presentation"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Presentation"
+          }
+        }
+      }
+    },
+    "planner.type.note" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Poznámka"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Poznámka"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Note"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Note"
+          }
+        }
+      }
+    },
+    "planner.type.task" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Úkol"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Úkol"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Task"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Task"
+          }
+        }
+      }
+    },
+    "planner.field.type" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Typ"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Typ"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Type"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Type"
+          }
+        }
+      }
+    },
+    "planner.field.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Název"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Název"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Title"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Title"
+          }
+        }
+      }
+    },
+    "planner.field.notes" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Poznámky (nepovinné)"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Poznámky (nepovinné)"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Notes (optional)"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Notes (optional)"
+          }
+        }
+      }
+    },
+    "planner.field.subject" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Předmět"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Předmět"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Subject"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Subject"
+          }
+        }
+      }
+    },
+    "planner.field.lesson" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hodina"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hodina"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lesson"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lesson"
+          }
+        }
+      }
+    },
+    "planner.field.linkDay" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Přiřadit ke dni"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Přiřadit ke dni"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Link to a day"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Link to a day"
+          }
+        }
+      }
+    },
+    "planner.field.day" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Den"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Den"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Day"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Day"
+          }
+        }
+      }
+    },
+    "planner.field.hasDueDate" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nastavit termín"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nastavit termín"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Set a due date"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Set a due date"
+          }
+        }
+      }
+    },
+    "planner.field.dueDate" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Termín"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Termín"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Due date"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Due date"
+          }
+        }
+      }
+    },
+    "planner.field.includeTime" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Přidat čas"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Přidat čas"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Include time"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Include time"
+          }
+        }
+      }
+    },
+    "planner.context" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vazba na školu"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vazba na školu"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "School context"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "School context"
+          }
+        }
+      }
+    },
+    "planner.subject.none" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bez předmětu"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bez předmětu"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No subject"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No subject"
+          }
+        }
+      }
+    },
+    "planner.lesson.unlink" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zrušit vazbu na hodinu"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zrušit vazbu na hodinu"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unlink lesson"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unlink lesson"
+          }
+        }
+      }
+    },
+    "planner.lesson.permanent" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tato hodina je ze stálého rozvrhu. Nastav termín, pokud chceš položce přiřadit konkrétní datum."
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tato hodina je ze stálého rozvrhu. Nastav termín, pokud chceš položce přiřadit konkrétní datum."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This is a permanent timetable lesson. Choose a due date to give this item a specific date."
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This is a permanent timetable lesson. Choose a due date to give this item a specific date."
+          }
+        }
+      }
+    },
+    "planner.due" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Termín"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Termín"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Due"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Due"
+          }
+        }
+      }
+    },
+    "planner.nextLesson" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Příští hodina"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Příští hodina"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Next lesson"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Next lesson"
+          }
+        }
+      }
+    },
+    "planner.nextLesson.notFound" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "V následujících čtyřech týdnech se nenašla další hodina. Nastav termín ručně."
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "V následujících čtyřech týdnech se nenašla další hodina. Nastav termín ručně."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No later lesson was found within the next four weeks. Choose a due date manually."
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No later lesson was found within the next four weeks. Choose a due date manually."
+          }
+        }
+      }
+    },
+    "planner.calendar.toggle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Synchronizovat do Apple Kalendáře"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Synchronizovat do Apple Kalendáře"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sync to Apple Calendar"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sync to Apple Calendar"
+          }
+        }
+      }
+    },
+    "planner.calendar.explanation" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Do kalendáře Gradey se posílají jen povolené položky. Přístup ke kalendáři umožňuje Gradey vlastní události upravovat a mazat. Změny provedené v Kalendáři se nepřebírají."
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Do kalendáře Gradey se posílají jen povolené položky. Přístup ke kalendáři umožňuje Gradey vlastní události upravovat a mazat. Změny provedené v Kalendáři se nepřebírají."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Only enabled items are sent to the Gradey calendar. Calendar access lets Gradey update and remove its events. Changes made in Calendar are not imported."
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Only enabled items are sent to the Gradey calendar. Calendar access lets Gradey update and remove its events. Changes made in Calendar are not imported."
+          }
+        }
+      }
+    },
+    "planner.calendar.needsDate" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pro Apple Kalendář vyber den nebo termín. Položky bez času se uloží jako celodenní události."
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pro Apple Kalendář vyber den nebo termín. Položky bez času se uloží jako celodenní události."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose a day or due date to enable Apple Calendar. Items with only a date become all-day events."
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose a day or due date to enable Apple Calendar. Items with only a date become all-day events."
+          }
+        }
+      }
+    },
+    "planner.calendar.pending" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Položky jsou uložené v tomto zařízení. Některé změny v Kalendáři čekají na synchronizaci."
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Položky jsou uložené v tomto zařízení. Některé změny v Kalendáři čekají na synchronizaci."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your items are saved on this device. Some Calendar changes are waiting to sync."
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your items are saved on this device. Some Calendar changes are waiting to sync."
+          }
+        }
+      }
+    },
+    "planner.calendar.retry" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zkusit synchronizaci Kalendáře znovu"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zkusit synchronizaci Kalendáře znovu"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Retry Calendar sync"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Retry Calendar sync"
+          }
+        }
+      }
+    },
+    "planner.calendar.subjectType" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ — %2$@"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ — %2$@"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ — %2$@"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ — %2$@"
+          }
+        }
+      }
+    },
+    "planner.calendar.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@: %2$@"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@: %2$@"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@: %2$@"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@: %2$@"
+          }
+        }
+      }
+    },
+    "planner.calendar.completedTitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hotovo: %@"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hotovo: %@"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Completed: %@"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Completed: %@"
+          }
+        }
+      }
+    },
+    "planner.savedLocally" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Uloženo v tomto zařízení"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Uloženo v tomto zařízení"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saved on this device"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saved on this device"
+          }
+        }
+      }
+    },
+    "planner.filter" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zobrazit položky plánovače"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zobrazit položky plánovače"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show planner items"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show planner items"
+          }
+        }
+      }
+    },
+    "planner.upcoming" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nadcházející"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nadcházející"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Upcoming"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Upcoming"
+          }
+        }
+      }
+    },
+    "planner.completed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dokončené"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dokončené"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Completed"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Completed"
+          }
+        }
+      }
+    },
+    "planner.private" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Osobní plánovač zůstává v tomto zařízení. Do školního systému se nic nezapisuje."
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Osobní plánovač zůstává v tomto zařízení. Do školního systému se nic nezapisuje."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your personal planner stays on this device. Nothing is written to your school system."
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your personal planner stays on this device. Nothing is written to your school system."
+          }
+        }
+      }
+    },
+    "planner.empty.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Plánovač je prázdný"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Plánovač je prázdný"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your planner is clear"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your planner is clear"
+          }
+        }
+      }
+    },
+    "planner.empty.message" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Přidej úkol, test nebo poznámku tady nebo z hodiny v rozvrhu. Nedokončené položky zůstanou viditelné i po termínu."
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Přidej úkol, test nebo poznámku tady nebo z hodiny v rozvrhu. Nedokončené položky zůstanou viditelné i po termínu."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add a task, test, or note here or from a timetable lesson. Unfinished items stay here, even after their due date."
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add a task, test, or note here or from a timetable lesson. Unfinished items stay here, even after their due date."
+          }
+        }
+      }
+    },
+    "planner.empty.completed.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Žádné dokončené položky"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Žádné dokončené položky"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No completed items"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No completed items"
+          }
+        }
+      }
+    },
+    "planner.empty.completed.message" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tady najdeš položky označené jako hotové."
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tady najdeš položky označené jako hotové."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Items you mark complete will appear here."
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Items you mark complete will appear here."
+          }
+        }
+      }
+    },
+    "planner.delete" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Smazat"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Smazat"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete"
+          }
+        }
+      }
+    },
+    "planner.delete.confirm" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Smazat tuto položku a její událost v Kalendáři?"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Smazat tuto položku a její událost v Kalendáři?"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete this planner item and its Calendar event?"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete this planner item and its Calendar event?"
+          }
+        }
+      }
+    },
+    "planner.markComplete" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Označit jako hotové"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Označit jako hotové"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mark complete"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mark complete"
+          }
+        }
+      }
+    },
+    "planner.markIncomplete" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Označit jako nedokončené"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Označit jako nedokončené"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mark incomplete"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mark incomplete"
+          }
+        }
+      }
+    },
+    "planner.tomorrow" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zítra"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zítra"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tomorrow"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tomorrow"
+          }
+        }
+      }
+    },
+    "planner.undated" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bez data"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bez data"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No date"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No date"
+          }
+        }
+      }
+    },
+    "planner.indicator.multiple" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ +%2$ld"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ +%2$ld"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ +%2$ld"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ +%2$ld"
+          }
+        }
+      }
+    },
+    "planner.error.titleRequired" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zadej název položky."
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zadej název položky."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enter a title for this item."
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enter a title for this item."
+          }
+        }
+      }
+    },
+    "planner.error.dateRequired" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Před zapnutím Kalendáře vyber den nebo termín."
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Před zapnutím Kalendáře vyber den nebo termín."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose a day or due date before enabling Calendar."
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose a day or due date before enabling Calendar."
+          }
+        }
+      }
+    },
+    "planner.error.storage" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gradey nemohl načíst nebo uložit plánovač. Původní soubor zůstal zachovaný. Zkus to znovu, až bude úložiště zařízení dostupné."
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gradey nemohl načíst nebo uložit plánovač. Původní soubor zůstal zachovaný. Zkus to znovu, až bude úložiště zařízení dostupné."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gradey could not read or save your planner. Your existing file has been kept. Try again when device storage is available."
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gradey could not read or save your planner. Your existing file has been kept. Try again when device storage is available."
+          }
+        }
+      }
+    },
+    "planner.error.calendarPermission" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Plánovač je uložený lokálně. V nastavení systému povol Gradey plný přístup ke kalendáři a zkus to znovu, aby mohl vytvářet, upravovat nebo mazat své události."
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Plánovač je uložený lokálně. V nastavení systému povol Gradey plný přístup ke kalendáři a zkus to znovu, aby mohl vytvářet, upravovat nebo mazat své události."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your planner is saved locally. Allow full calendar access for Gradey in system settings, then retry to create, update, or remove its Calendar events."
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your planner is saved locally. Allow full calendar access for Gradey in system settings, then retry to create, update, or remove its Calendar events."
+          }
+        }
+      }
+    },
+    "planner.error.calendarUnavailable" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Plánovač je uložený lokálně, ale Kalendář se nepodařilo aktualizovat. Zkontroluj dostupný účet kalendáře s právem zápisu a zkus to znovu."
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Plánovač je uložený lokálně, ale Kalendář se nepodařilo aktualizovat. Zkontroluj dostupný účet kalendáře s právem zápisu a zkus to znovu."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your planner is saved locally, but Calendar could not be updated. Check that a writable calendar account is available, then retry."
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your planner is saved locally, but Calendar could not be updated. Check that a writable calendar account is available, then retry."
+          }
+        }
+      }
+    },
+    "planner.error.timetableUnavailable" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Příští hodinu nelze ověřit, protože některý týden rozvrhu není dostupný nebo se změnil školní účet. Zkus to znovu nebo nastav termín ručně."
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Příští hodinu nelze ověřit, protože některý týden rozvrhu není dostupný nebo se změnil školní účet. Zkus to znovu nebo nastav termín ručně."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The next lesson could not be checked because a timetable week is unavailable or the school account changed. Try again or choose a due date manually."
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The next lesson could not be checked because a timetable week is unavailable or the school account changed. Try again or choose a due date manually."
+          }
+        }
+      }
+    },
+    "school.error.deviceSignInRequired" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Přihlaste se znovu ke školnímu účtu na tomto zařízení."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sign in to your school account again on this device."
+          }
+        }
+      }
+    },
+    "privacy.update.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aktualizovali jsme zásady ochrany osobních údajů"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "aktualizovali jsme zásady ochrany osobních údajů"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "We updated our Privacy Policy"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "we updated our privacy policy"
+          }
+        }
+      }
+    },
+    "privacy.update.subtitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gradey už neposílá vaše heslo do Bakalářů na naše servery. Než budete pokračovat, přečtěte si, co se změnilo."
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gradey už neposílá vaše heslo do bakalářů na naše servery. než budete pokračovat, přečtěte si, co se změnilo."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gradey no longer sends your Bakaláři password to our servers. Please read what changed before you continue."
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gradey no longer sends your Bakaláři password to our servers. please read what changed before you continue."
+          }
+        }
+      }
+    },
+    "privacy.update.effective" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Účinné od %@"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "účinné od %@"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Effective %@"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "effective %@"
+          }
+        }
+      }
+    },
+    "privacy.update.changes.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Co se změnilo"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "co se změnilo"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "What changed"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "what changed"
+          }
+        }
+      }
+    },
+    "privacy.update.row.hint" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zobrazí podrobné vysvětlení"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "zobrazí podrobné vysvětlení"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shows the full explanation"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "shows the full explanation"
+          }
+        }
+      }
+    },
+    "privacy.update.scrollHint" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pokračujte posunutím na konec"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "pokračujte posunutím na konec"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Scroll to the end to continue"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "scroll to the end to continue"
+          }
+        }
+      }
+    },
+    "privacy.update.progress" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Průběh čtení"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "průběh čtení"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reading progress"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "reading progress"
+          }
+        }
+      }
+    },
+    "privacy.update.accept" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Přečetl(a) jsem si to – souhlasím"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "přečetl(a) jsem si to – souhlasím"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "I’ve read this — accept"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "i’ve read this — accept"
+          }
+        }
+      }
+    },
+    "privacy.update.fullPolicy" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Přečíst celé zásady ochrany osobních údajů"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "přečíst celé zásady ochrany osobních údajů"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Read the full Privacy Policy"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "read the full privacy policy"
+          }
+        }
+      }
+    },
+    "privacy.update.footer" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tento přehled nenahrazuje samotné zásady. Úplné znění popisuje všechny účely, právní základy a příjemce a také to, jak si data vyexportovat nebo smazat."
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "tento přehled nenahrazuje samotné zásady. úplné znění popisuje všechny účely, právní základy a příjemce a také to, jak si data vyexportovat nebo smazat."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This summary is not the policy itself. The full text explains every purpose, legal basis and recipient, and how to export or delete your data."
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "this summary is not the policy itself. the full text explains every purpose, legal basis and recipient, and how to export or delete your data."
+          }
+        }
+      }
+    },
+    "privacy.update.settingsRow.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Co se v zásadách změnilo"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "co se v zásadách změnilo"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "What changed in the policy"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "what changed in the policy"
+          }
+        }
+      }
+    },
+    "privacy.update.settingsRow.caption" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Přehled, který jste potvrdili při aktualizaci zásad"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "přehled, který jste potvrdili při aktualizaci zásad"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The summary you accepted when the policy was updated"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "the summary you accepted when the policy was updated"
+          }
+        }
+      }
+    },
+    "privacy.update.change.password.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Školní heslo zůstává ve vašem zařízení"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "školní heslo zůstává ve vašem zařízení"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your school password stays on your device"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "your school password stays on your device"
+          }
+        }
+      }
+    },
+    "privacy.update.change.password.summary" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gradey už nenahrává vaše heslo do Bakalářů na naše servery."
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gradey už nenahrává vaše heslo do bakalářů na naše servery."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gradey no longer uploads your Bakaláři password to our servers."
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gradey no longer uploads your Bakaláři password to our servers."
+          }
+        }
+      }
+    },
+    "privacy.update.change.password.detail" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vaše zařízení posílá uživatelské jméno a heslo přímo na HTTPS server školy. Gradey je uchovává v Klíčence vázané na dané zařízení, aby se v případě potřeby mohlo ke škole znovu přihlásit. Heslo není součástí dat, která aktualizovaná aplikace posílá do Gradey."
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "vaše zařízení posílá uživatelské jméno a heslo přímo na HTTPS server školy. Gradey je uchovává v klíčence vázané na dané zařízení, aby se v případě potřeby mohlo ke škole znovu přihlásit. heslo není součástí dat, která aktualizovaná aplikace posílá do Gradey."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your device sends your username and password straight to your school’s HTTPS server to sign in. Gradey keeps them in the device Keychain, tied to that device, so it can sign in to the school again when it needs to. The password is not part of what the updated app sends to Gradey."
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "your device sends your username and password straight to your school’s HTTPS server to sign in. Gradey keeps them in the device Keychain, tied to that device, so it can sign in to the school again when it needs to. the password is not part of what the updated app sends to Gradey."
+          }
+        }
+      }
+    },
+    "privacy.update.change.cleanup.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dříve uložená hesla jsme smazali"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "dříve uložená hesla jsme smazali"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "We deleted the passwords we used to store"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "we deleted the passwords we used to store"
+          }
+        }
+      }
+    },
+    "privacy.update.change.cleanup.summary" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pole s hesly jsme 8. září 2026 odstranili z aktivní databáze."
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "pole s hesly jsme 8. září 2026 odstranili z aktivní databáze."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Password fields were removed from our active database on 8 September 2026."
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "password fields were removed from our active database on 8 september 2026."
+          }
+        }
+      }
+    },
+    "privacy.update.change.cleanup.detail" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Starší verze Gradey hesla do Bakalářů nahrávaly. Tato pole jsme odstranili z aktivní serverové databáze a ověřili, že v jejích šifrovaných záznamech žádná nezůstala. Zápisy nyní pole s hesly před uložením odstraňují. Smazání z aktivní databáze neodstraňuje okamžitě kopie v historických zálohách a protokolech, na které se vztahují jejich podmínky uchování."
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "starší verze Gradey hesla do bakalářů nahrávaly. tato pole jsme odstranili z aktivní serverové databáze a ověřili, že v jejích šifrovaných záznamech žádná nezůstala. zápisy nyní pole s hesly před uložením odstraňují. smazání z aktivní databáze neodstraňuje okamžitě kopie v historických zálohách a protokolech, na které se vztahují jejich podmínky uchování."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Earlier versions of Gradey did upload Bakaláři passwords. We removed those fields from the active backend database and verified that none remained in its encrypted records. Writes now strip password fields before storage. Deleting from an active database does not immediately remove historical backup and log copies, which stay subject to their retention arrangements."
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "earlier versions of Gradey did upload Bakaláři passwords. we removed those fields from the active backend database and verified that none remained in its encrypted records. writes now strip password fields before storage. deleting from an active database does not immediately remove historical backup and log copies, which stay subject to their retention arrangements."
+          }
+        }
+      }
+    },
+    "privacy.update.change.tokens.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kontroly na pozadí používají šifrované tokeny relace"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "kontroly na pozadí používají šifrované tokeny relace"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Background checks use encrypted session tokens"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "background checks use encrypted session tokens"
+          }
+        }
+      }
+    },
+    "privacy.update.change.tokens.summary" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kontrola nových známek obnovuje samostatnou školní relaci místo přihlašování heslem."
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "kontrola nových známek obnovuje samostatnou školní relaci místo přihlašování heslem."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "New-mark checks renew a separate school session instead of signing in with your password."
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "new-mark checks renew a separate school session instead of signing in with your password."
+          }
+        }
+      }
+    },
+    "privacy.update.change.tokens.detail" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Když propojíte účet Bakalářů s Gradey ID, aplikace získá samostatnou školní relaci. Její přístupový a obnovovací token uchováváme v šifrované podobě na Supabase. Tyto tokeny jsou citlivé údaje: po dobu své platnosti mohou umožňovat přístup ke školním datům. Pokud relaci nelze obnovit, připojte školní účet v Gradey znovu."
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "když propojíte účet bakalářů s Gradey ID, aplikace získá samostatnou školní relaci. její přístupový a obnovovací token uchováváme v šifrované podobě na Supabase. tyto tokeny jsou citlivé údaje: po dobu své platnosti mohou umožňovat přístup ke školním datům. pokud relaci nelze obnovit, připojte školní účet v Gradey znovu."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "When you link a Bakaláři account to Gradey ID, the app obtains a separate school session. We store its access and refresh tokens in encrypted form on Supabase. These tokens are sensitive: while they are valid, they can allow access to your school data. If the session can no longer be renewed, reconnect the school account in Gradey."
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "when you link a Bakaláři account to Gradey ID, the app obtains a separate school session. we store its access and refresh tokens in encrypted form on Supabase. these tokens are sensitive: while they are valid, they can allow access to your school data. if the session can no longer be renewed, reconnect the school account in Gradey."
+          }
+        }
+      }
+    },
+    "privacy.update.change.planner.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Novinka: Plánovač a export do Kalendáře"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "novinka: plánovač a export do kalendáře"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "New: Planner and Calendar export"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "new: planner and calendar export"
+          }
+        }
+      }
+    },
+    "privacy.update.change.planner.summary" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Položky plánovače zůstávají ve vašem zařízení. Export do Kalendáře je volitelný."
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "položky plánovače zůstávají ve vašem zařízení. export do kalendáře je volitelný."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Planner items stay on your device. Calendar export is optional."
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "planner items stay on your device. calendar export is optional."
+          }
+        }
+      }
+    },
+    "privacy.update.change.planner.detail" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Názvy, poznámky, data a nastavení osobního plánovače se ukládají místně a funkce plánovače je nikam nenahrává. Pokud zapnete export do Kalendáře, Gradey požádá o oprávnění vytvářet a spravovat vlastní události a exportovaná data se mohou synchronizovat přes váš kalendářový účet. Plánovač lze používat i bez přístupu ke Kalendáři."
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "názvy, poznámky, data a nastavení osobního plánovače se ukládají místně a funkce plánovače je nikam nenahrává. pokud zapnete export do kalendáře, Gradey požádá o oprávnění vytvářet a spravovat vlastní události a exportovaná data se mohou synchronizovat přes váš kalendářový účet. plánovač lze používat i bez přístupu ke kalendáři."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Titles, notes, dates and settings for your personal Planner are stored locally and are not uploaded by the Planner feature. If you turn on Calendar export, Gradey asks for permission to create and manage its own events, and what it exports may sync through your calendar account. You can use the Planner without granting Calendar access."
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "titles, notes, dates and settings for your personal planner are stored locally and are not uploaded by the planner feature. if you turn on calendar export, Gradey asks for permission to create and manage its own events, and what it exports may sync through your calendar account. you can use the planner without granting calendar access."
+          }
+        }
+      }
+    },
+    "privacy.update.change.ai.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gradey AI je popsáno podrobně"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gradey AI je popsáno podrobně"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gradey AI is described in full"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gradey AI is described in full"
+          }
+        }
+      }
+    },
+    "privacy.update.change.ai.summary" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Volitelné, s vlastním souhlasem, a pro zobrazení známek není potřeba."
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "volitelné, s vlastním souhlasem, a pro zobrazení známek není potřeba."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Optional, separately consented, and never needed to see your marks."
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "optional, separately consented, and never needed to see your marks."
+          }
+        }
+      }
+    },
+    "privacy.update.change.ai.detail" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Když používáte Gradey AI, zpracováváme vaše zprávy, historii konverzace a související školní kontext, například známky, rozvrh nebo absence, prostřednictvím našeho serveru na Firebase a služby AI, která odpověď generuje. Konverzace se mohou uchovávat, abyste se k nim mohli vrátit; ke smazání použijte ovládací prvky pro mazání a souhlas. Posílejte jen informace, které jste oprávněni sdílet, a počítejte s tím, že odpovědi AI mohou být nepřesné."
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "když používáte Gradey AI, zpracováváme vaše zprávy, historii konverzace a související školní kontext, například známky, rozvrh nebo absence, prostřednictvím našeho serveru na Firebase a služby ai, která odpověď generuje. konverzace se mohou uchovávat, abyste se k nim mohli vrátit; ke smazání použijte ovládací prvky pro mazání a souhlas. posílejte jen informace, které jste oprávněni sdílet, a počítejte s tím, že odpovědi ai mohou být nepřesné."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "When you use Gradey AI we process your messages, conversation history and relevant school context such as marks, timetables or absences, through our backend on Firebase and the AI service that generates the reply. Conversations can be kept so you can return to them; use the deletion and consent controls to remove them. Only submit information you are allowed to share, and remember that AI answers can be wrong."
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "when you use Gradey AI we process your messages, conversation history and relevant school context such as marks, timetables or absences, through our backend on Firebase and the ai service that generates the reply. conversations can be kept so you can return to them; use the deletion and consent controls to remove them. only submit information you are allowed to share, and remember that ai answers can be wrong."
+          }
+        }
+      }
+    },
+    "privacy.update.change.watch.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Co si uchovává vaše Apple Watch"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "co si uchovává vaše apple watch"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "What your Apple Watch keeps"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "what your apple watch keeps"
+          }
+        }
+      }
+    },
+    "privacy.update.change.watch.summary" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Spárované hodinky mohou mít vlastní kopii školních přihlašovacích údajů."
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "spárované hodinky mohou mít vlastní kopii školních přihlašovacích údajů."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A paired Watch can hold its own copy of your school credentials."
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "a paired watch can hold its own copy of your school credentials."
+          }
+        }
+      }
+    },
+    "privacy.update.change.watch.detail" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Váš iPhone může přenést školní data a přihlašovací informace včetně školních přihlašovacích údajů na spárované Apple Watch, aby si data mohly načítat přímo ze školy. Hodinky proto mohou mít vlastní kopii školního hesla a tokenů relace. Chraňte přístupové kódy svých zařízení a před předáním zařízení jinému člověku se odhlaste nebo zrušte párování."
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "váš iphone může přenést školní data a přihlašovací informace včetně školních přihlašovacích údajů na spárované apple watch, aby si data mohly načítat přímo ze školy. hodinky proto mohou mít vlastní kopii školního hesla a tokenů relace. chraňte přístupové kódy svých zařízení a před předáním zařízení jinému člověku se odhlaste nebo zrušte párování."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your iPhone can transfer school data and authentication information, including school credentials, to a paired Apple Watch so it can refresh directly from the school. The Watch may therefore keep its own copy of your school password and session tokens. Protect your device passcodes, and sign out or unpair a device before giving it to someone else."
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "your iphone can transfer school data and authentication information, including school credentials, to a paired apple watch so it can refresh directly from the school. the watch may therefore keep its own copy of your school password and session tokens. protect your device passcodes, and sign out or unpair a device before giving it to someone else."
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

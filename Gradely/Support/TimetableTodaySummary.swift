@@ -90,18 +90,12 @@ enum TimetableTodaySummaryBuilder {
         guard
             !lesson.hour.beginTime.isEmpty,
             !lesson.hour.endTime.isEmpty,
-            let start = time(lesson.hour.beginTime, on: day, calendar: calendar),
-            let end = time(lesson.hour.endTime, on: day, calendar: calendar)
+            let start = TimetableLessonTiming.date(lesson.hour.beginTime, on: day, calendar: calendar),
+            let end = TimetableLessonTiming.date(lesson.hour.endTime, on: day, calendar: calendar)
         else {
             return nil
         }
         return (start, end)
-    }
-
-    private static func time(_ string: String, on day: Date, calendar: Calendar) -> Date? {
-        let parts = string.split(separator: ":")
-        guard parts.count == 2, let hour = Int(parts[0]), let minute = Int(parts[1]) else { return nil }
-        return calendar.date(bySettingHour: hour, minute: minute, second: 0, of: day)
     }
 
     private static func positiveMinutes(from start: Date, to end: Date) -> Int {

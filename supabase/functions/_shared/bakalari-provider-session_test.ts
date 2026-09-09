@@ -1,199 +1,212 @@
 import {
-  bakalariCredentialsFromSecret,
   bakalariSecretFromTokenResponse,
   parseBakalariTokenResponse,
   ProviderAuthenticationError,
   resolveBakalariPollingSecret,
-  shouldEstablishBakalariPollingSession,
   shouldRefreshBakalariAccessToken,
 } from "./bakalari-provider-session.ts";
 
-Deno.test("bakalari credentials are read from the nested payload", () => {
-  const credentials = bakalariCredentialsFromSecret({
-    accessToken: "access",
-    bakalari: { username: "filip", password: "secret" },
-  });
-  assertEquals(credentials, { username: "filip", password: "secret" });
-});
+const now = new Date("2026-09-07T12:00:00.000Z");
+const secret = {
+  provider: "bakalari",
+  baseURL: "https://school.example/",
+  accessToken: "cloud-access",
+  refreshToken: "cloud-refresh",
+  expiresAt: "2026-09-07T13:00:00.000Z",
+  pollingSessionEstablishedAt: "2026-09-07T11:00:00.000Z",
+};
+const tokens = {
+  accessToken: "new-access",
+  refreshToken: "new-refresh",
+  tokenType: "Bearer",
+  expiresIn: 3600,
+};
 
-Deno.test("eduPage-style secrets do not look like bakalari credentials", () => {
-  const credentials = bakalariCredentialsFromSecret({
-    eduPage: { username: "student", gsecHash: "hash" },
-  });
-  if (credentials != null) {
-    throw new Error("Expected EduPage secrets not to expose Bakalari credentials");
-  }
-});
-
-Deno.test("a missing pollingSessionEstablishedAt still needs a poller-owned family", () => {
-  if (!shouldEstablishBakalariPollingSession({ accessToken: "access" })) {
-    throw new Error("Expected a new secret to establish a polling session");
-  }
-  if (shouldEstablishBakalariPollingSession({ pollingSessionEstablishedAt: "2026-08-21T10:00:00.000Z" })) {
-    throw new Error("Expected an established polling session to be reused");
-  }
-});
-
-Deno.test("access tokens are refreshed only near expiry", () => {
-  const now = Date.parse("2026-08-21T12:00:00.000Z");
-  if (
-    shouldRefreshBakalariAccessToken({
-      expiresAt: "2026-08-21T13:00:00.000Z",
-    }, now)
-  ) {
-    throw new Error("Expected a fresh access token to be reused");
-  }
-  if (
-    !shouldRefreshBakalariAccessToken({
-      expiresAt: "2026-08-21T12:04:00.000Z",
-    }, now)
-  ) {
-    throw new Error("Expected an almost-expired access token to refresh");
-  }
-});
-
-Deno.test("first poll with credentials logs in instead of redeeming the app refresh token", async () => {
-  const calls: string[] = [];
-  const resolved = await resolveBakalariPollingSecret({
-    accessToken: "app-access",
-    refreshToken: "app-refresh",
-    bakalari: { username: "filip", password: "secret" },
-  }, {
-    now: new Date("2026-08-21T12:00:00.000Z"),
-    login: async () => {
-      calls.push("login");
-      return {
-        accessToken: "poller-access",
-        refreshToken: "poller-refresh",
-        tokenType: "Bearer",
-        expiresIn: 3600,
-      };
-    },
-    refresh: async () => {
-      calls.push("refresh");
-      throw new Error("refresh should not run when credentials can mint a new family");
+Deno.test("fresh cloud access token is reused without a refresh", async () => {
+  const resolved = await resolveBakalariPollingSecret(secret, {
+    now,
+    refresh: () => {
+      throw new Error("Must not redeem a fresh token");
     },
   });
-
-  assertEquals(calls, ["login"]);
-  assertEquals(resolved.didMutate, true);
-  assertEquals(resolved.secret.accessToken, "poller-access");
-  assertEquals(resolved.secret.refreshToken, "poller-refresh");
-  assertEquals(resolved.secret.pollingSessionEstablishedAt, "2026-08-21T12:00:00.000Z");
-});
-
-Deno.test("established poller chain refreshes and falls back to password login", async () => {
-  const calls: string[] = [];
-  const resolved = await resolveBakalariPollingSecret({
-    accessToken: "old-access",
-    refreshToken: "old-refresh",
-    expiresAt: "2026-08-21T12:00:00.000Z",
-    pollingSessionEstablishedAt: "2026-08-21T10:00:00.000Z",
-    bakalari: { username: "filip", password: "secret" },
-  }, {
-    now: new Date("2026-08-21T12:00:00.000Z"),
-    login: async () => {
-      calls.push("login");
-      return {
-        accessToken: "login-access",
-        refreshToken: "login-refresh",
-        tokenType: "Bearer",
-        expiresIn: 3600,
-      };
-    },
-    refresh: async () => {
-      calls.push("refresh");
-      throw new ProviderAuthenticationError("bakalari_refresh_rejected");
-    },
-  });
-
-  assertEquals(calls, ["refresh", "login"]);
-  assertEquals(resolved.secret.accessToken, "login-access");
-});
-
-Deno.test("legacy secrets without credentials still refresh to split the chain", async () => {
-  const calls: string[] = [];
-  const resolved = await resolveBakalariPollingSecret({
-    accessToken: "app-access",
-    refreshToken: "app-refresh",
-    expiresAt: "2026-08-21T18:00:00.000Z",
-  }, {
-    now: new Date("2026-08-21T12:00:00.000Z"),
-    login: async () => {
-      calls.push("login");
-      throw new Error("login should not run without credentials");
-    },
-    refresh: async (refreshToken) => {
-      calls.push(`refresh:${refreshToken}`);
-      return {
-        accessToken: "split-access",
-        refreshToken: "split-refresh",
-        tokenType: "Bearer",
-        expiresIn: 3600,
-      };
-    },
-  });
-
-  assertEquals(calls, ["refresh:app-refresh"]);
-  assertEquals(resolved.secret.refreshToken, "split-refresh");
-});
-
-Deno.test("valid established access tokens are reused", async () => {
-  const resolved = await resolveBakalariPollingSecret({
-    accessToken: "poller-access",
-    refreshToken: "poller-refresh",
-    expiresAt: "2026-08-21T18:00:00.000Z",
-    pollingSessionEstablishedAt: "2026-08-21T10:00:00.000Z",
-    bakalari: { username: "filip", password: "secret" },
-  }, {
-    now: new Date("2026-08-21T12:00:00.000Z"),
-    login: async () => {
-      throw new Error("login should not run for a valid poller session");
-    },
-    refresh: async () => {
-      throw new Error("refresh should not run for a valid poller session");
-    },
-  });
-
   assertEquals(resolved.didMutate, false);
-  assertEquals(resolved.secret.accessToken, "poller-access");
+  assertEquals(resolved.secret.accessToken, "cloud-access");
 });
 
-Deno.test("token responses keep credentials already stored on the secret", () => {
-  const updated = bakalariSecretFromTokenResponse(
-    {
-      bakalari: { username: "filip", password: "secret" },
-      refreshToken: "old",
-    },
-    {
-      accessToken: "new-access",
-      refreshToken: "new-refresh",
-      tokenType: "Bearer",
-      expiresIn: 120,
-    },
-    new Date("2026-08-21T12:00:00.000Z"),
-  );
-
-  assertEquals(updated.bakalari, { username: "filip", password: "secret" });
-  assertEquals(updated.expiresAt, "2026-08-21T12:02:00.000Z");
+Deno.test("expiry and forced renewal redeem only the dedicated cloud token", async () => {
+  for (const forceRefresh of [false, true]) {
+    let received = "";
+    const resolved = await resolveBakalariPollingSecret({
+      ...secret,
+      expiresAt: now.toISOString(),
+    }, {
+      now,
+      forceRefresh,
+      refresh: (token) => {
+        received = token;
+        return Promise.resolve(tokens);
+      },
+    });
+    assertEquals(received, "cloud-refresh");
+    assertEquals(resolved.didMutate, true);
+    assertEquals(resolved.secret.refreshToken, "new-refresh");
+  }
 });
 
-Deno.test("token parser accepts snake_case OAuth fields", () => {
-  const tokens = parseBakalariTokenResponse({
-    access_token: "a",
-    refresh_token: "r",
-    token_type: "Bearer",
-    expires_in: 3600,
+Deno.test("a forced refresh also renews a token before its advertised expiry", async () => {
+  const resolved = await resolveBakalariPollingSecret(secret, {
+    now,
+    forceRefresh: true,
+    refresh: () => Promise.resolve(tokens),
   });
-  assertEquals(tokens.accessToken, "a");
-  assertEquals(tokens.refreshToken, "r");
-  assertEquals(tokens.expiresIn, 3600);
+  assertEquals(resolved.didMutate, true);
 });
 
+Deno.test("rejected refresh requires reconnect even if legacy passwords are present", async () => {
+  const rejected = new ProviderAuthenticationError("bakalari_refresh_rejected");
+  await expectError(() =>
+    resolveBakalariPollingSecret({
+      ...secret,
+      expiresAt: now.toISOString(),
+      bakalari: {
+        username: "test-student",
+        password: "legacy-school-password",
+      },
+    }, {
+      now,
+      refresh: () => {
+        throw rejected;
+      },
+    }), rejected);
+});
+
+Deno.test("transient refresh failures stay transient", async () => {
+  const networkError = new Error("network unavailable");
+  await expectError(() =>
+    resolveBakalariPollingSecret(secret, {
+      now,
+      forceRefresh: true,
+      refresh: () => {
+        throw networkError;
+      },
+    }), networkError);
+});
+
+Deno.test("unestablished legacy tokens are never redeemed from the device family", async () => {
+  try {
+    await resolveBakalariPollingSecret({
+      ...secret,
+      pollingSessionEstablishedAt: undefined,
+    }, {
+      now,
+      refresh: () => {
+        throw new Error("Device token must not be used");
+      },
+    });
+    throw new Error("Expected a reconnect");
+  } catch (error) {
+    if (!(error instanceof ProviderAuthenticationError)) throw error;
+  }
+});
+
+Deno.test("missing refresh token requires reconnect", async () => {
+  try {
+    await resolveBakalariPollingSecret({
+      ...secret,
+      refreshToken: "",
+      expiresAt: now.toISOString(),
+    }, {
+      now,
+      refresh: () => {
+        throw new Error("Missing token must not be redeemed");
+      },
+    });
+    throw new Error("Expected a reconnect");
+  } catch (error) {
+    if (!(error instanceof ProviderAuthenticationError)) throw error;
+  }
+});
+
+Deno.test("fresh and renewed runtime secrets discard all legacy credentials", async () => {
+  const legacy = {
+    ...secret,
+    password: "top-secret",
+    bakalari: { username: "test-student", password: "nested-secret" },
+  };
+  const resolved = await resolveBakalariPollingSecret(legacy, {
+    now,
+    refresh: () => {
+      throw new Error("Token remains valid");
+    },
+  });
+  for (
+    const value of [
+      resolved.secret,
+      bakalariSecretFromTokenResponse(legacy, tokens, now),
+    ]
+  ) {
+    assertEquals(value.password, undefined);
+    assertEquals(value.bakalari, undefined);
+  }
+});
+
+Deno.test("access tokens are refreshed within the expiry skew or if expiry is invalid", () => {
+  assertEquals(shouldRefreshBakalariAccessToken(secret, now.getTime()), false);
+  assertEquals(
+    shouldRefreshBakalariAccessToken(
+      { expiresAt: "2026-09-07T12:04:00Z" },
+      now.getTime(),
+    ),
+    true,
+  );
+  assertEquals(
+    shouldRefreshBakalariAccessToken({ expiresAt: "invalid" }, now.getTime()),
+    true,
+  );
+});
+
+Deno.test("token parser accepts OAuth fields and rejects unusable responses", () => {
+  assertEquals(
+    parseBakalariTokenResponse({
+      access_token: "a",
+      refresh_token: "r",
+      expires_in: 3600,
+    }),
+    {
+      accessToken: "a",
+      refreshToken: "r",
+      tokenType: "Bearer",
+      expiresIn: 3600,
+    },
+  );
+  for (
+    const input of [{}, {
+      access_token: "a",
+      refresh_token: "r",
+      expires_in: -1,
+    }]
+  ) {
+    let threw = false;
+    try {
+      parseBakalariTokenResponse(input);
+    } catch {
+      threw = true;
+    }
+    assertEquals(threw, true);
+  }
+});
+
+async function expectError(operation: () => Promise<unknown>, expected: Error) {
+  try {
+    await operation();
+  } catch (error) {
+    if (error === expected) return;
+    throw error;
+  }
+  throw new Error("Expected operation to reject");
+}
 function assertEquals(actual: unknown, expected: unknown) {
   if (JSON.stringify(actual) !== JSON.stringify(expected)) {
-    throw new Error(
-      `Expected ${JSON.stringify(expected)}, received ${JSON.stringify(actual)}`,
-    );
+    throw new Error("Assertion failed");
   }
 }

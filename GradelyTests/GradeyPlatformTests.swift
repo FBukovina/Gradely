@@ -74,7 +74,7 @@ struct GradeyPlatformTests {
         #expect(!json.contains("bakalari"))
     }
 
-    @Test func schoolProviderSecretPayloadIncludesBakalariCredentialsForPolling() throws {
+    @Test func schoolProviderSecretPayloadExcludesBakalariCredentials() throws {
         let session = StoredSession(
             accessToken: "access",
             refreshToken: "refresh",
@@ -89,10 +89,10 @@ struct GradeyPlatformTests {
         let data = try JSONEncoder.sessionEncoder.encode(payload)
         let json = String(data: data, encoding: .utf8) ?? ""
 
-        #expect(payload.bakalari?.username == "filip")
-        #expect(payload.bakalari?.password == "school-password")
-        #expect(json.contains("school-password"))
-        #expect(json.contains("filip"))
+        #expect(!json.contains("password"))
+        #expect(!json.contains("school-password"))
+        #expect(!json.contains("filip"))
+        #expect(payload.accessToken == "access")
     }
 
     @Test func reconnectPrefillUsesLinkedSchoolAndUsernameWithoutPassword() throws {
@@ -827,7 +827,7 @@ struct GradeyPlatformTests {
     }
 
     @MainActor
-    @Test func bootstrapRestoresCanonicalActiveSchoolAndEntersTodayState() async throws {
+    @Test func bootstrapPreservesGradeyStateUntilDeviceSchoolSignInCompletes() async throws {
         let defaults = UserDefaults(suiteName: "GradeyPlatformTests.\(UUID().uuidString)")!
         let schoolSessionStore = InMemorySessionStore()
         let schoolRepository = SchoolRepository(
@@ -864,15 +864,23 @@ struct GradeyPlatformTests {
 
         await viewModel.bootstrap()
 
-        #expect(viewModel.phase == .signedIn)
+        #expect(viewModel.phase == .signedInNeedsSchool)
         #expect(viewModel.gradeyAccount == PreviewData.gradeyAuthSession.account)
-        #expect(schoolSessionStore.session?.linkedAccountID == PreviewData.linkedSchoolAccount.id)
+        #expect(schoolSessionStore.session == nil)
         #expect(linkedRepository.loadAccounts().first?.id == PreviewData.linkedSchoolAccount.id)
         #expect(preferencesStore.preferences == canonicalPreferences)
+
+        var localSession = PreviewData.expiredSession
+        localSession.expiresAt = .distantFuture
+        localSession.linkedAccountID = PreviewData.linkedSchoolAccount.id
+        try schoolSessionStore.save(session: localSession)
+        await viewModel.bootstrap()
+        #expect(viewModel.phase == .signedIn)
+        #expect(schoolSessionStore.session == localSession)
     }
 
     @MainActor
-    @Test func bootstrapActivatesCachedSchoolWhenCanonicalSettingsAreOffline() async {
+    @Test func bootstrapRequiresDeviceSchoolSignInEvenWhenCloudAccountIsCached() async {
         let defaults = UserDefaults(suiteName: "GradeyPlatformTests.\(UUID().uuidString)")!
         let schoolSessionStore = InMemorySessionStore()
         let authClient = MockGradeyAuthClient()
@@ -902,8 +910,8 @@ struct GradeyPlatformTests {
 
         await viewModel.bootstrap()
 
-        #expect(viewModel.phase == .signedIn)
-        #expect(schoolSessionStore.session?.linkedAccountID == PreviewData.linkedSchoolAccount.id)
+        #expect(viewModel.phase == .signedInNeedsSchool)
+        #expect(schoolSessionStore.session == nil)
     }
 
     @MainActor

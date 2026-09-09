@@ -110,6 +110,7 @@ final class TodayViewModel {
     }
 
     var accountRequiringReconnect: LinkedAccount? {
+        if let accountRequiringDeviceSignIn { return accountRequiringDeviceSignIn }
         guard hasCheckedLinkedAccountStatus else { return nil }
         let candidates = snapshot.linkedSchoolAccounts.filter {
             $0.status == .actionRequired || $0.status == .failed
@@ -117,6 +118,8 @@ final class TodayViewModel {
         return candidates.first(where: { $0.id == snapshot.activeAccount?.id })
             ?? candidates.first
     }
+
+    private var accountRequiringDeviceSignIn: LinkedAccount?
 
     func loadIfNeeded() async {
         guard !hasLoaded else { return }
@@ -167,9 +170,12 @@ final class TodayViewModel {
         do {
             let activation = try await linkedAccountRepository.activateSchoolAccount(id: account.id)
             _ = try await repository.activateLinkedSchoolAccount(activation)
+            accountRequiringDeviceSignIn = nil
             snapshot = .empty
             loadCachedSnapshot()
             await refresh(forceRefresh: false)
+        } catch SchoolAuthenticationError.deviceSignInRequired {
+            accountRequiringDeviceSignIn = account
         } catch {
             errorMessage = userFacingMessage(for: error)
         }
@@ -180,6 +186,7 @@ final class TodayViewModel {
 
         do {
             try await restoreSchoolConnection(account)
+            accountRequiringDeviceSignIn = nil
             return true
         } catch {
             errorMessage = userFacingMessage(for: error)

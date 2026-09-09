@@ -25,6 +25,7 @@ struct GradelyApp: App {
         IntercomConfiguration.configureIfNeeded()
         Self.resetLanguageForUITestsIfNeeded()
         Self.attestAgeForUITestsIfNeeded()
+        Self.seedPrivacyPolicyConsentForUITestsIfNeeded()
         let store = AppLanguageStore.shared
         store.prepareAtLaunch()
         _languageStore = State(initialValue: store)
@@ -65,6 +66,19 @@ private extension GradelyApp {
                 forKey: AppLanguageStore.storageKey
             )
         }
+    }
+
+    /// UI tests must not meet the policy sheet unless they ask for it —
+    /// otherwise every existing signed-in test launches behind it.
+    static func seedPrivacyPolicyConsentForUITestsIfNeeded() {
+        let arguments = ProcessInfo.processInfo.arguments
+        guard arguments.contains("-uiTestingMockAPI") else { return }
+        let store = PrivacyPolicyConsentStore.shared
+        if arguments.contains(PrivacyPolicyConsentStore.uiTestingShowArgument) {
+            store.clear()
+            return
+        }
+        store.accept()
     }
 
     static func attestAgeForUITestsIfNeeded() {

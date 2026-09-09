@@ -454,13 +454,13 @@ struct LinkedSchoolAccountActivation: Codable, Equatable, Sendable {
 
         return StoredSession(
             accessToken: tokenPayload.accessToken,
-            refreshToken: tokenPayload.refreshToken ?? "",
+            // Cloud refresh tokens belong to the poller, even on older servers.
+            refreshToken: provider == .bakalari ? "" : tokenPayload.refreshToken ?? "",
             tokenType: tokenPayload.tokenType,
             expiresAt: tokenPayload.expiresAt ?? .distantFuture,
             baseURL: tokenPayload.baseURL,
             provider: provider,
             eduPage: eduPage,
-            bakalari: tokenPayload.bakalari,
             linkedAccountID: account.id,
             linkedAccountDisplayName: account.displayName,
             linkedAccountSchoolName: account.schoolName

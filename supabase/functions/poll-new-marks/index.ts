@@ -200,11 +200,6 @@ async function resolveAndPersistBakalariSecret(
 ) {
   const resolved = await resolveBakalariPollingSecret(secret, {
     forceRefresh,
-    login: (credentials) => requestBakalariTokens(baseURL, {
-      grant_type: "password",
-      username: credentials.username,
-      password: credentials.password,
-    }),
     refresh: (refreshToken) => requestBakalariTokens(baseURL, {
       grant_type: "refresh_token",
       refresh_token: refreshToken,
@@ -236,7 +231,7 @@ async function requestBakalariTokens(baseURL: string, fields: Record<string, str
 
   if (response.status === 400 || response.status === 401) {
     throw new ProviderAuthenticationError(
-      fields.grant_type === "password" ? "bakalari_login_rejected" : "bakalari_refresh_rejected",
+      "bakalari_refresh_rejected",
     );
   }
   if (!response.ok) throw new Error(`bakalari_token_status_${response.status}`);

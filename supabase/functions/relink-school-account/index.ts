@@ -1,6 +1,7 @@
 import { toLinkedAccount } from "../_shared/account-settings.ts";
 import { providerSecretKey, requireUser } from "../_shared/client.ts";
 import { errorResponse, handleOptions, json } from "../_shared/http.ts";
+import { containsProviderPassword, hasDedicatedBakalariPollingSession, sanitizeProviderSecret } from "../_shared/provider-secret.ts";
 import {
   providerURLsMatch,
   requireSafeProviderURL,
@@ -19,11 +20,17 @@ Deno.serve(async (req) => {
       return json({ error: "Method not allowed" }, 405);
     }
     const { supabase, user } = await requireUser(req);
+    if (req.headers.get("x-gradey-provider-session") !== "tokens-only-v1") {
+      return json({ error: "Update Gradey to link school accounts without uploading school passwords." }, 426);
+    }
     const body = await req.json();
+    if (containsProviderPassword(body)) {
+      return json({ error: "Update Gradey and reconnect your school account. School passwords are no longer accepted." }, 426);
+    }
     if (typeof body.id !== "string" || body.id.length === 0) {
       return json({ error: "Missing linked account id" }, 422);
     }
-    if (!body.token_payload || typeof body.token_payload !== "object") {
+    if (!body.token_payload || typeof body.token_payload !== "object" || Array.isArray(body.token_payload)) {
       return json({ error: "Missing provider token payload" }, 422);
     }
 
@@ -64,7 +71,10 @@ Deno.serve(async (req) => {
     const tokenBaseURL = canonicalSchoolBaseURL(suppliedTokenBaseURL);
     const baseURL = canonicalSchoolBaseURL(suppliedBaseURL);
 
-    const tokenPayload = { ...body.token_payload, baseURL: tokenBaseURL };
+    const tokenPayload = sanitizeProviderSecret({ ...body.token_payload, baseURL: tokenBaseURL });
+    if (provider === "bakalari" && !hasDedicatedBakalariPollingSession(tokenPayload)) {
+      return json({ error: "Update Gradey and reconnect your school account to enable background mark checks." }, 426);
+    }
     const providerUserID = canonicalSchoolProviderUserID(
       provider,
       body.provider_user_id,

@@ -1,9 +1,6 @@
-export class ProviderAuthenticationError extends Error {}
+import { sanitizeProviderSecret } from "./provider-secret.ts";
 
-export interface BakalariCredentials {
-  username: string;
-  password: string;
-}
+export class ProviderAuthenticationError extends Error {}
 
 export interface BakalariTokenResponse {
   accessToken: string;
@@ -13,16 +10,6 @@ export interface BakalariTokenResponse {
 }
 
 const ACCESS_TOKEN_REFRESH_SKEW_MS = 5 * 60 * 1000;
-
-export function bakalariCredentialsFromSecret(
-  secret: Record<string, unknown>,
-): BakalariCredentials | null {
-  const nested = recordValue(secret.bakalari);
-  const username = stringValue(nested?.username ?? secret.username);
-  const password = stringValue(nested?.password ?? secret.password);
-  if (!username || !password) return null;
-  return { username, password };
-}
 
 export function shouldEstablishBakalariPollingSession(
   secret: Record<string, unknown>,
@@ -35,7 +22,8 @@ export function shouldRefreshBakalariAccessToken(
   now = Date.now(),
 ) {
   const expiresAt = Date.parse(String(secret.expiresAt ?? ""));
-  return !Number.isFinite(expiresAt) || expiresAt <= now + ACCESS_TOKEN_REFRESH_SKEW_MS;
+  return !Number.isFinite(expiresAt) ||
+    expiresAt <= now + ACCESS_TOKEN_REFRESH_SKEW_MS;
 }
 
 export function bakalariSecretFromTokenResponse(
@@ -44,7 +32,7 @@ export function bakalariSecretFromTokenResponse(
   now: Date,
 ): Record<string, unknown> {
   return {
-    ...secret,
+    ...sanitizeProviderSecret(secret),
     accessToken: tokens.accessToken,
     refreshToken: tokens.refreshToken,
     tokenType: tokens.tokenType || "Bearer",
@@ -53,11 +41,14 @@ export function bakalariSecretFromTokenResponse(
   };
 }
 
-export function parseBakalariTokenResponse(tokens: unknown): BakalariTokenResponse {
+export function parseBakalariTokenResponse(
+  tokens: unknown,
+): BakalariTokenResponse {
   const record = recordValue(tokens) ?? {};
   const accessToken = stringValue(record.access_token ?? record.accessToken);
   const refreshToken = stringValue(record.refresh_token ?? record.refreshToken);
-  const tokenType = stringValue(record.token_type ?? record.tokenType) || "Bearer";
+  const tokenType = stringValue(record.token_type ?? record.tokenType) ||
+    "Bearer";
   const expiresIn = numberValue(record.expires_in ?? record.expiresIn);
   if (!accessToken || !refreshToken || expiresIn == null || expiresIn <= 0) {
     throw new Error("bakalari_refresh_response_invalid");
@@ -68,24 +59,32 @@ export function parseBakalariTokenResponse(tokens: unknown): BakalariTokenRespon
 /**
  * Picks a poller-owned Bakaláři token family.
  *
- * Prefer password login when credentials exist so the poller never redeems the
- * refresh-token chain the app and watch are using. Fall back to refresh, then
- * to login, when a previously established poller chain needs renewal.
+ * The app establishes a separate session directly with the school before linking.
+ * Rejected cloud tokens require an on-device reconnect; passwords never reach here.
  */
 export async function resolveBakalariPollingSecret(
   secret: Record<string, unknown>,
   options: {
     now?: Date;
     forceRefresh?: boolean;
-    login: (credentials: BakalariCredentials) => Promise<BakalariTokenResponse>;
     refresh: (refreshToken: string) => Promise<BakalariTokenResponse>;
   },
 ): Promise<{ secret: Record<string, unknown>; didMutate: boolean }> {
   const now = options.now ?? new Date();
-  const credentials = bakalariCredentialsFromSecret(secret);
+  secret = sanitizeProviderSecret(secret);
   const establish = shouldEstablishBakalariPollingSession(secret);
-  const accessNeedsRefresh = shouldRefreshBakalariAccessToken(secret, now.getTime());
-  const needsNewTokens = options.forceRefresh === true || establish || accessNeedsRefresh;
+  const accessNeedsRefresh = shouldRefreshBakalariAccessToken(
+    secret,
+    now.getTime(),
+  );
+  // Legacy unestablished secrets may share the device's rotating token. Do not
+  // redeem that token: reconnect from an updated client to create a separate one.
+  if (establish) {
+    throw new ProviderAuthenticationError(
+      "bakalari_polling_reconnect_required",
+    );
+  }
+  const needsNewTokens = options.forceRefresh === true || accessNeedsRefresh;
 
   if (!needsNewTokens) {
     return { secret, didMutate: false };
@@ -96,24 +95,12 @@ export async function resolveBakalariPollingSecret(
     didMutate: true,
   });
 
-  if (establish && credentials) {
-    return await apply(await options.login(credentials));
-  }
-
   const refreshToken = stringValue(secret.refreshToken);
   if (!refreshToken) {
-    if (credentials) return await apply(await options.login(credentials));
     throw new ProviderAuthenticationError("bakalari_refresh_token_missing");
   }
 
-  try {
-    return await apply(await options.refresh(refreshToken));
-  } catch (error) {
-    if (isProviderAuthenticationError(error) && credentials) {
-      return await apply(await options.login(credentials));
-    }
-    throw error;
-  }
+  return await apply(await options.refresh(refreshToken));
 }
 
 export function isProviderAuthenticationError(error: unknown) {

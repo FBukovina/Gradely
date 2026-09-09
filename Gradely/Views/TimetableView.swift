@@ -2,35 +2,43 @@ import SwiftUI
 
 struct TimetableView: View {
     @State private var viewModel: TimetableViewModel
-    @State private var selectedLesson: ScheduledLesson?
+    @State private var selectedLesson: PlannerLessonSelection?
+    @State private var plannerStore: PlannerStore
+    private let plannerResolver: PlannerLessonResolver
     private let accountHub: AnyView?
     private let onOpenGradeyAI: () -> Void
 
     init(
         repository: SchoolRepository,
+        plannerStore: PlannerStore? = nil,
         accountHub: AnyView? = nil,
         onOpenGradeyAI: @escaping () -> Void = {}
     ) {
         _viewModel = State(initialValue: TimetableViewModel(repository: repository))
+        _plannerStore = State(initialValue: plannerStore ?? PlannerStore(
+            persistence: InMemoryPlannerPersistence(), calendarService: UnavailablePlannerCalendarService()
+        ))
+        plannerResolver = PlannerLessonResolver(repository: repository)
         self.accountHub = accountHub
         self.onOpenGradeyAI = onOpenGradeyAI
     }
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                if viewModel.supportsPermanentTimetable {
-                    timetableKindPicker
-                }
-                content
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            }
+            content
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .gradelyScreenBackground()
                 .navigationTitle(AppL10n.string("rozvrh.title"))
                 .gradelyNavigationTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .gradelyTopBarLeading) {
                         GradeyAIToolbarButton(onOpen: onOpenGradeyAI)
+                    }
+
+                    if viewModel.supportsPermanentTimetable {
+                        ToolbarItem(placement: .gradelyTopBarTrailing) {
+                            timetableKindMenu
+                        }
                     }
 
                     ToolbarItem(placement: .gradelyTopBarTrailing) {
@@ -46,34 +54,56 @@ struct TimetableView: View {
                     }
 
                     ToolbarItem(placement: .gradelyTopBarTrailing) {
+                        NavigationLink {
+                            PlannerView(store: plannerStore, resolver: plannerResolver, displayedWeek: viewModel.week, subjects: plannerSubjects)
+                        } label: {
+                            GradelyIcon(systemName: "checklist")
+                        }
+                        .accessibilityLabel(AppL10n.string("planner.title"))
+                        .accessibilityIdentifier("timetablePlannerButton")
+                    }
+
+                    ToolbarItem(placement: .gradelyTopBarTrailing) {
                         AccountSettingsButton(accountHub: accountHub)
                     }
                 }
                 .task {
+                    plannerStore.loadIfNeeded()
                     await viewModel.loadIfNeeded()
                 }
-                .sheet(item: $selectedLesson) { lesson in
-                    LessonDetailSheet(lesson: lesson)
+                .sheet(item: $selectedLesson) { selection in
+                    LessonDetailSheet(
+                        lesson: selection.lesson, day: selection.day, scope: viewModel.schoolScope,
+                        plannerStore: plannerStore, resolver: plannerResolver,
+                        displayedWeek: viewModel.week, subjects: plannerSubjects
+                    )
                 }
         }
     }
 
-    private var timetableKindPicker: some View {
-        Picker(AppL10n.string("timetable.kind"), selection: Binding(
-            get: { viewModel.kind },
-            set: { kind in
-                if viewModel.setKind(kind) {
-                    Task { await viewModel.refresh() }
+    /// The weekly/permanent switch lives in the trailing toolbar so the timetable
+    /// itself stays a single uninterrupted column.
+    private var timetableKindMenu: some View {
+        Menu {
+            Picker(AppL10n.string("timetable.kind"), selection: Binding(
+                get: { viewModel.kind },
+                set: { kind in
+                    if viewModel.setKind(kind) {
+                        Task { await viewModel.refresh() }
+                    }
                 }
+            )) {
+                Text("timetable.kind.weekly").tag(TimetableKind.weekly)
+                Text("timetable.kind.permanent").tag(TimetableKind.permanent)
             }
-        )) {
-            Text("timetable.kind.weekly").tag(TimetableKind.weekly)
-            Text("timetable.kind.permanent").tag(TimetableKind.permanent)
+            .pickerStyle(.inline)
+            .accessibilityIdentifier("timetableKindPicker")
+        } label: {
+            GradelyIcon(systemName: viewModel.kind == .permanent ? "calendar.badge.clock" : "calendar")
+                .gradelyToolbarIconButton()
         }
-        .pickerStyle(.segmented)
-        .padding(.horizontal, Spacing.lg)
-        .padding(.vertical, Spacing.sm)
-        .accessibilityIdentifier("timetableKindPicker")
+        .accessibilityLabel(AppL10n.string("timetable.kind"))
+        .accessibilityIdentifier("timetableKindButton")
     }
 
     @ViewBuilder
@@ -108,12 +138,22 @@ struct TimetableView: View {
             if viewModel.kind == .weekly {
                 WeekNavBar(viewModel: viewModel)
             } else {
-                Text("timetable.permanent.description")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, Spacing.lg)
-                    .padding(.bottom, Spacing.md)
+                HStack(alignment: .top, spacing: Spacing.sm) {
+                    GradelyIcon(systemName: "calendar.badge.clock", size: 15)
+                        .foregroundStyle(Brand.primary)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("timetable.kind.permanent")
+                            .font(.subheadline.weight(.semibold))
+                        Text("timetable.permanent.description")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    Spacer(minLength: 0)
+                }
+                .padding(.horizontal, Spacing.lg)
+                .padding(.top, Spacing.md)
+                .padding(.bottom, Spacing.md)
             }
             DayStrip(viewModel: viewModel)
             Divider()
@@ -142,8 +182,8 @@ struct TimetableView: View {
 
                 if let day = viewModel.selectedDay, day.hasLessons {
                     ForEach(day.lessons) { lesson in
-                        LessonRow(lesson: lesson, isToday: day.isToday) {
-                            selectedLesson = lesson
+                        LessonRow(lesson: lesson, isToday: day.isToday, plannerItems: attachedItems(lesson, day: day)) {
+                            selectedLesson = PlannerLessonSelection(lesson: lesson, day: day)
                         }
                         .accessibilityIdentifier("lessonRow-\(lesson.id)")
                     }
@@ -160,6 +200,26 @@ struct TimetableView: View {
         }
         .accessibilityIdentifier("timetableList")
     }
+
+    private func attachedItems(_ lesson: ScheduledLesson, day: ScheduledDay) -> [PlannerItem] {
+        guard let scope = viewModel.schoolScope else { return [] }
+        return plannerStore.attachedItems(to: lesson, on: day, scope: scope)
+    }
+
+    private var plannerSubjects: [PlannerSubjectReference] {
+        guard let scope = viewModel.schoolScope else { return [] }
+        var seen = Set<String>()
+        return viewModel.days.flatMap(\.lessons).compactMap { lesson in
+            guard let id = lesson.subjectID, seen.insert(id).inserted else { return nil }
+            return PlannerSubjectReference(scope: scope, id: id, name: lesson.subjectName ?? lesson.title, abbreviation: lesson.subjectAbbrev)
+        }
+    }
+}
+
+private struct PlannerLessonSelection: Identifiable {
+    let lesson: ScheduledLesson
+    let day: ScheduledDay
+    var id: String { lesson.id }
 }
 
 // MARK: - Today summary
@@ -428,13 +488,14 @@ private struct DayChip: View {
 private struct LessonRow: View {
     let lesson: ScheduledLesson
     let isToday: Bool
+    let plannerItems: [PlannerItem]
     let onTap: () -> Void
 
     var body: some View {
         Button(action: onTap) {
             HStack(alignment: .top, spacing: Spacing.md) {
                 hourRail
-                LessonCard(lesson: lesson, isCurrent: LessonClock.isCurrent(lesson.hour, isToday: isToday))
+                LessonCard(lesson: lesson, isCurrent: LessonClock.isCurrent(lesson.hour, isToday: isToday), plannerItems: plannerItems)
             }
         }
         .buttonStyle(.plain)
@@ -464,6 +525,7 @@ private struct LessonRow: View {
 private struct LessonCard: View {
     let lesson: ScheduledLesson
     let isCurrent: Bool
+    let plannerItems: [PlannerItem]
 
     var body: some View {
         HStack(spacing: Spacing.md) {
@@ -509,6 +571,16 @@ private struct LessonCard: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
+                }
+
+                if let first = plannerItems.first {
+                    GradelyLabel(
+                        plannerItems.count == 1 ? first.type.title : String(format: AppL10n.string("planner.indicator.multiple"), first.type.title, plannerItems.count - 1),
+                        systemImage: first.type.systemImage, iconSize: 12
+                    )
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Brand.primary)
+                    .lineLimit(1)
                 }
             }
 
@@ -608,6 +680,13 @@ private struct EmptyDayView: View {
 
 private struct LessonDetailSheet: View {
     let lesson: ScheduledLesson
+    let day: ScheduledDay
+    let scope: SchoolDataScope?
+    let plannerStore: PlannerStore
+    let resolver: PlannerLessonResolver
+    let displayedWeek: TimetableWeek?
+    let subjects: [PlannerSubjectReference]
+    @State private var plannerItem: PlannerItem?
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -654,6 +733,10 @@ private struct LessonDetailSheet: View {
                     if let change = lesson.change, lesson.changeKind != .none {
                         changeCard(change)
                     }
+
+                    if let scope {
+                        plannerSection(scope: scope)
+                    }
                 }
                 .padding(Spacing.lg)
                 .frame(maxWidth: 640)
@@ -664,11 +747,56 @@ private struct LessonDetailSheet: View {
             }
             .navigationTitle(lesson.subjectName ?? lesson.title)
             .gradelyNavigationTitleDisplayMode(.inline)
-        }
-        .gradelyModalDismissButton {
-            dismiss()
+            .gradelyModalDismissButton {
+                dismiss()
+            }
         }
         .presentationDetents([.medium, .large])
+        .sheet(item: $plannerItem) { item in
+            PlannerItemEditorView(item: item, store: plannerStore, resolver: resolver,
+                                  displayedWeek: displayedWeek, subjects: subjects)
+        }
+    }
+
+    /// Planning starts here: the hour's detail is the only place an item can be
+    /// attached to a lesson or a day.
+    @ViewBuilder
+    private func plannerSection(scope: SchoolDataScope) -> some View {
+        let attached = plannerStore.attachedItems(to: lesson, on: day, scope: scope)
+
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            SettingsModalSectionHeader(title: "planner.title")
+
+            if !attached.isEmpty {
+                SettingsModalSurface(padding: Spacing.md) {
+                    VStack(spacing: Spacing.sm) {
+                        ForEach(Array(attached.enumerated()), id: \.element.id) { index, item in
+                            if index > 0 {
+                                Divider()
+                            }
+                            Button { plannerItem = item } label: {
+                                HStack(spacing: Spacing.sm) {
+                                    PlannerItemSummary(item: item)
+                                    SettingsModalDisclosureIcon()
+                                }
+                                .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityIdentifier("lessonPlannerItem-\(item.id)")
+                        }
+                    }
+                }
+            }
+
+            Button {
+                plannerItem = PlannerItem.linked(to: lesson, on: day, scope: scope)
+            } label: {
+                GradelyLabel(AppL10n.string("planner.addFromLesson"), systemImage: "plus")
+            }
+            .buttonStyle(PrimaryButtonStyle())
+            .disabled(!plannerStore.isLoaded)
+            .accessibilityIdentifier("lessonAddPlannerButton")
+        }
     }
 
     private var header: some View {
@@ -741,19 +869,14 @@ private enum LessonClock {
         guard
             isToday,
             !hour.beginTime.isEmpty, !hour.endTime.isEmpty,
-            let start = time(hour.beginTime, on: now),
-            let end = time(hour.endTime, on: now)
+            let start = TimetableLessonTiming.date(hour.beginTime, on: now),
+            let end = TimetableLessonTiming.date(hour.endTime, on: now)
         else {
             return false
         }
         return now >= start && now <= end
     }
 
-    private static func time(_ string: String, on day: Date) -> Date? {
-        let parts = string.split(separator: ":")
-        guard parts.count == 2, let hour = Int(parts[0]), let minute = Int(parts[1]) else { return nil }
-        return Calendar.current.date(bySettingHour: hour, minute: minute, second: 0, of: day)
-    }
 }
 
 // MARK: - Previews

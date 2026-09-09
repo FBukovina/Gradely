@@ -28,7 +28,9 @@ struct ContentView: View {
     @AppStorage("settings.showMealsTab") private var showMealsTab = true
     @Bindable private var languageStore = AppLanguageStore.shared
     @State private var ageAttestationStore = AgeAttestationStore.shared
+    @State private var privacyPolicyStore = PrivacyPolicyConsentStore.shared
     @State private var appViewModel: AppViewModel
+    @State private var plannerStore: PlannerStore
     @State private var gradeyAIViewModel: GradeyAIViewModel
     @State private var onboardingJourney: OnboardingJourney?
     @State private var isGradeyAIPresented = false
@@ -65,6 +67,7 @@ struct ContentView: View {
         }
 
         repository = environment.repository
+        _plannerStore = State(initialValue: environment.makePlannerStore())
         stravaCZRepository = environment.stravaCZRepository
         schoolDirectoryProvider = environment.schoolDirectoryProvider
         supportTipProvider = environment.supportTipProvider
@@ -137,6 +140,13 @@ struct ContentView: View {
                 ) {
                     onboardingProgressStore.clear()
                     hasCompletedOnboardingV2 = true
+                    // A brand-new install was shown the policy link during
+                    // onboarding, so do not immediately re-prompt it. Upgrading
+                    // users are the ones the change actually concerns, so they
+                    // still get the summary after their migration finishes.
+                    if onboardingJourney == .newUser {
+                        privacyPolicyStore.accept()
+                    }
                     isOnboardingForced = false
                     self.onboardingJourney = nil
                 }
@@ -187,6 +197,7 @@ struct ContentView: View {
                         Tab("rozvrh.title", image: "TabTimetable", value: AppTab.timetable) {
                             TimetableView(
                                 repository: repository,
+                                plannerStore: plannerStore,
                                 accountHub: AnyView(accountHub()),
                                 onOpenGradeyAI: presentGradeyAI
                             )
@@ -210,6 +221,7 @@ struct ContentView: View {
             }
         }
         .task {
+            await plannerStore.activate()
             watchSyncService?.start()
             #if !os(macOS)
             watchSyncService?.configureAIRelay(
@@ -229,6 +241,9 @@ struct ContentView: View {
             await preloadGradeyAIIfNeeded()
         }
         .onChange(of: scenePhase) { _, phase in
+            if phase == .active {
+                Task { await plannerStore.activate() }
+            }
             #if !os(macOS)
             if phase == .active {
                 Task { await publishWatchSupportTier() }
@@ -274,7 +289,18 @@ struct ContentView: View {
                 }
             )
         }
+        .privacyPolicyUpdate(isPresented: shouldShowPrivacyPolicyUpdate) {
+            privacyPolicyStore.accept()
+        }
         .environment(\.locale, languageStore.locale)
+    }
+
+    /// Never stacks on the age gate or onboarding — both are root branches
+    /// rather than overlays, so this waits until the app proper is on screen.
+    private var shouldShowPrivacyPolicyUpdate: Bool {
+        ageAttestationStore.allowsAppUse
+            && !shouldShowOnboarding
+            && privacyPolicyStore.needsAcknowledgement
     }
 
     private var shouldShowOnboarding: Bool {

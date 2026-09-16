@@ -20819,6 +20819,122 @@
         }
       }
     },
+    "today.ai.studyPriorities.subtitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Na co se tento týden zaměřit"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "What to focus on this week"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "what to focus on this week"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "na co se tento týden zaměřit"
+          }
+        }
+      }
+    },
+    "today.ai.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zeptej se Gradeyho"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ask Gradey"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ask Gradey"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "zeptej se gradeyho"
+          }
+        }
+      }
+    },
+    "today.ai.weekSummary.subtitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jak ti jde tento týden"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "How your week is going"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "how your week is going"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "jak ti jde tento týden"
+          }
+        }
+      }
+    },
+    "today.attention.emptyTitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Máš vše hotovo"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You're all caught up"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "you're all caught up"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "máš vše hotovo"
+          }
+        }
+      }
+    },
     "today.currentLesson" : {
       "localizations" : {
         "cs" : {
@@ -20843,6 +20959,93 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "current lesson"
+          }
+        }
+      }
+    },
+    "today.hero.average" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Průměr"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Average"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "average"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "průměr"
+          }
+        }
+      }
+    },
+    "today.hero.lessonsToday" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hodin dnes"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lessons today"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "lessons today"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "hodin dnes"
+          }
+        }
+      }
+    },
+    "today.hero.newMarks" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nové známky"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "New marks"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "new marks"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "nové známky"
           }
         }
       }
@@ -20899,6 +21102,93 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "trends start after Gradey records new grade snapshots."
+          }
+        }
+      }
+    },
+    "today.lesson.nextAt" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ začíná v %2$@"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ starts at %2$@"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ starts at %2$@"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ začíná v %2$@"
+          }
+        }
+      }
+    },
+    "today.lesson.startsAt" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Začíná v %@"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Starts at %@"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "starts at %@"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "začíná v %@"
+          }
+        }
+      }
+    },
+    "today.lesson.startsIn" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Začíná za %d min"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Starts in %d min"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "starts in %d min"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "začíná za %d min"
           }
         }
       }

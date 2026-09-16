@@ -163,6 +163,12 @@ struct ContentView: View {
                                 onOpenGradeyAI: presentGradeyAI,
                                 onOpenAbsence: {
                                     selectedTab = .absence
+                                },
+                                onOpenTimetable: {
+                                    selectedTab = .timetable
+                                },
+                                onOpenMarks: {
+                                    selectedTab = .subjects
                                 }
                             )
                         }

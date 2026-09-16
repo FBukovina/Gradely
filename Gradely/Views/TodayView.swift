@@ -1,13 +1,19 @@
 import SwiftUI
 
 struct TodayView: View {
+    @Environment(\.requestGradeyAIAction) private var requestAI
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State private var viewModel: TodayViewModel
     @State private var reconnectAccount: LinkedAccount?
+    @Environment(\.scenePhase) private var scenePhase
     private let accountHub: AnyView?
     private let repository: SchoolRepository
     private let schoolDirectoryProvider: any SchoolDirectoryProviding
     private let onOpenGradeyAI: () -> Void
     private let onOpenAbsence: () -> Void
+    private let onOpenTimetable: (() -> Void)?
+    private let onOpenMarks: (() -> Void)?
+    private let snapshotStore: SchoolSnapshotStore?
     @AppStorage("settings.showMealsTab") private var showMealsTab = true
 
     init(
@@ -18,37 +24,37 @@ struct TodayView: View {
         schoolDirectoryProvider: any SchoolDirectoryProviding,
         accountSettingsClient: (any GradeyAccountSettingsClient)? = nil,
         gradeyAuthClient: (any GradeyAuthClient)? = nil,
+        snapshotStore: SchoolSnapshotStore? = nil,
         accountHub: AnyView? = nil,
         onOpenGradeyAI: @escaping () -> Void = {},
-        onOpenAbsence: @escaping () -> Void
+        onOpenAbsence: @escaping () -> Void,
+        onOpenTimetable: (() -> Void)? = nil,
+        onOpenMarks: (() -> Void)? = nil
     ) {
         self.repository = repository
         self.schoolDirectoryProvider = schoolDirectoryProvider
         self.accountHub = accountHub
         self.onOpenGradeyAI = onOpenGradeyAI
         self.onOpenAbsence = onOpenAbsence
+        self.onOpenTimetable = onOpenTimetable
+        self.onOpenMarks = onOpenMarks
+        self.snapshotStore = snapshotStore
         _viewModel = State(initialValue: TodayViewModel(
             repository: repository,
             stravaCZRepository: stravaCZRepository,
             linkedAccountRepository: linkedAccountRepository,
             historyRepository: historyRepository,
             accountSettingsClient: accountSettingsClient,
-            gradeyAuthClient: gradeyAuthClient
+            gradeyAuthClient: gradeyAuthClient,
+            snapshotStore: snapshotStore
         ))
     }
 
     var body: some View {
         NavigationStack {
-            Group {
-                if viewModel.isLoading && viewModel.snapshot.subjects.isEmpty {
-                    ContentUnavailableView {
-                        ProgressView().controlSize(.large)
-                    } description: {
-                        Text("Loading today...")
-                    }
-                } else {
-                    content
-                }
+            TimelineView(.periodic(from: .now, by: 60)) { context in
+                content(at: context.date)
+                    .task(id: context.date) { viewModel.refreshTime(at: context.date) }
             }
             .navigationTitle("Today")
             .gradelyNavigationTitleDisplayMode(.inline)
@@ -76,6 +82,16 @@ struct TodayView: View {
             .task {
                 await viewModel.loadIfNeeded()
             }
+            .onChange(of: snapshotStore?.revision) { _, _ in viewModel.applySharedSnapshot() }
+            .onChange(of: scenePhase) { _, phase in
+                if phase == .active {
+                    viewModel.refreshTime()
+                    Task { await viewModel.refresh(forceRefresh: false) }
+                }
+            }
+            .navigationDestination(for: TodayInsight.Destination.self) { destination in
+                insightDestination(destination)
+            }
             .alert(AppL10n.string("error.title"), isPresented: errorBinding) {
                 Button(AppL10n.string("action.ok"), role: .cancel) { viewModel.clearError() }
             } message: {
@@ -97,20 +113,35 @@ struct TodayView: View {
         }
     }
 
-    private var content: some View {
+    // MARK: - Layout
+
+    private func content(at now: Date) -> some View {
         ScrollView {
             VStack(alignment: .leading, spacing: Spacing.lg) {
-                accountSwitcher
                 if let account = viewModel.accountRequiringReconnect {
                     schoolConnectionNotice(account)
                 }
-                TodayHero(snapshot: viewModel.snapshot)
-                timetableCard
-                absenceRiskCard
-                if showMealsTab {
+                TodayHero(
+                    snapshot: viewModel.snapshot,
+                    now: now,
+                    isRefreshing: viewModel.isRefreshing,
+                    isActivatingAccount: viewModel.isActivatingAccountID != nil,
+                    selectedAccountID: selectedSchoolAccountID
+                )
+                if viewModel.isLoading {
+                    loadingRow
+                }
+                dayCard(at: now)
+                attentionCard(at: now)
+                gradeyActions
+                recentMarksCard
+                plannerCard(at: now)
+                if let risk = viewModel.snapshot.absenceRisk, let highest = risk.highestRisk {
+                    absenceRiskCard(risk, highest: highest)
+                }
+                if showMealsTab, viewModel.snapshot.stravaSession != nil {
                     lunchCard
                 }
-                recentMarksCard
             }
             .padding(Spacing.lg)
             .frame(maxWidth: 760)
@@ -122,6 +153,20 @@ struct TodayView: View {
         }
         .accessibilityIdentifier("todayScrollView")
     }
+
+    private var loadingRow: some View {
+        HStack(spacing: Spacing.sm) {
+            ProgressView()
+                .controlSize(.small)
+            Text("today.refreshing")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity, alignment: .center)
+        .accessibilityIdentifier("todayLoadingIndicator")
+    }
+
+    // MARK: - School connection
 
     private func schoolConnectionNotice(_ account: LinkedAccount) -> some View {
         Card {
@@ -164,143 +209,317 @@ struct TodayView: View {
         .accessibilityIdentifier("todaySchoolConnectionNotice")
     }
 
-    @ViewBuilder
-    private var accountSwitcher: some View {
-        if !viewModel.snapshot.linkedSchoolAccounts.isEmpty {
-            Card(padding: Spacing.md) {
-                HStack(spacing: Spacing.md) {
-                    GradelyIcon(systemName: "person.2.fill")
-                        .foregroundStyle(Brand.primary)
-                        .frame(width: 34, height: 34)
-                        .background(Brand.primary.opacity(0.12), in: RoundedRectangle(cornerRadius: Radius.sm, style: .continuous))
+    // MARK: - Day card
 
-                    VStack(alignment: .leading, spacing: Spacing.xs) {
-                        Text(viewModel.snapshot.activeAccount?.displayName ?? AppL10n.string("today.schoolAccount"))
-                            .font(.headline)
-                            .lineLimit(1)
-                        Text(viewModel.snapshot.activeAccount?.subtitle ?? AppL10n.string("today.linkedAccounts"))
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                    }
-
-                    Spacer(minLength: Spacing.sm)
-
-                    Menu {
-                        Picker(selection: selectedSchoolAccountID) {
-                            ForEach(viewModel.snapshot.linkedSchoolAccounts) { account in
-                                Text(verbatim: account.displayName)
-                                    .tag(account.id)
-                            }
-                        } label: {
-                            EmptyView()
-                        }
-                        .pickerStyle(.inline)
-                    } label: {
-                        if viewModel.isActivatingAccountID != nil {
-                            ProgressView().controlSize(.small)
-                        } else {
-                            GradelyIcon(systemName: "chevron.up.chevron.down")
-                                .font(.caption.weight(.bold))
-                                .foregroundStyle(Brand.primary)
-                                .frame(width: 34, height: 34)
-                                .background(Brand.primary.opacity(0.12), in: Circle())
-                        }
-                    }
-                    .menuIndicator(.hidden)
-                    .buttonStyle(.plain)
-                    .disabled(viewModel.isActivatingAccountID != nil)
-                    .accessibilityLabel(
-                        viewModel.snapshot.activeAccount?.displayName ?? AppL10n.string("today.schoolAccount")
-                    )
-                    .accessibilityIdentifier("todayAccountSwitcher")
-                }
-            }
-        }
-    }
-
-    private var timetableCard: some View {
-        Card {
+    private func dayCard(at now: Date) -> some View {
+        let snapshot = viewModel.snapshot
+        return Card {
             VStack(alignment: .leading, spacing: Spacing.md) {
-                SectionHeader("Now and next")
-                if let summary = viewModel.snapshot.timetableSummary {
+                HStack(alignment: .firstTextBaseline) {
+                    SectionHeader("Now and next")
+                    if let onOpenTimetable {
+                        Button(action: onOpenTimetable) {
+                            TodayLinkLabel(title: "rozvrh.title")
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityIdentifier("todayOpenTimetableButton")
+                    }
+                }
+
+                if let summary = snapshot.timetableSummary {
+                    if !snapshot.todayLessons.isEmpty {
+                        TodayLessonStrip(lessons: snapshot.todayLessons, summary: summary, now: now)
+                    }
+
                     if let current = summary.currentLesson {
-                        TodayInfoRow(
-                            title: current.title.isEmpty ? Text("today.currentLesson") : Text(verbatim: current.title),
-                            subtitle: Text(verbatim: current.subjectName ?? current.hour.caption),
-                            systemImage: "play.circle.fill",
-                            tint: Brand.primary
+                        TodayLessonRow(lesson: current, role: .current, minutes: summary.minutesRemainingInCurrent)
+                    }
+                    if let next = summary.nextLesson {
+                        TodayLessonRow(
+                            lesson: next,
+                            role: .next,
+                            minutes: summary.currentLesson == nil ? summary.minutesUntilNext : nil
                         )
-                    } else if let next = summary.nextLesson {
-                        TodayInfoRow(
-                            title: next.title.isEmpty ? Text("today.nextLesson") : Text(verbatim: next.title),
-                            subtitle: Text(verbatim: next.subjectName ?? next.hour.caption),
-                            systemImage: "clock.fill",
-                            tint: Brand.secondary
-                        )
-                    } else {
-                        TodayInfoRow(
-                            title: Text("today.noMoreLessons"),
-                            subtitle: Text("today.noMoreLessons.subtitle"),
-                            systemImage: "checkmark.circle.fill",
-                            tint: Brand.primary
-                        )
+                    }
+                    if summary.currentLesson == nil, summary.nextLesson == nil {
+                        if summary.state == .empty {
+                            TodayInfoRow(
+                                title: Text("timetable.summary.empty.title"),
+                                subtitle: Text("timetable.summary.empty.message"),
+                                icon: "sun-01",
+                                tint: Brand.primary
+                            )
+                        } else {
+                            TodayInfoRow(
+                                title: Text("today.noMoreLessons"),
+                                subtitle: Text("today.noMoreLessons.subtitle"),
+                                icon: "checkmark-circle-02",
+                                tint: Brand.primary
+                            )
+                        }
                     }
 
                     if summary.hasChanges {
                         Divider()
+                        HStack(spacing: Spacing.sm) {
+                            GradelyIcon("alert-02", size: 14)
+                            Text(verbatim: changeSummary(summary))
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(LessonChangeKind.canceled.color)
                         ForEach(summary.changedLessons.prefix(3)) { lesson in
                             TodayInfoRow(
                                 title: Text(verbatim: lesson.changeKind.localizedLabel ?? AppL10n.string("today.timetableChange")),
-                                subtitle: Text(verbatim: lesson.subjectName ?? lesson.title),
-                                systemImage: "exclamationmark.triangle.fill",
-                                tint: .gradelySystemOrange
+                                subtitle: Text(verbatim: changeSubtitle(for: lesson)),
+                                icon: "alert-02",
+                                tint: lesson.changeKind.color
                             )
+                            .accessibilityIdentifier("todayTimetableChange-\(lesson.id)")
                         }
                     }
                 } else {
                     TodayInfoRow(
                         title: Text("today.timetableUnavailable"),
                         subtitle: Text("today.timetableUnavailable.subtitle"),
-                        systemImage: "calendar",
+                        icon: "calendar-03",
                         tint: .secondary
                     )
+                }
+
+                if let snapshotStore, snapshotStore.cachedWeek(containing: now) != nil,
+                   snapshotStore.sourceState("timetable-\(TimetableDates.apiDateString(TimetableDates.monday(of: now)))").isStale(at: now, interval: 900) {
+                    Text("today.cached.warning").font(.caption).foregroundStyle(.secondary)
                 }
             }
         }
         .accessibilityIdentifier("todayTimetableCard")
     }
 
-    private var absenceRiskCard: some View {
-        Card {
-            VStack(alignment: .leading, spacing: Spacing.md) {
-                HStack {
-                    SectionHeader("Absence risk")
-                    Spacer()
-                    Button("Open") {
-                        onOpenAbsence()
-                    }
-                    .font(.caption.weight(.bold))
-                    .buttonStyle(.bordered)
-                }
+    private func changeSummary(_ summary: TimetableTodaySummary) -> String {
+        let count = summary.changedLessons.count
+        if count == 1, let lesson = summary.changedLessons.first {
+            return String(format: AppL10n.string("timetable.summary.changes.one"), TodayLessonCopy.subject(for: lesson))
+        }
+        let key: String.LocalizationValue = (2...4).contains(count)
+            ? "timetable.summary.changes.few"
+            : "timetable.summary.changes.many"
+        return String(format: AppL10n.string(key), count)
+    }
 
-                if let risk = viewModel.snapshot.absenceRisk, let highest = risk.highestRisk {
-                    TodayRiskRow(subject: highest)
-                    ForEach(risk.subjects.dropFirst().prefix(2)) { subject in
-                        TodayRiskRow(subject: subject)
+    /// Cancelled atoms often carry the subject only inside the change payload,
+    /// so the row falls back to it before showing a bare period number.
+    private func changeSubtitle(for lesson: ScheduledLesson) -> String {
+        var parts: [String] = []
+        if let subject = TodayLessonCopy.optionalSubject(for: lesson) {
+            parts.append(subject)
+        } else if let description = lesson.change?.description?.trimmingCharacters(in: .whitespacesAndNewlines),
+                  !description.isEmpty {
+            parts.append(description)
+        }
+        parts.append(TodayLessonCopy.period(for: lesson))
+        if let room = TodayLessonCopy.room(for: lesson) {
+            parts.append(room)
+        }
+        return parts.joined(separator: " · ")
+    }
+
+    // MARK: - Attention
+
+    private func attentionCard(at now: Date) -> some View {
+        let insights = snapshotStore?.todayInsights(at: now) ?? []
+        return Card {
+            VStack(alignment: .leading, spacing: Spacing.md) {
+                HStack(alignment: .firstTextBaseline) {
+                    SectionHeader("today.attention.title")
+                    if !insights.isEmpty {
+                        StatusChip(text: "\(insights.count)", color: Brand.primary)
                     }
-                    if risk.isThresholdUnavailable {
-                        Text("School limit unavailable. Current percentages are shown without guessing a threshold.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                } else {
+                }
+                if insights.isEmpty {
                     TodayInfoRow(
-                        title: Text("today.noAbsenceRisk"),
-                        subtitle: Text("today.noAbsenceRisk.subtitle"),
-                        systemImage: "calendar.badge.exclamationmark",
+                        title: Text("today.attention.emptyTitle"),
+                        subtitle: Text("today.attention.empty"),
+                        icon: "checkmark-circle-02",
+                        tint: Brand.primary
+                    )
+                } else {
+                    ForEach(insights) { insight in
+                        NavigationLink(value: insight.destination) {
+                            TodayInsightRow(insight: insight, subtitle: insightSubtitle(insight))
+                        }
+                        .buttonStyle(.plain)
+                        .simultaneousGesture(TapGesture().onEnded { snapshotStore?.markSeen([insight]) })
+                        .accessibilityIdentifier("todayInsight-\(insight.id)")
+                    }
+                }
+                if let snapshotStore, snapshotStore.sourceState("marks").error != nil {
+                    Text("today.cached.warning").font(.caption).foregroundStyle(.secondary)
+                }
+            }
+        }
+        .accessibilityIdentifier("todayAttentionCard")
+    }
+
+    // MARK: - Gradey AI
+
+    private var gradeyActions: some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            SectionHeader("today.ai.title")
+                .padding(.horizontal, Spacing.xs)
+            if dynamicTypeSize.isAccessibilitySize {
+                VStack(spacing: Spacing.sm) {
+                    studyPrioritiesAction(expandsVertically: false)
+                    weekSummaryAction(expandsVertically: false)
+                }
+            } else {
+                HStack(alignment: .top, spacing: Spacing.sm) {
+                    studyPrioritiesAction(expandsVertically: true)
+                    weekSummaryAction(expandsVertically: true)
+                }
+                .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
+    private func studyPrioritiesAction(expandsVertically: Bool) -> some View {
+        gradeyAction(
+            .studyPriorities,
+            title: "gradey.ai.action.study_priorities",
+            subtitle: "today.ai.studyPriorities.subtitle",
+            icon: "target-02",
+            identifier: "todayStudyPrioritiesButton",
+            expandsVertically: expandsVertically
+        )
+    }
+
+    private func weekSummaryAction(expandsVertically: Bool) -> some View {
+        gradeyAction(
+            .weekSummary,
+            title: "gradey.ai.action.week_summary",
+            subtitle: "today.ai.weekSummary.subtitle",
+            icon: "calendar-check-in-02",
+            identifier: "todayWeekSummaryButton",
+            expandsVertically: expandsVertically
+        )
+    }
+
+    private func gradeyAction(
+        _ action: GradeyAIAction,
+        title: LocalizedStringKey,
+        subtitle: LocalizedStringKey,
+        icon: String,
+        identifier: String,
+        expandsVertically: Bool
+    ) -> some View {
+        Button { requestAI(action, nil, nil) } label: {
+            TodayActionCardLabel(title: title, subtitle: subtitle, icon: icon, expandsVertically: expandsVertically)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text(title))
+        .accessibilityIdentifier(identifier)
+    }
+
+    // MARK: - Recent marks
+
+    private var recentMarksCard: some View {
+        let marks = viewModel.snapshot.recentMarks(limit: 3)
+        return Card {
+            VStack(alignment: .leading, spacing: Spacing.md) {
+                HStack(alignment: .firstTextBaseline) {
+                    SectionHeader("today.recentGrades.title")
+                    if let onOpenMarks {
+                        Button(action: onOpenMarks) {
+                            TodayLinkLabel(title: "subjects.title")
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityIdentifier("todayOpenMarksButton")
+                    }
+                }
+                if marks.isEmpty {
+                    TodayInfoRow(
+                        title: Text("today.recentGrades.title"),
+                        subtitle: Text("today.recentGrades.empty"),
+                        icon: "checkmark-badge-02",
                         tint: .secondary
                     )
+                } else {
+                    ForEach(marks) { mark in
+                        NavigationLink(value: TodayInsight.Destination.subject(mark.subjectID)) {
+                            TodayMarkRow(mark: mark)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityIdentifier("todayRecentMark-\(mark.id)")
+                    }
+                }
+            }
+        }
+        .accessibilityIdentifier("todayGradeMovementCard")
+    }
+
+    // MARK: - Planner
+
+    @ViewBuilder private func plannerCard(at now: Date) -> some View {
+        if let snapshotStore {
+            let events = snapshotStore.events
+                .filter { $0.expiresAt > now }
+                .sorted { $0.date == $1.date ? $0.id.uuidString < $1.id.uuidString : $0.date < $1.date }
+                .prefix(3)
+            Card {
+                VStack(alignment: .leading, spacing: Spacing.md) {
+                    HStack(alignment: .firstTextBaseline) {
+                        SectionHeader("planner.title")
+                        NavigationLink(value: TodayInsight.Destination.planner) {
+                            TodayLinkLabel(title: "action.open")
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityIdentifier("todayOpenPlannerButton")
+                    }
+                    if events.isEmpty {
+                        TodayInfoRow(
+                            title: Text("planner.title"),
+                            subtitle: Text("today.planner.empty"),
+                            icon: "check-list",
+                            tint: .secondary
+                        )
+                    } else {
+                        ForEach(Array(events)) { event in
+                            NavigationLink(value: TodayInsight.Destination.plannerItem(event.id)) {
+                                TodayPlannerRow(event: event)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityIdentifier("todayPlannerEvent-\(event.id.uuidString)")
+                        }
+                    }
+                }
+            }
+            .accessibilityIdentifier("todayPlannerCard")
+        }
+    }
+
+    // MARK: - Absence & lunch
+
+    private func absenceRiskCard(_ risk: AbsenceRiskSummary, highest: AbsenceRiskSubject) -> some View {
+        let others = risk.subjects.filter { $0.id != highest.id }.prefix(2)
+        return Card {
+            VStack(alignment: .leading, spacing: Spacing.md) {
+                HStack(alignment: .firstTextBaseline) {
+                    SectionHeader("Absence risk")
+                    Button(action: onOpenAbsence) {
+                        TodayLinkLabel(title: "action.open")
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("todayOpenAbsenceButton")
+                }
+
+                TodayRiskRow(subject: highest)
+                ForEach(Array(others)) { subject in
+                    TodayRiskRow(subject: subject)
+                }
+                if risk.isThresholdUnavailable {
+                    Text("School limit unavailable. Current percentages are shown without guessing a threshold.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
             }
         }
@@ -315,21 +534,14 @@ struct TodayView: View {
                     TodayInfoRow(
                         title: Text(verbatim: meal.name),
                         subtitle: Text(verbatim: meal.formattedPrice),
-                        systemImage: "fork.knife",
+                        icon: "restaurant-02",
                         tint: Brand.primary
-                    )
-                } else if viewModel.snapshot.stravaSession != nil {
-                    TodayInfoRow(
-                        title: Text("today.noMeal"),
-                        subtitle: Text("today.noMeal.subtitle"),
-                        systemImage: "fork.knife.circle",
-                        tint: .secondary
                     )
                 } else {
                     TodayInfoRow(
-                        title: Text("today.mealsNotConnected"),
-                        subtitle: Text("today.mealsNotConnected.subtitle"),
-                        systemImage: "fork.knife",
+                        title: Text("today.noMeal"),
+                        subtitle: Text("today.noMeal.subtitle"),
+                        icon: "restaurant-02",
                         tint: .secondary
                     )
                 }
@@ -338,46 +550,43 @@ struct TodayView: View {
         .accessibilityIdentifier("todayLunchCard")
     }
 
-    private var recentMarksCard: some View {
-        let newMarks = viewModel.snapshot.newMarks
+    // MARK: - Navigation
 
-        return Card {
-            VStack(alignment: .leading, spacing: Spacing.md) {
-                SectionHeader("New marks and trends")
-                if !newMarks.isEmpty {
-                    ForEach(newMarks.prefix(3)) { mark in
-                        TodayInfoRow(
-                            title: Text(verbatim: String(
-                                format: AppL10n.string("today.markInSubject"),
-                                mark.markText,
-                                mark.subjectName
-                            )),
-                            subtitle: Text(verbatim: mark.detectedAt?.formatted(date: .abbreviated, time: .shortened)
-                                ?? AppL10n.string("today.newFromSchool")),
-                            systemImage: "checkmark.seal.fill",
-                            tint: Brand.primary
-                        )
-                    }
-                    if !viewModel.snapshot.topTrends.isEmpty {
-                        Divider()
-                    }
-                }
-
-                if viewModel.snapshot.topTrends.isEmpty {
-                    TodayInfoRow(
-                        title: Text("today.history.empty"),
-                        subtitle: Text("today.history.empty.subtitle"),
-                        systemImage: "chart.line.uptrend.xyaxis",
-                        tint: .secondary
-                    )
-                } else {
-                    ForEach(viewModel.snapshot.topTrends) { trend in
-                        TrendRow(trend: trend)
-                    }
-                }
-            }
+    @ViewBuilder private func insightDestination(_ destination: TodayInsight.Destination) -> some View {
+        switch destination {
+        case .subject(let id):
+            if let subject = viewModel.snapshot.subjects.first(where: { $0.id == id }) {
+                SubjectDetailView(viewModel: SubjectDetailViewModel(subject: subject, absence: nil,
+                    repository: repository, prepared: snapshotStore?.preparedCalculations[id]), snapshotStore: snapshotStore)
+            } else { ContentUnavailableView("today.destination.unavailable", systemImage: "book.closed") }
+        case .plannerItem(let id):
+            if let snapshotStore, let item = snapshotStore.plannerStore.items.first(where: { $0.id == id }) {
+                PlannerItemEditorView(item: item, store: snapshotStore.plannerStore, resolver: PlannerLessonResolver(repository: repository),
+                    displayedWeek: snapshotStore.cachedWeek(containing: item.orderingDate ?? Date()), subjects: plannerSubjects)
+            } else { ContentUnavailableView("today.destination.unavailable", systemImage: "checklist") }
+        case .planner:
+            if let snapshotStore {
+                PlannerView(store: snapshotStore.plannerStore, resolver: PlannerLessonResolver(repository: repository),
+                    displayedWeek: snapshotStore.cachedWeek(containing: Date()), subjects: plannerSubjects)
+            } else { ContentUnavailableView("today.destination.unavailable", systemImage: "checklist") }
         }
-        .accessibilityIdentifier("todayGradeMovementCard")
+    }
+
+    private var plannerSubjects: [PlannerSubjectReference] {
+        guard let scope = snapshotStore?.scope else { return [] }
+        return viewModel.snapshot.subjects.map {
+            PlannerSubjectReference(scope: scope, id: $0.id, name: $0.trimmedName, abbreviation: $0.trimmedAbbrev)
+        }
+    }
+
+    private func insightSubtitle(_ insight: TodayInsight) -> String {
+        if let eventID = insight.eventIDs.first {
+            if let event = snapshotStore?.events.first(where: { $0.id == eventID }) {
+                return SchoolDateFormatting.eventDate(event, includeTime: false)
+            }
+            return SchoolDateFormatting.date(insight.relevantAt)
+        }
+        return AppL10n.string("today.insight.recordedAverage")
     }
 
     private var errorBinding: Binding<Bool> {
@@ -455,86 +664,799 @@ private struct TodaySchoolReconnectSheet: View {
     }
 }
 
-private struct TodayHero: View {
-    let snapshot: TodaySnapshot
+// MARK: - Lesson copy helpers
 
-    var body: some View {
-        VStack(alignment: .leading, spacing: Spacing.lg) {
-            Text(snapshot.user?.fullName ?? snapshot.activeAccount?.displayName ?? "Gradey")
-                .font(.title2.weight(.bold))
-                .foregroundStyle(Brand.onAccent)
-                .lineLimit(2)
+/// Shared wording for lessons on Today so the hero, strip and rows agree.
+private enum TodayLessonCopy {
+    static func subject(for lesson: ScheduledLesson) -> String {
+        optionalSubject(for: lesson) ?? AppL10n.string("timetable.summary.lessonFallback")
+    }
 
-            HStack(alignment: .firstTextBaseline) {
-                VStack(alignment: .leading, spacing: Spacing.xs) {
-                    Text("marks.hero.average")
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(Brand.onAccent.opacity(0.7))
-                    Text(GradeMath.formattedAverage(snapshot.overallAverage))
-                        .font(.system(size: 48, weight: .bold, design: .rounded).monospacedDigit())
-                        .foregroundStyle(Brand.onAccent)
-                }
-                Spacer()
-                VStack(alignment: .trailing, spacing: Spacing.xs) {
-                    Text(String.localizedStringWithFormat(AppL10n.string("marks.hero.subjectCount"), snapshot.subjects.count))
-                    Text(String.localizedStringWithFormat(AppL10n.string("subject.markCount"), snapshot.totalMarks))
-                }
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(Brand.onAccent.opacity(0.72))
-            }
+    static func optionalSubject(for lesson: ScheduledLesson) -> String? {
+        if let name = lesson.subjectName?.trimmingCharacters(in: .whitespacesAndNewlines), !name.isEmpty {
+            return name
         }
-        .padding(Spacing.xl)
-        .background(Brand.gradient, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
-        .shadow(color: Brand.primary.opacity(0.24), radius: 16, x: 0, y: 8)
-        .accessibilityIdentifier("todayHeroCard")
+        if !lesson.title.isEmpty { return lesson.title }
+        if let changeSubject = lesson.change?.changeSubject?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !changeSubject.isEmpty {
+            return changeSubject
+        }
+        return nil
+    }
+
+    static func shortSubject(for lesson: ScheduledLesson) -> String {
+        if !lesson.title.isEmpty { return lesson.title }
+        if let changeSubject = lesson.change?.changeSubject?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !changeSubject.isEmpty {
+            return changeSubject
+        }
+        return "–"
+    }
+
+    static func timeRange(for lesson: ScheduledLesson) -> String? {
+        guard !lesson.hour.beginTime.isEmpty, !lesson.hour.endTime.isEmpty else { return nil }
+        return "\(lesson.hour.beginTime)–\(lesson.hour.endTime)"
+    }
+
+    static func period(for lesson: ScheduledLesson) -> String {
+        [lesson.hour.caption, timeRange(for: lesson)].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " · ")
+    }
+
+    static func room(for lesson: ScheduledLesson) -> String? {
+        let room = (lesson.roomAbbrev ?? lesson.roomName)?.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let room, !room.isEmpty else { return nil }
+        return room
+    }
+
+    static func teacher(for lesson: ScheduledLesson) -> String? {
+        let teacher = (lesson.teacherName ?? lesson.teacherAbbrev)?.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let teacher, !teacher.isEmpty else { return nil }
+        return teacher
+    }
+
+    /// Countdowns only help for the next couple of hours; further out the
+    /// start time is easier to read than "in 436 min".
+    static let countdownLimitMinutes = 120
+
+    static func startsIn(_ lesson: ScheduledLesson, minutes: Int?) -> String? {
+        if let minutes, minutes <= countdownLimitMinutes {
+            return String(format: AppL10n.string("today.lesson.startsIn"), minutes)
+        }
+        guard !lesson.hour.beginTime.isEmpty else {
+            return minutes.map { String(format: AppL10n.string("today.lesson.startsIn"), $0) }
+        }
+        return String(format: AppL10n.string("today.lesson.startsAt"), lesson.hour.beginTime)
+    }
+
+    static func nextLessonSummary(_ lesson: ScheduledLesson, minutes: Int?) -> String {
+        let subject = subject(for: lesson)
+        if let minutes, minutes <= countdownLimitMinutes {
+            return String(format: AppL10n.string("timetable.summary.nextIn"), subject, minutes)
+        }
+        guard !lesson.hour.beginTime.isEmpty else {
+            return String(format: AppL10n.string("timetable.summary.nextIs"), subject)
+        }
+        return String(format: AppL10n.string("today.lesson.nextAt"), subject, lesson.hour.beginTime)
     }
 }
 
-private struct TodayNavigationRow: View {
-    let title: String
-    let subtitle: String
-    let systemImage: String
+// MARK: - Hero
+
+private struct TodayHero: View {
+    let snapshot: TodaySnapshot
+    let now: Date
+    let isRefreshing: Bool
+    let isActivatingAccount: Bool
+    @Binding var selectedAccountID: String
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
-        Card(padding: Spacing.md) {
-            HStack(spacing: Spacing.md) {
-                GradelyIcon(systemName: systemImage)
-                    .foregroundStyle(Brand.primary)
-                    .frame(width: 38, height: 38)
-                    .background(Brand.primary.opacity(0.12), in: RoundedRectangle(cornerRadius: Radius.sm, style: .continuous))
-                VStack(alignment: .leading, spacing: Spacing.xs) {
-                    Text(title).font(.headline)
-                    Text(subtitle).font(.caption).foregroundStyle(.secondary)
+        VStack(alignment: .leading, spacing: Spacing.lg) {
+            if dynamicTypeSize.isAccessibilitySize {
+                VStack(alignment: .leading, spacing: Spacing.sm) {
+                    accountChip
+                    dateRow
                 }
-                Spacer()
-                GradelyIcon(systemName: "chevron.right")
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(.secondary)
+            } else {
+                HStack(alignment: .center, spacing: Spacing.sm) {
+                    dateRow
+                    Spacer(minLength: Spacing.sm)
+                    accountChip
+                }
+            }
+
+            Text(verbatim: greeting)
+                .font(.gradelyDisplay(size: 30, relativeTo: .title))
+                .foregroundStyle(Brand.onAccent)
+                .lineLimit(3)
+                .minimumScaleFactor(0.7)
+                .fixedSize(horizontal: false, vertical: true)
+
+            statusPanel
+
+            statTiles
+        }
+        .padding(Spacing.xl)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Brand.gradient, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+        .shadow(color: Brand.primary.opacity(0.24), radius: 16, x: 0, y: 8)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("todayHeroCard")
+    }
+
+    private var dateRow: some View {
+        HStack(alignment: .center, spacing: Spacing.sm) {
+            Text(verbatim: dateText)
+                .font(.caption.weight(.bold))
+                .textCase(.uppercase)
+                .kerning(0.6)
+                .foregroundStyle(Brand.onAccent.opacity(0.72))
+                .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
+                .minimumScaleFactor(0.8)
+                .fixedSize(horizontal: false, vertical: true)
+            if isRefreshing {
+                ProgressView()
+                    .controlSize(.mini)
+                    .tint(Brand.onAccent)
             }
         }
+    }
+
+    // MARK: Account chip
+
+    @ViewBuilder private var accountChip: some View {
+        if let label = snapshot.accountChipLabel {
+            let canSwitch = snapshot.linkedSchoolAccounts.count > 1
+            let chip = HStack(spacing: Spacing.xs) {
+                if !dynamicTypeSize.isAccessibilitySize {
+                    GradelyIcon("user-group", size: 13)
+                }
+                Text(verbatim: label)
+                    .lineLimit(1)
+                if canSwitch {
+                    GradelyIcon("arrow-data-transfer-vertical", size: 12)
+                }
+            }
+            .font(.caption.weight(.bold))
+            .foregroundStyle(Brand.onAccent)
+            .padding(.horizontal, Spacing.sm + 2)
+            .frame(minHeight: 30)
+            .background(.white.opacity(0.22), in: Capsule())
+            .frame(maxWidth: dynamicTypeSize.isAccessibilitySize ? nil : 190, alignment: .trailing)
+
+            if canSwitch {
+                Menu {
+                    Picker(selection: $selectedAccountID) {
+                        ForEach(snapshot.linkedSchoolAccounts) { account in
+                            Text(verbatim: account.displayName)
+                                .tag(account.id)
+                        }
+                    } label: {
+                        EmptyView()
+                    }
+                    .pickerStyle(.inline)
+                } label: {
+                    if isActivatingAccount {
+                        ProgressView()
+                            .controlSize(.small)
+                            .tint(Brand.onAccent)
+                            .frame(minHeight: 30)
+                    } else {
+                        chip
+                    }
+                }
+                .menuIndicator(.hidden)
+                .buttonStyle(.plain)
+                .disabled(isActivatingAccount)
+                .accessibilityLabel(snapshot.activeAccount?.displayName ?? AppL10n.string("today.schoolAccount"))
+                .accessibilityIdentifier("todayAccountSwitcher")
+            } else {
+                chip
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel(snapshot.activeAccount?.displayName ?? label)
+                    .accessibilityIdentifier("todayAccountSwitcher")
+            }
+        }
+    }
+
+    // MARK: Status
+
+    private var statusPanel: some View {
+        HStack(alignment: .top, spacing: Spacing.md) {
+            GradelyIcon(statusIcon, size: 18)
+                .foregroundStyle(Brand.onAccent)
+                .frame(width: 38, height: 38)
+                .background(.white.opacity(0.22), in: Circle())
+
+            VStack(alignment: .leading, spacing: Spacing.xs) {
+                Text(verbatim: statusTitle)
+                    .font(.headline.weight(.bold))
+                    .foregroundStyle(Brand.onAccent)
+                    .fixedSize(horizontal: false, vertical: true)
+                if let statusSubtitle {
+                    Text(verbatim: statusSubtitle)
+                        .font(.subheadline)
+                        .foregroundStyle(Brand.onAccent.opacity(0.78))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                if let progress = snapshot.currentLessonProgress {
+                    GeometryReader { geo in
+                        ZStack(alignment: .leading) {
+                            Capsule().fill(Brand.onAccent.opacity(0.14))
+                            Capsule()
+                                .fill(Brand.onAccent)
+                                .frame(width: max(geo.size.width * progress, 6))
+                        }
+                    }
+                    .frame(height: 5)
+                    .padding(.top, Spacing.xs)
+                    .accessibilityHidden(true)
+                }
+            }
+
+            Spacer(minLength: 0)
+        }
+        .padding(Spacing.md)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(.white.opacity(0.16), in: RoundedRectangle(cornerRadius: Radius.md, style: .continuous))
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("todayHeroStatus")
+    }
+
+    private var statusIcon: String {
+        guard let summary = snapshot.timetableSummary else { return "calendar-03" }
+        switch summary.state {
+        case .empty: return "sun-01"
+        case .beforeSchool: return "sunrise"
+        case .current: return "play-circle"
+        case .betweenLessons: return "coffee-02"
+        case .afterSchool: return "checkmark-circle-02"
+        }
+    }
+
+    private var statusTitle: String {
+        guard let summary = snapshot.timetableSummary else {
+            return AppL10n.string("today.timetableUnavailable")
+        }
+        switch summary.state {
+        case .empty:
+            return AppL10n.string("timetable.summary.empty.title")
+        case .beforeSchool:
+            return AppL10n.string("timetable.summary.beforeSchool.title")
+        case .current:
+            return String(
+                format: AppL10n.string("timetable.summary.now.title"),
+                summary.currentLesson.map { TodayLessonCopy.subject(for: $0) } ?? AppL10n.string("timetable.summary.lessonFallback")
+            )
+        case .betweenLessons:
+            return AppL10n.string("timetable.summary.between.title")
+        case .afterSchool:
+            return AppL10n.string("timetable.summary.after.title")
+        }
+    }
+
+    private var statusSubtitle: String? {
+        guard let summary = snapshot.timetableSummary else {
+            return AppL10n.string("today.timetableUnavailable.subtitle")
+        }
+        switch summary.state {
+        case .empty:
+            return AppL10n.string("timetable.summary.empty.message")
+        case .beforeSchool, .betweenLessons:
+            guard let next = summary.nextLesson else { return nil }
+            return TodayLessonCopy.nextLessonSummary(next, minutes: summary.minutesUntilNext)
+        case .current:
+            guard let minutes = summary.minutesRemainingInCurrent else { return nil }
+            return String(format: AppL10n.string("timetable.summary.remaining"), minutes)
+        case .afterSchool:
+            return AppL10n.string(summary.hasChanges ? "timetable.summary.after.changes" : "timetable.summary.after.done")
+        }
+    }
+
+    // MARK: Stats
+
+    @ViewBuilder private var statTiles: some View {
+        if dynamicTypeSize.isAccessibilitySize {
+            VStack(alignment: .leading, spacing: Spacing.md) {
+                averageTile
+                lessonsTile
+                newMarksTile
+            }
+        } else {
+            HStack(alignment: .bottom, spacing: Spacing.md) {
+                averageTile
+                statDivider
+                lessonsTile
+                statDivider
+                newMarksTile
+            }
+        }
+    }
+
+    private var statDivider: some View {
+        Rectangle()
+            .fill(Brand.onAccent.opacity(0.14))
+            .frame(width: 1, height: 30)
+            .accessibilityHidden(true)
+    }
+
+    private var averageTile: some View {
+        StatTile(title: AppL10n.string("today.hero.average"), value: GradeMath.formattedAverage(snapshot.overallAverage))
+            .accessibilityElement(children: .combine)
+            .accessibilityIdentifier("todayStatAverage")
+    }
+
+    private var lessonsTile: some View {
+        StatTile(
+            title: AppL10n.string("today.hero.lessonsToday"),
+            value: snapshot.timetableSummary == nil ? "–" : String(snapshot.activeLessonCount)
+        )
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("todayStatLessons")
+    }
+
+    private var newMarksTile: some View {
+        StatTile(title: AppL10n.string("today.hero.newMarks"), value: String(snapshot.newMarks.count))
+            .accessibilityElement(children: .combine)
+            .accessibilityIdentifier("todayStatNewMarks")
+    }
+
+    // MARK: Copy
+
+    private var dateText: String {
+        now.formatted(Date.FormatStyle(locale: AppLanguageOverride.locale).weekday(.wide).day().month(.wide))
+    }
+
+    private var greeting: String {
+        let hour = Calendar.current.component(.hour, from: now)
+        let key: String.LocalizationValue
+        switch hour {
+        case 5..<12: key = "today.greeting.morning"
+        case 12..<18: key = "today.greeting.afternoon"
+        default: key = "today.greeting.evening"
+        }
+        guard let name = snapshot.greetingName, !name.isEmpty else { return AppL10n.string(key) }
+        return AppL10n.string(key) + ", " + name
+    }
+}
+
+// MARK: - Lesson strip
+
+private struct TodayLessonStrip: View {
+    let lessons: [ScheduledLesson]
+    let summary: TimetableTodaySummary
+    let now: Date
+
+    var body: some View {
+        ScrollViewReader { proxy in
+            ScrollView(.horizontal) {
+                HStack(spacing: Spacing.sm) {
+                    ForEach(lessons) { lesson in
+                        TodayLessonChip(lesson: lesson, state: state(for: lesson))
+                            .id(lesson.id)
+                    }
+                }
+                .padding(.vertical, 2)
+            }
+            .scrollIndicators(.hidden)
+            .contentMargins(.horizontal, Spacing.lg, for: .scrollContent)
+            .padding(.horizontal, -Spacing.lg)
+            .onAppear {
+                if let focusID {
+                    proxy.scrollTo(focusID, anchor: .center)
+                }
+            }
+        }
+        .accessibilityIdentifier("todayLessonStrip")
+    }
+
+    private var focusID: String? {
+        summary.currentLesson?.id ?? summary.nextLesson?.id
+    }
+
+    private func state(for lesson: ScheduledLesson) -> TodayLessonChip.State {
+        if lesson.isCanceled { return .cancelled }
+        if summary.currentLesson?.id == lesson.id { return .current }
+        if let end = TimetableLessonTiming.date(lesson.hour.endTime, on: now), end <= now {
+            return .past
+        }
+        return .upcoming
+    }
+}
+
+private struct TodayLessonChip: View {
+    enum State { case past, current, upcoming, cancelled }
+
+    let lesson: ScheduledLesson
+    let state: State
+
+    var body: some View {
+        VStack(spacing: 2) {
+            Text(verbatim: lesson.hour.caption)
+                .font(.caption2.weight(.bold).monospacedDigit())
+                .opacity(0.8)
+            Text(verbatim: TodayLessonCopy.shortSubject(for: lesson))
+                .font(.subheadline.weight(.bold))
+                .strikethrough(state == .cancelled)
+                .lineLimit(1)
+        }
+        .padding(.horizontal, Spacing.sm + 2)
+        .padding(.vertical, Spacing.sm)
+        .frame(minWidth: 54, minHeight: 44)
+        .foregroundStyle(foreground)
+        .background(background, in: RoundedRectangle(cornerRadius: Radius.sm, style: .continuous))
+        .overlay(alignment: .topTrailing) {
+            if lesson.changeKind != .none, lesson.changeKind != .canceled {
+                Circle()
+                    .fill(lesson.changeKind.color)
+                    .frame(width: 7, height: 7)
+                    .padding(5)
+            }
+        }
+        .opacity(state == .past ? 0.62 : 1)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(accessibilityText)
+        .accessibilityIdentifier("todayLessonChip-\(lesson.id)")
+    }
+
+    private var foreground: Color {
+        switch state {
+        case .current: Brand.onAccent
+        case .upcoming: .primary
+        case .past: .secondary
+        case .cancelled: LessonChangeKind.canceled.color
+        }
+    }
+
+    private var background: AnyShapeStyle {
+        switch state {
+        case .current: AnyShapeStyle(Brand.gradient)
+        case .upcoming: AnyShapeStyle(Brand.primary.opacity(0.10))
+        case .past: AnyShapeStyle(Color.gradelyTertiaryFill)
+        case .cancelled: AnyShapeStyle(LessonChangeKind.canceled.color.opacity(0.12))
+        }
+    }
+
+    private var accessibilityText: String {
+        [
+            lesson.hour.caption,
+            TodayLessonCopy.subject(for: lesson),
+            TodayLessonCopy.timeRange(for: lesson),
+            lesson.changeKind.localizedLabel,
+        ]
+        .compactMap { $0 }
+        .filter { !$0.isEmpty }
+        .joined(separator: " · ")
+    }
+}
+
+// MARK: - Rows
+
+private struct TodayLessonRow: View {
+    enum Role { case current, next }
+
+    let lesson: ScheduledLesson
+    let role: Role
+    let minutes: Int?
+
+    var body: some View {
+        HStack(alignment: .center, spacing: Spacing.md) {
+            Text(verbatim: lesson.hour.caption)
+                .font(.headline.weight(.bold).monospacedDigit())
+                .foregroundStyle(tint)
+                .frame(width: 38, height: 38)
+                .background(tint.opacity(0.14), in: RoundedRectangle(cornerRadius: Radius.sm, style: .continuous))
+
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: Spacing.sm) {
+                    Text(roleTitle)
+                        .font(.caption2.weight(.bold))
+                        .textCase(.uppercase)
+                        .kerning(0.4)
+                        .foregroundStyle(tint)
+                    if let minutesText {
+                        Text(verbatim: minutesText)
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                Text(verbatim: TodayLessonCopy.subject(for: lesson))
+                    .font(.subheadline.weight(.bold))
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+                detailRow
+            }
+
+            Spacer(minLength: 0)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier(role == .current ? "todayCurrentLessonRow" : "todayNextLessonRow")
+    }
+
+    private var detailRow: some View {
+        HStack(spacing: Spacing.sm + 2) {
+            if let time = TodayLessonCopy.timeRange(for: lesson) {
+                Text(verbatim: time)
+                    .monospacedDigit()
+                    .layoutPriority(1)
+            }
+            if let room = TodayLessonCopy.room(for: lesson) {
+                detailItem(icon: "location-01", text: room)
+                    .layoutPriority(1)
+            }
+            if let teacher = TodayLessonCopy.teacher(for: lesson) {
+                detailItem(icon: "teacher", text: teacher)
+            }
+        }
+        .font(.caption)
+        .foregroundStyle(.secondary)
+        .lineLimit(1)
+    }
+
+    private func detailItem(icon: String, text: String) -> some View {
+        HStack(spacing: 3) {
+            GradelyIcon(icon, size: 11)
+            Text(verbatim: text)
+                .truncationMode(.tail)
+        }
+    }
+
+    private var tint: Color {
+        role == .current ? Brand.primary : Brand.secondary
+    }
+
+    private var roleTitle: LocalizedStringKey {
+        role == .current ? "today.currentLesson" : "today.nextLesson"
+    }
+
+    private var minutesText: String? {
+        switch role {
+        case .current:
+            guard let minutes else { return nil }
+            return String(format: AppL10n.string("timetable.summary.remaining"), minutes)
+        case .next:
+            return TodayLessonCopy.startsIn(lesson, minutes: minutes)
+        }
+    }
+}
+
+private struct TodayInsightRow: View {
+    let insight: TodayInsight
+    let subtitle: String
+
+    var body: some View {
+        HStack(spacing: Spacing.md) {
+            GradelyIcon(icon, size: 16)
+                .foregroundStyle(tint)
+                .frame(width: 34, height: 34)
+                .background(tint.opacity(0.14), in: RoundedRectangle(cornerRadius: Radius.sm, style: .continuous))
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(verbatim: insight.title)
+                    .font(.subheadline.weight(.bold))
+                    .fixedSize(horizontal: false, vertical: true)
+                Text(verbatim: subtitle)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Spacer(minLength: Spacing.sm)
+
+            TodayDisclosureIcon()
+        }
+        .contentShape(Rectangle())
+    }
+
+    private var icon: String {
+        switch insight.kind {
+        case .assessment: "edit-02"
+        case .busyTests: "task-daily-02"
+        case .deadline: "check-list"
+        case .averageChange: "chart-line-data-01"
+        case .worseningTrend: "chart-down"
+        case .recentGrade: "checkmark-badge-02"
+        }
+    }
+
+    private var tint: Color {
+        switch insight.kind {
+        case .assessment, .busyTests: GradeBand.average.foregroundColor
+        case .deadline: .gradelySystemPurple
+        case .worseningTrend: GradeBand.poor.foregroundColor
+        case .averageChange, .recentGrade: Brand.primary
+        }
+    }
+}
+
+private struct TodayMarkRow: View {
+    let mark: TodayNewMark
+
+    var body: some View {
+        HStack(spacing: Spacing.md) {
+            GradeBadge(text: mark.markText, band: mark.band, size: .small)
+
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: Spacing.xs + 2) {
+                    Text(verbatim: mark.subjectTitle)
+                        .font(.subheadline.weight(.bold))
+                        .lineLimit(1)
+                    if mark.isNew {
+                        Circle()
+                            .fill(Brand.primary)
+                            .frame(width: 7, height: 7)
+                            .accessibilityHidden(true)
+                    }
+                }
+                Text(verbatim: mark.caption ?? mark.subjectName)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+
+            Spacer(minLength: Spacing.sm)
+
+            Text(verbatim: dateText)
+                .font(.caption.monospacedDigit())
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+
+            TodayDisclosureIcon()
+        }
+        .contentShape(Rectangle())
+        .accessibilityElement(children: .combine)
+    }
+
+    private var dateText: String {
+        mark.detectedAt.map { SchoolDateFormatting.date($0) } ?? "–"
+    }
+}
+
+private struct TodayPlannerRow: View {
+    let event: SchoolEvent
+
+    var body: some View {
+        HStack(spacing: Spacing.md) {
+            VStack(spacing: 0) {
+                Text(verbatim: event.date.formatted(dateStyle.day()))
+                    .font(.title3.weight(.bold).monospacedDigit())
+                Text(verbatim: event.date.formatted(dateStyle.month(.abbreviated)))
+                    .font(.caption2.weight(.bold))
+                    .textCase(.uppercase)
+            }
+            .foregroundStyle(tint)
+            .frame(width: 46, height: 46)
+            .background(tint.opacity(0.14), in: RoundedRectangle(cornerRadius: Radius.sm, style: .continuous))
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(verbatim: event.title)
+                    .font(.subheadline.weight(.bold))
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text(verbatim: detail)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+
+            Spacer(minLength: Spacing.sm)
+
+            TodayDisclosureIcon()
+        }
+        .contentShape(Rectangle())
+        .accessibilityElement(children: .combine)
+    }
+
+    private var tint: Color {
+        event.isAssessment ? GradeBand.average.foregroundColor : Brand.primary
+    }
+
+    private var dateStyle: Date.FormatStyle {
+        Date.FormatStyle(locale: AppLanguageOverride.locale, timeZone: event.hasTime ? .current : event.calendar.timeZone)
+    }
+
+    private var detail: String {
+        var parts: [String] = []
+        if let kind = PlannerItemType(rawValue: event.kind.rawValue) {
+            parts.append(kind.title)
+        }
+        if let subject = event.subjectName?.trimmingCharacters(in: .whitespacesAndNewlines), !subject.isEmpty {
+            parts.append(subject)
+        }
+        if event.hasTime {
+            parts.append(event.date.formatted(Date.FormatStyle(date: .omitted, time: .shortened, locale: AppLanguageOverride.locale)))
+        }
+        return parts.joined(separator: " · ")
+    }
+}
+
+private struct TodayDisclosureIcon: View {
+    var body: some View {
+        GradelyIcon("arrow-right-01", size: 13)
+            .foregroundStyle(Color.secondary.opacity(0.6))
+            .accessibilityHidden(true)
+    }
+}
+
+private struct TodayLinkLabel: View {
+    let title: LocalizedStringKey
+
+    var body: some View {
+        HStack(spacing: Spacing.xs) {
+            Text(title)
+            GradelyIcon("arrow-right-01", size: 11)
+        }
+        .font(.caption.weight(.bold))
+        .foregroundStyle(Brand.primary)
+        .padding(.horizontal, Spacing.sm + 2)
+        .frame(minHeight: 28)
+        .background(Brand.primary.opacity(0.12), in: Capsule())
+        .contentShape(Capsule())
+    }
+}
+
+private struct TodayActionCardLabel: View {
+    let title: LocalizedStringKey
+    let subtitle: LocalizedStringKey
+    let icon: String
+    let expandsVertically: Bool
+
+    var body: some View {
+        HStack(alignment: .top, spacing: Spacing.md) {
+            GradelyIcon(icon, size: 16)
+                .foregroundStyle(Brand.onAccent)
+                .frame(width: 34, height: 34)
+                .background(Brand.gradient, in: Circle())
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(.primary)
+                Text(subtitle)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .multilineTextAlignment(.leading)
+            .fixedSize(horizontal: false, vertical: true)
+
+            Spacer(minLength: 0)
+        }
+        .padding(Spacing.md)
+        .frame(maxWidth: .infinity, maxHeight: expandsVertically ? .infinity : nil, alignment: .topLeading)
+        .frame(minHeight: 44)
+        .background(Color.gradelySecondaryGroupedBackground, in: RoundedRectangle(cornerRadius: Radius.md, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: Radius.md, style: .continuous)
+                .strokeBorder(Brand.primary.opacity(0.18), lineWidth: 1)
+        )
+        .contentShape(RoundedRectangle(cornerRadius: Radius.md, style: .continuous))
     }
 }
 
 private struct TodayInfoRow: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     let title: Text
     let subtitle: Text
-    let systemImage: String
+    let icon: String
     let tint: Color
 
     var body: some View {
         HStack(spacing: Spacing.md) {
-            GradelyIcon(systemName: systemImage)
+            GradelyIcon(icon, size: 16)
+                .dynamicTypeSize(.medium)
                 .foregroundStyle(tint)
-                .frame(width: 32, height: 32)
+                .frame(width: 34, height: 34)
                 .background(tint.opacity(0.12), in: RoundedRectangle(cornerRadius: Radius.sm, style: .continuous))
             VStack(alignment: .leading, spacing: Spacing.xs) {
                 title
                     .font(.subheadline.weight(.bold))
-                    .lineLimit(2)
+                    .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 2)
+                    .fixedSize(horizontal: false, vertical: true)
                 subtitle
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                    .lineLimit(2)
+                    .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 2)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             Spacer(minLength: 0)
         }

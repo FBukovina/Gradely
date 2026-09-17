@@ -25,6 +25,7 @@ interface EventRow extends NotificationEvent {
 
 interface DeviceRow {
   id: string;
+  platform: "ios" | "macos" | "android";
   environment: string;
   token_secret_id: string;
   invalidated_at: string | null;
@@ -55,6 +56,7 @@ interface DeliveryCounters {
 }
 
 let cachedAPNSJWT: { value: string; expiresAt: number } | null = null;
+let cachedFCMAccessToken: { value: string; expiresAt: number } | null = null;
 
 Deno.serve(async (req) => {
   const options = handleOptions(req);
@@ -101,11 +103,11 @@ Deno.serve(async (req) => {
     }
 
     console.log(
-      JSON.stringify({ event: "apns_dispatch_complete", ...counters }),
+      JSON.stringify({ event: "push_dispatch_complete", ...counters }),
     );
     return json(counters);
   } catch (error) {
-    return errorResponse(error, "Could not send APNs notifications");
+    return errorResponse(error, "Could not send push notifications");
   }
 });
 
@@ -242,7 +244,7 @@ async function dispatchUserEvents(
   if (deviceIDs.length > 0) {
     const { data: devices, error: deviceError } = await supabase
       .from("device_push_tokens")
-      .select("id,environment,token_secret_id,invalidated_at")
+      .select("id,platform,environment,token_secret_id,invalidated_at")
       .eq("user_id", userID)
       .in("id", deviceIDs);
     if (deviceError) throw deviceError;
@@ -416,16 +418,7 @@ async function deliverDeviceBatch(
   counters: DeliveryCounters,
 ) {
   const copy = notificationCopy(events, preferences.lock_screen_detail);
-  const payload = {
-    aps: {
-      alert: copy,
-      sound: "default",
-    },
-    url: deliveryDeepLink(events),
-    eventID: events.length === 1 ? events[0].id : undefined,
-    summaryID: events.length > 1 ? events[0].id : undefined,
-    summaryCount: events.length > 1 ? events.length : undefined,
-  };
+  const deepLink = deliveryDeepLink(events);
 
   let apnsID = deliveries[0].apns_id;
   let collapseID = `gradey-mark-${events[0].id}`;
@@ -444,22 +437,35 @@ async function deliverDeviceBatch(
   let response: Response;
   try {
     const token = await readDeviceToken(supabase, device.token_secret_id);
-    response = await sendAPNS(
-      token,
-      device.environment,
-      payload,
-      apnsID,
-      collapseID,
-    );
+    if (device.platform === "android") {
+      response = await sendFCM(token, copy, deepLink, events, collapseID);
+    } else {
+      response = await sendAPNS(
+        token,
+        device.environment,
+        {
+          aps: {
+            alert: copy,
+            sound: "default",
+          },
+          url: deepLink,
+          eventID: events.length === 1 ? events[0].id : undefined,
+          summaryID: events.length > 1 ? events[0].id : undefined,
+          summaryCount: events.length > 1 ? events.length : undefined,
+        },
+        apnsID,
+        collapseID,
+      );
+    }
   } catch (error) {
     const message = error instanceof Error
       ? error.message
-      : "apns_network_error";
+      : "push_network_error";
     await retryDeliveryRows(supabase, deliveries, message, counters);
     return false;
   }
 
-  const reason = await apnsReason(response);
+  const reason = await pushFailureReason(response, device.platform);
   if (response.ok) {
     const now = new Date().toISOString();
     const { data, error } = await supabase
@@ -483,7 +489,7 @@ async function deliverDeviceBatch(
   }
 
   const failure = (reason ?? `apns_status_${response.status}`).slice(0, 500);
-  if (isRejectedDeviceToken(response.status, reason)) {
+  if (isRejectedPushToken(device.platform, response.status, reason)) {
     const now = new Date().toISOString();
     const { data: invalidated, error } = await supabase
       .from("device_push_tokens")
@@ -503,7 +509,7 @@ async function deliverDeviceBatch(
     return true;
   }
 
-  if (isTransientAPNSStatus(response.status)) {
+  if (isTransientPushStatus(device.platform, response.status)) {
     await retryDeliveryRows(supabase, deliveries, failure, counters);
     return false;
   }
@@ -511,7 +517,7 @@ async function deliverDeviceBatch(
   counters.suppressed += await suppressDeliveryRows(
     supabase,
     deliveries,
-    `permanent_apns_error:${failure}`,
+    `permanent_push_error:${failure}`,
     true,
   );
   return false;
@@ -851,6 +857,117 @@ async function sendAPNS(
   });
 }
 
+async function sendFCM(
+  token: string,
+  copy: { title: string; body: string },
+  deepLink: string,
+  events: EventRow[],
+  collapseID: string,
+) {
+  const projectID = Deno.env.get("FCM_PROJECT_ID");
+  if (!projectID) throw new Error("Missing FCM_PROJECT_ID");
+  const accessToken = await fcmAccessToken();
+  const data: Record<string, string> = { url: deepLink };
+  if (events.length === 1) {
+    data.eventID = events[0].id;
+  } else {
+    data.summaryID = events[0].id;
+    data.summaryCount = String(events.length);
+  }
+
+  return await fetch(
+    `https://fcm.googleapis.com/v1/projects/${projectID}/messages:send`,
+    {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${accessToken}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        message: {
+          token,
+          notification: copy,
+          data,
+          android: {
+            priority: "HIGH",
+            collapse_key: collapseID.slice(0, 64),
+            notification: {
+              channel_id: "new_marks",
+              sound: "default",
+            },
+          },
+        },
+      }),
+      signal: AbortSignal.timeout(15_000),
+    },
+  );
+}
+
+async function fcmAccessToken() {
+  if (cachedFCMAccessToken && cachedFCMAccessToken.expiresAt > Date.now()) {
+    return cachedFCMAccessToken.value;
+  }
+
+  const clientEmail = Deno.env.get("FCM_CLIENT_EMAIL");
+  const privateKey = Deno.env.get("FCM_PRIVATE_KEY")?.replace(/\\n/g, "\n");
+  if (!clientEmail || !privateKey) {
+    throw new Error("Missing FCM service account credentials");
+  }
+
+  const issuedAt = Math.floor(Date.now() / 1000);
+  const assertion = await serviceAccountJWT({
+    iss: clientEmail,
+    scope: "https://www.googleapis.com/auth/firebase.messaging",
+    aud: "https://oauth2.googleapis.com/token",
+    iat: issuedAt,
+    exp: issuedAt + 3600,
+  }, privateKey);
+  const response = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
+      assertion,
+    }),
+    signal: AbortSignal.timeout(15_000),
+  });
+  if (!response.ok) throw new Error(`fcm_oauth_status_${response.status}`);
+
+  const payload = await response.json();
+  if (typeof payload?.access_token !== "string") {
+    throw new Error("Missing FCM OAuth access token");
+  }
+  const expiresIn = typeof payload.expires_in === "number"
+    ? payload.expires_in
+    : 3600;
+  cachedFCMAccessToken = {
+    value: payload.access_token,
+    expiresAt: Date.now() + Math.max(60, expiresIn - 300) * 1000,
+  };
+  return cachedFCMAccessToken.value;
+}
+
+async function serviceAccountJWT(
+  claims: Record<string, unknown>,
+  privateKey: string,
+) {
+  const header = base64URL(JSON.stringify({ alg: "RS256", typ: "JWT" }));
+  const payload = base64URL(JSON.stringify(claims));
+  const key = await crypto.subtle.importKey(
+    "pkcs8",
+    pemToArrayBuffer(privateKey),
+    { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const signature = await crypto.subtle.sign(
+    "RSASSA-PKCS1-v1_5",
+    key,
+    new TextEncoder().encode(`${header}.${payload}`),
+  );
+  return `${header}.${payload}.${base64URL(new Uint8Array(signature))}`;
+}
+
 async function apnsReason(response: Response) {
   try {
     const body = await response.json();
@@ -858,6 +975,45 @@ async function apnsReason(response: Response) {
   } catch {
     return null;
   }
+}
+
+async function pushFailureReason(
+  response: Response,
+  platform: DeviceRow["platform"],
+) {
+  if (response.ok) return null;
+  if (platform !== "android") return await apnsReason(response);
+  try {
+    const body = await response.json();
+    const detailCode = Array.isArray(body?.error?.details)
+      ? body.error.details.find((detail: Record<string, unknown>) =>
+        typeof detail?.errorCode === "string"
+      )?.errorCode
+      : null;
+    return detailCode ?? body?.error?.status ?? body?.error?.message ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function isRejectedPushToken(
+  platform: DeviceRow["platform"],
+  status: number,
+  reason: string | null,
+) {
+  if (platform !== "android") return isRejectedDeviceToken(status, reason);
+  const normalized = reason?.toUpperCase() ?? "";
+  return normalized.includes("UNREGISTERED") ||
+    normalized.includes("REGISTRATION TOKEN IS NOT A VALID FCM") ||
+    status === 404;
+}
+
+function isTransientPushStatus(
+  platform: DeviceRow["platform"],
+  status: number,
+) {
+  if (platform !== "android") return isTransientAPNSStatus(status);
+  return status === 408 || status === 429 || status >= 500;
 }
 
 async function apnsJWT() {

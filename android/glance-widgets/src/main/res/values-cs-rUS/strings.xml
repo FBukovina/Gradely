@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_open_gradey">otevřít Gradey</string>
+    <string name="widget_load_timetable">načíst rozvrh</string>
+    <string name="widget_no_lessons">žádný hodiny</string>
+    <string name="widget_refresh_timetable">obnovit rozvrh</string>
+    <string name="widget_now">teď</string>
+    <string name="widget_next">další</string>
+    <string name="widget_canceled">odpadá</string>
+    <string name="widget_substitution">suplování</string>
+    <string name="widget_room_changed">jiná učebna</string>
+    <string name="widget_added">přidáno</string>
+    <string name="widget_lesson_fallback">hodina</string>
+</resources>

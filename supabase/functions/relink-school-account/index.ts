@@ -8,6 +8,7 @@ import {
 import {
   canonicalSchoolBaseURL,
   canonicalSchoolProviderUserID,
+  schoolProviderIdentitiesMatchForRelink,
 } from "../_shared/school-account-identity.ts";
 
 Deno.serve(async (req) => {
@@ -71,8 +72,10 @@ Deno.serve(async (req) => {
       tokenPayload,
     );
     if (
-      account.provider_user_id && providerUserID &&
-      account.provider_user_id.trim() !== providerUserID
+      !schoolProviderIdentitiesMatchForRelink(
+        account.provider_user_id,
+        providerUserID,
+      )
     ) {
       return json({
         error: "The refreshed credentials belong to a different school account",

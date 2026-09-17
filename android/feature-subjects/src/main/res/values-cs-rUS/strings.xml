@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="marks_search_prompt">hledat předměty</string>
+    <string name="marks_search_empty">žádné předměty</string>
+    <string name="marks_search_clear">vymazat hledání předmětů</string>
+    <string name="mark_prediction_invalid">zadejte známku třeba 1, 2+ nebo 3-.</string>
+    <string name="mark_untitled">bez názvu</string>
+    <string name="mark_date_unavailable">datum není dostupné</string>
+    <string name="mark_date_today">dnes</string>
+    <string name="mark_date_yesterday">včera</string>
+    <plurals name="mark_date_days_ago">
+        <item quantity="one">před %1$d dnem</item>
+        <item quantity="few">před %1$d dny</item>
+        <item quantity="many">před %1$d dny</item>
+        <item quantity="other">před %1$d dny</item>
+    </plurals>
+    <plurals name="mark_date_weeks_ago">
+        <item quantity="one">před %1$d týdnem</item>
+        <item quantity="few">před %1$d týdny</item>
+        <item quantity="many">před %1$d týdny</item>
+        <item quantity="other">před %1$d týdny</item>
+    </plurals>
+    <plurals name="mark_date_months_ago">
+        <item quantity="one">před %1$d měsícem</item>
+        <item quantity="few">před %1$d měsíci</item>
+        <item quantity="many">před %1$d měsíci</item>
+        <item quantity="other">před %1$d měsíci</item>
+    </plurals>
+    <plurals name="mark_date_years_ago">
+        <item quantity="one">před %1$d rokem</item>
+        <item quantity="few">před %1$d lety</item>
+        <item quantity="many">před %1$d lety</item>
+        <item quantity="other">před %1$d lety</item>
+    </plurals>
+    <string name="mark_weight">váha %1$s×</string>
+    <string name="mark_weight_estimated">odhadovaná váha %1$s×</string>
+    <string name="mark_new">nová</string>
+    <string name="subject_average">průměr</string>
+    <string name="subject_predicted_average">předpokládaný průměr</string>
+    <plurals name="subject_mark_count">
+        <item quantity="one">%1$d známka</item>
+        <item quantity="few">%1$d známky</item>
+        <item quantity="many">%1$d známek</item>
+        <item quantity="other">%1$d známek</item>
+    </plurals>
+    <string name="subject_absence">absence %1$s %%</string>
+    <string name="subject_absence_unavailable">absence —</string>
+    <string name="subject_notes_section">poznámky</string>
+    <string name="subject_note_label">poznámka k předmětu</string>
+    <string name="subject_temporary_mark_label">dočasná známka</string>
+    <string name="subject_history_section">vývoj průměru</string>
+    <string name="subject_history_source_cloud">synchronizováno přes Gradey</string>
+    <string name="subject_history_source_local">vypočítáno ze známek</string>
+    <string name="subject_history_empty_title">historie průměru není k dispozici</string>
+    <string name="subject_history_empty_body">graf se vytvoří ze známek s datem. Gradey ID může synchronizovat i dlouhodobější historii.</string>
+    <string name="subject_trend_better">průměr se zlepšil o %1$s</string>
+    <string name="subject_trend_worse">průměr se zhoršil o %1$s</string>
+    <string name="subject_prediction_section">vyzkoušet známku</string>
+    <string name="subject_prediction_placeholder">známka, třeba 2+</string>
+    <string name="subject_prediction_unavailable">předpověď není dostupná</string>
+    <string name="subject_prediction_weight">váha %1$d</string>
+    <string name="subject_prediction_decrease_weight">snížit váhu</string>
+    <string name="subject_prediction_increase_weight">zvýšit váhu</string>
+    <string name="subject_prediction_new_average">nový průměr %1$s</string>
+    <string name="subject_prediction_better">zlepšení o %1$s</string>
+    <string name="subject_prediction_worse">zhoršení o %1$s</string>
+    <string name="subject_prediction_same">stejný průměr</string>
+    <string name="subject_prediction_checking">ověřování přes Bakaláře…</string>
+    <string name="subject_prediction_exact">vypočítáno Bakaláři</string>
+    <string name="subject_prediction_local">místní odhad</string>
+    <string name="marks_title">známky</string>
+    <string name="marks_overall_average">celkový průměr</string>
+    <plurals name="marks_subject_count">
+        <item quantity="one">%1$d předmět</item>
+        <item quantity="few">%1$d předměty</item>
+        <item quantity="many">%1$d předmětu</item>
+        <item quantity="other">%1$d předmětů</item>
+    </plurals>
+    <string name="marks_subjects_section">předměty</string>
+    <string name="marks_sort_focus">priorita</string>
+    <string name="marks_sort_average">průměr</string>
+    <string name="marks_sort_name">a-z</string>
+    <string name="marks_empty">žádné předměty</string>
+    <string name="marks_row_absence">%1$d%% absence</string>
+    <string name="marks_trends_section">vývoj známek</string>
+    <string name="marks_trends_range">90 dní</string>
+    <plurals name="marks_trends_new_marks">
+        <item quantity="one">%1$d nová známka</item>
+        <item quantity="few">%1$d nové známky</item>
+        <item quantity="many">%1$d nových známek</item>
+        <item quantity="other">%1$d nových známek</item>
+    </plurals>
+    <string name="marks_trends_movement">vývoj průměru</string>
+    <string name="marks_refresh_failed_title">známky se nepodařilo aktualizovat</string>
+    <string name="marks_refresh_failed_cached">ukazují se naposledy uložené známky.</string>
+    <string name="marks_refresh_retry">zkusit znovu</string>
+    <string name="marks_open_gradey_tools">otevřít Gradey tools</string>
+    <string name="marks_refresh_content_description">obnovit známky</string>
+    <string name="marks_open_account">otevřít účet</string>
+    <string name="marks_open_subject">otevřít %1$s</string>
+    <string name="subject_back">zpět</string>
+    <plurals name="subject_average_chart_description">
+        <item quantity="one">vývoj průměru, %1$d bod</item>
+        <item quantity="few">vývoj průměru, %1$d body</item>
+        <item quantity="many">vývoj průměru, %1$d bodu</item>
+        <item quantity="other">vývoj průměru, %1$d bodů</item>
+    </plurals>
+    <string name="subject_no_marks">zatím žádný známky</string>
+    <string name="subject_marks_section">známky</string>
+</resources>

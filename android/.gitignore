@@ -1,0 +1,15 @@
+.gradle/
+.idea/
+.kotlin/
+build/
+captures/
+local.properties
+*.iml
+*.keystore
+*.jks
+*.apk
+*.aab
+google-services.json
+supabase/functions/.env
+supabase/functions/.env.*
+

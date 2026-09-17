@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="login_title">připojit Bakaláře</string>
+    <string name="login_subtitle">přihlas se stejnou adresou školy, jménem a heslem jako do Bakalářů.</string>
+    <string name="login_back">zpět</string>
+    <string name="login_credentials_title">přihlášení do Bakalářů</string>
+    <string name="login_find_school">najít školu</string>
+    <string name="login_school_search_placeholder">název školy nebo město</string>
+    <string name="login_retry">zkusit znovu</string>
+    <string name="login_no_matching_school">žádný match. adresu školy můžeš zadat níže.</string>
+    <string name="login_manual_address_prompt">nebo zadej adresu školních Bakalářů</string>
+    <string name="login_use_demo_account">použít demo účet</string>
+    <string name="login_school_url">adresa školy</string>
+    <string name="login_school_url_required">adresa školy je povinná.</string>
+    <string name="login_school_url_invalid">zadej platnou adresu školy.</string>
+    <string name="login_username">uživatelské jméno</string>
+    <string name="login_username_required">uživatelské jméno je povinné.</string>
+    <string name="login_password">heslo</string>
+    <string name="login_password_required">heslo je povinné.</string>
+    <string name="login_hide_password">skrýt heslo</string>
+    <string name="login_show_password">ukázat heslo</string>
+    <string name="login_connecting">připojování…</string>
+    <string name="login_try_again">zkusit znovu</string>
+    <string name="login_connect_school">připojit školu</string>
+    <string name="login_cancel">zrušit</string>
+    <string name="login_credentials_privacy">přihlašovací údaje jsou v šifrovaném úložišti Androidu a používají se jen pro připojení ke škole. safe.</string>
+    <string name="login_manual_address_steps">1. otevři školní web Bakalářů.\n2. zkopíruj adresu z browseru.\n3. vlož sem celou adresu.\n4. zadej jméno a heslo do Bakalářů.</string>
+    <string name="login_manual_address_example">třeba: https://school.example.cz</string>
+    <string name="login_help">nápověda</string>
+    <string name="login_github">GitHub</string>
+</resources>

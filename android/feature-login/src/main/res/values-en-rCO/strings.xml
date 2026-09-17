@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="login_title">connect Bakaláři</string>
+    <string name="login_subtitle">use the same school address, username, and password you use for Bakaláři.</string>
+    <string name="login_back">back</string>
+    <string name="login_credentials_title">Bakaláři login</string>
+    <string name="login_find_school">find your school</string>
+    <string name="login_school_search_placeholder">school name or town</string>
+    <string name="login_retry">retry</string>
+    <string name="login_no_matching_school">no match. you can enter the school address below.</string>
+    <string name="login_manual_address_prompt">or enter the Bakaláři school address</string>
+    <string name="login_use_demo_account">use demo account</string>
+    <string name="login_school_url">school URL</string>
+    <string name="login_school_url_required">school URL is required.</string>
+    <string name="login_school_url_invalid">enter a valid school URL.</string>
+    <string name="login_username">username</string>
+    <string name="login_username_required">username is required.</string>
+    <string name="login_password">password</string>
+    <string name="login_password_required">password is required.</string>
+    <string name="login_hide_password">hide password</string>
+    <string name="login_show_password">show password</string>
+    <string name="login_connecting">connecting…</string>
+    <string name="login_try_again">try again</string>
+    <string name="login_connect_school">connect school</string>
+    <string name="login_cancel">cancel</string>
+    <string name="login_credentials_privacy">your login stays in Android encrypted storage and is only used to connect to your school server. safe.</string>
+    <string name="login_manual_address_steps">1. open your school’s Bakaláři site.\n2. copy the address from your browser.\n3. paste the full address below.\n4. enter your Bakaláři username and password.</string>
+    <string name="login_manual_address_example">like: https://school.example.cz</string>
+    <string name="login_help">help</string>
+    <string name="login_github">GitHub</string>
+</resources>

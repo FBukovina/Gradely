@@ -217,6 +217,7 @@ struct ContentView: View {
                         Tab("absence.title", image: "TabAbsence", value: AppTab.absence) {
                             AbsenceView(
                                 repository: repository,
+                                snapshotStore: schoolSnapshotStore,
                                 accountHub: AnyView(accountHub()),
                                 onOpenGradeyAI: presentGradeyAI
                             )

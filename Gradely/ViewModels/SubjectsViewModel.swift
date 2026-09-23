@@ -8,6 +8,7 @@ final class SubjectsViewModel {
     var isRefreshing = false
     var subjects: [Subject] = []
     var absencesPerSubject: [AbsencePerSubject] = []
+    var hasLocalAbsenceAdjustments = false
     var user: UserResponse?
     var errorMessage: String?
     var lastCacheDate: Date?
@@ -94,6 +95,7 @@ final class SubjectsViewModel {
             let dashboard = try await repository.loadDashboard(forceRefresh: forceRefresh)
             subjects = dashboard.marksResponse.subjects
             absencesPerSubject = dashboard.absencesPerSubject
+            hasLocalAbsenceAdjustments = (try? repository.loadCachedAbsenceData())?.data.overrideMetadata.hasLocalAdjustments ?? false
             user = dashboard.user
             lastCacheDate = Date()
             await refreshTrends()
@@ -108,6 +110,7 @@ final class SubjectsViewModel {
         guard let snapshotStore else { return }
         subjects = snapshotStore.subjects
         absencesPerSubject = snapshotStore.absence?.absencesPerSubject ?? []
+        hasLocalAbsenceAdjustments = snapshotStore.absence?.overrideMetadata.hasLocalAdjustments ?? false
         user = snapshotStore.user
         trends = snapshotStore.history.trends
         lastCacheDate = snapshotStore.marksFetchedAt
@@ -127,17 +130,14 @@ final class SubjectsViewModel {
     }
 
     func absence(for subject: Subject) -> AbsencePerSubject? {
-        let subjectName = subject.trimmedName.lowercased()
-        let subjectAbbrev = subject.trimmedAbbrev.lowercased()
+        Self.matchingAbsence(for: subject, in: absencesPerSubject)
+    }
 
-        return absencesPerSubject.first { absence in
-            let absenceName = absence.subjectName.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-            return absenceName == subjectName
-                || (!subjectAbbrev.isEmpty && absenceName == subjectAbbrev)
-                || absenceName.contains(subjectName)
-                || subjectName.contains(absenceName)
-                || (!subjectAbbrev.isEmpty && absenceName.contains(subjectAbbrev))
-        }
+    static func matchingAbsence(for subject: Subject, in rows: [AbsencePerSubject]) -> AbsencePerSubject? {
+        let normalized = AbsenceTimetableLessonResolver.normalized
+        let names = Set([normalized(subject.trimmedName), normalized(subject.trimmedAbbrev)].filter { !$0.isEmpty })
+        let matches = rows.filter { names.contains(normalized($0.subjectName)) }
+        return matches.count == 1 ? matches[0] : nil
     }
 
     private func userFacingMessage(for error: Error) -> String {

@@ -10,6 +10,7 @@ Gradely will be available on the App Store. Source code lives at [FBukovina/Grad
 - Store sessions securely in Keychain and renew expired Bakaláři tokens or EduPage cookies.
 - Cache marks locally so the dashboard can show recent data while refreshing.
 - View overall average, total marks, best subject, and subjects that need attention.
+- Hide and restore absence lessons or whole days locally. Gradey adjusts its statistics, keeps edits on this device, and asks for review if the school's record changes; school records are never edited.
 - Open a subject detail page with individual marks, weights, dates, absence data, and point-based marks.
 - Try a theoretical mark and weight to preview the new subject average.
 - Run UI tests against a built-in mock Bakalari client, no real school account required.

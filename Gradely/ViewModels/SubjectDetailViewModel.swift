@@ -5,7 +5,7 @@ import Observation
 @Observable
 final class SubjectDetailViewModel {
     private(set) var subject: Subject
-    let absence: AbsencePerSubject?
+    private(set) var absence: AbsencePerSubject?
     private(set) var trend: SubjectGradeTrend?
     private(set) var summary: SubjectInsightSummary?
 
@@ -31,6 +31,10 @@ final class SubjectDetailViewModel {
         self.trend = trend
         self.summary = summary
         preparedCalculation = prepared ?? GradeMath.prepare(subject)
+    }
+
+    func updateAbsence(_ absence: AbsencePerSubject?) {
+        self.absence = absence
     }
 
     var currentAverage: Double? {

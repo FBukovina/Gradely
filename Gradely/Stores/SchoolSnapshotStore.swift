@@ -55,6 +55,12 @@ final class SchoolSnapshotStore {
         self.historyDirectory = historyDirectory
         self.insightState = SchoolInsightStateStore(directory: historyDirectory)
         self.now = now
+        repository.onAbsenceOverridesChange = { [weak self] changedScope, data in
+            self?.acceptLocalAbsenceUpdate(data, scope: changedScope)
+        }
+        repository.onAbsenceDataLoaded = { [weak self] changedScope, data, fetchedAt in
+            self?.acceptNetworkAbsenceUpdate(data, scope: changedScope, fetchedAt: fetchedAt)
+        }
     }
 
     var marksFetchedAt: Date? { freshness["marks"]?.lastSuccessAt }
@@ -108,9 +114,8 @@ final class SchoolSnapshotStore {
         if let cached = try? repository.loadCachedMarks() {
             acceptMarks(cached.marksResponse.subjects, at: cached.cachedAt, isCached: true)
         }
-        if let cached = try? repository.loadCachedAbsence() {
-            absence = AbsenceData(response: cached.response, absencesPerSubject: cached.response.absencesPerSubject,
-                                  subjectResolutionSource: .official, user: nil)
+        if let cached = try? repository.loadCachedAbsenceData() {
+            absence = cached.data
             freshness["absence"] = SchoolSourceFreshness(lastSuccessAt: cached.cachedAt)
         }
         for date in [now(), TimetableDates.addingWeeks(1, to: now())] {
@@ -124,6 +129,29 @@ final class SchoolSnapshotStore {
         loadCachedHistory()
         revision += 1
         return true
+    }
+
+    /// Local changes reuse the latest raw school snapshot and never advance network freshness.
+    func acceptLocalAbsenceUpdate(_ data: AbsenceData, scope changedScope: SchoolDataScope) {
+        activateCurrentScope()
+        guard changedScope == scope, data.sessionGeneration == repository.sessionGeneration,
+              let session = try? repository.currentStoredSession(),
+              data.overrideScope == SchoolDataScope.absenceOverrides(session: session) else { return }
+        absence = data
+        revision += 1
+    }
+
+    private func acceptNetworkAbsenceUpdate(_ data: AbsenceData, scope changedScope: SchoolDataScope, fetchedAt: Date) {
+        activateCurrentScope()
+        guard changedScope == scope, data.sessionGeneration == repository.sessionGeneration,
+              let session = try? repository.currentStoredSession(),
+              data.overrideScope == SchoolDataScope.absenceOverrides(session: session) else { return }
+        absence = data
+        var state = sourceState("absence")
+        state.lastSuccessAt = fetchedAt
+        state.error = nil
+        freshness["absence"] = state
+        revision += 1
     }
 
     func invalidateSession() {

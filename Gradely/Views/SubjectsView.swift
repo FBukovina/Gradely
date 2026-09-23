@@ -129,6 +129,13 @@ struct SubjectsView: View {
                         .accessibilityIdentifier("marksTrendSection")
                 }
 
+                if viewModel.hasLocalAbsenceAdjustments {
+                    GradelyLabel(AppL10n.string("absence.title") + " · " + AppL10n.string("absence.override.adjusted"), systemImage: "eye.slash")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .accessibilityIdentifier("subjectsAbsenceAdjusted")
+                }
+
                 SubjectDirectory(
                     subjects: displayedSubjects,
                     sortMode: $sortMode,

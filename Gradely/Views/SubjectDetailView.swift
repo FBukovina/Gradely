@@ -25,7 +25,7 @@ struct SubjectDetailView: View {
         } else {
         ScrollView {
             VStack(spacing: Spacing.xl) {
-                AverageHero(viewModel: viewModel)
+                AverageHero(viewModel: viewModel, hasLocalAbsenceAdjustment: hasLocalAbsenceAdjustment)
                 chartSection
                 insightsSection
                 calculatorSection
@@ -52,9 +52,19 @@ struct SubjectDetailView: View {
         }
     }
 
+    private var hasLocalAbsenceAdjustment: Bool {
+        guard let snapshotStore, snapshotStore.scope == navigationScope,
+              let absence = viewModel.absence else { return false }
+        let name = AbsenceOverrideProjection.normalizedSubjectName(absence.subjectName)
+        return snapshotStore.absence?.overrideMetadata.activeOverrides.contains { saved in
+            saved.hiddenAllocations.contains { AbsenceOverrideProjection.normalizedSubjectName($0.subjectName) == name }
+        } ?? false
+    }
+
     private func refreshSubjectSnapshot() {
         guard let snapshotStore, snapshotStore.scope == navigationScope,
               let subject = snapshotStore.subject(id: viewModel.subject.id) else { return }
+        viewModel.updateAbsence(SubjectsViewModel.matchingAbsence(for: subject, in: snapshotStore.absence?.absencesPerSubject ?? []))
         viewModel.updateSubject(
             subject,
             prepared: snapshotStore.preparedCalculations[subject.id],
@@ -218,6 +228,7 @@ struct SubjectDetailView: View {
 
 private struct AverageHero: View {
     let viewModel: SubjectDetailViewModel
+    let hasLocalAbsenceAdjustment: Bool
 
     var body: some View {
         let band = GradeMath.band(for: viewModel.currentAverage)
@@ -252,6 +263,12 @@ private struct AverageHero: View {
                         systemImage: "calendar"
                     )
                 }
+            }
+            if hasLocalAbsenceAdjustment {
+                GradelyLabel("absence.override.adjusted", systemImage: "eye.slash")
+                    .font(.caption)
+                    .foregroundStyle(.white.opacity(0.85))
+                    .accessibilityIdentifier("subjectAbsenceAdjusted")
             }
         }
         .frame(maxWidth: .infinity)

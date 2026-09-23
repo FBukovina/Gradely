@@ -13,6 +13,13 @@ struct DashboardData: Equatable {
 }
 
 struct AbsenceData: Equatable {
+    let rawResponse: AbsenceResponse
+    let rawAbsencesPerSubject: [AbsencePerSubject]
+    let scope: SchoolDataScope?
+    let overrideScope: SchoolDataScope?
+    let sessionGeneration: UUID?
+    let overrideMetadata: AbsenceOverrideMetadata
+    let overrideError: String?
     let response: AbsenceResponse
     let absencesPerSubject: [AbsencePerSubject]
     let subjectResolutionSource: AbsenceSubjectResolutionSource
@@ -24,12 +31,26 @@ struct AbsenceData: Equatable {
     init(
         response: AbsenceResponse,
         absencesPerSubject: [AbsencePerSubject],
+        rawResponse: AbsenceResponse? = nil,
+        rawAbsencesPerSubject: [AbsencePerSubject]? = nil,
+        scope: SchoolDataScope? = nil,
+        overrideScope: SchoolDataScope? = nil,
+        sessionGeneration: UUID? = nil,
+        overrideMetadata: AbsenceOverrideMetadata = .empty,
+        overrideError: String? = nil,
         subjectResolutionSource: AbsenceSubjectResolutionSource,
         subjectResolutionWarning: String? = nil,
         subjectStableIDHints: [String] = [],
         unresolvedPartialDays: [AbsencePartialDayCandidate] = [],
         user: UserResponse?
     ) {
+        self.rawResponse = rawResponse ?? response
+        self.rawAbsencesPerSubject = rawAbsencesPerSubject ?? absencesPerSubject
+        self.scope = scope
+        self.overrideScope = overrideScope ?? scope
+        self.sessionGeneration = sessionGeneration
+        self.overrideMetadata = overrideMetadata
+        self.overrideError = overrideError
         self.response = response
         self.absencesPerSubject = absencesPerSubject
         self.subjectResolutionSource = subjectResolutionSource
@@ -38,6 +59,25 @@ struct AbsenceData: Equatable {
         self.unresolvedPartialDays = unresolvedPartialDays
         self.user = user
     }
+}
+
+struct AbsenceOverrideSubjectOption: Identifiable, Equatable {
+    let id: String
+    let subjectKey: String?
+    let subjectName: String
+}
+
+struct AbsenceOverrideEditorContext: Equatable {
+    let scope: SchoolDataScope
+    let overrideScope: SchoolDataScope
+    let sessionGeneration: UUID
+    let rawDay: AbsenceDay
+    let dateKey: String
+    let lessons: [AbsenceLessonCandidate]
+    let selectedLessonIDs: Set<String>
+    let subjects: [AbsenceOverrideSubjectOption]
+    let existingOverride: AbsenceDayOverride?
+    let data: AbsenceData
 }
 
 enum AbsenceSubjectResolutionSource: Equatable {
@@ -78,6 +118,10 @@ final class SchoolRepository {
     private let absenceCache: any AbsenceCaching
     private let timetableCache: any TimetableCaching
     private let nextLessonWidgetStore: (any NextLessonWidgetStoring)?
+    private let absenceOverrideStore: any AbsenceOverrideStoring
+    private var latestAbsenceData: [SchoolDataScope: AbsenceData] = [:]
+    var onAbsenceOverridesChange: ((SchoolDataScope, AbsenceData) -> Void)?
+    var onAbsenceDataLoaded: ((SchoolDataScope, AbsenceData, Date) -> Void)?
     private let absenceLessonSelectionStore: any AbsenceLessonSelectionStoring
     private let schoolDirectoryProvider: (any SchoolDirectoryProviding)?
     private let watchSyncService: (any WatchSyncing)?
@@ -121,6 +165,7 @@ final class SchoolRepository {
 
     private func invalidateRequests() {
         sessionGeneration = UUID()
+        latestAbsenceData.removeAll()
         bakalariRefreshTask?.cancel()
         bakalariRefreshTask = nil
         bakalariRefreshGeneration = nil
@@ -155,6 +200,7 @@ final class SchoolRepository {
         timetableCache: any TimetableCaching = InMemoryTimetableCache(),
         nextLessonWidgetStore: (any NextLessonWidgetStoring)? = nil,
         absenceLessonSelectionStore: any AbsenceLessonSelectionStoring = InMemoryAbsenceLessonSelectionStore(),
+        absenceOverrideStore: any AbsenceOverrideStoring = InMemoryAbsenceOverrideStore(),
         schoolDirectoryProvider: (any SchoolDirectoryProviding)? = nil,
         watchSyncService: (any WatchSyncing)? = nil,
         dateProvider: @escaping () -> Date = Date.init,
@@ -168,6 +214,7 @@ final class SchoolRepository {
         self.timetableCache = timetableCache
         self.nextLessonWidgetStore = nextLessonWidgetStore
         self.absenceLessonSelectionStore = absenceLessonSelectionStore
+        self.absenceOverrideStore = absenceOverrideStore
         self.schoolDirectoryProvider = schoolDirectoryProvider
         self.watchSyncService = watchSyncService
         self.dateProvider = dateProvider
@@ -462,6 +509,238 @@ final class SchoolRepository {
         return try absenceCache.load(scope: SchoolDataScope(session: session))
     }
 
+    /// Returns an effective snapshot while leaving the provider cache untouched.
+    func loadCachedAbsenceData() throws -> (data: AbsenceData, cachedAt: Date)? {
+        guard let session = try sessionStore.loadSession(),
+              let cached = try absenceCache.load(scope: SchoolDataScope(session: session)) else { return nil }
+        return (projectAbsenceData(rawResponse: cached.response, session: session, user: nil), cached.cachedAt)
+    }
+
+    private func mergeOverrideSelections(_ overrides: [AbsenceDayOverride], rawResponse: AbsenceResponse,
+                                         scope: SchoolDataScope, into selections: inout AbsenceLessonSelections) {
+        let original = AbsenceOverrideProjection.manualSelections(for: overrides, rawResponse: rawResponse, scope: scope)
+        selections.selectedLessonIDsByDate.merge(original.selectedLessonIDsByDate) { _, incoming in incoming }
+    }
+
+    private func cachedAbsenceBaseline(rawResponse: AbsenceResponse, session: StoredSession,
+                                       user: UserResponse?, overrides: [AbsenceDayOverride]) -> AbsenceData {
+        let scope = SchoolDataScope(session: session)
+        let overrideScope = SchoolDataScope.absenceOverrides(session: session)
+        if !rawResponse.absencesPerSubject.isEmpty {
+            return AbsenceData(response: rawResponse, absencesPerSubject: rawResponse.absencesPerSubject,
+                               subjectResolutionSource: .official, user: user)
+        }
+        let previous = latestAbsenceData[scope].flatMap { $0.rawResponse == rawResponse && $0.overrideScope == overrideScope ? $0 : nil }
+        guard !overrides.isEmpty || previous != nil else {
+            return AbsenceData(response: rawResponse, absencesPerSubject: [], subjectResolutionSource: .unavailable, user: user)
+        }
+        let term = AbsenceSubjectFallback.term(for: rawResponse.absences, now: dateProvider())
+        let timetables = term.weekStarts.compactMap { try? timetableCache.load(weekStart: $0, scope: scope)?.response }
+        guard !timetables.isEmpty else {
+            return AbsenceData(response: rawResponse, absencesPerSubject: [],
+                               subjectResolutionSource: .unavailable, user: user)
+        }
+        let marks = (try? marksCache.load(scope: scope))?.marksResponse.subjects ?? []
+        var selections = (try? absenceLessonSelectionStore.load(scope: absenceLessonSelectionScope(session: session, user: user))) ?? .empty
+        mergeOverrideSelections(overrides, rawResponse: rawResponse, scope: overrideScope, into: &selections)
+        let resolved = AbsenceSubjectFallback.makeAbsenceResult(
+            from: rawResponse, timetableResponses: timetables, subjects: marks,
+            manualSelections: selections,
+            manualAllocationsByDate: AbsenceOverrideProjection.manualAllocations(for: overrides, rawResponse: rawResponse, scope: overrideScope),
+            validDateRange: term.start...term.end
+        )
+        let partial = timetables.count < term.weekStarts.count
+        return AbsenceData(response: rawResponse, absencesPerSubject: resolved.absences,
+                           subjectResolutionSource: resolved.absences.isEmpty ? .unavailable : (partial ? .partialSynthesized : .synthesized),
+                           subjectResolutionWarning: partial ? AppL10n.string("absence.subjects.partial.warning") : nil,
+                           subjectStableIDHints: resolved.stableIDHints, unresolvedPartialDays: resolved.unresolvedPartialDays, user: user)
+    }
+
+    private func currentOverrideLessons(overrides: [AbsenceDayOverride], session: StoredSession) -> [String: [AbsenceLessonCandidate]] {
+        let scope = SchoolDataScope(session: session)
+        let marks = (try? marksCache.load(scope: scope))?.marksResponse.subjects ?? []
+        var lessons: [String: [AbsenceLessonCandidate]] = [:]
+        for item in overrides {
+            guard let date = MarkDateFormatter.date(from: item.dateKey),
+                  let cached = try? timetableCache.load(weekStart: TimetableDates.monday(of: date), scope: scope) else { continue }
+            lessons[item.dateKey] = AbsenceTimetableLessonResolver.candidates(on: date, in: cached.response, subjects: marks)
+        }
+        return lessons
+    }
+
+    private func projectAbsenceData(rawResponse: AbsenceResponse, session: StoredSession, user: UserResponse?,
+                                    resolvedBaseline: AbsenceData? = nil) -> AbsenceData {
+        do { return try projectedAbsenceData(rawResponse: rawResponse, session: session, user: user, resolvedBaseline: resolvedBaseline) }
+        catch {
+            let baseline = resolvedBaseline ?? cachedAbsenceBaseline(rawResponse: rawResponse, session: session, user: user, overrides: [])
+            return AbsenceData(response: rawResponse, absencesPerSubject: baseline.rawAbsencesPerSubject,
+                               scope: SchoolDataScope(session: session), overrideScope: SchoolDataScope.absenceOverrides(session: session),
+                               sessionGeneration: sessionGeneration, overrideError: error.localizedDescription,
+                               subjectResolutionSource: baseline.subjectResolutionSource,
+                               subjectResolutionWarning: baseline.subjectResolutionWarning,
+                               subjectStableIDHints: baseline.subjectStableIDHints,
+                               unresolvedPartialDays: baseline.unresolvedPartialDays, user: user)
+        }
+    }
+
+    private func projectedAbsenceData(rawResponse: AbsenceResponse, session: StoredSession, user: UserResponse?,
+                                      resolvedBaseline: AbsenceData? = nil,
+                                      overrides suppliedOverrides: [AbsenceDayOverride]? = nil,
+                                      persistReconciliation: Bool = true) throws -> AbsenceData {
+        let scope = SchoolDataScope(session: session)
+        let overrideScope = SchoolDataScope.absenceOverrides(session: session)
+        let overrides = try suppliedOverrides ?? absenceOverrideStore.load(scope: overrideScope)
+        var baseline = resolvedBaseline ?? cachedAbsenceBaseline(rawResponse: rawResponse, session: session, user: user, overrides: overrides)
+        var result = AbsenceOverrideProjection.project(rawResponse: rawResponse,
+            rawSubjects: baseline.rawAbsencesPerSubject, subjectStableIDHints: baseline.subjectStableIDHints,
+            overrides: overrides, scope: overrideScope, currentLessonsByDate: currentOverrideLessons(overrides: overrides, session: session))
+        if result.reconciledOverrides != overrides, rawResponse.absencesPerSubject.isEmpty {
+            // A paused assignment cannot remain part of the synthesized raw baseline.
+            baseline = cachedAbsenceBaseline(rawResponse: rawResponse, session: session, user: user, overrides: result.reconciledOverrides)
+            result = AbsenceOverrideProjection.project(rawResponse: rawResponse,
+                rawSubjects: baseline.rawAbsencesPerSubject, subjectStableIDHints: baseline.subjectStableIDHints,
+                overrides: result.reconciledOverrides, scope: overrideScope,
+                currentLessonsByDate: currentOverrideLessons(overrides: result.reconciledOverrides, session: session))
+        }
+        if persistReconciliation, result.reconciledOverrides != overrides {
+            try absenceOverrideStore.save(result.reconciledOverrides, scope: overrideScope)
+        }
+        let data = AbsenceData(response: result.response, absencesPerSubject: result.absencesPerSubject,
+                               rawResponse: rawResponse, rawAbsencesPerSubject: baseline.rawAbsencesPerSubject,
+                               scope: scope, overrideScope: overrideScope, sessionGeneration: sessionGeneration, overrideMetadata: result.metadata,
+                               subjectResolutionSource: baseline.subjectResolutionSource,
+                               subjectResolutionWarning: baseline.subjectResolutionWarning,
+                               subjectStableIDHints: baseline.subjectStableIDHints,
+                               unresolvedPartialDays: baseline.unresolvedPartialDays, user: user)
+        if persistReconciliation { latestAbsenceData[scope] = data }
+        return data
+    }
+
+    func loadAbsenceOverrideEditorContext(dateKey: String, user: UserResponse?) async throws -> AbsenceOverrideEditorContext {
+        guard let session = try sessionStore.loadSession() else { throw AppError.notLoggedIn }
+        let requestContext = context(for: session)
+        let scope = SchoolDataScope(session: session)
+        guard let initialRaw = try absenceCache.load(scope: scope)?.response ?? latestAbsenceData[scope]?.rawResponse,
+              initialRaw.absences.contains(where: { Self.absenceDateKey($0.date) == dateKey }) else {
+            throw AppError.unknown(AppL10n.string("absence.override.error.unavailable"))
+        }
+        var lessons: [AbsenceLessonCandidate] = []
+        if let date = MarkDateFormatter.date(from: dateKey) {
+            let monday = TimetableDates.monday(of: date)
+            var timetable = try? timetableCache.load(weekStart: monday, scope: scope)?.response
+            if timetable == nil {
+                timetable = await loadUncachedRawTimetableWithTimeout(weekStart: monday, session: session).response
+                try validate(requestContext)
+            }
+            if let timetable {
+                let marks = (try? marksCache.load(scope: scope))?.marksResponse.subjects ?? []
+                lessons = AbsenceTimetableLessonResolver.candidates(on: date, in: timetable, subjects: marks)
+            }
+        }
+        try validate(requestContext)
+        guard let raw = try absenceCache.load(scope: scope)?.response ?? latestAbsenceData[scope]?.rawResponse,
+              let day = raw.absences.first(where: { Self.absenceDateKey($0.date) == dateKey }) else {
+            throw AppError.unknown(AppL10n.string("absence.override.error.unavailable"))
+        }
+        let data = try projectedAbsenceData(rawResponse: raw, session: session, user: user)
+        let existing = (data.overrideMetadata.activeOverrides + data.overrideMetadata.reviewOverrides).first { $0.dateKey == dateKey }
+        var selected = ((try? absenceLessonSelectionStore.load(scope: absenceLessonSelectionScope(session: session, user: user))) ?? .empty)
+            .selectedLessonIDs(for: dateKey)
+        let baseCount = day.ok + day.unsolved + day.missed
+        if baseCount == lessons.count { selected = Set(lessons.map(\.id)) }
+        if let existing { selected = Set(existing.allocations.filter { $0.category.contributesToBase }.compactMap(\.lessonID)) }
+        let normalized = AbsenceTimetableLessonResolver.normalized
+        var options: [AbsenceOverrideSubjectOption] = []
+        let rawSubjects = data.rawAbsencesPerSubject
+        for (index, row) in rawSubjects.enumerated() {
+            guard rawSubjects.filter({ normalized($0.subjectName) == normalized(row.subjectName) }).count == 1 else { continue }
+            let stableKey = data.subjectStableIDHints.indices.contains(index) ? data.subjectStableIDHints[index] : nil
+            options.append(AbsenceOverrideSubjectOption(id: stableKey ?? "official-\(index)", subjectKey: stableKey, subjectName: row.subjectName))
+        }
+        // Keep original unhidden lesson assignments truthful even when the school
+        // omitted their subject aggregate. Only hidden units require an official match.
+        for lesson in lessons where !options.contains(where: { $0.subjectKey == lesson.subjectKey || normalized($0.subjectName) == normalized(lesson.subjectName) }) {
+            guard rawSubjects.filter({ normalized($0.subjectName) == normalized(lesson.subjectName) }).count <= 1 else { continue }
+            options.append(AbsenceOverrideSubjectOption(id: lesson.subjectKey, subjectKey: lesson.subjectKey, subjectName: lesson.subjectName))
+        }
+        // Without official aggregates, cached mark identities can preserve an unknown denominator.
+        if raw.absencesPerSubject.isEmpty {
+            let marks = (try? marksCache.load(scope: scope))?.marksResponse.subjects ?? []
+            for subject in marks where !options.contains(where: { normalized($0.subjectName) == normalized(subject.trimmedName) }) {
+                options.append(AbsenceOverrideSubjectOption(id: subject.id, subjectKey: subject.id, subjectName: subject.trimmedName))
+            }
+        }
+        let editor = AbsenceOverrideEditorContext(scope: scope, overrideScope: SchoolDataScope.absenceOverrides(session: session),
+            sessionGeneration: sessionGeneration, rawDay: day,
+            dateKey: dateKey, lessons: lessons, selectedLessonIDs: selected, subjects: options, existingOverride: existing, data: data)
+        onAbsenceOverridesChange?(scope, data)
+        return editor
+    }
+
+    func saveAbsenceOverride(_ edit: AbsenceDayOverride, context editor: AbsenceOverrideEditorContext,
+                             user: UserResponse?) async throws -> AbsenceData {
+        let session = try overrideSession(scope: editor.scope, overrideScope: editor.overrideScope, generation: editor.sessionGeneration)
+        guard edit.scope == editor.overrideScope, edit.dateKey == editor.dateKey,
+              edit.baselineDay == editor.rawDay,
+              let raw = try absenceCache.load(scope: editor.scope)?.response ?? latestAbsenceData[editor.scope]?.rawResponse else {
+            throw AppError.unknown(AppL10n.string("absence.override.error.changed"))
+        }
+        var overrides = try absenceOverrideStore.load(scope: editor.overrideScope)
+        overrides.removeAll { $0.dateKey == edit.dateKey }
+        overrides.append(edit)
+        let projected = try projectedAbsenceData(rawResponse: raw, session: session, user: user,
+                                                 overrides: overrides, persistReconciliation: false)
+        guard projected.overrideMetadata.activeOverrides.contains(where: { $0.id == edit.id }) else {
+            throw AppError.unknown(AppL10n.string("absence.override.error.changed"))
+        }
+        try absenceOverrideStore.save((projected.overrideMetadata.activeOverrides + projected.overrideMetadata.reviewOverrides).sorted { $0.dateKey < $1.dateKey }, scope: editor.overrideScope)
+        latestAbsenceData[editor.scope] = projected
+        onAbsenceOverridesChange?(editor.scope, projected)
+        return projected
+    }
+
+    func restoreAbsenceOverride(dateKey: String, scope: SchoolDataScope, overrideScope: SchoolDataScope,
+                                sessionGeneration generation: UUID,
+                                user: UserResponse?) async throws -> AbsenceData {
+        let session = try overrideSession(scope: scope, overrideScope: overrideScope, generation: generation)
+        var overrides = try absenceOverrideStore.load(scope: overrideScope)
+        overrides.removeAll { $0.dateKey == dateKey }
+        return try persistRestoredOverrides(overrides, session: session, user: user)
+    }
+
+    func resetAbsenceOverrides(scope: SchoolDataScope, overrideScope: SchoolDataScope, sessionGeneration generation: UUID,
+                              user: UserResponse?) async throws -> AbsenceData {
+        let session = try overrideSession(scope: scope, overrideScope: overrideScope, generation: generation)
+        return try persistRestoredOverrides([], session: session, user: user)
+    }
+
+    private func persistRestoredOverrides(_ overrides: [AbsenceDayOverride], session: StoredSession, user: UserResponse?) throws -> AbsenceData {
+        let scope = SchoolDataScope(session: session)
+        let raw = try absenceCache.load(scope: scope)?.response ?? latestAbsenceData[scope]?.rawResponse
+            ?? AbsenceResponse(percentageThreshold: nil, absences: [], absencesPerSubject: [])
+        let projected = try projectedAbsenceData(rawResponse: raw, session: session, user: user,
+                                                 overrides: overrides, persistReconciliation: false)
+        try absenceOverrideStore.save((projected.overrideMetadata.activeOverrides + projected.overrideMetadata.reviewOverrides).sorted { $0.dateKey < $1.dateKey }, scope: SchoolDataScope.absenceOverrides(session: session))
+        latestAbsenceData[scope] = projected
+        onAbsenceOverridesChange?(scope, projected)
+        return projected
+    }
+
+    private func overrideSession(scope: SchoolDataScope, overrideScope: SchoolDataScope, generation: UUID) throws -> StoredSession {
+        guard let session = try sessionStore.loadSession() else { throw AppError.notLoggedIn }
+        guard generation == sessionGeneration, SchoolDataScope(session: session) == scope,
+              SchoolDataScope.absenceOverrides(session: session) == overrideScope else { throw CancellationError() }
+        func hasValue(_ value: String?) -> Bool { value?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false }
+        let hasIdentity = hasValue(session.linkedAccountID) || hasValue(session.bakalari?.username)
+            || (session.provider == .eduPage && (hasValue(session.eduPage?.activeStudent?.id) || hasValue(session.eduPage?.userID)))
+        guard hasIdentity else { throw AppError.unknown(AppL10n.string("absence.override.error.identity")) }
+        return session
+    }
+
+    private static func absenceDateKey(_ value: String) -> String {
+        AbsenceOverrideProjection.dateKey(value)
+    }
+
     var supportsPermanentTimetable: Bool { currentProvider == .bakalari }
 
     /// Cached week for instant/offline display, if it matches the requested week.
@@ -566,7 +845,9 @@ final class SchoolRepository {
         if let absence { try? absenceCache.save(absence, scope: SchoolDataScope(session: session)) }
         let resolved = resolvedUser(loadedUser, session: session)
         if let resolved { watchSyncService?.update(user: resolved) }
-        return DashboardData(marksResponse: marksResponse, absencesPerSubject: absence?.absencesPerSubject ?? [], user: resolved)
+        let projected = absence.map { projectAbsenceData(rawResponse: $0, session: session, user: resolved) }
+        if let projected { onAbsenceDataLoaded?(SchoolDataScope(session: session), projected, dateProvider()) }
+        return DashboardData(marksResponse: marksResponse, absencesPerSubject: projected?.absencesPerSubject ?? [], user: resolved)
     }
 
     func loadAbsence(forceRefresh: Bool = false, includeUser: Bool = true) async throws -> AbsenceData {
@@ -585,12 +866,9 @@ final class SchoolRepository {
             watchSyncService?.update(user: resolvedAbsenceUser)
         }
 
-        return AbsenceData(
-            response: response,
-            absencesPerSubject: response.absencesPerSubject,
-            subjectResolutionSource: response.absencesPerSubject.isEmpty ? .unavailable : .official,
-            user: resolvedAbsenceUser
-        )
+        let projected = projectAbsenceData(rawResponse: response, session: session, user: resolvedAbsenceUser)
+        onAbsenceDataLoaded?(scope, projected, dateProvider())
+        return projected
     }
 
     func resolveAbsencesPerSubject(
@@ -598,70 +876,52 @@ final class SchoolRepository {
         user: UserResponse? = nil,
         progress: ((AbsenceSubjectResolutionProgress) async -> Void)? = nil
     ) async throws -> AbsenceData {
-        guard response.absencesPerSubject.isEmpty else {
-            return AbsenceData(
-                response: response,
-                absencesPerSubject: response.absencesPerSubject,
-                subjectResolutionSource: .official,
-                user: nil
-            )
-        }
-
-        guard !response.absences.isEmpty else {
-            return AbsenceData(
-                response: response,
-                absencesPerSubject: [],
-                subjectResolutionSource: .unavailable,
-                user: nil
-            )
-        }
-
         let session = try await validSession()
         let requestContext = context(for: session)
-        let selectionScope = absenceLessonSelectionScope(session: session, user: user)
-        let manualSelections = (try? absenceLessonSelectionStore.load(scope: selectionScope)) ?? .empty
-        let marksResponse = try? await marksResponseForAbsenceFallback(session: session)
-        let term = AbsenceSubjectFallback.term(
-            for: response.absences,
-            now: dateProvider()
-        )
-        let timetables = await loadTermTimetableResponses(
-            weekStarts: term.weekStarts,
-            session: session,
-            progress: progress
-        )
-
-        try validate(requestContext)
-        guard !timetables.responses.isEmpty else {
-            throw AbsenceSubjectResolutionError.noUsableTimetable
+        guard response.absencesPerSubject.isEmpty, !response.absences.isEmpty else {
+            return projectAbsenceData(rawResponse: response, session: session, user: user)
         }
-
+        let selectionScope = absenceLessonSelectionScope(session: session, user: user)
+        var manualSelections = (try? absenceLessonSelectionStore.load(scope: selectionScope)) ?? .empty
+        let scope = SchoolDataScope(session: session)
+        let overrideScope = SchoolDataScope.absenceOverrides(session: session)
+        let overrides = (try? absenceOverrideStore.load(scope: overrideScope)) ?? []
+        mergeOverrideSelections(overrides, rawResponse: response, scope: overrideScope, into: &manualSelections)
+        let marksResponse = try? await marksResponseForAbsenceFallback(session: session)
+        let term = AbsenceSubjectFallback.term(for: response.absences, now: dateProvider())
+        let timetables = await loadTermTimetableResponses(weekStarts: term.weekStarts, session: session, progress: progress)
+        try validate(requestContext)
+        guard !timetables.responses.isEmpty else { throw AbsenceSubjectResolutionError.noUsableTimetable }
+        // Re-read after the network await: local edits may have changed during this request.
+        if let latestRaw = try absenceCache.load(scope: scope)?.response, latestRaw != response { throw CancellationError() }
+        let currentOverrides = (try? absenceOverrideStore.load(scope: overrideScope)) ?? []
+        manualSelections = (try? absenceLessonSelectionStore.load(scope: selectionScope)) ?? .empty
+        mergeOverrideSelections(currentOverrides, rawResponse: response, scope: overrideScope, into: &manualSelections)
         let resolved = AbsenceSubjectFallback.makeAbsenceResult(
-            from: response,
-            timetableResponses: timetables.responses,
-            subjects: marksResponse?.subjects ?? [],
-            manualSelections: manualSelections,
+            from: response, timetableResponses: timetables.responses,
+            subjects: marksResponse?.subjects ?? [], manualSelections: manualSelections,
+            manualAllocationsByDate: AbsenceOverrideProjection.manualAllocations(for: currentOverrides, rawResponse: response, scope: overrideScope),
             validDateRange: term.start...term.end
         )
-        let hasPartialTimetable = timetables.failedWeeks > 0
-        let warning = hasPartialTimetable ? AppL10n.string("absence.subjects.partial.warning") : nil
-
-        return AbsenceData(
-            response: response,
-            absencesPerSubject: resolved.absences,
-            subjectResolutionSource: resolved.absences.isEmpty ? .unavailable : (hasPartialTimetable ? .partialSynthesized : .synthesized),
-            subjectResolutionWarning: warning,
+        let partial = timetables.failedWeeks > 0
+        let baseline = AbsenceData(
+            response: response, absencesPerSubject: resolved.absences,
+            subjectResolutionSource: resolved.absences.isEmpty ? .unavailable : (partial ? .partialSynthesized : .synthesized),
+            subjectResolutionWarning: partial ? AppL10n.string("absence.subjects.partial.warning") : nil,
             subjectStableIDHints: resolved.stableIDHints,
-            unresolvedPartialDays: resolved.unresolvedPartialDays,
-            user: nil
+            unresolvedPartialDays: resolved.unresolvedPartialDays, user: user
         )
+        let data = projectAbsenceData(rawResponse: response, session: session, user: user, resolvedBaseline: baseline)
+        onAbsenceOverridesChange?(scope, data)
+        return data
     }
 
     func saveManualAbsenceLessonSelections(
         selectedLessonIDsByDate: [String: Set<String>],
         user: UserResponse?
     ) async throws {
-        let session = try await validSession()
+        guard let session = try sessionStore.loadSession() else { throw AppError.notLoggedIn }
+        let requestContext = context(for: session)
         let scope = absenceLessonSelectionScope(session: session, user: user)
         var selections = try absenceLessonSelectionStore.load(scope: scope)
 
@@ -669,6 +929,7 @@ final class SchoolRepository {
             selections.selectedLessonIDsByDate[dateKey] = Array(lessonIDs).sorted()
         }
 
+        try validate(requestContext)
         try absenceLessonSelectionStore.save(selections, scope: scope)
     }
 

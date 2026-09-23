@@ -81,6 +81,7 @@ import Foundation
         let absenceCache: any AbsenceCaching = (try? AbsenceCache()) ?? InMemoryAbsenceCache()
         let timetableCache: any TimetableCaching = (try? TimetableCache()) ?? InMemoryTimetableCache()
         let absenceLessonSelectionStore: any AbsenceLessonSelectionStoring = (try? AbsenceLessonSelectionStore()) ?? InMemoryAbsenceLessonSelectionStore()
+        let absenceOverrideStore: any AbsenceOverrideStoring = (try? AbsenceOverrideStore()) ?? UnavailableAbsenceOverrideStore()
         let schoolDirectoryCache: any SchoolDirectoryCaching = (try? SchoolDirectoryCache()) ?? InMemorySchoolDirectoryCache()
         let schoolDirectoryProvider = URLSessionSchoolDirectoryProvider(cache: schoolDirectoryCache)
         #if os(macOS)
@@ -110,6 +111,7 @@ import Foundation
             timetableCache: timetableCache,
             nextLessonWidgetStore: nextLessonWidgetStore,
             absenceLessonSelectionStore: absenceLessonSelectionStore,
+            absenceOverrideStore: absenceOverrideStore,
             schoolDirectoryProvider: schoolDirectoryProvider,
             watchSyncService: watchSyncService
         )
@@ -154,13 +156,24 @@ import Foundation
             return live()
         }
 
-        let preloadedSession = arguments.contains("-uiTestingLoggedIn") ? PreviewData.expiredSession : nil
+        var preloadedSession = arguments.contains("-uiTestingLoggedIn") ? PreviewData.expiredSession : nil
+        preloadedSession?.bakalari = BakalariCredentials(username: DemoAccount.username, password: DemoAccount.password)
         let store = InMemorySessionStore(session: preloadedSession)
         let cache = InMemoryMarksCache(
             cachedMarks: arguments.contains("-uiTestingCachedMarks")
                 ? CachedMarks(marksResponse: PreviewData.marksResponse, cachedAt: Date())
                 : nil
         )
+        let testOverrideStore: any AbsenceOverrideStoring
+        if arguments.contains("-uiTestingPersistentAbsenceOverrides") {
+            let directory = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+                .appending(path: "GradelyUITestAbsenceOverrides", directoryHint: .isDirectory)
+            let persistent = (try? AbsenceOverrideStore(directory: directory))
+            if arguments.contains("-uiTestingResetAbsenceOverrides") { try? persistent?.clearAll() }
+            testOverrideStore = persistent ?? UnavailableAbsenceOverrideStore()
+        } else {
+            testOverrideStore = InMemoryAbsenceOverrideStore()
+        }
         let useLargeSubjectAbsenceMock = arguments.contains("-uiTestingLargeAbsenceSubjects")
         let useManualSubjectAbsenceMock = arguments.contains("-uiTestingManualSubjectAbsence")
         let useEmptySubjectAbsenceMock = arguments.contains("-uiTestingEmptySubjectAbsence")
@@ -276,6 +289,7 @@ import Foundation
                 eduPageClient: eduPageClient,
                 sessionStore: store,
                 marksCache: cache,
+                absenceOverrideStore: testOverrideStore,
                 schoolDirectoryProvider: schoolDirectoryProvider
             ),
             stravaCZRepository: makeMockStravaCZRepository(

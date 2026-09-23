@@ -71,15 +71,12 @@ struct AbsenceTimetableLessonResolver {
         subjects: [Subject],
         calendar: Calendar = TimetableDates.weekCalendar
     ) -> [AbsenceLessonCandidate] {
-        guard let day = timetable.days.first(where: { day in
-            guard let dayDate = MarkDateFormatter.date(from: day.date) else { return false }
-            return calendar.isDate(dayDate, inSameDayAs: date)
-        }) else {
+        let dateKey = AbsenceOverrideProjection.dateKey(for: date, calendar: calendar)
+        guard let day = timetable.days.first(where: { AbsenceOverrideProjection.dateKey($0.date) == dateKey }) else {
             return []
         }
 
         var resolver = AbsenceTimetableLessonResolver(subjects: subjects)
-        let dateKey = TimetableDates.apiDateString(calendar.startOfDay(for: date))
         return resolver.countableLessons(
             for: day,
             in: timetable,

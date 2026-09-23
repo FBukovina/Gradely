@@ -54,7 +54,7 @@ enum AbsenceSubjectFallback {
         now: Date,
         calendar: Calendar = TimetableDates.weekCalendar
     ) -> Term {
-        let dates = absences.compactMap { MarkDateFormatter.date(from: $0.date) }
+        let dates = absences.compactMap { AbsenceOverrideProjection.schoolDate($0.date, calendar: calendar) }
         guard let latestAbsenceDate = dates.max() else {
             return currentTerm(containing: now, calendar: calendar)
         }
@@ -133,6 +133,7 @@ enum AbsenceSubjectFallback {
         timetableResponses: [TimetableResponse],
         subjects: [Subject],
         manualSelections: AbsenceLessonSelections = .empty,
+        manualAllocationsByDate: [String: [AbsenceOverrideAllocation]] = [:],
         validDateRange: ClosedRange<Date>? = nil,
         calendar: Calendar = TimetableDates.weekCalendar
     ) -> Result {
@@ -163,13 +164,13 @@ enum AbsenceSubjectFallback {
         for timetable in timetableResponses {
             for day in timetable.days {
                 guard
-                    let date = MarkDateFormatter.date(from: day.date),
+                    let date = AbsenceOverrideProjection.schoolDate(day.date, calendar: calendar),
                     isDate(date, inside: validDateRange, calendar: calendar)
                 else {
                     continue
                 }
 
-                let dateKey = TimetableDates.apiDateString(date)
+                let dateKey = AbsenceOverrideProjection.dateKey(day.date)
                 let countableLessons = lessonResolver.countableLessons(
                     for: day,
                     in: timetable,
@@ -191,6 +192,14 @@ enum AbsenceSubjectFallback {
                     let absenceDay = absenceByDate[dateKey],
                     absenceDay.fullDayAbsenceCount > 0
                 else {
+                    continue
+                }
+
+                // A confirmed original allocation replaces inference for this
+                // day. It is counted below after every subject denominator is
+                // known; hiding is a separate projection of that raw baseline.
+                if let allocations = manualAllocationsByDate[dateKey],
+                   completeAllocation(allocations, for: absenceDay) {
                     continue
                 }
 
@@ -219,6 +228,31 @@ enum AbsenceSubjectFallback {
                         lessons: countableLessons.map(\.candidate)
                     )
                 }
+            }
+        }
+
+        for (dateKey, allocations) in manualAllocationsByDate {
+            guard let absenceDay = absenceByDate[dateKey],
+                  completeAllocation(allocations, for: absenceDay) else { continue }
+            if let date = AbsenceOverrideProjection.schoolDate(absenceDay.date, calendar: calendar),
+               !isDate(date, inside: validDateRange, calendar: calendar) { continue }
+            for allocation in allocations where allocation.category.contributesToBase {
+                let key: String?
+                if let subjectKey = allocation.subjectKey, totals[subjectKey] != nil {
+                    key = subjectKey
+                } else {
+                    let matches = totals.keys.filter {
+                        AbsenceOverrideProjection.normalizedSubjectName(totals[$0]?.displayName ?? "")
+                            == AbsenceOverrideProjection.normalizedSubjectName(allocation.subjectName)
+                    }
+                    key = matches.count == 1 ? matches[0] : nil
+                }
+                // A manual subject with no taught-lesson denominator remains
+                // unavailable instead of inventing a total or a percentage.
+                guard let key else { continue }
+                totals[key]?.base += 1
+                appliedManualSelectionCount += 1
+                assignedAnyFullDay = true
             }
         }
 
@@ -258,6 +292,14 @@ enum AbsenceSubjectFallback {
         )
     }
 
+    private static func completeAllocation(_ allocations: [AbsenceOverrideAllocation], for day: AbsenceDay) -> Bool {
+        Set(allocations.map(\.id)).count == allocations.count
+            && AbsenceOverrideCategory.allCases.allSatisfy { category in
+                category.count(in: day) >= 0
+                    && allocations.filter { $0.category == category }.count == category.count(in: day)
+            }
+    }
+
     private static func weekStarts(from start: Date, through end: Date) -> [Date] {
         var weeks: [Date] = []
         var cursor = TimetableDates.monday(of: start)
@@ -279,11 +321,7 @@ enum AbsenceSubjectFallback {
     }
 
     private static func dateKey(_ string: String) -> String? {
-        if let date = MarkDateFormatter.date(from: string) {
-            return TimetableDates.apiDateString(date)
-        }
-
-        let fallback = String(string.split(separator: "T").first ?? "")
+        let fallback = AbsenceOverrideProjection.dateKey(string)
         return fallback.isEmpty ? nil : fallback
     }
 

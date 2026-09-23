@@ -160,6 +160,59 @@ final class AbsenceUITests: XCTestCase {
         XCTAssertTrue(waitForAnyElement(possibleStates, timeout: 8))
     }
 
+    @MainActor
+    func testHiddenAbsencePersistsAcrossRelaunchAndRestores() throws {
+        let app = XCUIApplication()
+        let arguments = ["-uiTestingMockAPI", "-uiTestingLoggedIn", "-uiTestingManualSubjectAbsence", "-uiTestingPersistentAbsenceOverrides"]
+        app.launchArguments = arguments + ["-uiTestingResetAbsenceOverrides"]
+        app.launch()
+        XCTAssertTrue(app.scrollViews["todayScrollView"].waitForExistence(timeout: 5))
+        app.tabBars.buttons.element(boundBy: 2).tap()
+        let day = app.buttons["absenceRow-day-2026-02-02T00:00:00+01:00"]
+        XCTAssertTrue(day.waitForExistence(timeout: 8))
+        day.tap()
+
+        let original = app.buttons["absenceOverrideOriginal-lesson-2026-02-02-2-raw-tev"]
+        XCTAssertTrue(original.waitForExistence(timeout: 8))
+        original.tap()
+        app.buttons["absenceOverrideConfirmOriginal"].tap()
+        let hide = app.buttons["absenceOverrideHideDay"]
+        XCTAssertTrue(hide.waitForExistence(timeout: 5))
+        hide.tap()
+        XCTAssertFalse(app.staticTexts["absence.category.ok"].exists)
+        let preview = app.descendants(matching: .any)["absenceOverridePreview"]
+        var previewScrolls = 0
+        while !preview.isHittable && previewScrolls < 4 {
+            app.swipeUp()
+            previewScrolls += 1
+        }
+        XCTAssertTrue(preview.exists)
+        let editorScreenshot = XCTAttachment(screenshot: app.screenshot())
+        editorScreenshot.name = "Absence editor before saving"
+        editorScreenshot.lifetime = .keepAlways
+        add(editorScreenshot)
+        let save = app.buttons["absenceOverrideSaveButton"]
+        XCTAssertTrue(save.isEnabled)
+        save.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["absenceLocallyAdjusted"].waitForExistence(timeout: 5))
+
+        app.terminate()
+        app.launchArguments = arguments
+        app.launch()
+        XCTAssertTrue(app.scrollViews["todayScrollView"].waitForExistence(timeout: 5))
+        app.tabBars.buttons.element(boundBy: 2).tap()
+        XCTAssertTrue(app.descendants(matching: .any)["absenceLocallyAdjusted"].waitForExistence(timeout: 8))
+        app.buttons["absenceHiddenButton"].tap()
+        let restore = app.buttons["absenceHiddenRestore-2026-02-02"]
+        XCTAssertTrue(restore.waitForExistence(timeout: 5))
+        let managementScreenshot = XCTAttachment(screenshot: app.screenshot())
+        managementScreenshot.name = "Hidden absences after relaunch"
+        managementScreenshot.lifetime = .keepAlways
+        add(managementScreenshot)
+        restore.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["absenceHiddenEmpty"].waitForExistence(timeout: 5))
+    }
+
     private func waitForAnyElement(_ elements: [XCUIElement], timeout: TimeInterval) -> Bool {
         let deadline = Date().addingTimeInterval(timeout)
         while Date() < deadline {

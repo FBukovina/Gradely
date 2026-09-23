@@ -3,14 +3,17 @@ import SwiftUI
 struct AbsenceView: View {
     @State private var viewModel: AbsenceViewModel
     private let accountHub: AnyView?
+    private let snapshotStore: SchoolSnapshotStore?
     private let onOpenGradeyAI: () -> Void
 
     init(
         repository: SchoolRepository,
+        snapshotStore: SchoolSnapshotStore? = nil,
         accountHub: AnyView? = nil,
         onOpenGradeyAI: @escaping () -> Void = {}
     ) {
-        _viewModel = State(initialValue: AbsenceViewModel(repository: repository))
+        _viewModel = State(initialValue: AbsenceViewModel(repository: repository, snapshotStore: snapshotStore))
+        self.snapshotStore = snapshotStore
         self.accountHub = accountHub
         self.onOpenGradeyAI = onOpenGradeyAI
     }
@@ -38,11 +41,31 @@ struct AbsenceView: View {
                     }
 
                     ToolbarItem(placement: .gradelyTopBarTrailing) {
+                        Button {
+                            viewModel.isHiddenAbsencesSheetPresented = true
+                        } label: {
+                            GradelyIcon(systemName: "eye.slash")
+                        }
+                        .accessibilityLabel(AppL10n.string("absence.override.hiddenTitle"))
+                        .accessibilityIdentifier("absenceHiddenButton")
+                    }
+
+                    ToolbarItem(placement: .gradelyTopBarTrailing) {
                         AccountSettingsButton(accountHub: accountHub)
                     }
                 }
                 .task {
                     await viewModel.loadIfNeeded()
+                }
+                .onChange(of: snapshotStore?.revision) { _, _ in viewModel.applySharedSnapshot() }
+                .sheet(isPresented: $viewModel.isHiddenAbsencesSheetPresented) {
+                    HiddenAbsencesView(viewModel: viewModel)
+                }
+                .sheet(item: Binding(
+                    get: { viewModel.isHiddenAbsencesSheetPresented ? nil : viewModel.editor },
+                    set: { viewModel.editor = $0 }
+                )) { editor in
+                    AbsenceOverrideEditorView(viewModel: editor)
                 }
                 .sheet(isPresented: $viewModel.isManualSelectionSheetPresented) {
                     ManualAbsenceLessonSelectionSheet(viewModel: viewModel)
@@ -88,6 +111,25 @@ struct AbsenceView: View {
                     totalCounts: viewModel.totalCounts,
                     threshold: viewModel.normalizedThreshold
                 )
+                if viewModel.isLocallyAdjusted {
+                    GradelyLabel("absence.override.adjusted", systemImage: "eye.slash")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .accessibilityIdentifier("absenceLocallyAdjusted")
+                }
+                if !viewModel.overrideMetadata.reviewOverrides.isEmpty {
+                    Button {
+                        viewModel.isHiddenAbsencesSheetPresented = true
+                    } label: {
+                        GradelyLabel("absence.override.needsReview", systemImage: "exclamationmark.triangle")
+                    }
+                    .accessibilityIdentifier("absenceOverridesNeedReview")
+                }
+                if let error = viewModel.overrideErrorMessage {
+                    GradelyLabel(error, systemImage: "exclamationmark.triangle")
+                        .font(.caption).foregroundStyle(GradeBand.poor.foregroundColor)
+                }
                 AbsencePredictorCard(
                     result: viewModel.predictionResult,
                     onOpen: {
@@ -132,7 +174,8 @@ struct AbsenceView: View {
                     AbsenceCountsList(
                         totalTitle: AppL10n.string("absence.total"),
                         rows: viewModel.dayCountRows,
-                        emptyTitle: "absence.days.empty"
+                        emptyTitle: "absence.days.empty",
+                        onSelect: { viewModel.openOverrideEditor(dayRowID: $0) }
                     )
                 case .months:
                     if viewModel.monthRows.count >= 2 {
@@ -229,6 +272,7 @@ private struct AbsenceCountsList: View {
     let totalTitle: String
     let rows: [AbsenceCountRow]
     let emptyTitle: LocalizedStringKey
+    var onSelect: ((String) -> Void)? = nil
 
     var body: some View {
         if rows.isEmpty {
@@ -236,19 +280,27 @@ private struct AbsenceCountsList: View {
         } else {
             LazyVStack(spacing: 0) {
                 countRow(
-                    id: "absenceRow-total",
                     title: totalTitle,
                     counts: rows.reduce(into: .zero) { total, row in total.add(row.counts) },
                     isTotal: true
                 )
+                .accessibilityElement(children: .combine)
+                .accessibilityIdentifier("absenceRow-total")
 
                 ForEach(rows) { row in
-                    countRow(
-                        id: "absenceRow-\(row.id)",
-                        title: row.title,
-                        counts: row.counts,
-                        isTotal: false
-                    )
+                    if let onSelect {
+                        Button { onSelect(row.id) } label: {
+                            countRow(title: row.title, counts: row.counts, isTotal: false)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityElement(children: .combine)
+                        .accessibilityIdentifier("absenceRow-\(row.id)")
+                        .accessibilityHint(AppL10n.string("absence.override.editHint"))
+                    } else {
+                        countRow(title: row.title, counts: row.counts, isTotal: false)
+                            .accessibilityElement(children: .combine)
+                            .accessibilityIdentifier("absenceRow-\(row.id)")
+                    }
                 }
             }
             .background(Color.gradelySecondaryGroupedBackground, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
@@ -260,7 +312,6 @@ private struct AbsenceCountsList: View {
     }
 
     private func countRow(
-        id: String,
         title: String,
         counts: AbsenceCounts,
         isTotal: Bool
@@ -285,7 +336,6 @@ private struct AbsenceCountsList: View {
         .overlay(alignment: .bottom) {
             Divider()
         }
-        .accessibilityIdentifier(id)
     }
 
     private func categoryChips(for counts: AbsenceCounts) -> some View {

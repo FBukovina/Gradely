@@ -512,6 +512,12 @@ struct TodayView: View {
                     .accessibilityIdentifier("todayOpenAbsenceButton")
                 }
 
+                if viewModel.snapshot.hasLocalAbsenceAdjustments {
+                    GradelyLabel("absence.override.adjusted", systemImage: "eye.slash")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .accessibilityIdentifier("todayAbsenceAdjusted")
+                }
                 TodayRiskRow(subject: highest)
                 ForEach(Array(others)) { subject in
                     TodayRiskRow(subject: subject)

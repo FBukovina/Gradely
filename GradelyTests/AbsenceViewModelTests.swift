@@ -184,6 +184,27 @@ struct AbsenceViewModelTests {
         #expect(didApplyManualSelection)
     }
 
+    @Test func unrelatedSharedRefreshDoesNotDiscardResolvedSubjects() async throws {
+        let repository = repository(client: DelayedAbsenceClient(absenceResult: PreviewData.absenceResponseWithoutSubjectRows))
+        let snapshot = SchoolSnapshotStore(repository: repository)
+        await snapshot.refresh(requirements: [.absence], force: true)
+        let viewModel = AbsenceViewModel(repository: repository, snapshotStore: snapshot)
+        await viewModel.loadIfNeeded()
+        let resolved = await waitForSubjectState(viewModel) { state in
+            if case .loaded(let rows, _, _, _) = state { return !rows.isEmpty }
+            return false
+        }
+        #expect(resolved)
+        let rows = viewModel.subjectAbsenceState.rows
+        let counts = viewModel.totalCounts
+
+        await snapshot.refresh(requirements: [.marks], force: true)
+        viewModel.applySharedSnapshot()
+
+        #expect(viewModel.subjectAbsenceState.rows == rows)
+        #expect(viewModel.totalCounts == counts)
+    }
+
     private func waitForSubjectState(
         _ viewModel: AbsenceViewModel,
         timeout: TimeInterval = 3,

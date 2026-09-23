@@ -42,6 +42,13 @@ final class AbsenceViewModel {
     var isLoading = false
     var isRefreshing = false
     var response: AbsenceResponse?
+    var rawResponse: AbsenceResponse?
+    var overrideMetadata: AbsenceOverrideMetadata = .empty
+    var overrideErrorMessage: String?
+    var isHiddenAbsencesSheetPresented = false
+    var editor: AbsenceOverrideEditorViewModel?
+    var isRestoringOverrides = false
+    private var currentData: AbsenceData?
     var subjectAbsenceState: SubjectAbsenceState = .idle
     var user: UserResponse?
     var errorMessage: String?
@@ -65,15 +72,19 @@ final class AbsenceViewModel {
     var isLoadingPredictionLessons = false
 
     private let repository: SchoolRepository
+    private let snapshotStore: SchoolSnapshotStore?
     private let predictionMinimumDay: Date
     private var hasLoaded = false
     @ObservationIgnored private var predictionLessonsByDate: [String: [AbsenceLessonCandidate]] = [:]
     @ObservationIgnored private var predictionLessonCacheByID: [String: AbsenceLessonCandidate] = [:]
     @ObservationIgnored private var subjectResolutionTask: Task<Void, Never>?
     @ObservationIgnored private var subjectResolutionToken = UUID()
+    @ObservationIgnored private var lastSharedAbsence: AbsenceData?
+    @ObservationIgnored private var lastSharedScope: SchoolDataScope?
 
-    init(repository: SchoolRepository, today: Date = Date()) {
+    init(repository: SchoolRepository, snapshotStore: SchoolSnapshotStore? = nil, today: Date = Date()) {
         self.repository = repository
+        self.snapshotStore = snapshotStore
         predictionMinimumDay = TimetableDates.weekCalendar.startOfDay(for: today)
         predictionSelectedDate = predictionMinimumDay
     }
@@ -127,8 +138,10 @@ final class AbsenceViewModel {
         guard !hasLoaded else { return }
         hasLoaded = true
 
-        if let cached = try? repository.loadCachedAbsence() {
-            applyCached(cached)
+        applySharedSnapshot()
+        if let cached = try? repository.loadCachedAbsenceData() {
+            applyLoaded(cached.data)
+            lastCacheDate = cached.cachedAt
         }
 
         await refresh(forceRefresh: false)
@@ -148,11 +161,23 @@ final class AbsenceViewModel {
             isRefreshing = false
         }
 
+        if let snapshotStore {
+            await snapshotStore.refresh(requirements: [.absence, .user], force: forceRefresh)
+            applySharedSnapshot()
+            if let user = snapshotStore.user { self.user = user }
+            if let rawResponse {
+                startSubjectResolutionIfNeeded(for: rawResponse)
+            } else {
+                errorMessage = snapshotStore.sourceState("absence").error
+            }
+            return
+        }
+
         do {
             let data = try await repository.loadAbsence(forceRefresh: forceRefresh)
             applyLoaded(data)
             lastCacheDate = Date()
-            startSubjectResolutionIfNeeded(for: data.response)
+            startSubjectResolutionIfNeeded(for: data.rawResponse)
         } catch {
             if response == nil {
                 errorMessage = userFacingMessage(for: error)
@@ -161,24 +186,15 @@ final class AbsenceViewModel {
     }
 
     func retrySubjectResolution() {
-        guard let response else { return }
-        startSubjectResolutionIfNeeded(for: response)
-    }
-
-    private func applyCached(_ cached: CachedAbsence) {
-        response = cached.response
-        applyAbsenceSnapshots(from: cached.response)
-        subjectAbsenceState = state(
-            for: cached.response.absencesPerSubject,
-            source: cached.response.absencesPerSubject.isEmpty ? .unavailable : .official,
-            threshold: cached.response.percentageThreshold,
-            stableIDHints: [],
-            unresolvedPartialDays: []
-        )
-        lastCacheDate = cached.cachedAt
+        guard let rawResponse else { return }
+        startSubjectResolutionIfNeeded(for: rawResponse)
     }
 
     private func applyLoaded(_ data: AbsenceData) {
+        currentData = data
+        rawResponse = data.rawResponse
+        overrideMetadata = data.overrideMetadata
+        overrideErrorMessage = data.overrideError
         response = data.response
         applyAbsenceSnapshots(from: data.response)
         subjectAbsenceState = state(
@@ -189,7 +205,7 @@ final class AbsenceViewModel {
             warning: data.subjectResolutionWarning,
             unresolvedPartialDays: data.unresolvedPartialDays
         )
-        user = data.user
+        user = data.user ?? snapshotStore?.user ?? user
     }
 
     private func applyAbsenceSnapshots(from response: AbsenceResponse) {
@@ -209,16 +225,7 @@ final class AbsenceViewModel {
         subjectResolutionTask = nil
         subjectResolutionToken = UUID()
 
-        guard response.absencesPerSubject.isEmpty else {
-            subjectAbsenceState = state(
-                for: response.absencesPerSubject,
-                source: .official,
-                threshold: response.percentageThreshold,
-                stableIDHints: [],
-                unresolvedPartialDays: []
-            )
-            return
-        }
+        guard response.absencesPerSubject.isEmpty else { return }
 
         guard !response.absences.isEmpty else {
             subjectAbsenceState = .empty
@@ -234,7 +241,7 @@ final class AbsenceViewModel {
                     await MainActor.run {
                         guard
                             let self,
-                            self.response == response,
+                            self.rawResponse == response,
                             self.subjectResolutionToken == token
                         else {
                             return
@@ -252,6 +259,8 @@ final class AbsenceViewModel {
                     unresolvedPartialDays: data.unresolvedPartialDays
                 )
                 await MainActor.run {
+                    guard rawResponse == response, subjectResolutionToken == token else { return }
+                    applyLoaded(data)
                     applySubjectResolution(nextState, expectedResponse: response, token: token)
                 }
             } catch {
@@ -269,9 +278,126 @@ final class AbsenceViewModel {
         expectedResponse: AbsenceResponse,
         token: UUID
     ) {
-        guard response == expectedResponse, subjectResolutionToken == token else { return }
+        guard rawResponse == expectedResponse, subjectResolutionToken == token else { return }
         subjectAbsenceState = state
         subjectResolutionTask = nil
+    }
+
+    var allOverrides: [AbsenceDayOverride] {
+        (overrideMetadata.activeOverrides + overrideMetadata.reviewOverrides).sorted { $0.dateKey < $1.dateKey }
+    }
+
+    var isLocallyAdjusted: Bool { !overrideMetadata.activeOverrides.isEmpty }
+
+    func applySharedSnapshot() {
+        guard let snapshotStore else { return }
+        let data = snapshotStore.absence
+        guard data != lastSharedAbsence || snapshotStore.scope != lastSharedScope else { return }
+        lastSharedAbsence = data
+        lastSharedScope = snapshotStore.scope
+        if let data {
+            lastCacheDate = snapshotStore.sourceState("absence").lastSuccessAt
+            guard currentData != data else { return }
+            let sameBaseline = currentData?.scope == data.scope
+                && currentData?.overrideScope == data.overrideScope
+                && currentData?.sessionGeneration == data.sessionGeneration
+                && rawResponse == data.rawResponse
+                && overrideMetadata == data.overrideMetadata
+                && overrideErrorMessage == data.overrideError
+            // An unrelated shared refresh may still carry an unresolved baseline.
+            // Keep the in-flight or completed subject resolution for that baseline.
+            if sameBaseline, data.subjectResolutionSource == .unavailable,
+               subjectResolutionTask != nil || !(currentData?.absencesPerSubject.isEmpty ?? true) { return }
+            if currentData?.scope != data.scope || currentData?.overrideScope != data.overrideScope
+                || currentData?.sessionGeneration != data.sessionGeneration {
+                clearAccountDrafts()
+            }
+            subjectResolutionTask?.cancel()
+            subjectResolutionTask = nil
+            subjectResolutionToken = UUID()
+            applyLoaded(data)
+            if data.subjectResolutionSource == .unavailable {
+                startSubjectResolutionIfNeeded(for: data.rawResponse)
+            }
+        } else if currentData != nil {
+            subjectResolutionTask?.cancel()
+            subjectResolutionTask = nil
+            subjectResolutionToken = UUID()
+            currentData = nil
+            response = nil
+            rawResponse = nil
+            overrideMetadata = .empty
+            overrideErrorMessage = nil
+            user = nil
+            dayRows = []
+            dayCountRows = []
+            monthRows = []
+            monthCountRows = []
+            totalCounts = .zero
+            subjectAbsenceState = .idle
+            clearAccountDrafts()
+        }
+    }
+
+    private func clearAccountDrafts() {
+        editor = nil
+        isHiddenAbsencesSheetPresented = false
+        isManualSelectionSheetPresented = false
+        manualSelectionDrafts = [:]
+        isPredictionSheetPresented = false
+        predictionSelectedLessons = []
+        predictionDraftLessonIDs = []
+        predictionLessons = []
+        predictionLessonsByDate = [:]
+        predictionLessonCacheByID = [:]
+    }
+
+    func openOverrideEditor(dayRowID: String) {
+        let rawID = String(dayRowID.dropFirst("day-".count))
+        guard let day = rawResponse?.absences.first(where: { $0.id == rawID }) else { return }
+        openOverrideEditor(dateKey: AbsenceOverrideProjection.dateKey(day.date))
+    }
+
+    func openOverrideEditor(dateKey: String) {
+        editor = AbsenceOverrideEditorViewModel(dateKey: dateKey, repository: repository, user: user) { [weak self] data in
+            self?.subjectResolutionTask?.cancel()
+            self?.subjectResolutionToken = UUID()
+            self?.applyLoaded(data)
+        }
+    }
+
+    func restoreOverride(dateKey: String) async {
+        guard let scope = currentData?.scope, let overrideScope = currentData?.overrideScope,
+              let generation = currentData?.sessionGeneration else { return }
+        isRestoringOverrides = true
+        overrideErrorMessage = nil
+        defer { isRestoringOverrides = false }
+        do {
+            let data = try await repository.restoreAbsenceOverride(dateKey: dateKey, scope: scope, overrideScope: overrideScope, sessionGeneration: generation, user: user)
+            subjectResolutionTask?.cancel()
+            subjectResolutionTask = nil
+            subjectResolutionToken = UUID()
+            applyLoaded(data)
+        } catch {
+            overrideErrorMessage = error.localizedDescription
+        }
+    }
+
+    func restoreAllOverrides() async {
+        guard let scope = currentData?.scope, let overrideScope = currentData?.overrideScope,
+              let generation = currentData?.sessionGeneration else { return }
+        isRestoringOverrides = true
+        overrideErrorMessage = nil
+        defer { isRestoringOverrides = false }
+        do {
+            let data = try await repository.resetAbsenceOverrides(scope: scope, overrideScope: overrideScope, sessionGeneration: generation, user: user)
+            subjectResolutionTask?.cancel()
+            subjectResolutionTask = nil
+            subjectResolutionToken = UUID()
+            applyLoaded(data)
+        } catch {
+            overrideErrorMessage = error.localizedDescription
+        }
     }
 
     func openManualSelectionSheet() {
@@ -310,7 +436,7 @@ final class AbsenceViewModel {
     }
 
     func saveManualSelections() async {
-        guard let response else { return }
+        guard let response = rawResponse else { return }
         guard canSaveManualSelectionDrafts else { return }
 
         manualSelectionErrorMessage = nil

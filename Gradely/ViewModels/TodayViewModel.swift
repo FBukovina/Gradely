@@ -47,6 +47,7 @@ struct TodaySnapshot: Equatable {
     var subjects: [Subject]
     var timetableSummary: TimetableTodaySummary?
     var absenceRisk: AbsenceRiskSummary?
+    var hasLocalAbsenceAdjustments = false
     var stravaSession: StravaCZStoredSession?
     var orderedMeal: StravaCZMeal?
     var gradeHistory: GradeHistoryResponse
@@ -381,10 +382,11 @@ final class TodayViewModel {
             refreshTime()
         }
 
-        if let cachedAbsence = try? repository.loadCachedAbsence() {
+        if let cachedAbsence = try? repository.loadCachedAbsenceData() {
+            snapshot.hasLocalAbsenceAdjustments = cachedAbsence.data.overrideMetadata.hasLocalAdjustments
             snapshot.absenceRisk = AbsenceRiskSummary.make(
-                response: cachedAbsence.response,
-                subjects: cachedAbsence.response.absencesPerSubject
+                response: cachedAbsence.data.response,
+                subjects: cachedAbsence.data.absencesPerSubject
             )
         }
 
@@ -422,9 +424,13 @@ final class TodayViewModel {
         snapshot.gradeHistory = snapshotStore.history
         snapshot.refreshedAt = snapshotStore.marksFetchedAt
         if let absence = snapshotStore.absence {
+            snapshot.hasLocalAbsenceAdjustments = absence.overrideMetadata.hasLocalAdjustments
             let subjects = absence.absencesPerSubject.isEmpty ? absence.response.absencesPerSubject : absence.absencesPerSubject
             snapshot.absenceRisk = AbsenceRiskSummary.make(response: absence.response, subjects: subjects)
-        } else { snapshot.absenceRisk = nil }
+        } else {
+            snapshot.absenceRisk = nil
+            snapshot.hasLocalAbsenceAdjustments = false
+        }
         timetableWeek = snapshotStore.cachedWeek(containing: now)
         refreshTime(at: now)
     }
@@ -453,6 +459,7 @@ final class TodayViewModel {
     private func refreshAbsenceRisk(forceRefresh: Bool) async {
         do {
             let absence = try await repository.loadAbsence(forceRefresh: forceRefresh)
+            snapshot.hasLocalAbsenceAdjustments = absence.overrideMetadata.hasLocalAdjustments
             let subjects = absence.absencesPerSubject.isEmpty ? absence.response.absencesPerSubject : absence.absencesPerSubject
             snapshot.absenceRisk = AbsenceRiskSummary.make(response: absence.response, subjects: subjects)
         } catch {

@@ -86,6 +86,7 @@ struct GradeyAccountHubView: View {
     @AppStorage(PlannerNotificationScheduler.enabledKey) private var plannerRemindersEnabled = false
     @Environment(\.dismiss) private var dismiss
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.openURL) private var openURL
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage("settings.showMealsTab") private var showMealsTab = true
     @Bindable private var languageStore = AppLanguageStore.shared
@@ -1334,29 +1335,23 @@ private extension GradeyAccountHubView {
 
             SettingsSurface(padding: 0) {
                 VStack(spacing: 0) {
-                    Link(destination: AppLinks.privacyPolicyURL) {
-                        SettingsActionRow(
-                            title: "legal.privacyPolicy",
-                            message: "settings.privacy.policy.caption",
-                            iconName: "security-lock"
-                        )
-                        .padding(20)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityIdentifier("privacyPolicyLink")
+                    legalSettingsRow(
+                        title: "legal.privacyPolicy",
+                        message: "settings.privacy.policy.caption",
+                        iconName: "security-lock",
+                        url: AppLinks.privacyPolicyURL,
+                        accessibilityIdentifier: "privacyPolicyLink"
+                    )
 
                     SettingsRowDivider()
 
-                    Link(destination: AppLinks.termsOfUseURL) {
-                        SettingsActionRow(
-                            title: "legal.termsOfUse",
-                            message: "settings.privacy.terms.caption",
-                            iconName: "left-to-right-list-bullet"
-                        )
-                        .padding(20)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityIdentifier("termsOfUseLink")
+                    legalSettingsRow(
+                        title: "legal.termsOfUse",
+                        message: "settings.privacy.terms.caption",
+                        iconName: "left-to-right-list-bullet",
+                        url: AppLinks.termsOfUseURL,
+                        accessibilityIdentifier: "termsOfUseLink"
+                    )
 
                     SettingsRowDivider()
 
@@ -1561,29 +1556,23 @@ private extension GradeyAccountHubView {
 
                     SettingsRowDivider()
 
-                    Link(destination: AppLinks.privacyPolicyURL) {
-                        SettingsActionRow(
-                            title: "legal.privacyPolicy",
-                            message: "settings.privacy.policy.caption",
-                            iconName: "security-lock"
-                        )
-                        .padding(20)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityIdentifier("aboutPrivacyPolicyLink")
+                    legalSettingsRow(
+                        title: "legal.privacyPolicy",
+                        message: "settings.privacy.policy.caption",
+                        iconName: "security-lock",
+                        url: AppLinks.privacyPolicyURL,
+                        accessibilityIdentifier: "aboutPrivacyPolicyLink"
+                    )
 
                     SettingsRowDivider()
 
-                    Link(destination: AppLinks.termsOfUseURL) {
-                        SettingsActionRow(
-                            title: "legal.termsOfUse",
-                            message: "settings.privacy.terms.caption",
-                            iconName: "left-to-right-list-bullet"
-                        )
-                        .padding(20)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityIdentifier("aboutTermsOfUseLink")
+                    legalSettingsRow(
+                        title: "legal.termsOfUse",
+                        message: "settings.privacy.terms.caption",
+                        iconName: "left-to-right-list-bullet",
+                        url: AppLinks.termsOfUseURL,
+                        accessibilityIdentifier: "aboutTermsOfUseLink"
+                    )
                 }
             }
 
@@ -2008,6 +1997,29 @@ private extension GradeyAccountHubView {
         case .authorized:
             break
         }
+    }
+
+    func legalSettingsRow(
+        title: LocalizedStringKey,
+        message: LocalizedStringKey,
+        iconName: String,
+        url: URL,
+        accessibilityIdentifier: String
+    ) -> some View {
+        Button {
+            openURL(url)
+        } label: {
+            SettingsActionRow(
+                title: title,
+                message: message,
+                iconName: iconName
+            )
+            .padding(20)
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier(accessibilityIdentifier)
+        .accessibilityValue(url.absoluteString)
+        .accessibilityAddTraits(.isLink)
     }
 
     func openSchoolConnection(reconnectAccountID: String?) {

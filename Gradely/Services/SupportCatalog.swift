@@ -17,6 +17,9 @@ import Foundation
 /// - Offering identifier `support` with packages `support_standard_monthly`,
 ///   `support_standard_yearly`, `support_plus_monthly`, `support_plus_yearly`
 /// - Keep the existing `tips` offering unchanged
+/// - Guideline 3.1.2 metadata: paste `AppLinks.appStoreDescriptionLegalFooter()`
+///   into the App Description (macOS has a separate field), or upload a custom
+///   EULA in App Store Connect → App Information → License Agreement
 enum SupportInterval: String, CaseIterable, Identifiable, Sendable {
     case monthly
     case yearly

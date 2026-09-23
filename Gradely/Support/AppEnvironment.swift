@@ -1,7 +1,8 @@
 import Foundation
 
-struct AppEnvironment {
+@MainActor final class AppEnvironment {
     let repository: SchoolRepository
+    let schoolSnapshotStore: SchoolSnapshotStore
     let stravaCZRepository: StravaCZRepository
     let schoolDirectoryProvider: any SchoolDirectoryProviding
     let supportTipProvider: any SupportTipProviding
@@ -15,10 +16,11 @@ struct AppEnvironment {
     let notificationSettingsStore: MarkNotificationSettingsStore
     let guestModeStore: any GradeyGuestModeStoring
     let requiresGradeyID: Bool
+    let makePlannerStore: @MainActor () -> PlannerStore
 
     init(
         repository: SchoolRepository,
-        stravaCZRepository: StravaCZRepository = AppEnvironment.makeMockStravaCZRepository(),
+        stravaCZRepository: StravaCZRepository? = nil,
         schoolDirectoryProvider: any SchoolDirectoryProviding,
         supportTipProvider: any SupportTipProviding = MockSupportTipService(),
         watchSyncService: (any WatchSyncing)? = nil,
@@ -30,10 +32,13 @@ struct AppEnvironment {
         devicePushTokenClient: any DevicePushTokenClient = MockDevicePushTokenClient(),
         notificationSettingsStore: MarkNotificationSettingsStore = MarkNotificationSettingsStore(userDefaults: .standard),
         guestModeStore: any GradeyGuestModeStoring = GradeyGuestModeStore(),
-        requiresGradeyID: Bool = false
+        requiresGradeyID: Bool = false,
+        makePlannerStore: @escaping @MainActor () -> PlannerStore = {
+            PlannerStore(persistence: InMemoryPlannerPersistence(), calendarService: UnavailablePlannerCalendarService())
+        }
     ) {
         self.repository = repository
-        self.stravaCZRepository = stravaCZRepository
+        self.stravaCZRepository = stravaCZRepository ?? AppEnvironment.makeMockStravaCZRepository()
         self.schoolDirectoryProvider = schoolDirectoryProvider
         self.supportTipProvider = supportTipProvider
         self.watchSyncService = watchSyncService
@@ -42,6 +47,8 @@ struct AppEnvironment {
         self.notificationSettingsStore = notificationSettingsStore
         self.guestModeStore = guestModeStore
         self.requiresGradeyID = requiresGradeyID
+        let planner = makePlannerStore()
+        self.makePlannerStore = { planner }
         let resolvedLinkedAccountRepository = linkedAccountRepository ?? LinkedAccountRepository(
             store: LinkedAccountStore(userDefaults: .standard),
             client: MockLinkedAccountClient(),
@@ -53,10 +60,19 @@ struct AppEnvironment {
         )
         self.linkedAccountRepository = resolvedLinkedAccountRepository
         self.historyRepository = resolvedHistoryRepository
+        let snapshot = SchoolSnapshotStore(repository: repository, historyRepository: resolvedHistoryRepository,
+                                           plannerStore: planner,
+                                           historyDirectory: FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appending(path: "Gradely"))
+        self.schoolSnapshotStore = snapshot
+        repository.onSchoolCacheInvalidation = { [weak snapshot] scope in
+            snapshot?.clearDerivedState(scope: scope)
+            NotificationCenter.default.post(name: .gradeySiriDataDidInvalidate, object: nil)
+        }
         self.gradeyAIClient = gradeyAIClient ?? MockGradeyAIClient()
         self.gradeyAIContextBuilder = gradeyAIContextBuilder ?? GradeyAIContextBuilder(
             repository: repository,
-            historyRepository: resolvedHistoryRepository
+            historyRepository: resolvedHistoryRepository,
+            snapshotStore: snapshot
         )
     }
 
@@ -98,6 +114,7 @@ struct AppEnvironment {
             watchSyncService: watchSyncService
         )
 
+        let scopeValidator = GradeyAIContextBuilder(repository: repository, historyRepository: historyRepository)
         return AppEnvironment(
             repository: repository,
             stravaCZRepository: StravaCZRepository(
@@ -114,15 +131,20 @@ struct AppEnvironment {
             gradeyAIClient: FirebaseGradeyAIClient(
                 accountIDProvider: { [gradeyAuthClient] in
                     (try? gradeyAuthClient.bootstrapSession())?.account.id
-                }
-            ),
-            gradeyAIContextBuilder: GradeyAIContextBuilder(
-                repository: repository,
-                historyRepository: historyRepository
+                },
+                accountProofProvider: { [gradeyAuthClient] in
+                    guard let expectedAccount = try gradeyAuthClient.bootstrapSession()?.account.id else { return nil }
+                    let session = try await gradeyAuthClient.validSession()
+                    guard session.account.id == expectedAccount,
+                          try gradeyAuthClient.bootstrapSession()?.account.id == expectedAccount else { throw CancellationError() }
+                    return session.accessToken
+                },
+                schoolScopeProvider: { try await scopeValidator.currentSchoolScope() }
             ),
             devicePushTokenClient: devicePushTokenClient,
             notificationSettingsStore: notificationSettingsStore,
-            requiresGradeyID: true
+            requiresGradeyID: true,
+            makePlannerStore: { PlannerStore.shared }
         )
     }
 

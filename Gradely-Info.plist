@@ -47,28 +47,34 @@
 	</array>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
-	<key>LSRequiresIPhoneOS</key>
-	<true/>
-	<key>NSAccentColorName</key>
-	<string>AccentColor</string>
 	<key>IntercomAppID</key>
 	<string>$(INTERCOM_APP_ID)</string>
 	<key>IntercomIOSAPIKey</key>
 	<string>$(INTERCOM_IOS_API_KEY)</string>
+	<key>LSRequiresIPhoneOS</key>
+	<true/>
+	<key>NSAccentColorName</key>
+	<string>AccentColor</string>
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>Gradey needs calendar access to create, update, and remove the planner events you choose to sync. Your planner stays the source of truth.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Gradey uses the camera so you can send a photo in support chat.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Gradey uses the microphone so you can send a video in support chat.</string>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Gradey uses your photo library so you can attach a photo in support chat.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>Gradey may save a support-chat attachment to your photo library.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Gradey uses your photo library so you can attach a photo in support chat.</string>
 	<key>RevenueCatIOSAPIKey</key>
 	<string>$(REVENUECAT_IOS_API_KEY)</string>
 	<key>SupabaseAnonKey</key>
 	<string>$(SUPABASE_ANON_KEY)</string>
 	<key>SupabaseURL</key>
 	<string>$(SUPABASE_URL)</string>
+	<key>UIAppFonts</key>
+	<array>
+		<string>SpaceGrotesk-Bold.ttf</string>
+	</array>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
@@ -76,10 +82,6 @@
 		<key>UISceneConfigurations</key>
 		<dict/>
 	</dict>
-	<key>UIAppFonts</key>
-	<array>
-		<string>SpaceGrotesk-Bold.ttf</string>
-	</array>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UIBackgroundModes</key>

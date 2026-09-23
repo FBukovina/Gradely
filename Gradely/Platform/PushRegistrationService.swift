@@ -1,4 +1,5 @@
 import Foundation
+import Observation
 import UserNotifications
 #if os(iOS)
 import UIKit
@@ -409,9 +410,10 @@ final class MockDevicePushTokenClient: DevicePushTokenClient {
     }
 }
 
-final class MarkNotificationSettingsStore {
+@Observable final class MarkNotificationSettingsStore {
     private let userDefaults: UserDefaults
     private let key = "gradey.notificationPreferences.v1"
+    private var revision = 0
 
     init(userDefaults: UserDefaults = .standard) {
         self.userDefaults = userDefaults
@@ -419,6 +421,7 @@ final class MarkNotificationSettingsStore {
 
     var preferences: NotificationPreferences {
         get {
+            _ = revision
             guard let data = userDefaults.data(forKey: key),
                   let decoded = try? JSONDecoder.sessionDecoder.decode(NotificationPreferences.self, from: data)
             else {
@@ -429,11 +432,13 @@ final class MarkNotificationSettingsStore {
         set {
             guard let data = try? JSONEncoder.sessionEncoder.encode(newValue) else { return }
             userDefaults.set(data, forKey: key)
+            revision += 1
         }
     }
 
     func clear() {
         userDefaults.removeObject(forKey: key)
+        revision += 1
     }
 }
 
@@ -452,6 +457,7 @@ final class GradeyAppDelegate: NSObject, UIApplicationDelegate {
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
         IntercomConfiguration.configureIfNeeded()
+        SchoolNotificationRouter.shared.install()
         return true
     }
 
@@ -466,6 +472,9 @@ final class GradeyAppDelegate: NSObject, UIApplicationDelegate {
 }
 #elseif os(macOS)
 final class GradeyMacAppDelegate: NSObject, NSApplicationDelegate {
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        SchoolNotificationRouter.shared.install()
+    }
     func application(
         _ application: NSApplication,
         didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data

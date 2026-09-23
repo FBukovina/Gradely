@@ -13,11 +13,13 @@ final class SubjectsViewModel {
     var lastCacheDate: Date?
     var trends: [SubjectGradeTrend] = []
 
+    let snapshotStore: SchoolSnapshotStore?
     private let repository: SchoolRepository
     private let historyRepository: GradeyHistoryRepository?
     private var hasLoaded = false
 
-    init(repository: SchoolRepository, historyRepository: GradeyHistoryRepository? = nil) {
+    init(repository: SchoolRepository, historyRepository: GradeyHistoryRepository? = nil, snapshotStore: SchoolSnapshotStore? = nil) {
+        self.snapshotStore = snapshotStore
         self.repository = repository
         self.historyRepository = historyRepository
     }
@@ -26,7 +28,11 @@ final class SubjectsViewModel {
 
     /// Weighted study average across all subjects (mean of subject averages).
     var overallAverage: Double? {
-        GradeMath.overallAverage(for: subjects)
+        if let snapshotStore {
+            let averages = subjects.compactMap { snapshotStore.preparedCalculations[$0.id]?.displayAverage }
+            return averages.isEmpty ? nil : averages.reduce(0, +) / Double(averages.count)
+        }
+        return GradeMath.overallAverage(for: subjects)
     }
 
     /// Total number of recorded marks across every subject.
@@ -56,7 +62,10 @@ final class SubjectsViewModel {
         guard !hasLoaded else { return }
         hasLoaded = true
 
-        if let cached = try? repository.loadCachedMarks() {
+        if let snapshotStore {
+            snapshotStore.activateCurrentScope()
+            applySharedSnapshot()
+        } else if let cached = try? repository.loadCachedMarks() {
             subjects = cached.marksResponse.subjects
             lastCacheDate = cached.cachedAt
         }
@@ -76,6 +85,11 @@ final class SubjectsViewModel {
             isRefreshing = false
         }
 
+        if let snapshotStore {
+            await snapshotStore.refresh(requirements: .subjects, force: forceRefresh)
+            applySharedSnapshot()
+            return
+        }
         do {
             let dashboard = try await repository.loadDashboard(forceRefresh: forceRefresh)
             subjects = dashboard.marksResponse.subjects
@@ -88,6 +102,16 @@ final class SubjectsViewModel {
                 errorMessage = userFacingMessage(for: error)
             }
         }
+    }
+
+    func applySharedSnapshot() {
+        guard let snapshotStore else { return }
+        subjects = snapshotStore.subjects
+        absencesPerSubject = snapshotStore.absence?.absencesPerSubject ?? []
+        user = snapshotStore.user
+        trends = snapshotStore.history.trends
+        lastCacheDate = snapshotStore.marksFetchedAt
+        errorMessage = subjects.isEmpty ? snapshotStore.sourceState("marks").error : nil
     }
 
     /// Cloud grade history is a best-effort extra: failures keep the last value.

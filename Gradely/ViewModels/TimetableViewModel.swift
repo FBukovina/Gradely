@@ -31,6 +31,10 @@ final class TimetableViewModel {
 
     var supportsPermanentTimetable: Bool { repository.supportsPermanentTimetable }
 
+    var schoolScope: SchoolDataScope? {
+        (try? repository.currentStoredSession()).map(SchoolDataScope.init(session:))
+    }
+
     var days: [ScheduledDay] { week?.days ?? [] }
 
     var selectedDay: ScheduledDay? {
@@ -131,6 +135,13 @@ final class TimetableViewModel {
         guard kind == .weekly, !isViewingCurrentWeek else { return }
         weekAnchor = today
         await loadCurrentAnchor()
+    }
+
+    func showSiriDay(_ date: Date) async {
+        _ = setKind(.weekly)
+        weekAnchor = date
+        await loadCurrentAnchor()
+        selectedDayID = days.first { $0.date.map { Calendar.current.isDate($0, inSameDayAs: date) } == true }?.id
     }
 
     func select(dayID: String) {

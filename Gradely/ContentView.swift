@@ -1,4 +1,5 @@
 import SwiftUI
+import CoreSpotlight
 
 private enum AppTab: Hashable {
     case today
@@ -10,6 +11,8 @@ private enum AppTab: Hashable {
 
 struct ContentView: View {
     private let repository: SchoolRepository
+    private let siriService: GradeyIntentService
+    private let schoolSnapshotStore: SchoolSnapshotStore
     private let stravaCZRepository: StravaCZRepository
     private let schoolDirectoryProvider: any SchoolDirectoryProviding
     private let supportTipProvider: any SupportTipProviding
@@ -28,17 +31,31 @@ struct ContentView: View {
     @AppStorage("settings.showMealsTab") private var showMealsTab = true
     @Bindable private var languageStore = AppLanguageStore.shared
     @State private var ageAttestationStore = AgeAttestationStore.shared
+    @State private var privacyPolicyStore = PrivacyPolicyConsentStore.shared
     @State private var appViewModel: AppViewModel
+    @State private var plannerStore: PlannerStore
     @State private var gradeyAIViewModel: GradeyAIViewModel
     @State private var onboardingJourney: OnboardingJourney?
+    @State private var plannerTarget: PlannerNavigationTarget?
+    @State private var siriSubjectID: String?
+    @State private var siriSubjectRequestID: UUID?
+    @State private var schoolRouteRequestID = UUID()
+    @State private var siriLessonTarget: GradeySiriDestination?
+    @State private var siriRouteError: String?
+    @State private var notificationRouter = SchoolNotificationRouter.shared
+    @AppStorage(PlannerNotificationScheduler.enabledKey) private var plannerRemindersEnabled = false
+    private let plannerNotificationScheduler = PlannerNotificationScheduler()
     @State private var isGradeyAIPresented = false
+    @State private var waitingForAIDismissal = false
+    @State private var waitingForPolicyDismissal = false
     @State private var selectedTab: AppTab = .today
     @State private var schoolAccountRevision = UUID()
     @State private var isOnboardingForced = false
     @Environment(\.scenePhase) private var scenePhase
 
     init(
-        environment: AppEnvironment = .current(),
+        environment: AppEnvironment? = nil,
+        siriService: GradeyIntentService? = nil,
         skipsOnboarding: Bool = ProcessInfo.processInfo.arguments.contains("-uiTestingMockAPI")
             && !ProcessInfo.processInfo.arguments.contains("-uiTestingShowOnboarding")
             && !ProcessInfo.processInfo.arguments.contains("-uiTestingShowUpgradeOnboarding"),
@@ -64,7 +81,11 @@ struct ContentView: View {
             defaults.set(true, forKey: GradeyDebugModeStore.storageKey)
         }
 
+        let environment = environment ?? AppEnvironment.current()
         repository = environment.repository
+        self.siriService = siriService ?? GradeyIntentService(environment: environment)
+        schoolSnapshotStore = environment.schoolSnapshotStore
+        _plannerStore = State(initialValue: environment.makePlannerStore())
         stravaCZRepository = environment.stravaCZRepository
         schoolDirectoryProvider = environment.schoolDirectoryProvider
         supportTipProvider = environment.supportTipProvider
@@ -137,6 +158,13 @@ struct ContentView: View {
                 ) {
                     onboardingProgressStore.clear()
                     hasCompletedOnboardingV2 = true
+                    // A brand-new install was shown the policy link during
+                    // onboarding, so do not immediately re-prompt it. Upgrading
+                    // users are the ones the change actually concerns, so they
+                    // still get the summary after their migration finishes.
+                    if onboardingJourney == .newUser {
+                        privacyPolicyStore.accept()
+                    }
                     isOnboardingForced = false
                     self.onboardingJourney = nil
                 }
@@ -159,6 +187,7 @@ struct ContentView: View {
                                 schoolDirectoryProvider: schoolDirectoryProvider,
                                 accountSettingsClient: devicePushTokenClient,
                                 gradeyAuthClient: gradeyAuthClient,
+                                snapshotStore: schoolSnapshotStore,
                                 accountHub: AnyView(accountHub()),
                                 onOpenGradeyAI: presentGradeyAI,
                                 onOpenAbsence: {
@@ -177,8 +206,11 @@ struct ContentView: View {
                             SubjectsView(
                                 repository: repository,
                                 historyRepository: historyRepository,
+                                snapshotStore: schoolSnapshotStore,
                                 accountHub: AnyView(accountHub()),
-                                onOpenGradeyAI: presentGradeyAI
+                                onOpenGradeyAI: presentGradeyAI,
+                                siriSubjectID: siriSubjectID,
+                                siriRequestID: siriSubjectRequestID
                             )
                         }
 
@@ -193,8 +225,10 @@ struct ContentView: View {
                         Tab("rozvrh.title", image: "TabTimetable", value: AppTab.timetable) {
                             TimetableView(
                                 repository: repository,
+                                plannerStore: plannerStore,
                                 accountHub: AnyView(accountHub()),
-                                onOpenGradeyAI: presentGradeyAI
+                                onOpenGradeyAI: presentGradeyAI,
+                                siriTarget: siriLessonTarget
                             )
                         }
 
@@ -216,6 +250,7 @@ struct ContentView: View {
             }
         }
         .task {
+            await plannerStore.activate()
             watchSyncService?.start()
             #if !os(macOS)
             watchSyncService?.configureAIRelay(
@@ -230,11 +265,21 @@ struct ContentView: View {
                 authClient: gradeyAuthClient
             )
             await appViewModel.bootstrap()
+            await consumeNotificationRoute()
+            await reconcilePlannerReminders()
             resumeOnboardingIfSessionIsIncomplete()
             await PushRegistrationService.shared.refreshRegistrationIfAuthorized()
             await preloadGradeyAIIfNeeded()
         }
         .onChange(of: scenePhase) { _, phase in
+            if phase == .active {
+                Task {
+                    schoolSnapshotStore.activateCurrentScope()
+                    await plannerStore.activate()
+                    await schoolSnapshotStore.refresh()
+                    await reconcilePlannerReminders()
+                }
+            }
             #if !os(macOS)
             if phase == .active {
                 Task { await publishWatchSupportTier() }
@@ -245,12 +290,32 @@ struct ContentView: View {
             resumeOnboardingIfSessionIsIncomplete()
             if appViewModel.phase == .signedIn {
                 selectedTab = .today
-                Task { await preloadGradeyAIIfNeeded() }
+                Task {
+                    await consumeNotificationRoute()
+                    await reconcilePlannerReminders()
+                    await preloadGradeyAIIfNeeded()
+                }
             } else {
+                schoolSnapshotStore.invalidateSession()
+                Task { await plannerNotificationScheduler.cancelAll() }
                 isGradeyAIPresented = false
+                plannerTarget = nil
+                siriSubjectID = nil
+                siriLessonTarget = nil
                 gradeyAIViewModel.reset()
             }
         }
+        .onChange(of: schoolSnapshotStore.scope) {
+            siriSubjectID = nil
+            siriLessonTarget = nil
+        }
+        .onChange(of: plannerStore.items) { Task { await reconcilePlannerReminders() } }
+        .onChange(of: plannerRemindersEnabled) { Task { await reconcilePlannerReminders() } }
+        .onChange(of: notificationSettingsStore.preferences) { Task { await reconcilePlannerReminders() } }
+        .onChange(of: notificationRouter.pendingURL) { Task { await consumeNotificationRoute() } }
+        .onChange(of: shouldShowOnboarding) { Task { await consumeNotificationRoute() } }
+        .onChange(of: shouldShowPrivacyPolicyUpdate) { Task { await consumeNotificationRoute() } }
+        .onChange(of: ageAttestationStore.allowsAppUse) { Task { await consumeNotificationRoute() } }
         .onChange(of: showMealsTab) { _, isVisible in
             if !isVisible, selectedTab == .stravaCZ {
                 selectedTab = .today
@@ -259,15 +324,27 @@ struct ContentView: View {
         .onOpenURL { url in
             Task { await handleOpenURL(url) }
         }
+        .onContinueUserActivity(CSSearchableItemActionType) { activity in
+            guard let value = activity.userInfo?[CSSearchableItemActivityIdentifier] as? String,
+                  let identifier = GradeySiriID(value) else { return }
+            Task { await handleOpenURL(identifier.url) }
+        }
         .onReceive(NotificationCenter.default.publisher(for: .gradelySchoolAccountDidChange)) { _ in
+            schoolSnapshotStore.activateCurrentScope()
             isGradeyAIPresented = false
+            plannerTarget = nil
             gradeyAIViewModel.reset()
             selectedTab = .today
             schoolAccountRevision = UUID()
+            siriSubjectID = nil
+            siriLessonTarget = nil
+            Task { await reconcilePlannerReminders() }
             Task { await preloadGradeyAIIfNeeded() }
         }
         .sheet(isPresented: $isGradeyAIPresented, onDismiss: {
             gradeyAIViewModel.stop()
+            waitingForAIDismissal = false
+            Task { await consumeNotificationRoute() }
         }) {
             GradeyAIView(
                 viewModel: gradeyAIViewModel,
@@ -280,7 +357,40 @@ struct ContentView: View {
                 }
             )
         }
+        .sheet(item: $plannerTarget) { target in
+            NavigationStack {
+                PlannerView(store: plannerStore, resolver: PlannerLessonResolver(repository: repository),
+                            focusedDay: target.day, initialItemID: target.itemID)
+            }
+        }
+        .privacyPolicyUpdate(isPresented: shouldShowPrivacyPolicyUpdate, onDismiss: {
+            waitingForPolicyDismissal = false
+            Task { await consumeNotificationRoute() }
+        }) {
+            waitingForPolicyDismissal = true
+            privacyPolicyStore.accept()
+        }
+        .environment(\.requestGradeyAIAction) { action, subjectID, eventID in
+            Task {
+                let expectedGeneration = repository.sessionGeneration
+                isGradeyAIPresented = true
+                await gradeyAIViewModel.selectAction(action, subjectID: subjectID, eventID: eventID)
+                guard repository.sessionGeneration == expectedGeneration else { return }
+            }
+        }
+        .alert(AppL10n.string("error.title"), isPresented: Binding(get: { siriRouteError != nil }, set: { if !$0 { siriRouteError = nil } })) {
+            Button("action.done") { siriRouteError = nil }
+        } message: { Text(siriRouteError ?? "") }
+        .environment(\.gradeySiriService, siriService)
         .environment(\.locale, languageStore.locale)
+    }
+
+    /// Never stacks on the age gate or onboarding — both are root branches
+    /// rather than overlays, so this waits until the app proper is on screen.
+    private var shouldShowPrivacyPolicyUpdate: Bool {
+        ageAttestationStore.allowsAppUse
+            && !shouldShowOnboarding
+            && privacyPolicyStore.needsAcknowledgement
     }
 
     private var shouldShowOnboarding: Bool {
@@ -363,12 +473,14 @@ struct ContentView: View {
                 appViewModel.clearLocalCaches()
                 gradeyAIViewModel.reset()
                 schoolAccountRevision = UUID()
+            Task { await reconcilePlannerReminders() }
             },
             onDebugResetAsNewUser: {
                 Task {
                     await appViewModel.resetAsNewUser()
                     gradeyAIViewModel.reset()
                     schoolAccountRevision = UUID()
+            Task { await reconcilePlannerReminders() }
                     restartOnboarding(.newUser)
                 }
             }
@@ -376,9 +488,39 @@ struct ContentView: View {
     }
 
     private func handleOpenURL(_ url: URL) async {
-        guard url.scheme == "gradey" || url.scheme == "gradely" else { return }
+        guard SchoolNotificationRouting.isSupported(url) else { return }
+        let requestID = UUID()
+        schoolRouteRequestID = requestID
+        notificationRouter.pendingURL = url
+        if isGradeyAIPresented {
+            waitingForAIDismissal = true
+            isGradeyAIPresented = false
+            return // Resume after the sheet's dismissal animation completes.
+        }
+        guard canHandleSchoolRoutes else { return }
+        _ = notificationRouter.takePendingURL(ifReady: true)
 
-        if url.host == "marks"
+        if let identifier = GradeySiriID.from(url: url) {
+            do {
+                let destination = try await siriService.resolveDestination(identifier.value)
+                try siriService.validateDestination(destination)
+                guard canHandleSchoolRoutes, schoolRouteRequestID == requestID else { return }
+                if let subjectID = destination.subjectID {
+                    siriSubjectID = subjectID
+                    siriSubjectRequestID = destination.requestID
+                    selectedTab = .subjects
+                } else if destination.lesson != nil {
+                    siriLessonTarget = destination
+                    selectedTab = .timetable
+                } else if let itemID = destination.plannerItemID {
+                    selectedTab = .today
+                    plannerTarget = PlannerNavigationTarget(url: URL(string: "gradey://planner/item/\(itemID.uuidString)")!)
+                }
+            } catch { if schoolRouteRequestID == requestID { siriRouteError = error.localizedDescription } }
+        } else if let target = PlannerNavigationTarget(url: url) {
+            selectedTab = .today
+            plannerTarget = target
+        } else if url.host == "marks"
             || url.host == "subjects"
             || url.path == "/marks"
             || url.path == "/subjects" {
@@ -386,6 +528,24 @@ struct ContentView: View {
         } else if url.host == "timetable" || url.path == "/timetable" {
             selectedTab = .timetable
         }
+    }
+
+    private func consumeNotificationRoute() async {
+        guard let url = notificationRouter.pendingURL else { return }
+        await handleOpenURL(url)
+    }
+
+    private var canHandleSchoolRoutes: Bool {
+        appViewModel.phase == .signedIn && ageAttestationStore.allowsAppUse
+            && !shouldShowOnboarding && !shouldShowPrivacyPolicyUpdate
+            && !isGradeyAIPresented && !waitingForAIDismissal && !waitingForPolicyDismissal
+    }
+
+    private func reconcilePlannerReminders() async {
+        guard appViewModel.phase == .signedIn else { await plannerNotificationScheduler.cancelAll(); return }
+        schoolSnapshotStore.activateCurrentScope()
+        await plannerNotificationScheduler.reconcile(items: plannerStore.items, scope: schoolSnapshotStore.scope,
+                                                      preferences: notificationSettingsStore.preferences)
     }
 
     private func presentGradeyAI() {

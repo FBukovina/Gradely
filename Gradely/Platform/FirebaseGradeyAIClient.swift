@@ -14,9 +14,13 @@ final class FirebaseGradeyAIClient: GradeyAIClient {
 
     private let identityCoordinator = FirebaseGradeyAIIdentityCoordinator()
     private let accountIDProvider: @Sendable () -> String?
+    private let accountProofProvider: @Sendable () async throws -> String?
+    private let schoolScopeProvider: (@Sendable () async throws -> String?)?
 
-    init(accountIDProvider: @escaping @Sendable () -> String? = { nil }) {
+    init(accountIDProvider: @escaping @Sendable () -> String? = { nil }, accountProofProvider: @escaping @Sendable () async throws -> String? = { nil }, schoolScopeProvider: (@Sendable () async throws -> String?)? = nil) {
         self.accountIDProvider = accountIDProvider
+        self.accountProofProvider = accountProofProvider
+        self.schoolScopeProvider = schoolScopeProvider
     }
 
     private var gradeyAccountID: String? {
@@ -25,17 +29,22 @@ final class FirebaseGradeyAIClient: GradeyAIClient {
         return trimmed
     }
 
-    func loadStatus() async throws -> GradeyAIStatus {
+    func loadStatus() async throws -> GradeyAIStatus { try await loadStatus(refreshEntitlement: false) }
+
+    func loadStatus(refreshEntitlement: Bool) async throws -> GradeyAIStatus {
         let response: FirebaseGradeyAIStatusDTO = try await call(
             "gradeyAIGetStatus",
-            request: FirebaseGradeyAIEmptyRequest(gradeyAccountID: gradeyAccountID)
+            request: FirebaseGradeyAIEmptyRequest(gradeyAccountID: gradeyAccountID, refreshEntitlement: refreshEntitlement)
         )
         return response.model
     }
 
     func acceptConsent() async throws -> GradeyAIConsent {
+        let accountID = gradeyAccountID
         try await identityCoordinator.ensureIdentity()
+        try await validateScope(nil, accountID: accountID)
         let currentStatus = try await loadStatus()
+        try await validateScope(nil, accountID: accountID)
         let response: FirebaseGradeyAIStatusEnvelope = try await call(
             "gradeyAIAcceptConsent",
             request: FirebaseGradeyAIAcceptConsentRequest(
@@ -59,19 +68,26 @@ final class FirebaseGradeyAIClient: GradeyAIClient {
     func listConversations(schoolScope: String) async throws -> [GradeyAIConversation] {
         let response: FirebaseGradeyAIChatsResponse = try await call(
             "gradeyAIListChats",
-            request: FirebaseGradeyAISchoolScopeRequest(schoolScope: schoolScope, gradeyAccountID: gradeyAccountID)
+            request: FirebaseGradeyAISchoolScopeRequest(schoolScope: schoolScope, gradeyAccountID: gradeyAccountID),
+            expectedSchoolScope: schoolScope
         )
         return response.chats.map(\.model)
     }
 
     func createConversation(schoolScope: String, title: String?) async throws -> GradeyAIConversation {
+        try await createConversation(schoolScope: schoolScope, title: title, contextSelectionID: schoolScope)
+    }
+
+    func createConversation(schoolScope: String, title: String?, contextSelectionID: String) async throws -> GradeyAIConversation {
         let response: FirebaseGradeyAIChatResponse = try await call(
             "gradeyAICreateChat",
             request: FirebaseGradeyAICreateChatRequest(
                 schoolScope: schoolScope,
                 title: title,
-                gradeyAccountID: gradeyAccountID
-            )
+                gradeyAccountID: gradeyAccountID,
+                contextSelectionID: contextSelectionID
+            ),
+            expectedSchoolScope: schoolScope
         )
         return response.chat.model
     }
@@ -97,7 +113,8 @@ final class FirebaseGradeyAIClient: GradeyAIClient {
     func deleteAllConversations(schoolScope: String) async throws {
         let _: FirebaseGradeyAIDeletionResponse = try await call(
             "gradeyAIDeleteAll",
-            request: FirebaseGradeyAISchoolScopeRequest(schoolScope: schoolScope, gradeyAccountID: gradeyAccountID)
+            request: FirebaseGradeyAISchoolScopeRequest(schoolScope: schoolScope, gradeyAccountID: gradeyAccountID),
+            expectedSchoolScope: schoolScope
         )
     }
 
@@ -107,7 +124,24 @@ final class FirebaseGradeyAIClient: GradeyAIClient {
         text: String,
         context: GradeyAIContextSnapshot
     ) -> AsyncThrowingStream<GradeyAIStreamEvent, Error> {
-        AsyncThrowingStream { continuation in
+        streamReply(request: GradeyAIReplyRequest(conversationID: conversationID, clientMessageID: clientMessageID,
+                    text: text, context: context, actionID: .reply, contextSelectionID: context.schoolScope,
+                    catalogVersion: nil, maximumComputeCost: 1))
+    }
+
+    func recoverRequest(_ pending: GradeyAIPendingRequest) async throws -> GradeyAIGenerationRecovery {
+        let response: FirebaseGradeyAIRecoveryResponse = try await call("gradeyAIGetRequest", request: FirebaseGradeyAIRecoveryRequest(
+            chatID: pending.conversationID, clientMessageID: pending.clientMessageID, schoolScope: pending.schoolScope,
+            contextSelectionID: pending.contextSelectionID, gradeyAccountID: gradeyAccountID
+        ), expectedSchoolScope: pending.schoolScope)
+        return GradeyAIGenerationRecovery(state: response.state, message: response.message?.model(fallbackConversationID: pending.conversationID), status: response.status?.model)
+    }
+
+    func streamReply(request frozen: GradeyAIReplyRequest) -> AsyncThrowingStream<GradeyAIStreamEvent, Error> {
+        let conversationID = frozen.conversationID, clientMessageID = frozen.clientMessageID
+        let text = frozen.text, context = frozen.context
+        let accountID = gradeyAccountID
+        return AsyncThrowingStream { continuation in
             let task = Task {
                 do {
                     let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -115,23 +149,31 @@ final class FirebaseGradeyAIClient: GradeyAIClient {
                         throw GradeyAIError.invalidPrompt
                     }
 
+                    let proof = try await accountProofProvider()
+                    try await validateScope(context.schoolScope, accountID: accountID)
                     var minimizedContext = FirebaseGradeyAIContextDTO(context)
                     try minimizedContext.constrainEncodedSize(to: Self.maximumContextBytes)
                     let request = FirebaseGradeyAIStreamRequest(
                         chatID: conversationID,
                         clientMessageID: clientMessageID,
                         text: trimmedText,
-                        locale: Locale.current.identifier,
+                        locale: frozen.locale,
                         schoolScope: context.schoolScope,
                         context: minimizedContext,
                         contextGeneratedAt: Self.milliseconds(context.generatedAt),
-                        gradeyAccountID: gradeyAccountID
+                        gradeyAccountID: accountID,
+                        actionID: frozen.actionID.rawValue,
+                        catalogVersion: frozen.catalogVersion,
+                        maximumComputeCost: frozen.maximumComputeCost,
+                        contextSelectionID: frozen.contextSelectionID,
+                        gradeyAccessToken: proof
                     )
                     guard try JSONEncoder().encode(request).count <= Self.maximumRequestBytes else {
                         throw GradeyAIError.requestTooLarge
                     }
 
                     try await identityCoordinator.ensureIdentity()
+                    try await validateScope(context.schoolScope, accountID: accountID)
                     guard GradeyFirebaseConfiguration.isConfigured else {
                         throw GradeyAIError.notConfigured
                     }
@@ -147,9 +189,11 @@ final class FirebaseGradeyAIClient: GradeyAIClient {
                         )
                     callable.timeoutInterval = Self.callableTimeout
 
+                    try await validateScope(context.schoolScope, accountID: accountID)
                     var receivedTerminalEvent = false
                     for try await response in try callable.stream(request) {
                         try Task.checkCancellation()
+                        guard gradeyAccountID == accountID else { throw CancellationError() }
                         let payload: FirebaseGradeyAIStreamEventDTO
                         let isFinalResult: Bool
                         switch response {
@@ -182,8 +226,10 @@ final class FirebaseGradeyAIClient: GradeyAIClient {
     private func call<Request: Encodable & Sendable, Response: Decodable & Sendable>(
         _ name: String,
         request: Request,
-        requiresIdentity: Bool = true
+        requiresIdentity: Bool = true,
+        expectedSchoolScope: String? = nil
     ) async throws -> Response {
+        let accountID = gradeyAccountID
         do {
             GradeyFirebaseConfiguration.configureIfNeeded()
             guard GradeyFirebaseConfiguration.isConfigured else {
@@ -191,14 +237,34 @@ final class FirebaseGradeyAIClient: GradeyAIClient {
             }
             if requiresIdentity {
                 try await identityCoordinator.ensureIdentity()
+                try await validateScope(expectedSchoolScope, accountID: accountID)
             }
-            var callable: Callable<Request, Response> = Functions.functions(region: Self.region)
+            // History deletion and consent withdrawal rely on Firebase ownership,
+            // and must remain available while the paid-account proof is unavailable.
+            let privacyDeletion = ["gradeyAIDeleteChat", "gradeyAIDeleteAll", "gradeyAIRevokeConsent"].contains(name)
+            let proof = privacyDeletion ? nil : try await accountProofProvider()
+            try await validateScope(expectedSchoolScope, accountID: accountID)
+            let authenticated = FirebaseAuthenticatedAIRequest(payload: request, gradeyAccessToken: proof)
+            var callable: Callable<FirebaseAuthenticatedAIRequest<Request>, Response> = Functions.functions(region: Self.region)
                 .httpsCallable(name)
             callable.timeoutInterval = Self.callableTimeout
-            return try await callable(request)
+            try await validateScope(expectedSchoolScope, accountID: accountID)
+            let response = try await callable(authenticated)
+            try await validateScope(expectedSchoolScope, accountID: accountID)
+            return response
         } catch {
             throw Self.mappedError(error)
         }
+    }
+
+    private func validateScope(_ expectedScope: String?, accountID: String?) async throws {
+        try Task.checkCancellation()
+        guard gradeyAccountID == accountID else { throw CancellationError() }
+        if let expectedScope, let schoolScopeProvider {
+            guard try await schoolScopeProvider() == expectedScope else { throw CancellationError() }
+        }
+        try Task.checkCancellation()
+        guard gradeyAccountID == accountID else { throw CancellationError() }
     }
 
     private static func milliseconds(_ date: Date) -> Double {
@@ -255,11 +321,41 @@ private actor FirebaseGradeyAIIdentityCoordinator {
     }
 }
 
+nonisolated private struct FirebaseAuthenticatedAIRequest<Payload: Encodable & Sendable>: Encodable, Sendable {
+    let payload: Payload
+    let gradeyAccessToken: String?
+    func encode(to encoder: Encoder) throws {
+        try payload.encode(to: encoder)
+        var container = encoder.container(keyedBy: AnyFirebaseCodingKey.self)
+        try container.encodeIfPresent(gradeyAccessToken, forKey: AnyFirebaseCodingKey("gradeyAccessToken"))
+    }
+}
+
+nonisolated private struct FirebaseGradeyAIRecoveryRequest: Codable, Sendable {
+    let chatID: String
+    let clientMessageID: String
+    let schoolScope: String
+    let contextSelectionID: String
+    let gradeyAccountID: String?
+    enum CodingKeys: String, CodingKey {
+        case chatID, clientMessageID, schoolScope, contextSelectionID
+        case gradeyAccountID = "gradey_account_id"
+    }
+}
+
+nonisolated private struct FirebaseGradeyAIRecoveryResponse: Codable, Sendable {
+    let state: String
+    let message: FirebaseGradeyAIMessageDTO?
+    let status: FirebaseGradeyAIStatusDTO?
+}
+
 nonisolated private struct FirebaseGradeyAIEmptyRequest: Codable, Sendable {
     var gradeyAccountID: String?
+    var refreshEntitlement: Bool? = nil
 
     enum CodingKeys: String, CodingKey {
         case gradeyAccountID = "gradey_account_id"
+        case refreshEntitlement
     }
 }
 
@@ -297,11 +393,13 @@ nonisolated private struct FirebaseGradeyAICreateChatRequest: Codable, Sendable 
     let schoolScope: String
     let title: String?
     var gradeyAccountID: String?
+    var contextSelectionID: String? = nil
 
     enum CodingKeys: String, CodingKey {
         case schoolScope
         case title
         case gradeyAccountID = "gradey_account_id"
+        case contextSelectionID
     }
 }
 
@@ -314,6 +412,12 @@ nonisolated private struct FirebaseGradeyAIStreamRequest: Codable, Sendable {
     let context: FirebaseGradeyAIContextDTO
     let contextGeneratedAt: Double
     var gradeyAccountID: String?
+    let actionID: String
+    let catalogVersion: String?
+    let maximumComputeCost: Int
+    let contextSelectionID: String
+    let gradeyAccessToken: String?
+
 
     enum CodingKeys: String, CodingKey {
         case chatID
@@ -324,6 +428,7 @@ nonisolated private struct FirebaseGradeyAIStreamRequest: Codable, Sendable {
         case context
         case contextGeneratedAt
         case gradeyAccountID = "gradey_account_id"
+        case actionID, catalogVersion, maximumComputeCost, contextSelectionID, gradeyAccessToken
     }
 }
 
@@ -554,6 +659,7 @@ nonisolated private struct FirebaseGradeyAIStatusDTO: Codable, Sendable {
     let dailyUsed: Int
     let remaining: Int
     let resetAt: Double?
+    let compute: GradeyComputeBalance?
 
     var model: GradeyAIStatus {
         GradeyAIStatus(
@@ -564,7 +670,8 @@ nonisolated private struct FirebaseGradeyAIStatusDTO: Codable, Sendable {
             dailyUsed: dailyUsed,
             remaining: remaining,
             resetAt: resetAt.map { Date(timeIntervalSince1970: $0 / 1_000) },
-            tier: GradeyAIIdentityTier(rawValue: tier) ?? .anonymous
+            tier: GradeyAIIdentityTier(rawValue: tier) ?? .anonymous,
+            compute: compute
         )
     }
 
@@ -581,6 +688,7 @@ nonisolated private struct FirebaseGradeyAIStatusDTO: Codable, Sendable {
             fallback: max(0, dailyLimit - dailyUsed)
         )
         resetAt = FirebaseFlexibleTime.milliseconds(in: container, names: "resetAt", "reset_at")
+        compute = try container.decodeIfPresent(GradeyComputeBalance.self, forKey: AnyFirebaseCodingKey("compute"))
     }
 
     func encode(to encoder: Encoder) throws {
@@ -593,6 +701,7 @@ nonisolated private struct FirebaseGradeyAIStatusDTO: Codable, Sendable {
         try container.encode(dailyUsed, forKey: AnyFirebaseCodingKey("dailyUsed"))
         try container.encode(remaining, forKey: AnyFirebaseCodingKey("remaining"))
         try container.encodeIfPresent(resetAt, forKey: AnyFirebaseCodingKey("resetAt"))
+        try container.encodeIfPresent(compute, forKey: AnyFirebaseCodingKey("compute"))
     }
 }
 
@@ -607,6 +716,7 @@ nonisolated private struct FirebaseGradeyAIChatDTO: Codable, Sendable {
     let createdAt: Double
     let updatedAt: Double
     let lastMessageAt: Double?
+    let contextSelectionID: String?
 
     var model: GradeyAIConversation {
         GradeyAIConversation(
@@ -615,7 +725,8 @@ nonisolated private struct FirebaseGradeyAIChatDTO: Codable, Sendable {
             title: title,
             createdAt: Date(timeIntervalSince1970: createdAt / 1_000),
             updatedAt: Date(timeIntervalSince1970: updatedAt / 1_000),
-            lastMessageAt: lastMessageAt.map { Date(timeIntervalSince1970: $0 / 1_000) }
+            lastMessageAt: lastMessageAt.map { Date(timeIntervalSince1970: $0 / 1_000) },
+            contextSelectionID: contextSelectionID
         )
     }
 
@@ -628,6 +739,7 @@ nonisolated private struct FirebaseGradeyAIChatDTO: Codable, Sendable {
         createdAt = FirebaseFlexibleTime.milliseconds(in: container, names: "createdAt", "created_at") ?? now
         updatedAt = FirebaseFlexibleTime.milliseconds(in: container, names: "updatedAt", "updated_at") ?? createdAt
         lastMessageAt = FirebaseFlexibleTime.milliseconds(in: container, names: "lastMessageAt", "last_message_at")
+        contextSelectionID = container.flexibleString("contextSelectionID")
     }
 
     func encode(to encoder: Encoder) throws {
@@ -638,6 +750,7 @@ nonisolated private struct FirebaseGradeyAIChatDTO: Codable, Sendable {
         try container.encode(createdAt, forKey: AnyFirebaseCodingKey("createdAt"))
         try container.encode(updatedAt, forKey: AnyFirebaseCodingKey("updatedAt"))
         try container.encodeIfPresent(lastMessageAt, forKey: AnyFirebaseCodingKey("lastMessageAt"))
+        try container.encodeIfPresent(contextSelectionID, forKey: AnyFirebaseCodingKey("contextSelectionID"))
     }
 }
 
@@ -911,6 +1024,10 @@ nonisolated private struct FirebaseGradeyAIContextDTO: Codable, Sendable {
     var subjects: [Subject]
     var trends: [Trend]
     var timetable: [Lesson]
+    var events: [GradeyAIEventContext]
+    var insights: [GradeyAIInsightContext]
+    var sourceFreshness: [GradeyAISourceFreshness]
+
 
     init(_ snapshot: GradeyAIContextSnapshot) {
         schoolScope = snapshot.schoolScope
@@ -920,11 +1037,16 @@ nonisolated private struct FirebaseGradeyAIContextDTO: Codable, Sendable {
         subjects = snapshot.subjects.map(Subject.init)
         trends = snapshot.trends.map(Trend.init)
         timetable = snapshot.timetable.map(Lesson.init)
+        events = Array((snapshot.events ?? []).prefix(30))
+        insights = Array((snapshot.insights ?? []).prefix(12))
+        sourceFreshness = Array((snapshot.sourceFreshness ?? []).prefix(5))
     }
 
     mutating func constrainEncodedSize(to maximumBytes: Int) throws {
         let encoder = JSONEncoder()
         while try encoder.encode(self).count > maximumBytes {
+            if !events.isEmpty { events.removeLast(); continue }
+            if !insights.isEmpty { insights.removeLast(); continue }
             if !timetable.isEmpty {
                 timetable.removeLast()
                 continue
@@ -975,6 +1097,7 @@ nonisolated private struct FirebaseGradeyAIContextDTO: Codable, Sendable {
         let pointsOnly: Bool
         let totalMarkCount: Int
         var recentMarks: [Mark]
+        let calculation: GradeyAIGradeCalculationContext?
 
         init(_ subject: GradeyAISubjectContext) {
             id = subject.id
@@ -983,6 +1106,7 @@ nonisolated private struct FirebaseGradeyAIContextDTO: Codable, Sendable {
             average = subject.average
             pointsOnly = subject.pointsOnly
             totalMarkCount = subject.totalMarkCount
+            calculation = subject.calculation
             recentMarks = subject.recentMarks.map(Mark.init)
         }
     }
@@ -1075,8 +1199,9 @@ nonisolated enum FirebaseGradeyAIWireContract {
 #else
 
 final class FirebaseGradeyAIClient: GradeyAIClient {
-    init(accountIDProvider: @escaping @Sendable () -> String? = { nil }) {
+    init(accountIDProvider: @escaping @Sendable () -> String? = { nil }, accountProofProvider: @escaping @Sendable () async throws -> String? = { nil }, schoolScopeProvider: (@Sendable () async throws -> String?)? = nil) {
         _ = accountIDProvider
+        _ = accountProofProvider
     }
 
     func loadStatus() async throws -> GradeyAIStatus { throw GradeyAIError.notConfigured }

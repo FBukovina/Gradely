@@ -2,16 +2,32 @@ import SwiftUI
 
 struct SubjectDetailView: View {
     @State private var viewModel: SubjectDetailViewModel
+    @Environment(\.requestGradeyAIAction) private var requestAI
+    @State private var isSimulatorPresented = false
+    private let snapshotStore: SchoolSnapshotStore?
+    private let navigationScope: SchoolDataScope?
 
-    init(viewModel: SubjectDetailViewModel) {
+    init(viewModel: SubjectDetailViewModel, snapshotStore: SchoolSnapshotStore? = nil) {
         _viewModel = State(initialValue: viewModel)
+        self.snapshotStore = snapshotStore
+        self.navigationScope = snapshotStore?.scope
+    }
+
+    private var subjectUnavailable: Bool {
+        guard let snapshotStore else { return false }
+        return snapshotStore.scope != navigationScope || snapshotStore.subject(id: viewModel.subject.id) == nil
     }
 
     var body: some View {
+        Group {
+        if subjectUnavailable {
+            ContentUnavailableView("detail.intelligence.subjectUnavailable", systemImage: "book.closed")
+        } else {
         ScrollView {
             VStack(spacing: Spacing.xl) {
                 AverageHero(viewModel: viewModel)
                 chartSection
+                insightsSection
                 calculatorSection
                 marksSection
             }
@@ -20,10 +36,90 @@ struct SubjectDetailView: View {
             .frame(maxWidth: 640)
             .frame(maxWidth: .infinity)
         }
+        }
+        }
         .gradelyScreenBackground()
         .scrollDismissesKeyboard(.interactively)
-        .navigationTitle(viewModel.subject.trimmedName)
+        .gradeySiriContext(.subject(viewModel.subject.id, navigationScope))
+        .navigationTitle(subjectUnavailable ? AppL10n.string("detail.intelligence.subjectUnavailable") : viewModel.subject.trimmedName)
         .gradelyNavigationTitleDisplayMode(.large)
+        .onChange(of: snapshotStore?.revision, initial: true) { _, _ in
+            if subjectUnavailable { isSimulatorPresented = false }
+            else { refreshSubjectSnapshot() }
+        }
+        .sheet(isPresented: $isSimulatorPresented) {
+            GradeSimulatorView(viewModel: viewModel)
+        }
+    }
+
+    private func refreshSubjectSnapshot() {
+        guard let snapshotStore, snapshotStore.scope == navigationScope,
+              let subject = snapshotStore.subject(id: viewModel.subject.id) else { return }
+        viewModel.updateSubject(
+            subject,
+            prepared: snapshotStore.preparedCalculations[subject.id],
+            trend: snapshotStore.history.trends.first { $0.subjectID == subject.id },
+            summary: snapshotStore.subjectInsights.first { $0.subjectID == subject.id }
+        )
+    }
+
+    @ViewBuilder
+    private var insightsSection: some View {
+        if let summary = viewModel.summary {
+            VStack(alignment: .leading, spacing: Spacing.md) {
+                SectionHeader("detail.intelligence.insights")
+                Card {
+                    VStack(alignment: .leading, spacing: Spacing.md) {
+                        if let delta = summary.trendDelta {
+                            VStack(alignment: .leading, spacing: Spacing.xs) {
+                                Text(String.localizedStringWithFormat(
+                                    AppL10n.string(delta > 0 ? "detail.intelligence.worsening" : "detail.intelligence.improving"), abs(delta)
+                                ))
+                                .font(.subheadline.weight(.semibold))
+                                Text(AppL10n.string("detail.intelligence.observedTrend"))
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        if summary.trendDelta == nil {
+                            Text("detail.intelligence.insufficientHistory")
+                                .font(.subheadline).foregroundStyle(.secondary)
+                        }
+                        if let contribution = summary.recentContribution {
+                            DisclosureGroup(AppL10n.string("detail.intelligence.recentContribution")) {
+                                Text(String(format: AppL10n.string("detail.intelligence.contributionExplanation"), contribution.markText, contribution.reconstructedDelta))
+                                    .font(.caption).foregroundStyle(.secondary)
+                            }
+                        }
+                        Button { requestAI(.subjectHelp, viewModel.subject.id, nil) } label: {
+                            GradelyLabel("gradey.ai.action.subject_help", systemImage: "sparkles")
+                        }.buttonStyle(.bordered)
+                            .accessibilityIdentifier("subjectContextualAIButton")
+                        ForEach(Array(summary.upcomingEvents.prefix(2))) { event in
+                            HStack(alignment: .top, spacing: Spacing.md) {
+                                GradelyIcon(systemName: "calendar")
+                                    .foregroundStyle(Brand.primary)
+                                VStack(alignment: .leading, spacing: Spacing.xs) {
+                                    Text(event.title).font(.subheadline.weight(.medium))
+                                    Text(event.date.formatted(Date.FormatStyle(
+                                        date: .abbreviated, time: event.hasTime ? .shortened : .omitted,
+                                        locale: AppLanguageOverride.locale, timeZone: event.calendar.timeZone
+                                    )))
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                    if event.kind == .test {
+                                        Button { requestAI(.testPreparation, viewModel.subject.id, event.id) } label: {
+                                            Text("gradey.ai.action.test_preparation")
+                                        }.font(.caption)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            .accessibilityIdentifier("subjectInsightSummary")
+        }
     }
 
     private var marksSection: some View {
@@ -97,6 +193,23 @@ struct SubjectDetailView: View {
         VStack(alignment: .leading, spacing: Spacing.md) {
             SectionHeader("detail.calculator.section")
             TheoreticalCalculatorView(viewModel: viewModel)
+            Button {
+                isSimulatorPresented = true
+            } label: {
+                HStack(spacing: Spacing.md) {
+                    GradelyIcon(systemName: "chart.line.uptrend.xyaxis")
+                    Text(AppL10n.string("detail.simulator.title"))
+                        .font(.subheadline.weight(.semibold))
+                    Spacer()
+                    GradelyIcon(systemName: "chevron.right")
+                        .font(.caption.weight(.semibold))
+                }
+                .padding(Spacing.md)
+                .background(Color.gradelySecondaryGroupedBackground, in: RoundedRectangle(cornerRadius: Radius.card))
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(Brand.primary)
+            .accessibilityIdentifier("openGradeSimulatorButton")
         }
     }
 }
@@ -110,7 +223,8 @@ private struct AverageHero: View {
         let band = GradeMath.band(for: viewModel.currentAverage)
 
         VStack(spacing: Spacing.md) {
-            Text("detail.average.title")
+            Text(AppL10n.string(viewModel.preparedCalculation.officialAverage != nil
+                ? "detail.intelligence.schoolAverage" : "detail.intelligence.calculatedAverage"))
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(.white.opacity(0.85))
 
@@ -199,7 +313,7 @@ private struct MarkRow: View {
                         color: .secondary
                     )
 
-                    if !mark.isPoints, resolvedWeight.source == .explicit, resolvedWeight.value > 1 {
+                    if !mark.isPoints, resolvedWeight.source == .explicit, resolvedWeight.value != 1 {
                         StatusChip(
                             text: String.localizedStringWithFormat(
                                 AppL10n.string("detail.weight.decimal"),
@@ -209,7 +323,7 @@ private struct MarkRow: View {
                         )
                     }
 
-                    if !mark.isPoints, resolvedWeight.source == .inferred, resolvedWeight.value > 1 {
+                    if !mark.isPoints, resolvedWeight.source == .inferred, resolvedWeight.value != 1 {
                         StatusChip(
                             text: String.localizedStringWithFormat(
                                 AppL10n.string("detail.weight.estimated.decimal"),
@@ -244,6 +358,7 @@ private struct TheoreticalCalculatorView: View {
     var body: some View {
         Card {
             VStack(alignment: .leading, spacing: Spacing.lg) {
+                if viewModel.preparedCalculation.canSimulate {
                 TextField(AppL10n.string("detail.calculator.mark.placeholder"), text: Binding(
                     get: { viewModel.theoreticalMark },
                     set: { viewModel.updateTheoreticalMark($0) }
@@ -257,10 +372,24 @@ private struct TheoreticalCalculatorView: View {
                 if let theoreticalAverage = viewModel.theoreticalAverage {
                     ResultView(
                         theoreticalAverage: theoreticalAverage,
-                        difference: viewModel.theoreticalDifference
+                        difference: viewModel.theoreticalDifference,
+                        sourceKey: viewModel.predictionSourceKey
                     )
                     .accessibilityIdentifier("theoreticalResultPanel")
                 }
+                if let warning = viewModel.calculationWarningKey {
+                    Text(AppL10n.string(String.LocalizationValue(warning)))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                } else {
+                    Text(AppL10n.string("detail.simulator.unavailable"))
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+                Text(AppL10n.string("detail.intelligence.teacherDisclaimer"))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
         }
     }
@@ -293,10 +422,11 @@ private struct TheoreticalCalculatorView: View {
             GradelyIcon(systemName: systemImage)
                 .font(.headline.weight(.bold))
                 .foregroundStyle(disabled ? AnyShapeStyle(.tertiary) : AnyShapeStyle(Brand.primary))
-                .frame(width: 36, height: 32)
+                .frame(minWidth: 44, minHeight: 44)
                 .background(Color.gradelySecondaryGroupedBackground, in: RoundedRectangle(cornerRadius: Radius.sm - 4, style: .continuous))
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(AppL10n.string(systemImage == "minus" ? "detail.weight.decrease" : "detail.weight.increase"))
         .disabled(disabled)
     }
 }
@@ -304,6 +434,7 @@ private struct TheoreticalCalculatorView: View {
 private struct ResultView: View {
     let theoreticalAverage: Double
     let difference: Double?
+    let sourceKey: String
 
     var body: some View {
         let tint = differenceColor
@@ -311,12 +442,15 @@ private struct ResultView: View {
         VStack(spacing: Spacing.xs) {
             Text(
                 String.localizedStringWithFormat(
-                    AppL10n.string("detail.calculator.newAverage"),
+                    AppL10n.string("detail.simulator.result"),
                     theoreticalAverage
                 )
             )
             .font(.title3.bold())
             .monospacedDigit()
+            Text(AppL10n.string(String.LocalizationValue(sourceKey)))
+                .font(.caption)
+                .foregroundStyle(.secondary)
 
             if let differenceText {
                 Text(differenceText)

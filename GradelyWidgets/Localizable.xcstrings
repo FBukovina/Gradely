@@ -70,13 +70,13 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Aktuální nebo další předmět na ploše."
+            "value" : "Aktuální nebo další hodina na ploše."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "See your current or next subject on the desktop."
+            "value" : "See your current or next lesson on the desktop."
           }
         }
       }
@@ -86,13 +86,13 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Aktuální nebo další předmět na zamykací obrazovce."
+            "value" : "Aktuální nebo další hodina na zamykací obrazovce."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "See your current or next subject on the Lock Screen."
+            "value" : "See your current or next lesson on the Lock Screen."
           }
         }
       }

@@ -1,4 +1,5 @@
 import Foundation
+import CryptoKit
 
 struct SchoolDataScope: Codable, Equatable, Hashable, Sendable {
     let rawValue: String
@@ -21,7 +22,19 @@ struct SchoolDataScope: Codable, Equatable, Hashable, Sendable {
     init(session: StoredSession) {
         if let linkedAccountID = session.linkedAccountID?.trimmingCharacters(in: .whitespacesAndNewlines),
            !linkedAccountID.isEmpty {
-            self.init(rawValue: "linked-\(linkedAccountID)")
+            if session.provider == .eduPage {
+                // A linked EduPage login can contain several children with the same
+                // subject IDs. Keep their data separate without guessing old ownership.
+                let components = [linkedAccountID, session.baseURL.absoluteString,
+                                  session.eduPage?.userID ?? "",
+                                  session.eduPage?.activeStudent == nil ? "unselected" : "student",
+                                  session.eduPage?.activeStudent?.id ?? ""]
+                let identity = components.map { "\($0.utf8.count):\($0)" }.joined()
+                let digest = SHA256.hash(data: Data(identity.utf8)).map { String(format: "%02x", $0) }.joined()
+                self.init(rawValue: "edupage-linked-v2-\(digest)")
+            } else {
+                self.init(rawValue: "linked-\(linkedAccountID)")
+            }
         } else {
             self.init(rawValue: session.cacheScope)
         }

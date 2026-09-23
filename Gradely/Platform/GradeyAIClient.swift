@@ -18,17 +18,44 @@ enum GradeyAIError: LocalizedError, Equatable {
     var errorDescription: String? {
         switch self {
         case .notConfigured:
-            return AppL10n.string("gradey.auth.error.notConfigured")
+            return AppL10n.string("gradey.ai.compute.unavailable")
         case .invalidResponse, .invalidStream:
-            return AppL10n.string("gradey.account.error.invalidResponse")
+            return AppL10n.string("gradey.ai.error.couldNotComplete")
         case .invalidPrompt:
             return AppL10n.string("gradey.ai.error.invalidPrompt")
         case .requestTooLarge:
             return AppL10n.string("gradey.ai.error.requestTooLarge")
         case .unauthenticated:
             return AppL10n.string("gradey.ai.error.unauthenticated")
-        case .server(_, let message, _):
-            return message
+        case .server(let code, _, _):
+            // The backend contract supplies stable codes; its diagnostic copy
+            // is not localized to the student's selected app language.
+            switch code.lowercased().replacingOccurrences(of: "_", with: "-") {
+            case "quota-exceeded":
+                return AppL10n.string("gradey.ai.limit.reached")
+            case "catalog-changed", "price-changed":
+                return AppL10n.string("gradey.ai.compute.priceChanged")
+            case "request-pending":
+                return AppL10n.string("gradey.ai.compute.pending")
+            case "cancelled", "firebase-1":
+                return AppL10n.string("gradey.ai.response.cancelled")
+            case "timeout", "firebase-4":
+                return AppL10n.string("gradey.ai.error.timeout")
+            case "content-filter":
+                return AppL10n.string("gradey.ai.error.contentFilter")
+            case "provider-rate-limit", "firebase-8":
+                return AppL10n.string("gradey.ai.error.busy")
+            case "accounting-blocked", "firebase-14":
+                return AppL10n.string("gradey.ai.compute.unavailable")
+            case "idempotency-conflict":
+                return AppL10n.string("gradey.ai.error.changedRequest")
+            case "firebase-5":
+                return AppL10n.string("gradey.ai.error.chatUnavailable")
+            case "unauthenticated", "firebase-16":
+                return AppL10n.string("gradey.ai.error.unauthenticated")
+            default:
+                return AppL10n.string("gradey.ai.error.couldNotComplete")
+            }
         }
     }
 
@@ -46,6 +73,10 @@ enum GradeyAIError: LocalizedError, Equatable {
 
 protocol GradeyAIClient {
     func loadStatus() async throws -> GradeyAIStatus
+    func loadStatus(refreshEntitlement: Bool) async throws -> GradeyAIStatus
+    func createConversation(schoolScope: String, title: String?, contextSelectionID: String) async throws -> GradeyAIConversation
+    func streamReply(request: GradeyAIReplyRequest) -> AsyncThrowingStream<GradeyAIStreamEvent, Error>
+    func recoverRequest(_ pending: GradeyAIPendingRequest) async throws -> GradeyAIGenerationRecovery
     func acceptConsent() async throws -> GradeyAIConsent
     func revokeConsent() async throws
     func listConversations(schoolScope: String) async throws -> [GradeyAIConversation]
@@ -59,6 +90,25 @@ protocol GradeyAIClient {
         text: String,
         context: GradeyAIContextSnapshot
     ) -> AsyncThrowingStream<GradeyAIStreamEvent, Error>
+}
+
+
+extension GradeyAIClient {
+    func loadStatus(refreshEntitlement: Bool) async throws -> GradeyAIStatus { try await loadStatus() }
+    func createConversation(schoolScope: String, title: String?, contextSelectionID: String) async throws -> GradeyAIConversation {
+        var conversation = try await createConversation(schoolScope: schoolScope, title: title)
+        conversation.contextSelectionID = contextSelectionID
+        return conversation
+    }
+    func streamReply(request: GradeyAIReplyRequest) -> AsyncThrowingStream<GradeyAIStreamEvent, Error> {
+        streamReply(conversationID: request.conversationID, clientMessageID: request.clientMessageID, text: request.text, context: request.context)
+    }
+    func recoverRequest(_ pending: GradeyAIPendingRequest) async throws -> GradeyAIGenerationRecovery {
+        let detail = try await loadConversation(id: pending.conversationID)
+        let userIndex = detail.messages.firstIndex { $0.clientMessageID == pending.clientMessageID && $0.role == .user }
+        let message = userIndex.flatMap { index in detail.messages.dropFirst(index + 1).first { $0.role == .assistant } }
+        return GradeyAIGenerationRecovery(state: message?.status == .complete ? "complete" : "missing", message: message, status: try await loadStatus())
+    }
 }
 
 final class MockGradeyAIClient: GradeyAIClient {

@@ -70,13 +70,13 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Něco se pokazilo."
+            "value" : "Odpověď se nepodařilo dokončit. Zkus to znovu."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Something went wrong."
+            "value" : "Couldn’t complete the reply. Try again."
           }
         }
       }
@@ -118,13 +118,13 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "iPhone odpovídal moc dlouho."
+            "value" : "Odpověď trvala příliš dlouho. Zkus to znovu."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "The iPhone took too long to reply."
+            "value" : "The reply took too long. Try again."
           }
         }
       }
@@ -134,13 +134,13 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Na opakovaných plánech podpory. Předplatné nastavíš v Gradey na iPhonu."
+            "value" : "S předplatným Support nebo Support Plus. Aktivuješ ho v Gradey na iPhonu."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Available on recurring supporter plans. Subscribe in Gradey on iPhone."
+            "value" : "Available with Support or Support Plus. Subscribe in Gradey on iPhone."
           }
         }
       }
@@ -172,7 +172,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Refresh purchases"
+            "value" : "Restore purchases"
           }
         }
       }
@@ -448,7 +448,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Could not refresh purchases. Open Gradey on iPhone and try again."
+            "value" : "Could not restore purchases. Open Gradey on iPhone and try again."
           }
         }
       }
@@ -474,13 +474,13 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Žádný aktivní plán. Předplatné nastavíš v Gradey na iPhonu."
+            "value" : "Nenašlo se aktivní předplatné. Aktivuješ ho v Gradey na iPhonu."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "No active plan found. Subscribe in Gradey on iPhone."
+            "value" : "No active subscription found. Subscribe in Gradey on iPhone."
           }
         }
       }
@@ -538,13 +538,13 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Klepni pro zbývajících %d"
+            "value" : "Zbývající hodiny: %d"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tap for %d remaining"
+            "value" : "Remaining lessons: %d"
           }
         }
       }
@@ -570,13 +570,13 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Přihlas se a hodinky dostanou školní relaci."
+            "value" : "Otevři Gradey na iPhonu a přihlas se ke škole."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sign in and the watch will receive your school session."
+            "value" : "Open Gradey on iPhone and sign in to your school."
           }
         }
       }
@@ -785,6 +785,150 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Today"
+          }
+        }
+      }
+    },
+    "watch.ai.error.consentRequired" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Review and enable Gradey AI in Gradey on iPhone."
+          }
+        },
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Otevři Gradey na iPhonu a potvrď souhlas s používáním AI."
+          }
+        }
+      }
+    },
+    "watch.ai.error.unavailable" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gradey AI is unavailable right now. Try again later."
+          }
+        },
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gradey AI teď není k dispozici. Zkus to později."
+          }
+        }
+      }
+    },
+    "watch.ai.error.quotaExceeded" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Daily Compute allowance used. Try again after the reset."
+          }
+        },
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Denní příděl Compute je vyčerpaný. Zkus to po jeho obnovení."
+          }
+        }
+      }
+    },
+    "watch.ai.error.priceChanged" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The Compute price changed. Open Gradey on iPhone to continue."
+          }
+        },
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cena v Compute se změnila. Pokračuj v Gradey na iPhonu."
+          }
+        }
+      }
+    },
+    "watch.ai.error.pending" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your reply is still processing. Check Gradey on iPhone."
+          }
+        },
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Odpověď se ještě připravuje. Zkontroluj Gradey na iPhonu."
+          }
+        }
+      }
+    },
+    "watch.ai.error.contentFilter" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI couldn’t answer this request. Try rephrasing it."
+          }
+        },
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI na tento požadavek nemohla odpovědět. Zkus ho přeformulovat."
+          }
+        }
+      }
+    },
+    "watch.ai.error.busy" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gradey AI is busy. Try again shortly."
+          }
+        },
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gradey AI je vytížená. Zkus to za chvíli."
+          }
+        }
+      }
+    },
+    "watch.ai.error.changedRequest" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This request changed. Open Gradey on iPhone to try again."
+          }
+        },
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tento požadavek se změnil. Zkus to znovu v Gradey na iPhonu."
+          }
+        }
+      }
+    },
+    "watch.ai.error.chatUnavailable" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This conversation is unavailable. Open Gradey on iPhone to start again."
+          }
+        },
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tato konverzace není k dispozici. Začni znovu v Gradey na iPhonu."
           }
         }
       }

@@ -22,7 +22,8 @@ Deno.serve(async (req) => {
         .eq("user_id", user.id)
         .eq("linked_account_id", linkedAccountID)
         .gte("captured_at", cutoff)
-        .order("captured_at", { ascending: true })
+        .order("captured_at", { ascending: false })
+        .order("id", { ascending: false })
         .limit(1000),
       supabase
         .from("new_mark_events")
@@ -37,7 +38,8 @@ Deno.serve(async (req) => {
     if (recentMarks.error) throw recentMarks.error;
 
     return json({
-      events: history.data ?? [],
+      // Limit the newest rows, then preserve the chronological client contract.
+      events: (history.data ?? []).reverse(),
       recentNewMarkEvents: recentMarks.data ?? [],
     });
   } catch (error) {

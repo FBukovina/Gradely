@@ -8,6 +8,10 @@ This folder contains the Gradey ID platform backend:
 - `send-apns` atomically claims due events, enforces global and per-school switches, defers quiet-hours events, summarizes one complete quiet-window group, applies lock-screen privacy, and tracks acceptance, retry, or suppression independently for every target device.
 - Authenticated settings functions return canonical account state, update preferences, reconnect an owned school account in place, export user-owned data, and delete the Gradey ID account.
 
+The password-removal changes in this checkout require a coordinated rollout. Link and relink require `x-gradey-provider-session: tokens-only-v1` before parsing a request body; they also reject password fields and require a separately established Bakaláři polling session. Polling uses refresh tokens only and requires reconnect when a token fails. Activation omits the poller's refresh token. The new database migration sanitizes every encrypted write and read, including legacy payloads, while preserving APNs device tokens stored in the same table.
+
+Existing ciphertext needs a separate cleanup; applying the migration alone does not erase it. See [rollout and policy text](../Docs/BakalariPasswordPrivacy.md) and `Scripts/purge-provider-passwords.ts` (dry-run by default). Do not claim the live service is password-free until deployment and cleanup have been verified.
+
 ## Remote project
 
 - Project ref: `<your-project-ref>`

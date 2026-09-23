@@ -9,7 +9,7 @@ enum MarkFingerprintBuilder {
         linkedAccountID: String
     ) -> MarkFingerprint {
         let subjectID = stableSubjectID(mark: mark, subject: subject)
-        let providerMarkID = trimmed(mark.id)
+        let providerMarkID = mark.hasStableProviderID ? trimmed(mark.id) : nil
 
         if let providerMarkID {
             let value = [
@@ -160,9 +160,8 @@ enum ProviderSecretSanitizer {
         let tokenType: String
         let expiresAt: Date?
         let eduPage: EduPagePayload?
-        /// Bakaláři username/password so the cloud poller can mint its own
-        /// token family instead of racing the app's rotating refresh token.
-        let bakalari: BakalariCredentials?
+        /// Set only for a separate token family created on-device for polling.
+        var pollingSessionEstablishedAt: Date? = nil
     }
 
     struct EduPagePayload: Codable, Equatable {
@@ -193,8 +192,7 @@ enum ProviderSecretSanitizer {
                     linkedStudents: data.linkedStudents,
                     subjects: data.subjects
                 )
-            },
-            bakalari: session.bakalari
+            }
         )
     }
 }

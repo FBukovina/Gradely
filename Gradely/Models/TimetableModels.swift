@@ -388,6 +388,9 @@ struct ScheduledLesson: Identifiable, Equatable {
     let change: TimetableChange?
     let changeKind: LessonChangeKind
     var cycles: [String] = []
+    /// Preserve provider identifiers for personal links; display names are not identities.
+    var subjectID: String? = nil
+    var groupIDs: [String] = []
 
     var isCanceled: Bool { changeKind.isCanceled }
 

@@ -36,7 +36,9 @@ final class LiveWatchSyncService: NSObject, WatchSyncing {
     private var aiClient: (any GradeyAIClient)?
     private var contextBuilder: (any GradeyAIContextBuilding)?
     private var supportProvider: (any SupportTipProviding)?
-    private var watchConversationID: String?
+    private var watchConversation: GradeyAIConversation?
+    private var relayGeneration = UUID()
+    private var relaySchoolScope: SchoolDataScope?
     private var activeAIRequestID: String?
     private var aiTask: Task<Void, Never>?
 
@@ -50,6 +52,11 @@ final class LiveWatchSyncService: NSObject, WatchSyncing {
     }
 
     func update(session: StoredSession?) {
+        let nextScope = session.map(SchoolDataScope.init(session:))
+        if nextScope != relaySchoolScope {
+            invalidateAIRelay()
+            relaySchoolScope = nextScope
+        }
         auth = session.map(WatchPayloadBuilder.auth)
         publishCurrentPayload()
     }
@@ -74,6 +81,7 @@ final class LiveWatchSyncService: NSObject, WatchSyncing {
         contextBuilder: any GradeyAIContextBuilding,
         supportProvider: any SupportTipProviding
     ) {
+        invalidateAIRelay()
         self.aiClient = client
         self.contextBuilder = contextBuilder
         self.supportProvider = supportProvider
@@ -85,10 +93,8 @@ final class LiveWatchSyncService: NSObject, WatchSyncing {
         user = nil
         timetable = nil
         supportTier = .none
-        watchConversationID = nil
-        aiTask?.cancel()
-        aiTask = nil
-        activeAIRequestID = nil
+        relaySchoolScope = nil
+        invalidateAIRelay()
         publish(payload: .signedOut())
     }
 
@@ -165,148 +171,154 @@ final class LiveWatchSyncService: NSObject, WatchSyncing {
         replyToSyncRequest(replyHandler)
     }
 
-    private func handleAIRequest(
+    /// The Watch has no explicit school-context picker, so it always starts or
+    /// continues a general chat with no attached school records.
+    func handleAIRequest(
         _ request: GradelyWatchAIStreamRequest,
         replyHandler: @escaping ([String: Any]) -> Void
     ) async {
         aiTask?.cancel()
+        aiTask = nil
+        relayGeneration = UUID()
+        let generation = relayGeneration
         activeAIRequestID = request.requestID
-
-        let entitlement = await supportProvider?.currentEntitlement() ?? .none
-        guard entitlement.tier != .none else {
-            reply(replyHandler, .failure(
-                code: GradelyWatchAIErrorCode.supporterRequired,
-                message: "Subscribe in Gradey on iPhone."
-            ))
-            return
+        var handedOffToStream = false
+        defer {
+            if !handedOffToStream, relayGeneration == generation { activeAIRequestID = nil }
         }
 
         guard let aiClient, let contextBuilder else {
-            reply(replyHandler, .failure(
-                code: GradelyWatchAIErrorCode.notConfigured,
-                message: "Gradey AI is not available."
-            ))
+            reply(replyHandler, .failure(code: GradelyWatchAIErrorCode.notConfigured, message: "Gradey AI is not available."))
             return
         }
 
         do {
+            let schoolScope = try contextBuilder.currentSchoolScope()
+            let selection = GradeyAIContextSelection(action: .reply)
             let status = try await aiClient.loadStatus()
-            if status.consentRequired {
-                reply(replyHandler, .failure(
-                    code: GradelyWatchAIErrorCode.consentRequired,
-                    message: "Enable Gradey AI on iPhone."
-                ))
+            try validateAIRelay(scope: schoolScope, generation: generation, requestID: request.requestID)
+            guard !status.consentRequired else {
+                reply(replyHandler, .failure(code: GradelyWatchAIErrorCode.consentRequired, message: "Enable Gradey AI on iPhone."))
                 return
             }
             guard status.enabled else {
-                reply(replyHandler, .failure(
-                    code: GradelyWatchAIErrorCode.notConfigured,
-                    message: "Gradey AI is not available."
-                ))
-                return
-            }
-            guard status.remaining > 0 else {
-                reply(replyHandler, .failure(
-                    code: GradelyWatchAIErrorCode.quotaExceeded,
-                    message: "Daily Gradey AI limit reached."
-                ))
+                reply(replyHandler, .failure(code: GradelyWatchAIErrorCode.notConfigured, message: "Gradey AI is not available."))
                 return
             }
 
-            let schoolScope = try contextBuilder.currentSchoolScope()
-            let context: GradeyAIContextSnapshot
-            if let refreshed = try? await contextBuilder.refreshContext() {
-                context = refreshed
-            } else if let cached = try contextBuilder.cachedContext() {
-                context = cached
+            let cost: Int
+            if let compute = status.compute {
+                guard compute.schemaVersion == 1, !compute.catalogVersion.isEmpty,
+                      let action = compute.actions.first(where: { $0.id == GradeyAIAction.reply.rawValue && $0.available }),
+                      action.cost > 0 else {
+                    reply(replyHandler, .failure(code: GradelyWatchAIErrorCode.notConfigured, message: "Gradey AI is not available."))
+                    return
+                }
+                guard ["standard", "plus"].contains(compute.supportTier) else {
+                    reply(replyHandler, .failure(code: GradelyWatchAIErrorCode.supporterRequired, message: "Subscribe in Gradey on iPhone."))
+                    return
+                }
+                cost = action.cost
             } else {
-                reply(replyHandler, .failure(
-                    code: GradelyWatchAIErrorCode.noSchoolAccount,
-                    message: "School context is unavailable."
-                ))
+                // Keep the old relay contract usable against a legacy backend;
+                // local StoreKit metadata never changes the server's balance.
+                let entitlement = await supportProvider?.currentEntitlement() ?? .none
+                try validateAIRelay(scope: schoolScope, generation: generation, requestID: request.requestID)
+                guard entitlement.tier != .none else {
+                    reply(replyHandler, .failure(code: GradelyWatchAIErrorCode.supporterRequired, message: "Subscribe in Gradey on iPhone."))
+                    return
+                }
+                cost = 1
+            }
+            guard status.remaining >= cost else {
+                reply(replyHandler, .failure(code: GradelyWatchAIErrorCode.quotaExceeded, message: "Daily Gradey AI limit reached."))
                 return
             }
 
-            let conversationID: String
-            if let existing = request.conversationID ?? watchConversationID {
-                conversationID = existing
-            } else {
-                conversationID = try await aiClient.createConversation(
-                    schoolScope: schoolScope,
-                    title: "Watch"
-                ).id
+            var conversation: GradeyAIConversation?
+            var createdConversation = false
+            if let existingID = request.conversationID ?? watchConversation?.id {
+                if let cached = watchConversation, cached.id == existingID {
+                    conversation = cached
+                } else {
+                    conversation = try? await aiClient.loadConversation(id: existingID).conversation
+                    try validateAIRelay(scope: schoolScope, generation: generation, requestID: request.requestID)
+                }
             }
-            watchConversationID = conversationID
-
-            reply(replyHandler, .success(conversationID: conversationID))
-
+            // Legacy chats attached whole school records. A fresh purpose-scoped
+            // chat avoids carrying those records forward through chat history.
+            if conversation?.schoolScope != schoolScope || conversation?.contextSelectionID != selection.identifier {
+                conversation = nil
+            }
+            if conversation == nil {
+                createdConversation = true
+                conversation = try await aiClient.createConversation(schoolScope: schoolScope, title: "Watch", contextSelectionID: selection.identifier)
+                try validateAIRelay(scope: schoolScope, generation: generation, requestID: request.requestID)
+            }
+            guard let conversation, conversation.schoolScope == schoolScope,
+                  conversation.contextSelectionID == selection.identifier
+                    || (createdConversation && status.compute == nil && conversation.contextSelectionID == nil) else {
+                throw GradeyAIError.invalidResponse
+            }
+            let context = GradeyAIContextBuilder.emptyContext(schoolScope: schoolScope, now: Date())
+            let frozen = GradeyAIReplyRequest(conversationID: conversation.id, clientMessageID: request.clientMessageID,
+                text: request.text, context: context, actionID: .reply, contextSelectionID: selection.identifier,
+                catalogVersion: status.compute?.catalogVersion, maximumComputeCost: cost)
+            try validateAIRelay(scope: schoolScope, generation: generation, requestID: request.requestID)
+            watchConversation = conversation
+            reply(replyHandler, .success(conversationID: conversation.id))
+            handedOffToStream = true
             aiTask = Task { [weak self] in
-                await self?.stream(
-                    request: request,
-                    conversationID: conversationID,
-                    context: context,
-                    client: aiClient
-                )
+                await self?.stream(requestID: request.requestID, frozen: frozen, client: aiClient, generation: generation)
             }
+        } catch is CancellationError {
+            reply(replyHandler, .failure(code: GradelyWatchAIErrorCode.cancelled, message: "Cancelled. Open Gradey on iPhone and try again."))
         } catch let error as GradeyAIContextError where error == .noSchoolAccount {
-            reply(replyHandler, .failure(
-                code: GradelyWatchAIErrorCode.noSchoolAccount,
-                message: "Open Gradey on iPhone and sign in to school."
-            ))
+            reply(replyHandler, .failure(code: GradelyWatchAIErrorCode.noSchoolAccount, message: "Open Gradey on iPhone and sign in to school."))
         } catch {
-            reply(replyHandler, .failure(
-                code: "failed",
-                message: error.localizedDescription
-            ))
+            reply(replyHandler, .failure(code: "failed", message: error.localizedDescription))
         }
     }
 
-    private func stream(
-        request: GradelyWatchAIStreamRequest,
-        conversationID: String,
-        context: GradeyAIContextSnapshot,
-        client: any GradeyAIClient
-    ) async {
+    private func stream(requestID: String, frozen: GradeyAIReplyRequest, client: any GradeyAIClient, generation: UUID) async {
         do {
-            for try await event in client.streamReply(
-                conversationID: conversationID,
-                clientMessageID: request.clientMessageID,
-                text: request.text,
-                context: context
-            ) {
-                try Task.checkCancellation()
-                sendAIEvent(Self.watchEvent(from: event, requestID: request.requestID, conversationID: conversationID))
+            try validateAIRelay(scope: frozen.context.schoolScope, generation: generation, requestID: requestID)
+            for try await event in client.streamReply(request: frozen) {
+                try validateAIRelay(scope: frozen.context.schoolScope, generation: generation, requestID: requestID)
+                sendAIEvent(Self.watchEvent(from: event, requestID: requestID, conversationID: frozen.conversationID))
             }
-        } catch is CancellationError {
-            sendAIEvent(
-                GradelyWatchAIStreamEvent(
-                    requestID: request.requestID,
-                    conversationID: conversationID,
-                    kind: .failed,
-                    errorCode: GradelyWatchAIErrorCode.cancelled,
-                    errorMessage: "Cancelled."
-                )
-            )
         } catch {
-            sendAIEvent(
-                GradelyWatchAIStreamEvent(
-                    requestID: request.requestID,
-                    conversationID: conversationID,
-                    kind: .failed,
-                    errorCode: "failed",
-                    errorMessage: error.localizedDescription
-                )
-            )
+            // A request for the previous student must never publish events after
+            // the Watch has switched to a new school session.
+            guard relayGeneration == generation, activeAIRequestID == requestID,
+                  (try? contextBuilder?.currentSchoolScope()) == frozen.context.schoolScope else { return }
+            sendAIEvent(GradelyWatchAIStreamEvent(requestID: requestID, conversationID: frozen.conversationID, kind: .failed,
+                errorCode: error is CancellationError ? GradelyWatchAIErrorCode.cancelled : "failed",
+                errorMessage: error is CancellationError ? "Cancelled." : error.localizedDescription))
         }
-
-        if activeAIRequestID == request.requestID {
+        if relayGeneration == generation, activeAIRequestID == requestID {
             activeAIRequestID = nil
             aiTask = nil
         }
     }
 
+    private func validateAIRelay(scope: String, generation: UUID, requestID: String) throws {
+        try Task.checkCancellation()
+        guard relayGeneration == generation, activeAIRequestID == requestID,
+              let contextBuilder, try contextBuilder.currentSchoolScope() == scope else { throw CancellationError() }
+    }
+
+    private func invalidateAIRelay() {
+        relayGeneration = UUID()
+        watchConversation = nil
+        aiTask?.cancel()
+        aiTask = nil
+        activeAIRequestID = nil
+    }
+
     private func handleAICancel(_ cancel: GradelyWatchAICancel) {
         guard cancel.requestID == activeAIRequestID else { return }
+        relayGeneration = UUID()
         aiTask?.cancel()
         aiTask = nil
         activeAIRequestID = nil

@@ -1,6 +1,35 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "NSCalendarsFullAccessUsageDescription" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gradey potřebuje přístup ke kalendáři, aby mohl vytvářet, upravovat a mazat události, u kterých zapneš synchronizaci. Zdrojem dat zůstává plánovač v Gradey."
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gradey potřebuje přístup ke kalendáři, aby mohl vytvářet, upravovat a mazat události, u kterých zapneš synchronizaci. Zdrojem dat zůstává plánovač v Gradey."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gradey needs calendar access to create, update, and remove the planner events you choose to sync. Your planner stays the source of truth."
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gradey needs calendar access to create, update, and remove the planner events you choose to sync. Your planner stays the source of truth."
+          }
+        }
+      }
+    },
     "CFBundleDisplayName" : {
       "comment" : "Bundle display name",
       "extractionState" : "extracted_with_value",
@@ -37,7 +66,7 @@
         "cs-US" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "gradey používá fotoaparát, abys mohl v chatu podpory poslat fotku."
+            "value" : "Gradey používá fotoaparát, abys mohl v chatu podpory poslat fotku."
           }
         },
         "en" : {
@@ -49,7 +78,7 @@
         "en-CO" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "gradey uses the camera so you can send a photo in support chat."
+            "value" : "Gradey uses the camera so you can send a photo in support chat."
           }
         }
       }
@@ -66,7 +95,7 @@
         "cs-US" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "gradey používá mikrofon, abys mohl v chatu podpory poslat video."
+            "value" : "Gradey používá mikrofon, abys mohl v chatu podpory poslat video."
           }
         },
         "en" : {
@@ -78,7 +107,7 @@
         "en-CO" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "gradey uses the microphone so you can send a video in support chat."
+            "value" : "Gradey uses the microphone so you can send a video in support chat."
           }
         }
       }
@@ -95,7 +124,7 @@
         "cs-US" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "gradey může uložit přílohu z chatu podpory do fotek."
+            "value" : "Gradey může uložit přílohu z chatu podpory do fotek."
           }
         },
         "en" : {
@@ -107,7 +136,7 @@
         "en-CO" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "gradey may save a support-chat attachment to your photo library."
+            "value" : "Gradey may save a support-chat attachment to your photo library."
           }
         }
       }
@@ -124,7 +153,7 @@
         "cs-US" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "gradey používá fotky, abys mohl v chatu podpory přiložit snímek."
+            "value" : "Gradey používá fotky, abys mohl v chatu podpory přiložit snímek."
           }
         },
         "en" : {
@@ -136,7 +165,7 @@
         "en-CO" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "gradey uses your photo library so you can attach a photo in support chat."
+            "value" : "Gradey uses your photo library so you can attach a photo in support chat."
           }
         }
       }

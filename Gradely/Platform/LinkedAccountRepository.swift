@@ -147,16 +147,25 @@ final class LinkedAccountRepository {
 final class SupabaseLinkedAccountClient: LinkedAccountClient {
     private let configuration: SupabaseConfiguration?
     private let urlSession: URLSession
+    private let bakalariClient: any BakalariClient
+    private let dateProvider: () -> Date
     private let encoder = JSONEncoder.sessionEncoder
     private let decoder = JSONDecoder.gradeyAPIDecoder
 
-    init(configuration: SupabaseConfiguration? = .fromBundle(), urlSession: URLSession = .shared) {
+    init(
+        configuration: SupabaseConfiguration? = .fromBundle(),
+        urlSession: URLSession = .shared,
+        bakalariClient: (any BakalariClient)? = nil,
+        dateProvider: @escaping () -> Date = Date.init
+    ) {
         self.configuration = configuration
         self.urlSession = urlSession
+        self.bakalariClient = bakalariClient ?? URLSessionBakalariClient(urlSession: urlSession)
+        self.dateProvider = dateProvider
     }
 
     func linkSchoolAccount(session: StoredSession, user: UserResponse?, gradeySession: GradeyAuthSession) async throws -> LinkedAccount {
-        let sanitized = ProviderSecretSanitizer.schoolPayload(from: session)
+        let sanitized = try await schoolPayloadForPolling(from: session)
         let request = LinkSchoolAccountRequest(
             provider: sanitized.provider,
             baseURL: sanitized.baseURL,
@@ -205,7 +214,7 @@ final class SupabaseLinkedAccountClient: LinkedAccountClient {
         user: UserResponse?,
         gradeySession: GradeyAuthSession
     ) async throws -> LinkedAccount {
-        let sanitized = ProviderSecretSanitizer.schoolPayload(from: session)
+        let sanitized = try await schoolPayloadForPolling(from: session)
         return try await send(
             function: "relink-school-account",
             method: "POST",
@@ -220,6 +229,39 @@ final class SupabaseLinkedAccountClient: LinkedAccountClient {
                 tokenPayload: sanitized
             )
         )
+    }
+
+    /// Credentials are used only in a direct request to the school. Never upload
+    /// the device's rotating refresh token or fall back to uploading its password.
+    private func schoolPayloadForPolling(from session: StoredSession) async throws -> ProviderSecretSanitizer.SchoolPayload {
+        guard configuration != nil else { throw GradeyAuthError.notConfigured }
+        guard session.provider == .bakalari else {
+            return ProviderSecretSanitizer.schoolPayload(from: session)
+        }
+        guard let credentials = session.bakalari,
+              !credentials.username.isEmpty, !credentials.password.isEmpty else {
+            throw SchoolAuthenticationError.deviceSignInRequired
+        }
+        let response = try await bakalariClient.login(
+            baseURL: session.baseURL,
+            username: credentials.username,
+            password: credentials.password
+        )
+        guard !response.accessToken.isEmpty, !response.refreshToken.isEmpty,
+              response.refreshToken != session.refreshToken else {
+            throw SchoolAuthenticationError.deviceSignInRequired
+        }
+        let now = dateProvider()
+        let pollingSession = StoredSession(
+            accessToken: response.accessToken,
+            refreshToken: response.refreshToken,
+            tokenType: response.tokenType,
+            expiresAt: now.addingTimeInterval(TimeInterval(response.expiresIn)),
+            baseURL: session.baseURL
+        )
+        var payload = ProviderSecretSanitizer.schoolPayload(from: pollingSession)
+        payload.pollingSessionEstablishedAt = now
+        return payload
     }
 
     func updateNotificationsEnabled(
@@ -288,6 +330,7 @@ final class SupabaseLinkedAccountClient: LinkedAccountClient {
         request.setValue(gradeySession.authorizationHeader, forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.setValue("application/json; charset=utf-8", forHTTPHeaderField: "Content-Type")
+        request.setValue("tokens-only-v1", forHTTPHeaderField: "x-gradey-provider-session")
         request.httpBody = try encoder.encode(body)
 
         let (data, response) = try await urlSession.data(for: request)

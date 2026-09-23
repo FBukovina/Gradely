@@ -83,6 +83,7 @@ struct GradeyAccountHubView: View {
     let onDebugClearCache: () -> Void
     let onDebugResetAsNewUser: () -> Void
 
+    @AppStorage(PlannerNotificationScheduler.enabledKey) private var plannerRemindersEnabled = false
     @Environment(\.dismiss) private var dismiss
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.scenePhase) private var scenePhase
@@ -97,10 +98,12 @@ struct GradeyAccountHubView: View {
     @State private var pendingUnlinkAccount: LinkedAccount?
     @State private var isSupportSheetPresented = false
     @State private var isCreditsPresented = false
+    @State private var isPrivacyChangesPresented = false
     @State private var isStudentPickerPresented = false
     @State private var studentSwitchError: String?
     @State private var retryingCloudLink: OnboardingWarning.Kind?
     @State private var notificationAuthorizationStatus: NotificationAuthorizationStatus = .notDetermined
+    @State private var isRequestingPlannerPermission = false
     @State private var isSignOutConfirmationPresented = false
     @State private var isDeleteConfirmationPresented = false
     @State private var isFinalDeleteConfirmationPresented = false
@@ -250,6 +253,9 @@ struct GradeyAccountHubView: View {
             }
             .sheet(isPresented: $isCreditsPresented) {
                 CreditsView()
+            }
+            .sheet(isPresented: $isPrivacyChangesPresented) {
+                PrivacyPolicyUpdateView(mode: .review)
             }
             .sheet(isPresented: $isStudentPickerPresented) {
                 studentPicker
@@ -1188,6 +1194,20 @@ private extension GradeyAccountHubView {
                 }
             }
 
+            SettingsSurface {
+                VStack(alignment: .leading, spacing: Spacing.sm) {
+                    Toggle(isOn: Binding(get: { plannerRemindersEnabled }, set: { enabled in
+                        if !enabled { plannerRemindersEnabled = false }
+                        else { Task { await enablePlannerReminders() } }
+                    })) { Text("planner.reminders.toggle") }
+                        .tint(Brand.primary)
+                        .disabled(isRequestingPlannerPermission)
+                        .accessibilityIdentifier("plannerRemindersToggle")
+                    Text("planner.reminders.message")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+            }
+
             DetailSectionHeader(
                 title: "gradey.account.notifications.title",
                 message: "gradey.account.notifications.message"
@@ -1306,6 +1326,7 @@ private extension GradeyAccountHubView {
 
     var privacyDataDetail: some View {
         VStack(alignment: .leading, spacing: Spacing.xl) {
+            SettingsSurface { GradeySiriDiscoverySettingsView() }
             DetailSectionHeader(
                 title: "settings.privacy.documents.title",
                 message: "settings.privacy.documents.message"
@@ -1336,6 +1357,21 @@ private extension GradeyAccountHubView {
                     }
                     .buttonStyle(.plain)
                     .accessibilityIdentifier("termsOfUseLink")
+
+                    SettingsRowDivider()
+
+                    Button {
+                        isPrivacyChangesPresented = true
+                    } label: {
+                        SettingsActionRow(
+                            title: "privacy.update.settingsRow.title",
+                            message: "privacy.update.settingsRow.caption",
+                            iconName: "legal-document-01"
+                        )
+                        .padding(20)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("privacyChangesLink")
                 }
             }
 
@@ -1727,7 +1763,7 @@ private extension GradeyAccountHubView {
     }
 
     var notificationControlsAreEnabled: Bool {
-        notificationsAreAvailable && viewModel.notificationPreferences.newMarksEnabled
+        (notificationsAreAvailable && viewModel.notificationPreferences.newMarksEnabled) || plannerRemindersEnabled
     }
 
     var quietHoursControlsAreEnabled: Bool {
@@ -1911,7 +1947,7 @@ private extension GradeyAccountHubView {
         mutation(&preferences)
         preferences.quietHoursTimeZoneIdentifier = TimeZone.current.identifier
         Task {
-            await viewModel.updateNotificationPreferences(preferences)
+            await viewModel.updateNotificationPreferences(preferences, locallyOnly: isGuestMode)
         }
     }
 
@@ -1946,6 +1982,21 @@ private extension GradeyAccountHubView {
 
     func refreshNotificationAuthorization() async {
         notificationAuthorizationStatus = await notificationAuthorizer.authorizationStatus()
+    }
+
+    func enablePlannerReminders() async {
+        guard !isRequestingPlannerPermission else { return }
+        isRequestingPlannerPermission = true
+        defer { isRequestingPlannerPermission = false }
+        let current = await notificationAuthorizer.authorizationStatus()
+        if current == .denied {
+            notificationAuthorizationStatus = .denied
+            notificationAuthorizer.openSystemSettings()
+            return
+        }
+        let resolved = current == .authorized ? current : await notificationAuthorizer.requestAuthorization()
+        notificationAuthorizationStatus = resolved
+        plannerRemindersEnabled = resolved == .authorized
     }
 
     func resolveNotificationPermission() async {
@@ -2060,6 +2111,8 @@ private extension GradeyAccountHubView {
                 detailPath = []
                 compactPath = []
                 onSchoolLinked()
+            } catch SchoolAuthenticationError.deviceSignInRequired {
+                openSchoolConnection(reconnectAccountID: linkedAccount.id)
             } catch {
                 actionErrorMessage = error.localizedDescription
             }

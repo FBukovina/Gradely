@@ -199,12 +199,16 @@ final class GradeyAccountHubViewModel {
         }
     }
 
-    func updateNotificationPreferences(_ preferences: NotificationPreferences) async {
+    func updateNotificationPreferences(_ preferences: NotificationPreferences, locallyOnly: Bool = false) async {
         errorMessage = nil
         let previous = notificationPreferences
         let prepared = preferences.preparedForServerUpdate()
         notificationPreferences = prepared
         preferencesStore.preferences = prepared
+
+        // Guests can use local Planner reminders and edit their quiet/privacy
+        // preferences without creating or requiring a Gradey cloud account.
+        guard !locallyOnly else { return }
 
         do {
             let session = try await authClient.validSession()

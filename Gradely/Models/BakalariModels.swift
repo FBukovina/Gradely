@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 
 struct LoginResponse: Codable, Equatable {
@@ -290,6 +291,12 @@ struct Mark: Codable, Equatable, Hashable, Identifiable {
     let confirmedBy: String?
     let markConfirmationState: String?
 
+    /// Synthetic content identities stay stable across decodes, but cannot prove
+    /// that an edited mark is the same provider record for notification purposes.
+    var hasStableProviderID: Bool {
+        !id.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !id.hasPrefix("local-mark-")
+    }
+
     var displayText: String {
         if isPoints, let pointsText, !pointsText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, let maxPoints {
             return "\(markText)/\(maxPoints)"
@@ -373,7 +380,11 @@ struct Mark: Codable, Equatable, Hashable, Identifiable {
         self.isPoints = isPoints
         self.calculatedMarkText = calculatedMarkText
         self.classRankText = classRankText
-        self.id = id
+        self.id = Self.resolvedID(
+            id, markDate: markDate, markText: markText, subjectID: subjectID,
+            type: type, typeNote: typeNote, caption: caption, theme: theme,
+            weight: weight, isPoints: isPoints, pointsText: pointsText, maxPoints: maxPoints
+        )
         self.pointsText = pointsText
         self.maxPoints = maxPoints
         self.confirmedWhen = confirmedWhen
@@ -403,13 +414,35 @@ struct Mark: Codable, Equatable, Hashable, Identifiable {
         isPoints = try container.decodeIfPresent(Bool.self, forKey: .isPoints) ?? false
         calculatedMarkText = try container.decodeIfPresent(String.self, forKey: .calculatedMarkText)
         classRankText = try container.decodeIfPresent(String.self, forKey: .classRankText)
-        id = try container.decodeIfPresent(String.self, forKey: .id) ?? UUID().uuidString
+        let providerID = try container.decodeIfPresent(String.self, forKey: .id)
         pointsText = try container.decodeIfPresent(String.self, forKey: .pointsText)
         maxPoints = try container.decodeIfPresent(Int.self, forKey: .maxPoints)
         confirmedWhen = try container.decodeIfPresent(String.self, forKey: .confirmedWhen)
         confirmedBy = try container.decodeIfPresent(String.self, forKey: .confirmedBy)
         markConfirmationState = try container.decodeIfPresent(String.self, forKey: .markConfirmationState)
+        id = Self.resolvedID(
+            providerID, markDate: markDate, markText: markText, subjectID: subjectID,
+            type: type, typeNote: typeNote, caption: caption, theme: theme,
+            weight: weight, isPoints: isPoints, pointsText: pointsText, maxPoints: maxPoints
+        )
     }
+
+    private static func resolvedID(
+        _ providerID: String?, markDate: String, markText: String, subjectID: String,
+        type: String, typeNote: String?, caption: String?, theme: String?,
+        weight: Double?, isPoints: Bool, pointsText: String?, maxPoints: Int?
+    ) -> String {
+        if let id = providerID?.trimmingCharacters(in: .whitespacesAndNewlines), !id.isEmpty { return id }
+        let fields = [
+            subjectID, markDate, markText, type, typeNote ?? "", caption ?? "", theme ?? "",
+            weight.map { String($0) } ?? "nil", isPoints ? "points" : "grade",
+            pointsText ?? "", maxPoints.map(String.init) ?? ""
+        ]
+        let input = fields.map { "\($0.utf8.count):\($0)" }.joined()
+        let hash = SHA256.hash(data: Data(input.utf8)).map { String(format: "%02x", $0) }.joined()
+        return "local-mark-" + hash
+    }
+
 }
 
 struct AbsenceResponse: Codable, Equatable {

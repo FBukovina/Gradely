@@ -18,6 +18,27 @@ protocol GradeyAIContextBuilding {
     func currentSchoolScope() throws -> String
     func cachedContext() throws -> GradeyAIContextSnapshot?
     func refreshContext() async throws -> GradeyAIContextSnapshot
+    func cachedContext(for selection: GradeyAIContextSelection) throws -> GradeyAIContextSnapshot?
+    func availableEvents() -> [GradeyAIEventContext]
+    func availableSubjects() -> [GradeyAISubjectContext]
+    func refreshContext(for selection: GradeyAIContextSelection) async throws -> GradeyAIContextSnapshot
+}
+
+extension GradeyAIContextBuilding {
+    func availableSubjects() -> [GradeyAISubjectContext] { (try? cachedContext())?.subjects ?? [] }
+    func availableEvents() -> [GradeyAIEventContext] { (try? cachedContext())?.events ?? [] }
+    func cachedContext(for selection: GradeyAIContextSelection) throws -> GradeyAIContextSnapshot? {
+        let scope = try currentSchoolScope()
+        if selection.action == .reply { return GradeyAIContextBuilder.emptyContext(schoolScope: scope, now: Date()) }
+        return try cachedContext().map { GradeyAIContextBuilder.select($0, for: selection, now: Date()) }
+    }
+    func refreshContext(for selection: GradeyAIContextSelection) async throws -> GradeyAIContextSnapshot {
+        let scope = try currentSchoolScope()
+        if selection.action == .reply { return GradeyAIContextBuilder.emptyContext(schoolScope: scope, now: Date()) }
+        let snapshot = try await refreshContext()
+        guard try currentSchoolScope() == scope, snapshot.schoolScope == scope else { throw CancellationError() }
+        return GradeyAIContextBuilder.select(snapshot, for: selection, now: Date())
+    }
 }
 
 final class GradeyAIContextBuilder: GradeyAIContextBuilding {
@@ -30,17 +51,201 @@ final class GradeyAIContextBuilder: GradeyAIContextBuilding {
     private let historyRepository: GradeyHistoryRepository
     private let schoolScopeHasher: any GradeyAISchoolScopeHashing
     private let dateProvider: () -> Date
+    private let snapshotStore: SchoolSnapshotStore?
 
     init(
         repository: SchoolRepository,
         historyRepository: GradeyHistoryRepository,
         schoolScopeHasher: any GradeyAISchoolScopeHashing = GradeyAISchoolScopeHasher(),
-        dateProvider: @escaping () -> Date = Date.init
+        dateProvider: @escaping () -> Date = Date.init,
+        snapshotStore: SchoolSnapshotStore? = nil
     ) {
         self.repository = repository
         self.historyRepository = historyRepository
         self.schoolScopeHasher = schoolScopeHasher
         self.dateProvider = dateProvider
+        self.snapshotStore = snapshotStore
+    }
+
+    func availableSubjects() -> [GradeyAISubjectContext] {
+        guard let snapshotStore else { return (try? cachedContext())?.subjects ?? [] }
+        snapshotStore.activateCurrentScope()
+        return snapshotStore.subjects.map { subject in
+            GradeyAISubjectContext(id: subject.id, name: subject.trimmedName, abbreviation: subject.trimmedAbbrev,
+                average: snapshotStore.preparedCalculations[subject.id]?.displayAverage, pointsOnly: subject.pointsOnly,
+                totalMarkCount: subject.marks.count, recentMarks: [])
+        }.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+    }
+
+    func availableEvents() -> [GradeyAIEventContext] {
+        guard let snapshotStore else { return [] }
+        snapshotStore.activateCurrentScope()
+        return snapshotStore.events.filter { $0.isAssessment && $0.expiresAt > dateProvider() }.prefix(30).map { event in
+            GradeyAIEventContext(id: event.id.uuidString, title: String(event.title.prefix(200)), type: event.kind.rawValue,
+                                subjectID: event.subjectID, subjectName: event.subjectName, date: event.date.ISO8601Format(),
+                                hasTime: event.hasTime, notes: nil)
+        }
+    }
+
+    func cachedContext(for selection: GradeyAIContextSelection) throws -> GradeyAIContextSnapshot? {
+        let scope = try currentSchoolScope(), now = dateProvider()
+        if selection.action == .reply { return Self.emptyContext(schoolScope: scope, now: now) }
+        if let snapshotStore {
+            snapshotStore.activateCurrentScope()
+            return selectedStoreContext(snapshotStore, selection: selection, schoolScope: scope, now: now)
+        }
+        return try cachedContext().map { Self.select($0, for: selection, now: now) }
+    }
+
+    func refreshContext(for selection: GradeyAIContextSelection) async throws -> GradeyAIContextSnapshot {
+        let scope = try currentSchoolScope(), now = dateProvider()
+        if selection.action == .reply { return Self.emptyContext(schoolScope: scope, now: now) }
+        guard let snapshotStore else {
+            let snapshot = try await refreshContext()
+            guard try currentSchoolScope() == scope else { throw CancellationError() }
+            return Self.select(snapshot, for: selection, now: now)
+        }
+        var requirements: SchoolRefreshRequirements = []
+        switch selection.action {
+        case .reply: break
+        case .tomorrow: requirements = [.timetable]
+        case .weekSummary: requirements = []
+        case .studyPriorities: requirements = [.marks, .history]
+        case .subjectHelp, .testPreparation: requirements = [.marks, .history]
+        }
+        await snapshotStore.refresh(requirements: requirements)
+        if selection.action == .tomorrow || selection.action == .weekSummary {
+            let lastDate = selection.action == .weekSummary ? Self.weekStart(containing: selection.weekStart ?? now) : (Calendar.current.date(byAdding: .day, value: 1, to: now) ?? now)
+            await snapshotStore.refreshTimetable(containing: lastDate)
+        }
+        guard try currentSchoolScope() == scope else { throw CancellationError() }
+        return selectedStoreContext(snapshotStore, selection: selection, schoolScope: scope, now: now)
+    }
+
+    static func weekStart(containing date: Date, calendar: Calendar = .current) -> Date {
+        var calendar = calendar
+        calendar.firstWeekday = 2
+        calendar.minimumDaysInFirstWeek = 4
+        return calendar.dateInterval(of: .weekOfYear, for: date)?.start ?? calendar.startOfDay(for: date)
+    }
+
+    static func emptyContext(schoolScope: String, now: Date) -> GradeyAIContextSnapshot {
+        GradeyAIContextSnapshot(schoolScope: schoolScope, generatedAt: now, isStale: false,
+                                unavailableSections: [], subjects: [], trends: [], timetable: [])
+    }
+
+    private func selectedStoreContext(_ store: SchoolSnapshotStore, selection: GradeyAIContextSelection, schoolScope: String, now: Date) -> GradeyAIContextSnapshot {
+        let sourceFreshness: [GradeyAISourceFreshness] = ["marks", "trends", "timetable", "events", "insights"].map { section in
+            if section == "events" { return GradeyAISourceFreshness(section: section, fetchedAt: now.timeIntervalSince1970 * 1_000, isStale: false) }
+            let key = section == "trends" ? "history" : (section == "insights" ? "marks" : section)
+            let selectedDate = selection.action == .weekSummary ? (selection.weekStart ?? now) : (Calendar.current.date(byAdding: .day, value: 1, to: now) ?? now)
+            let timetableKey = "timetable-" + TimetableDates.apiDateString(TimetableDates.monday(of: selectedDate))
+            let state = store.sourceState(section == "timetable" ? timetableKey : key)
+            return GradeyAISourceFreshness(section: section, fetchedAt: state.lastSuccessAt.map { $0.timeIntervalSince1970 * 1_000 }, isStale: state.isStale(at: now, interval: section == "marks" ? 300 : 900))
+        }
+        var base = GradeyAIContextSnapshot(
+            schoolScope: schoolScope, generatedAt: now, isStale: false,
+            unavailableSections: sourceFreshness.compactMap { $0.fetchedAt == nil ? GradeyAIContextSection(rawValue: $0.section) : nil },
+            subjects: Self.makeSubjects(from: store.subjects, preparedCalculations: store.preparedCalculations, maximumTotalMarkCount: .max), trends: Self.makeTrends(from: store.history.trends, maximumTrendCount: .max),
+            timetable: Self.makeLessons(from: Array(store.timetableWeeks.values), maximumLessonCount: .max)
+        )
+        base.events = store.events.map { event in
+            let notes = selection.includeNotes && event.id == selection.eventID
+                ? store.plannerStore.items.first(where: { $0.id == event.id })?.notes : nil
+            return GradeyAIEventContext(id: event.id.uuidString, title: String(event.title.prefix(200)), type: event.kind.rawValue,
+                                       subjectID: event.subjectID, subjectName: event.subjectName,
+                                       date: event.date.ISO8601Format(), hasTime: event.hasTime,
+                                       notes: notes.map { String($0.prefix(1_000)) })
+        }
+        base.insights = Self.makeInsights(observations: store.observations, summaries: store.subjectInsights, preparedCalculations: store.preparedCalculations)
+        base.sourceFreshness = sourceFreshness
+        return Self.select(base, for: selection, now: now)
+    }
+
+    /// Only explicit action selection determines school-data disclosure; prose is
+    /// never inspected to automatically add unrelated subjects or Planner notes.
+    static func select(_ source: GradeyAIContextSnapshot, for selection: GradeyAIContextSelection, now: Date, calendar: Calendar = .current) -> GradeyAIContextSnapshot {
+        if selection.action == .reply { return emptyContext(schoolScope: source.schoolScope, now: now) }
+        let day = calendar.startOfDay(for: now)
+        let tomorrow = calendar.date(byAdding: .day, value: 1, to: day) ?? day
+        let endTomorrow = calendar.date(byAdding: .day, value: 2, to: day) ?? tomorrow
+        let weekStart = Self.weekStart(containing: selection.weekStart ?? now, calendar: calendar)
+        let selectedWeekEnd = calendar.date(byAdding: .day, value: 7, to: weekStart) ?? weekStart
+        let weekEnd = calendar.date(byAdding: .day, value: 7, to: day) ?? day
+        let selectedEvent = source.events?.first { $0.id == selection.eventID?.uuidString }
+        let selectedSubject = selection.action == .testPreparation ? selectedEvent?.subjectID : selection.subjectID
+        var subjectIDs = Set<String>()
+        var required: Set<GradeyAIContextSection> = []
+        var events: [GradeyAIEventContext] = []
+        var lessons: [GradeyAILessonContext] = []
+        func eventDate(_ event: GradeyAIEventContext) -> Date? { MarkDateFormatter.date(from: event.date) }
+        func lessonDate(_ lesson: GradeyAILessonContext) -> Date? {
+            let pieces = lesson.date.prefix(10).split(separator: "-").compactMap { Int($0) }
+            guard pieces.count == 3 else { return nil }
+            return calendar.date(from: DateComponents(year: pieces[0], month: pieces[1], day: pieces[2]))
+        }
+        switch selection.action {
+        case .reply: break
+        case .tomorrow:
+            required = [.timetable, .events]
+            lessons = source.timetable.filter { lessonDate($0).map { $0 >= tomorrow && $0 < endTomorrow } == true }
+            events = (source.events ?? []).filter { eventDate($0).map { $0 >= tomorrow && $0 < endTomorrow } == true }
+        case .weekSummary:
+            required = [.timetable, .events, .insights]
+            lessons = source.timetable.filter { lessonDate($0).map { $0 >= weekStart && $0 < selectedWeekEnd } == true }
+            events = (source.events ?? []).filter { eventDate($0).map { $0 >= weekStart && $0 < selectedWeekEnd } == true }
+        case .studyPriorities:
+            required = [.marks, .trends, .events, .insights]
+            events = (source.events ?? []).filter { eventDate($0).map { $0 >= day && $0 < weekEnd } == true }
+            let relevant = (source.insights ?? []).compactMap(\.subjectID) + events.compactMap(\.subjectID)
+                + source.subjects.sorted { ($0.average ?? 0) > ($1.average ?? 0) }.map(\.id)
+            let currentIDs = Set(source.subjects.map(\.id))
+            for id in relevant where currentIDs.contains(id) && subjectIDs.count < 3 { subjectIDs.insert(id) }
+        case .subjectHelp:
+            required = [.marks, .trends, .events, .insights]
+            if let selectedSubject { subjectIDs.insert(selectedSubject) }
+            events = (source.events ?? []).filter { $0.subjectID == selectedSubject && selectedSubject != nil && eventDate($0).map { $0 >= day && $0 < weekEnd } == true }
+        case .testPreparation:
+            required = [.marks, .events]
+            if let selectedSubject { subjectIDs.insert(selectedSubject) }
+            if let selectedEvent { events = [selectedEvent] }
+        }
+        var unavailable = source.unavailableSections.filter { required.contains($0) }
+        let subjects = source.subjects.filter { subjectIDs.contains($0.id) }.map { subject in
+            GradeyAISubjectContext(id: subject.id, name: subject.name, abbreviation: subject.abbreviation,
+                                  average: subject.average, pointsOnly: subject.pointsOnly, totalMarkCount: subject.totalMarkCount,
+                                  recentMarks: selection.action == .studyPriorities ? [] : Array(subject.recentMarks.prefix(5)),
+                                  calculation: subject.calculation)
+        }
+        if (selection.action == .subjectHelp || selection.action == .testPreparation) && subjects.isEmpty { unavailable.append(.marks) }
+        if selection.action == .testPreparation && selectedEvent == nil { unavailable.append(.events) }
+        let freshness = source.sourceFreshness?.filter { required.contains(GradeyAIContextSection(rawValue: $0.section) ?? .marks) }
+        let isStale = !unavailable.isEmpty || (freshness?.contains(where: \.isStale) ?? source.isStale)
+        var output = GradeyAIContextSnapshot(
+            schoolScope: source.schoolScope, generatedAt: source.generatedAt, isStale: isStale,
+            unavailableSections: orderedSections(Array(Set(unavailable))), subjects: subjects,
+            trends: required.contains(.trends) ? source.trends.filter { subjectIDs.contains($0.subjectID) } : [],
+            timetable: Array(lessons.prefix(60)).map { lesson in
+                GradeyAILessonContext(id: lesson.id, date: lesson.date, subject: lesson.subject, subjectAbbreviation: lesson.subjectAbbreviation,
+                                      beginsAt: lesson.beginsAt, endsAt: lesson.endsAt, teacher: nil, room: lesson.room, groups: [],
+                                      changeKind: lesson.changeKind, changeDescription: nil)
+            }
+        )
+        output.events = Array(events.prefix(30)).map { event in
+            GradeyAIEventContext(id: event.id, title: event.title, type: event.type, subjectID: event.subjectID,
+                                subjectName: event.subjectName, date: event.date, hasTime: event.hasTime,
+                                notes: selection.includeNotes && event.id == selection.eventID?.uuidString ? event.notes : nil)
+        }
+        output.insights = required.contains(.insights) ? Array((source.insights ?? []).filter { insight in
+            if selection.action == .weekSummary {
+                guard insight.kind == "observed_grade_change", let observedAt = insight.observedAt else { return false }
+                let date = Date(timeIntervalSince1970: observedAt / 1_000)
+                return date >= weekStart && date < selectedWeekEnd
+            }
+            return insight.subjectID.map { subjectIDs.contains($0) } ?? false
+        }.prefix(5)) : []
+        output.sourceFreshness = freshness
+        return output
     }
 
     func currentSchoolScope() throws -> String {
@@ -94,6 +299,8 @@ final class GradeyAIContextBuilder: GradeyAIContextBuilding {
             currentTimetableAttempt,
             nextTimetableAttempt
         )
+        try Task.checkCancellation()
+        guard try currentSchoolScope() == schoolScope else { throw CancellationError() }
 
         var unavailable: [GradeyAIContextSection] = []
         let subjects: [GradeyAISubjectContext]
@@ -167,7 +374,11 @@ final class GradeyAIContextBuilder: GradeyAIContextBuilding {
 
     private func loadHistoryAttempt() async -> Result<GradeHistoryResponse, Error> {
         do {
-            guard let linkedAccountID = try repository.currentStoredSession()?.linkedAccountID,
+            let session = try repository.currentStoredSession()
+            // Cloud history has no EduPage child identifier, so it cannot be
+            // attributed to the active student in either the iPhone or Watch path.
+            guard session?.provider != .eduPage else { return .failure(GradeyAIContextError.noContextAvailable) }
+            guard let linkedAccountID = session?.linkedAccountID,
                   !linkedAccountID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             else {
                 return .success(GradeHistoryResponse(events: [], recentNewMarkEvents: []))
@@ -186,7 +397,33 @@ final class GradeyAIContextBuilder: GradeyAIContextBuilding {
         }
     }
 
-    static func makeSubjects(from subjects: [Subject]) -> [GradeyAISubjectContext] {
+    /// Share observed changes independently of Today ranking and seen state.
+    /// Apply action/date/subject caps after this projection so a selected subject
+    /// or older week is never displaced by unrelated earlier source records.
+    static func makeInsights(observations: [SchoolGradeObservation], summaries: [SubjectInsightSummary], preparedCalculations: [String: PreparedGradeCalculation]) -> [GradeyAIInsightContext] {
+        let changes = observations.sorted { $0.observedAt > $1.observedAt }.map { observation in
+            var description = "Observed \(observation.addedMarkIDs.count) added and \(observation.editedMarkIDs.count) edited grades."
+            if let previous = observation.previousAverage, let average = observation.average {
+                description += " Recorded average: \(previous) to \(average)."
+            }
+            return GradeyAIInsightContext(id: String(observation.id.prefix(160)), subjectID: observation.subjectID,
+                kind: "observed_grade_change", summary: String(description.prefix(400)),
+                observedAt: observation.observedAt.timeIntervalSince1970 * 1_000,
+                isEstimated: preparedCalculations[observation.subjectID]?.confidence != .exact)
+        }
+        let facts = summaries.map { summary in
+            var description = "Subject: \(summary.subjectName)."
+            if let average = summary.currentAverage { description += " Current recorded average: \(average)." }
+            if let delta = summary.trendDelta { description += " Comparable observed trend change: \(delta)." }
+            else { description += " Not enough comparable observations for a trend." }
+            return GradeyAIInsightContext(id: "subject-summary-" + String(summary.subjectID.prefix(128)), subjectID: summary.subjectID,
+                kind: "subject_summary", summary: String(description.prefix(400)), observedAt: nil,
+                isEstimated: preparedCalculations[summary.subjectID]?.confidence != .exact)
+        }
+        return changes + facts
+    }
+
+    static func makeSubjects(from subjects: [Subject], preparedCalculations: [String: PreparedGradeCalculation] = [:], maximumTotalMarkCount: Int = maximumTotalMarks) -> [GradeyAISubjectContext] {
         struct Candidate {
             let subjectIndex: Int
             let mark: Mark
@@ -213,7 +450,7 @@ final class GradeyAIContextBuilder: GradeyAIContextBuilding {
 
         var selectedBySubject: [Int: [Mark]] = [:]
         var total = 0
-        for candidate in candidates where total < maximumTotalMarks {
+        for candidate in candidates where total < maximumTotalMarkCount {
             guard selectedBySubject[candidate.subjectIndex, default: []].count < maximumMarksPerSubject else {
                 continue
             }
@@ -222,6 +459,7 @@ final class GradeyAIContextBuilder: GradeyAIContextBuilding {
         }
 
         return subjects.enumerated().map { index, subject in
+            let calculation = preparedCalculations[subject.id] ?? GradeMath.prepare(subject)
             let name = trimmed(subject.trimmedName, maximumLength: 120)
                 ?? trimmed(subject.trimmedAbbrev, maximumLength: 32)
                 ?? subject.id
@@ -229,17 +467,18 @@ final class GradeyAIContextBuilder: GradeyAIContextBuilding {
                 id: String(subject.id.prefix(128)),
                 name: name,
                 abbreviation: trimmed(subject.trimmedAbbrev, maximumLength: 32),
-                average: GradeMath.subjectAverage(subject),
+                average: calculation.displayAverage,
                 pointsOnly: subject.pointsOnly,
                 totalMarkCount: subject.marks.count,
-                recentMarks: (selectedBySubject[index] ?? []).map(makeMark)
+                recentMarks: (selectedBySubject[index] ?? []).map(makeMark),
+                calculation: GradeyAIGradeCalculationContext(prepared: calculation)
             )
         }
         .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
     }
 
-    static func makeTrends(from trends: [SubjectGradeTrend]) -> [GradeyAITrendContext] {
-        Array(trends.prefix(maximumTrends)).map { trend in
+    static func makeTrends(from trends: [SubjectGradeTrend], maximumTrendCount: Int = maximumTrends) -> [GradeyAITrendContext] {
+        Array(trends.prefix(maximumTrendCount)).map { trend in
             GradeyAITrendContext(
                 subjectID: String(trend.subjectID.prefix(128)),
                 subjectName: trimmed(trend.subjectName, maximumLength: 120)
@@ -255,7 +494,7 @@ final class GradeyAIContextBuilder: GradeyAIContextBuilding {
         }
     }
 
-    static func makeLessons(from weeks: [TimetableWeek]) -> [GradeyAILessonContext] {
+    static func makeLessons(from weeks: [TimetableWeek], maximumLessonCount: Int = maximumLessons) -> [GradeyAILessonContext] {
         let orderedWeeks = weeks.sorted { $0.weekStart < $1.weekStart }
         var seenIDs: Set<String> = []
         var lessons: [GradeyAILessonContext] = []
@@ -265,7 +504,7 @@ final class GradeyAIContextBuilder: GradeyAIContextBuilding {
                 guard let date = day.date else { continue }
                 let dateString = TimetableDates.apiDateString(date)
                 for lesson in day.lessons {
-                    guard lessons.count < maximumLessons else { return lessons }
+                    guard lessons.count < maximumLessonCount else { return lessons }
                     let identifier = "\(dateString)#\(lesson.id)"
                     guard seenIDs.insert(identifier).inserted else { continue }
                     guard let subject = trimmed(lesson.subjectName, maximumLength: 120)
@@ -326,7 +565,7 @@ final class GradeyAIContextBuilder: GradeyAIContextBuilding {
     }
 
     private static func orderedSections(_ sections: [GradeyAIContextSection]) -> [GradeyAIContextSection] {
-        [.marks, .trends, .timetable].filter { sections.contains($0) }
+        [.marks, .trends, .timetable, .events, .insights].filter { sections.contains($0) }
     }
 
     private static func trimmed(_ value: String?, maximumLength: Int) -> String? {

@@ -4,29 +4,37 @@ import Observation
 @MainActor
 @Observable
 final class SubjectDetailViewModel {
-    let subject: Subject
+    private(set) var subject: Subject
     let absence: AbsencePerSubject?
-    let trend: SubjectGradeTrend?
+    private(set) var trend: SubjectGradeTrend?
+    private(set) var summary: SubjectInsightSummary?
 
     var theoreticalMark = ""
     var theoreticalWeight = 1
     var isPredictingExactAverage = false
+    private(set) var preparedCalculation: PreparedGradeCalculation
+    var targetAverageText = "2.49"
+    var targetWeight = 1
+    private(set) var hypotheticalGrades: [HypotheticalGrade] = []
 
     private let repository: SchoolRepository
     private var localTheoreticalAverage: Double?
     private var exactTheoreticalAverage: Double?
     @ObservationIgnored private var predictionTask: Task<Void, Never>?
     @ObservationIgnored private var cachedAverageTimeline: [AverageTimelineEntry]?
+    @ObservationIgnored private var predictionGeneration = UUID()
 
-    init(subject: Subject, absence: AbsencePerSubject?, repository: SchoolRepository, trend: SubjectGradeTrend? = nil) {
+    init(subject: Subject, absence: AbsencePerSubject?, repository: SchoolRepository, trend: SubjectGradeTrend? = nil, prepared: PreparedGradeCalculation? = nil, summary: SubjectInsightSummary? = nil) {
         self.subject = subject
         self.absence = absence
         self.repository = repository
         self.trend = trend
+        self.summary = summary
+        preparedCalculation = prepared ?? GradeMath.prepare(subject)
     }
 
     var currentAverage: Double? {
-        GradeMath.subjectAverage(subject)
+        preparedCalculation.displayAverage
     }
 
     var averageFormatted: String {
@@ -34,8 +42,12 @@ final class SubjectDetailViewModel {
     }
 
     var sortedMarks: [Mark] {
-        subject.marks.sorted { lhs, rhs in
-            (MarkDateFormatter.date(from: lhs.markDate) ?? .distantPast) > (MarkDateFormatter.date(from: rhs.markDate) ?? .distantPast)
+        Dictionary(grouping: subject.marks, by: \.id).values.compactMap { marks in
+            marks.sorted { ($0.editDate ?? "", $0.markText) > ($1.editDate ?? "", $1.markText) }.first
+        }.sorted { lhs, rhs in
+            let left = MarkDateFormatter.date(from: lhs.markDate) ?? .distantPast
+            let right = MarkDateFormatter.date(from: rhs.markDate) ?? .distantPast
+            return left == right ? lhs.id < rhs.id : left > right
         }
     }
 
@@ -47,19 +59,18 @@ final class SubjectDetailViewModel {
         case none
     }
 
-    /// Running-average series derived from the subject's own marks; empty for
-    /// points-only subjects. Cached — the subject never changes per detail push.
+    /// Reuses the same prepared weights as the calculator and shared insights.
     var averageTimeline: [AverageTimelineEntry] {
         if let cachedAverageTimeline {
             return cachedAverageTimeline
         }
-        let timeline = AverageTimeline.entries(for: subject)
+        let timeline = AverageTimeline.entries(for: subject, prepared: preparedCalculation)
         cachedAverageTimeline = timeline
         return timeline
     }
 
     var chartSource: ChartSource {
-        if let trend, trend.events.filter({ $0.averageValue != nil }).count >= 2 {
+        if let trend, trend.events.filter({ $0.averageValue?.isFinite == true }).count >= 2 {
             return .cloud
         }
         return averageTimeline.isEmpty ? .none : .local
@@ -69,10 +80,9 @@ final class SubjectDetailViewModel {
         switch chartSource {
         case .cloud:
             return (trend?.events ?? [])
-                .compactMap { event in
-                    event.averageValue.map {
-                        AveragePoint(id: event.id, date: event.capturedAt, value: $0)
-                    }
+                .compactMap { event -> AveragePoint? in
+                    guard let value = event.averageValue, value.isFinite else { return nil }
+                    return AveragePoint(id: event.id, date: event.capturedAt, value: value)
                 }
                 .sorted { $0.date < $1.date }
         case .local:
@@ -100,8 +110,11 @@ final class SubjectDetailViewModel {
     }
 
     var theoreticalDifference: Double? {
-        guard let theoreticalAverage, let currentAverage else { return nil }
-        return theoreticalAverage - currentAverage
+        guard let theoreticalAverage else { return nil }
+        // Compare like with like: provider response against provider baseline,
+        // local simulation against local arithmetic, never mix the two.
+        let baseline = exactTheoreticalAverage != nil ? preparedCalculation.officialAverage : preparedCalculation.calculatedAverage
+        return baseline.map { theoreticalAverage - $0 }
     }
 
     func updateTheoreticalMark(_ newValue: String) {
@@ -121,27 +134,112 @@ final class SubjectDetailViewModel {
     }
 
     func resolvedWeight(for mark: Mark) -> ResolvedMarkWeight {
-        GradeMath.resolvedWeight(for: mark, in: subject)
+        preparedCalculation.resolvedWeights[mark.id] ?? ResolvedMarkWeight(value: 1, source: .fallback)
+    }
+
+    var predictionSourceKey: String {
+        if exactTheoreticalAverage != nil { return "detail.intelligence.source.schoolPrediction" }
+        return calculationSourceKey
+    }
+
+    var calculationSourceKey: String {
+        preparedCalculation.confidence == .exact
+            ? "detail.intelligence.source.providedWeights"
+            : "detail.intelligence.source.estimated"
+    }
+
+    var calculationWarningKey: String? {
+        if preparedCalculation.issues.contains(.inconsistentOfficialAverage) { return "detail.intelligence.averageMismatch" }
+        if preparedCalculation.issues.contains(.conflictingDuplicateIDs) || preparedCalculation.issues.contains(.invalidWeights) || preparedCalculation.issues.contains(.excludedMarks) {
+            return "detail.intelligence.partialGrades"
+        }
+        if preparedCalculation.issues.contains(.modifierMapping) { return "detail.intelligence.modifierEstimate" }
+        if preparedCalculation.issues.contains(.missingWeights) { return "detail.intelligence.assumedWeights" }
+        if preparedCalculation.issues.contains(.inferredWeights) { return "detail.intelligence.inferredWeights" }
+        return nil
+    }
+
+    var targetResult: GradeTargetResult {
+        GradeMath.targetOptions(
+            for: preparedCalculation,
+            targetAverage: GradeMath.parseAverageText(targetAverageText) ?? .nan,
+            weight: targetWeight
+        )
+    }
+
+    var simulationResult: GradeSimulationResult? {
+        GradeMath.simulate(preparedCalculation, adding: hypotheticalGrades)
+    }
+
+    func addHypotheticalGrade(value: Double = 1, weight: Int = 1) {
+        guard hypotheticalGrades.count < GradeMath.maximumHypotheticalGrades else { return }
+        hypotheticalGrades.append(HypotheticalGrade(value: value, weight: weight))
+    }
+
+    func updateHypotheticalGrade(id: UUID, value: Double? = nil, weight: Int? = nil) {
+        guard let index = hypotheticalGrades.firstIndex(where: { $0.id == id }) else { return }
+        if let value, value.isFinite, (1.0...5.0).contains(value) { hypotheticalGrades[index].value = value }
+        if let weight, (1...10).contains(weight) { hypotheticalGrades[index].weight = weight }
+    }
+
+    func removeHypotheticalGrade(id: UUID) {
+        hypotheticalGrades.removeAll { $0.id == id }
+    }
+
+    func applyTargetOption(_ option: GradeTargetOption) {
+        hypotheticalGrades = (0..<min(option.count, GradeMath.maximumHypotheticalGrades)).map { _ in
+            HypotheticalGrade(value: Double(option.grade), weight: option.weight)
+        }
+    }
+
+    /// The shared school store calls this for a new subject revision. User input
+    /// survives a refresh of the same subject, while its numeric baseline updates.
+    func updateSubject(_ subject: Subject, prepared: PreparedGradeCalculation? = nil, trend: SubjectGradeTrend? = nil, summary: SubjectInsightSummary? = nil) {
+        let calculation = prepared ?? GradeMath.prepare(subject)
+        let differentSubject = subject.id != self.subject.id
+        let changedCalculation = calculation.revision != preparedCalculation.revision
+        let predictionAvailabilityChanged = subject.markPredictionEnabled != self.subject.markPredictionEnabled
+        self.subject = subject
+        self.trend = trend
+        self.summary = summary
+        preparedCalculation = calculation
+        guard differentSubject || changedCalculation || predictionAvailabilityChanged else { return }
+        cachedAverageTimeline = nil
+        if differentSubject {
+            theoreticalMark = ""
+            theoreticalWeight = 1
+            targetAverageText = "2.49"
+            targetWeight = 1
+            hypotheticalGrades = []
+        }
+        refreshTheoreticalAverage()
     }
 
     private func refreshTheoreticalAverage() {
         predictionTask?.cancel()
+        predictionGeneration = UUID()
         exactTheoreticalAverage = nil
         isPredictingExactAverage = false
 
-        guard let value = GradeMath.parseMarkValue(theoreticalMark), !theoreticalMark.isEmpty else {
+        guard preparedCalculation.canSimulate,
+              let value = GradeMath.parseMarkValue(theoreticalMark), !theoreticalMark.isEmpty,
+              let simulation = GradeMath.simulate(preparedCalculation, adding: [HypotheticalGrade(value: value, weight: theoreticalWeight)]) else {
             localTheoreticalAverage = nil
             return
         }
 
-        localTheoreticalAverage = GradeMath.theoreticalAverage(
-            existingMarks: subject.marks,
-            subjectAverageText: subject.averageText,
-            markValue: value,
-            weight: theoreticalWeight
-        )
+        localTheoreticalAverage = simulation.estimatedAverage
 
-        guard subject.markPredictionEnabled else { return }
+        // Retain the existing provider prediction for one ordinary scenario.
+        // Invalid/conflicting records and fractional weights cannot be faithfully
+        // represented by the existing integer-weight what-if wire payload.
+        guard subject.markPredictionEnabled,
+              !preparedCalculation.issues.contains(.conflictingDuplicateIDs),
+              !preparedCalculation.issues.contains(.invalidWeights),
+              subject.marks.allSatisfy({ mark in
+                  mark.weight.map { $0.isFinite && $0 >= 1 && $0 <= 10 && $0.rounded() == $0 } ?? true
+              }) else { return }
+        let generation = predictionGeneration
 
         let markText = theoreticalMark
         let selectedWeight = theoreticalWeight
@@ -160,12 +258,13 @@ final class SubjectDetailViewModel {
 
                 await MainActor.run {
                     guard let self,
+                          self.predictionGeneration == generation,
                           self.theoreticalMark == markText,
                           self.theoreticalWeight == selectedWeight
                     else {
                         return
                     }
-                    if let exactAverage {
+                    if let exactAverage, exactAverage.isFinite {
                         self.exactTheoreticalAverage = exactAverage
                     }
                     self.isPredictingExactAverage = false
@@ -175,6 +274,7 @@ final class SubjectDetailViewModel {
 
                 await MainActor.run {
                     guard let self,
+                          self.predictionGeneration == generation,
                           self.theoreticalMark == markText,
                           self.theoreticalWeight == selectedWeight
                     else {

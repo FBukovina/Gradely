@@ -449,7 +449,7 @@ struct GradeyAICoreTests {
     }
 
     @MainActor
-    @Test func paidPlanRaisesTheDisplayedDailyLimit() async {
+    @Test func localPaidPlanCannotOverrideServerComputeAllowance() async {
         let snapshot = GradeyAIContextSnapshot(
             schoolScope: "school_test_scope",
             generatedAt: Date(),
@@ -481,9 +481,9 @@ struct GradeyAICoreTests {
 
         viewModel.applySupportTier(.plus, catalogLoaded: true)
 
-        #expect(viewModel.status?.dailyLimit == 25)
+        #expect(viewModel.status?.dailyLimit == 5)
         #expect(viewModel.status?.dailyUsed == 2)
-        #expect(viewModel.status?.remaining == 23)
+        #expect(viewModel.status?.remaining == 3)
         #expect(viewModel.canStartNewChat)
     }
 

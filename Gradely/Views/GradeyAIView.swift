@@ -2,6 +2,7 @@ import SwiftUI
 
 struct GradeyAIView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State private var viewModel: GradeyAIViewModel
     @State private var supportViewModel: SupportTipViewModel
     @State private var pendingConversationDeletion: GradeyAIConversation?
@@ -94,7 +95,7 @@ struct GradeyAIView: View {
             Task {
                 await supportViewModel.refreshEntitlement()
                 applySupportTierFromCatalog()
-                await viewModel.refreshStatus()
+                await viewModel.refreshStatus(refreshEntitlement: true)
                 applySupportTierFromCatalog()
             }
         }) {
@@ -366,17 +367,17 @@ struct GradeyAIView: View {
                 consentDetail(
                     icon: "chart.bar.doc.horizontal",
                     title: "gradey.ai.consent.schoolData.title",
-                    message: "gradey.ai.consent.schoolData.message"
+                    message: "gradey.ai.consent.selectedContext"
                 )
                 consentDetail(
                     icon: "cloud.fill",
-                    title: "gradey.ai.consent.azure.title",
-                    message: "gradey.ai.consent.azure.message"
+                    title: "gradey.ai.consent.processors.title",
+                    message: "gradey.ai.consent.processors.message"
                 )
                 consentDetail(
                     icon: "clock.arrow.circlepath",
                     title: "gradey.ai.consent.retention.title",
-                    message: "gradey.ai.consent.retention.message"
+                    message: "gradey.ai.consent.selectedRetention"
                 )
 
                 Text("gradey.ai.disclaimer")
@@ -467,18 +468,17 @@ struct GradeyAIView: View {
             subtitle: "gradey.ai.welcome.message"
         ) {
             VStack(alignment: .leading, spacing: Spacing.sm) {
-                HStack {
-                    limitLabel(onBrand: true)
-                    Spacer(minLength: Spacing.md)
-                    Button {
-                        viewModel.beginDraftChat()
-                    } label: {
-                        GradelyLabel(AppL10n.string("gradey.ai.newChat"), systemImage: "square.and.pencil")
+                if dynamicTypeSize.isAccessibilitySize {
+                    VStack(alignment: .leading, spacing: Spacing.md) {
+                        limitLabel(onBrand: true)
+                        newChatButton
                     }
-                    .buttonStyle(.borderedProminent)
-                    .tint(Brand.onAccent)
-                    .disabled(!viewModel.canStartNewChat)
-                    .accessibilityIdentifier("gradeyAINewChatButton")
+                } else {
+                    HStack {
+                        limitLabel(onBrand: true)
+                        Spacer(minLength: Spacing.md)
+                        newChatButton
+                    }
                 }
 
                 if showsSupportUpgradeCTA {
@@ -486,6 +486,19 @@ struct GradeyAIView: View {
                 }
             }
         }
+    }
+
+    private var newChatButton: some View {
+        Button {
+            viewModel.beginDraftChat()
+        } label: {
+            GradelyLabel(AppL10n.string("gradey.ai.newChat"), systemImage: "square.and.pencil")
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .buttonStyle(.borderedProminent)
+        .tint(Brand.onAccent)
+        .disabled(!viewModel.canStartNewChat)
+        .accessibilityIdentifier("gradeyAINewChatButton")
     }
 
     private var emptyConversations: some View {
@@ -545,22 +558,26 @@ struct GradeyAIView: View {
 
     private var chatView: some View {
         VStack(spacing: 0) {
-            if viewModel.status?.enabled == false {
-                serviceAvailabilityBanner
+            if dynamicTypeSize.isAccessibilitySize {
+                accessibleChatContent
+            } else {
+                if viewModel.status?.enabled == false {
+                    serviceAvailabilityBanner
+                        .padding(.horizontal, Spacing.lg)
+                        .padding(.top, Spacing.sm)
+                }
+
+                contextStatusCard
                     .padding(.horizontal, Spacing.lg)
                     .padding(.top, Spacing.sm)
-            }
 
-            contextStatusCard
-                .padding(.horizontal, Spacing.lg)
-                .padding(.top, Spacing.sm)
-
-            if viewModel.isOpeningConversation, viewModel.messages.isEmpty {
-                openingConversationView
-            } else if viewModel.messages.isEmpty {
-                emptyChatBody
-            } else {
-                messageList
+                if viewModel.isOpeningConversation, viewModel.messages.isEmpty {
+                    openingConversationView
+                } else if viewModel.messages.isEmpty {
+                    emptyChatBody
+                } else {
+                    messageList
+                }
             }
 
             composer
@@ -569,6 +586,43 @@ struct GradeyAIView: View {
                 supportUpgradeCTA()
                     .padding(.horizontal, Spacing.lg)
                     .padding(.bottom, Spacing.md)
+            }
+        }
+    }
+
+    private var accessibleChatContent: some View {
+        ScrollViewReader { proxy in
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: Spacing.lg) {
+                    if viewModel.status?.enabled == false { serviceAvailabilityBanner }
+                    contextStatusCard
+                    if viewModel.isOpeningConversation, viewModel.messages.isEmpty {
+                        openingConversationView
+                    } else if viewModel.messages.isEmpty {
+                        emptyChatBody
+                    } else {
+                        ForEach(viewModel.messages) { message in
+                            GradeyAIMessageBubble(message: message, canRetry: viewModel.canRetry(message), onRetry: {
+                                Task { await viewModel.retry() }
+                            })
+                            .id(message.id)
+                        }
+                    }
+                    Color.clear.frame(height: 1).id("gradeyAIMessageBottom")
+                }
+                .padding(Spacing.lg)
+                .frame(maxWidth: 760)
+                .frame(maxWidth: .infinity)
+            }
+            .accessibilityIdentifier("gradeyAIAccessibleContent")
+            #if os(iOS)
+            .scrollDismissesKeyboard(.interactively)
+            #endif
+            .onChange(of: viewModel.messages.count) {
+                scrollToBottom(proxy, animated: !viewModel.isStreaming)
+            }
+            .onChange(of: viewModel.messages.last?.content) {
+                scrollToBottom(proxy, animated: false)
             }
         }
     }
@@ -662,60 +716,119 @@ struct GradeyAIView: View {
                     .background(Color.gradelyTertiaryFill, in: RoundedRectangle(cornerRadius: Radius.sm, style: .continuous))
                 }
                 .buttonStyle(.plain)
-                .disabled(viewModel.isStreaming || viewModel.status?.canSend != true)
+                .disabled(viewModel.isStreaming || viewModel.isPreparingReply || !viewModel.canAffordSelectedAction)
             }
         }
         .accessibilityIdentifier("gradeyAIStarterPrompts")
     }
 
     private var contextStatusCard: some View {
-        HStack(alignment: .center, spacing: Spacing.sm) {
-            GradelyIcon(systemName: contextStatusImage)
-                .foregroundStyle(contextStatusColor)
-                .accessibilityHidden(true)
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(contextStatusTitle)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.primary)
-                if let contextError = viewModel.contextError {
-                    Text(contextError)
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            HStack(alignment: .top, spacing: Spacing.sm) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(AppL10n.string(String.LocalizationValue(viewModel.contextSelection.action.titleKey)))
+                        .font(.caption.weight(.semibold))
+                    if let name = viewModel.selectedContextName { Text(name).font(.subheadline.weight(.medium)) }
+                    Text(viewModel.selectedSharingSummary)
                         .font(.caption2)
                         .foregroundStyle(.secondary)
-                        .lineLimit(2)
-                } else if let generatedAt = viewModel.contextGeneratedAt {
-                    Text(generatedAt, style: .relative)
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
+                    if let contextError = viewModel.contextError {
+                        Text(contextError).font(.caption2).foregroundStyle(.secondary).lineLimit(2)
+                    }
+                }
+                Spacer()
+                Button { Task { await viewModel.refreshContext() } } label: {
+                    if viewModel.isRefreshingContext { ProgressView().controlSize(.small) }
+                    else { GradelyIcon(systemName: "arrow.clockwise") }
+                }
+                .buttonStyle(.plain)
+                .frame(minWidth: 44, minHeight: 44)
+                .fixedSize()
+                .disabled(viewModel.isRefreshingContext || viewModel.isStreaming || viewModel.isPreparingReply)
+                .accessibilityLabel(AppL10n.string("gradey.ai.context.refresh"))
+                .accessibilityIdentifier("gradeyAIContextRefreshButton")
+            }
+            ViewThatFits(in: .horizontal) {
+                HStack {
+                    contextSelectionMenu.fixedSize(horizontal: true, vertical: false)
+                    Spacer()
+                    actionCostLabel.fixedSize(horizontal: true, vertical: false)
+                }
+                VStack(alignment: .leading, spacing: Spacing.sm) {
+                    contextSelectionMenu
+                    actionCostLabel
                 }
             }
-
-            Spacer(minLength: Spacing.sm)
-
-            Button {
-                Task { await viewModel.refreshContext() }
-            } label: {
-                if viewModel.isRefreshingContext {
-                    ProgressView()
-                        .controlSize(.small)
-                } else {
-                    GradelyIcon(systemName: "arrow.clockwise")
+            if viewModel.contextSelection.action == .testPreparation && viewModel.contextSelection.eventID != nil {
+                Toggle(AppL10n.string("gradey.ai.context.includeNotes"), isOn: Binding(
+                    get: { viewModel.contextSelection.includeNotes },
+                    set: { value in
+                        Task { await viewModel.selectAction(.testPreparation, subjectID: viewModel.contextSelection.subjectID,
+                            eventID: viewModel.contextSelection.eventID, includeNotes: value, prompt: viewModel.draft) }
+                    }
+                ))
+                .font(.caption)
+                .disabled(viewModel.isStreaming || viewModel.isPreparingReply)
+            }
+            if !viewModel.isConversationPurposeCompatible {
+                Text(AppL10n.string("gradey.ai.context.newPurpose"))
+                    .font(.caption2).foregroundStyle(.secondary)
+            }
+            if let pending = viewModel.pendingRecoveryMessage {
+                HStack {
+                    Text(pending).font(.caption2).foregroundStyle(.secondary)
+                    Spacer()
+                    Button(AppL10n.string("gradey.ai.compute.checkRequest")) { Task { await viewModel.recoverPendingRequest() } }
+                        .font(.caption.weight(.semibold))
+                        .disabled(viewModel.isRecoveringRequest)
                 }
             }
-            .buttonStyle(.plain)
-            .disabled(viewModel.isRefreshingContext || viewModel.isStreaming)
-            .accessibilityLabel(AppL10n.string("gradey.ai.context.refresh"))
-            .accessibilityIdentifier("gradeyAIContextRefreshButton")
         }
         .padding(.horizontal, Spacing.md)
         .padding(.vertical, Spacing.sm)
         .background(Color.gradelySecondaryGroupedBackground, in: RoundedRectangle(cornerRadius: Radius.sm, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: Radius.sm, style: .continuous)
-                .strokeBorder(contextStatusColor.opacity(0.18), lineWidth: 1)
-        }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("gradeyAIContextStatus")
+    }
+
+    private var actionCostLabel: some View {
+        Text(viewModel.selectedActionCost == Int.max ? AppL10n.string("gradey.ai.compute.actionUnavailable") :
+            String.localizedStringWithFormat(AppL10n.string("gradey.ai.compute.actionCost"), viewModel.selectedActionCost))
+            .font(.caption2.monospacedDigit())
+            .foregroundStyle(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private var contextSelectionMenu: some View {
+        Menu {
+            ForEach([GradeyAIAction.reply, .tomorrow, .studyPriorities, .weekSummary], id: \.rawValue) { action in
+                Button(AppL10n.string(String.LocalizationValue(action.titleKey))) {
+                    Task { await viewModel.selectAction(action, prompt: viewModel.draft) }
+                }
+            }
+            Menu(AppL10n.string(String.LocalizationValue(GradeyAIAction.subjectHelp.titleKey))) {
+                ForEach(viewModel.availableSubjects) { subject in
+                    Button(subject.name) {
+                        Task { await viewModel.selectAction(.subjectHelp, subjectID: subject.id, prompt: viewModel.draft) }
+                    }
+                }
+            }
+            .disabled(viewModel.availableSubjects.isEmpty)
+            Menu(AppL10n.string(String.LocalizationValue(GradeyAIAction.testPreparation.titleKey))) {
+                ForEach(viewModel.availableEvents, id: \.id) { event in
+                    Button(event.title) {
+                        Task { await viewModel.selectAction(.testPreparation, subjectID: event.subjectID,
+                            eventID: UUID(uuidString: event.id), prompt: viewModel.draft) }
+                    }
+                }
+            }
+            .disabled(viewModel.availableEvents.isEmpty)
+        } label: {
+            Text(AppL10n.string("gradey.ai.context.chooseAction"))
+                .font(.caption.weight(.semibold))
+        }
+        .disabled(viewModel.isStreaming || viewModel.isPreparingReply)
+        .accessibilityIdentifier("gradeyAIContextSelectionMenu")
     }
 
     private var contextStatusTitle: String {
@@ -855,7 +968,7 @@ struct GradeyAIView: View {
                 GradelyIcon("favourite", size: 15)
                     .foregroundStyle(onBrand ? Brand.onAccent : Brand.primary)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("gradey.ai.limit.upgrade")
+                    Text("gradey.ai.compute.upgrade")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(onBrand ? Brand.onAccent : .primary)
                         .multilineTextAlignment(.leading)
@@ -878,7 +991,7 @@ struct GradeyAIView: View {
     private var limitText: String {
         guard let status = viewModel.status else { return "" }
         return String.localizedStringWithFormat(
-            AppL10n.string("gradey.ai.limit.remaining"),
+            AppL10n.string("gradey.ai.compute.remaining"),
             Int64(status.remaining),
             Int64(status.dailyLimit)
         )
@@ -888,7 +1001,7 @@ struct GradeyAIView: View {
         guard let resetAt = viewModel.status?.resetAt else { return nil }
         return String.localizedStringWithFormat(
             AppL10n.string("gradey.ai.limit.resets"),
-            resetAt.formatted(date: .omitted, time: .shortened)
+            resetAt.formatted(Date.FormatStyle(date: .omitted, time: .shortened).locale(AppLanguageOverride.locale))
         )
     }
 

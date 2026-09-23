@@ -104,6 +104,8 @@ The existing UI tests exercise login, the subject dashboard, subject detail, and
 
 ## Privacy
 
-Gradely stores login tokens in Keychain and keeps the school URL in user defaults. EduPage credentials, session cookie, and selected child are stored with device-only Keychain accessibility so the app and Watch can renew sessions. Cached marks are written to the app's Application Support directory. The app requires HTTPS school URLs.
+Gradey keeps Bakaláři credentials and the device's session in Keychain and uses the password only for direct HTTPS sign-in to the school. Linking or reconnecting creates a separate school token family on the device for background mark checks; only those tokens are uploaded to Gradey. A new device signs in to the school again. EduPage credentials, session cookie, and selected child are stored with device-only Keychain accessibility so the app and Watch can renew sessions. Cached marks are written to the app's Application Support directory. The app requires HTTPS school URLs.
+
+This describes the source in this checkout. The production rollout, existing encrypted-password cleanup, and policy publication are tracked in [Bakaláři password removal](Docs/BakalariPasswordPrivacy.md).
 
 Gradely is not an official Bakaláři or EduPage product. EduPage support is an original Swift implementation informed by observed web behavior and the unofficial GPL-3.0 [EdupageAPI/edupage-api](https://github.com/EdupageAPI/edupage-api) project; that package is not bundled or linked.

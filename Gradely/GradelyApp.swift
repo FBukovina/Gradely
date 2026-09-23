@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import AppIntents
 import HugeiconsStrokeRounded
 
 @main
@@ -16,6 +17,9 @@ struct GradelyApp: App {
     @NSApplicationDelegateAdaptor(GradeyMacAppDelegate.self) private var appDelegate
     #endif
     @State private var languageStore: AppLanguageStore
+    private let environment: AppEnvironment
+    private let siriService: GradeyIntentService
+    private let siriDiscovery: GradeySiriDiscoveryCoordinator
 
     init() {
         _ = HugeiconsStrokeRounded.load()
@@ -25,19 +29,29 @@ struct GradelyApp: App {
         IntercomConfiguration.configureIfNeeded()
         Self.resetLanguageForUITestsIfNeeded()
         Self.attestAgeForUITestsIfNeeded()
+        Self.seedPrivacyPolicyConsentForUITestsIfNeeded()
         let store = AppLanguageStore.shared
         store.prepareAtLaunch()
         _languageStore = State(initialValue: store)
+        let environment = AppEnvironment.current()
+        self.environment = environment
+        let service = GradeyIntentService(environment: environment)
+        self.siriService = service
+        self.siriDiscovery = GradeySiriDiscoveryCoordinator(service: service)
+        AppDependencyManager.shared.add(dependency: environment)
+        AppDependencyManager.shared.add(dependency: service)
+        GradeyAppShortcuts.updateAppShortcutParameters()
+        siriDiscovery.start()
     }
 
     var body: some Scene {
         WindowGroup {
             #if os(macOS)
-            ContentView()
+            ContentView(environment: environment, siriService: siriService)
                 .frame(minWidth: 880, minHeight: 600)
                 .appLanguage(languageStore)
             #else
-            ContentView()
+            ContentView(environment: environment, siriService: siriService)
                 .appLanguage(languageStore)
             #endif
         }
@@ -65,6 +79,19 @@ private extension GradelyApp {
                 forKey: AppLanguageStore.storageKey
             )
         }
+    }
+
+    /// UI tests must not meet the policy sheet unless they ask for it —
+    /// otherwise every existing signed-in test launches behind it.
+    static func seedPrivacyPolicyConsentForUITestsIfNeeded() {
+        let arguments = ProcessInfo.processInfo.arguments
+        guard arguments.contains("-uiTestingMockAPI") else { return }
+        let store = PrivacyPolicyConsentStore.shared
+        if arguments.contains(PrivacyPolicyConsentStore.uiTestingShowArgument) {
+            store.clear()
+            return
+        }
+        store.accept()
     }
 
     static func attestAgeForUITestsIfNeeded() {

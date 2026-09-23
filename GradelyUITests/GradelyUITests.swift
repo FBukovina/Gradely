@@ -530,19 +530,19 @@ final class GradelyUITests: XCTestCase {
     @MainActor
     func testTimetableSwitchesBetweenWeeklyAndPermanent() throws {
         let app = XCUIApplication()
-        app.launchArguments = ["-uiTestingMockAPI", "-uiTestingLoggedIn"]
+        app.launchArguments = ["-uiTestingMockAPI", "-uiTestingLoggedIn", "-settings.appLanguage", "english"]
         app.launch()
         XCTAssertTrue(app.scrollViews["todayScrollView"].waitForExistence(timeout: 5))
         app.tabBars.buttons.element(boundBy: 3).tap()
         XCTAssertTrue(app.scrollViews["timetableList"].waitForExistence(timeout: 5))
 
-        let picker = app.segmentedControls["timetableKindPicker"]
-        XCTAssertTrue(picker.waitForExistence(timeout: 5))
-        XCTAssertEqual(picker.buttons.count, 2)
+        // The kind switch is a toolbar menu, not a slider above the timetable.
+        XCTAssertFalse(app.segmentedControls["timetableKindPicker"].exists)
+        XCTAssertTrue(app.buttons["timetableKindButton"].waitForExistence(timeout: 5))
         app.buttons["weekNext"].tap()
         XCTAssertTrue(app.buttons["weekToday"].waitForExistence(timeout: 5))
 
-        picker.buttons.element(boundBy: 1).tap()
+        selectTimetableKind("Permanent", in: app)
         XCTAssertTrue(app.buttons["weekNext"].waitForNonExistence(timeout: 5))
         XCTAssertTrue(app.scrollViews["timetableList"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["dayChip-1"].exists)
@@ -558,11 +558,25 @@ final class GradelyUITests: XCTestCase {
         app.buttons["dayChip-2"].tap()
         app.buttons["timetableRefreshButton"].tap()
         XCTAssertTrue(app.scrollViews["timetableList"].waitForExistence(timeout: 5))
-        picker.buttons.element(boundBy: 0).tap()
+        selectTimetableKind("Weekly", in: app)
         XCTAssertTrue(app.buttons["weekNext"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["weekToday"].exists)
         app.buttons["weekToday"].tap()
         XCTAssertTrue(app.buttons["weekToday"].waitForNonExistence(timeout: 5))
+    }
+
+    /// Opens the timetable's toolbar kind menu and picks one of its options.
+    @MainActor
+    private func selectTimetableKind(_ title: String, in app: XCUIApplication) {
+        app.buttons["timetableKindButton"].tap()
+        let option = app.buttons[title]
+        if option.waitForExistence(timeout: 5) {
+            option.tap()
+            return
+        }
+        let menuItem = app.menuItems[title]
+        XCTAssertTrue(menuItem.waitForExistence(timeout: 5), "Timetable kind option \(title) was not offered")
+        menuItem.tap()
     }
 
     @MainActor

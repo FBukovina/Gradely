@@ -205,7 +205,7 @@ final class WatchAppModel: ObservableObject {
                 aiConversationID = conversationID
             }
             guard ack.accepted else {
-                failAI(message: ack.errorMessage)
+                failAI(message: localizedAIErrorMessage(for: ack.errorCode))
                 return
             }
         } catch {
@@ -236,7 +236,7 @@ final class WatchAppModel: ObservableObject {
         case .done:
             finishAIStream()
         case .failed:
-            failAI(message: event.errorMessage)
+            failAI(message: localizedAIErrorMessage(for: event.errorCode))
         }
     }
 
@@ -258,6 +258,43 @@ final class WatchAppModel: ObservableObject {
         aiRequestID = nil
         if let index = aiMessages.lastIndex(where: { $0.role == .assistant }) {
             aiMessages[index].isStreaming = false
+        }
+    }
+
+    private func localizedAIErrorMessage(for code: String?) -> String {
+        // Relay and provider messages are diagnostics. Choose display copy on
+        // the Watch so the current Watch language also applies to failures.
+        switch code?.lowercased().replacingOccurrences(of: "_", with: "-") {
+        case "supporter-required":
+            return String(localized: "watch.ai.lock.detail")
+        case "consent-required":
+            return String(localized: "watch.ai.error.consentRequired")
+        case "phone-unreachable":
+            return String(localized: "watch.ai.error.iphoneNearby")
+        case "not-configured", "accounting-blocked", "firebase-14":
+            return String(localized: "watch.ai.error.unavailable")
+        case "no-school-account", "unauthenticated", "firebase-16":
+            return String(localized: "watch.signedOut.detail")
+        case "quota-exceeded":
+            return String(localized: "watch.ai.error.quotaExceeded")
+        case "cancelled", "firebase-1":
+            return String(localized: "watch.ai.error.cancelled")
+        case "timeout", "firebase-4":
+            return String(localized: "watch.ai.error.timeout")
+        case "catalog-changed", "price-changed":
+            return String(localized: "watch.ai.error.priceChanged")
+        case "request-pending":
+            return String(localized: "watch.ai.error.pending")
+        case "content-filter":
+            return String(localized: "watch.ai.error.contentFilter")
+        case "provider-rate-limit", "firebase-8":
+            return String(localized: "watch.ai.error.busy")
+        case "idempotency-conflict":
+            return String(localized: "watch.ai.error.changedRequest")
+        case "firebase-5":
+            return String(localized: "watch.ai.error.chatUnavailable")
+        default:
+            return String(localized: "watch.ai.error.generic")
         }
     }
 

@@ -3,6 +3,9 @@ import SwiftUI
 struct SubjectsView: View {
     @State private var viewModel: SubjectsViewModel
     @State private var sortMode: SubjectSortMode = .focus
+    @State private var siriPath: [String] = []
+    private let siriSubjectID: String?
+    private let siriRequestID: UUID?
     private let repository: SchoolRepository
     private let accountHub: AnyView?
     private let onOpenGradeyAI: () -> Void
@@ -11,19 +14,24 @@ struct SubjectsView: View {
         repository: SchoolRepository,
         historyRepository: GradeyHistoryRepository? = nil,
         trends: [SubjectGradeTrend] = [],
+        snapshotStore: SchoolSnapshotStore? = nil,
         accountHub: AnyView? = nil,
-        onOpenGradeyAI: @escaping () -> Void = {}
+        onOpenGradeyAI: @escaping () -> Void = {},
+        siriSubjectID: String? = nil,
+        siriRequestID: UUID? = nil
     ) {
         self.repository = repository
+        self.siriSubjectID = siriSubjectID
+        self.siriRequestID = siriRequestID
         self.accountHub = accountHub
         self.onOpenGradeyAI = onOpenGradeyAI
-        let model = SubjectsViewModel(repository: repository, historyRepository: historyRepository)
+        let model = SubjectsViewModel(repository: repository, historyRepository: historyRepository, snapshotStore: snapshotStore)
         model.trends = trends
         _viewModel = State(initialValue: model)
     }
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $siriPath) {
             Group {
                 if viewModel.isLoading && viewModel.subjects.isEmpty {
                     ContentUnavailableView {
@@ -83,8 +91,19 @@ struct SubjectsView: View {
                     AccountSettingsButton(accountHub: accountHub)
                 }
             }
+            .navigationDestination(for: String.self) { subjectID in
+                if let subject = viewModel.subjects.first(where: { $0.id == subjectID }) {
+                    SubjectDetailView(viewModel: SubjectDetailViewModel(subject: subject, absence: viewModel.absence(for: subject), repository: repository,
+                        trend: trend(for: subject),
+                        prepared: viewModel.snapshotStore?.preparedCalculations[subject.id]), snapshotStore: viewModel.snapshotStore)
+                } else { ContentUnavailableView("detail.intelligence.subjectUnavailable", systemImage: "book.closed") }
+            }
+            .onChange(of: siriSubjectID) { _, id in if id == nil { siriPath = [] } }
+            .onChange(of: siriRequestID) { siriPath = siriSubjectID.map { [$0] } ?? [] }
+            .onChange(of: viewModel.snapshotStore?.revision) { viewModel.applySharedSnapshot() }
             .task {
                 await viewModel.loadIfNeeded()
+                if let siriSubjectID { siriPath = [siriSubjectID] }
             }
         }
     }
@@ -114,6 +133,7 @@ struct SubjectsView: View {
                     subjects: displayedSubjects,
                     sortMode: $sortMode,
                     repository: repository,
+                    snapshotStore: viewModel.snapshotStore,
                     absence: { viewModel.absence(for: $0) },
                     trend: { trend(for: $0) }
                 )
@@ -133,9 +153,14 @@ struct SubjectsView: View {
         let subjects = viewModel.subjects
         switch sortMode {
         case .focus:
+            let summaries = viewModel.snapshotStore?.subjectInsights ?? []
+            let scores = summaries.reduce(into: [String: Double]()) { scores, summary in
+                scores[summary.subjectID] = (summary.currentAverage ?? 0) + max(summary.trendDelta ?? 0, 0) * 2
+                    + (summary.upcomingEvents.isEmpty ? 0 : 2)
+            }
             return subjects.sorted {
-                let firstScore = attentionScore(for: $0)
-                let secondScore = attentionScore(for: $1)
+                let firstScore = scores[$0.id] ?? GradeMath.subjectAverage($0) ?? 0
+                let secondScore = scores[$1.id] ?? GradeMath.subjectAverage($1) ?? 0
                 if firstScore == secondScore {
                     return $0.trimmedName.localizedCaseInsensitiveCompare($1.trimmedName) == .orderedAscending
                 }
@@ -155,24 +180,6 @@ struct SubjectsView: View {
                 $0.trimmedName.localizedCaseInsensitiveCompare($1.trimmedName) == .orderedAscending
             }
         }
-    }
-
-    private func attentionScore(for subject: Subject) -> Double {
-        var score = GradeMath.subjectAverage(subject) ?? 0
-
-        if let delta = trend(for: subject)?.averageDelta {
-            score += max(delta, 0) * 2
-        }
-
-        if let absence = viewModel.absence(for: subject) {
-            score += absence.absencePercentage / 25
-        }
-
-        if subject.marks.isEmpty {
-            score -= 2
-        }
-
-        return score
     }
 
     private func trend(for subject: Subject) -> SubjectGradeTrend? {
@@ -340,6 +347,7 @@ private struct SubjectDirectory: View {
     let subjects: [Subject]
     @Binding var sortMode: SubjectSortMode
     let repository: SchoolRepository
+    let snapshotStore: SchoolSnapshotStore?
     let absence: (Subject) -> AbsencePerSubject?
     let trend: (Subject) -> SubjectGradeTrend?
 
@@ -366,14 +374,17 @@ private struct SubjectDirectory: View {
                                 subject: subject,
                                 absence: absence(subject),
                                 repository: repository,
-                                trend: trend(subject)
-                            )
+                                trend: trend(subject),
+                                prepared: snapshotStore?.preparedCalculations[subject.id]
+                            ),
+                            snapshotStore: snapshotStore
                         )
                     } label: {
                         SubjectRow(
                             subject: subject,
                             absence: absence(subject),
-                            trend: trend(subject)
+                            trend: trend(subject),
+                            prepared: snapshotStore?.preparedCalculations[subject.id]
                         )
                     }
                     .buttonStyle(.plain)
@@ -398,9 +409,10 @@ private struct SubjectRow: View {
     let subject: Subject
     let absence: AbsencePerSubject?
     let trend: SubjectGradeTrend?
+    var prepared: PreparedGradeCalculation? = nil
 
     var body: some View {
-        let average = GradeMath.subjectAverage(subject)
+        let average = prepared == nil ? GradeMath.subjectAverage(subject) : prepared?.displayAverage
         let band = GradeMath.band(for: average)
 
         HStack(alignment: .center, spacing: Spacing.md) {

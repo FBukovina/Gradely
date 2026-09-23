@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 
 struct GradeyAIStatus: Codable, Equatable, Sendable {
@@ -9,6 +10,7 @@ struct GradeyAIStatus: Codable, Equatable, Sendable {
     var remaining: Int
     var resetAt: Date?
     var tier: GradeyAIIdentityTier? = nil
+    var compute: GradeyComputeBalance? = nil
 
     var canSend: Bool {
         enabled && !consentRequired && remaining > 0
@@ -23,6 +25,7 @@ struct GradeyAIStatus: Codable, Equatable, Sendable {
         case remaining
         case resetAt = "reset_at"
         case tier
+        case compute
     }
 }
 
@@ -48,6 +51,7 @@ struct GradeyAIConversation: Codable, Equatable, Identifiable, Sendable {
     let createdAt: Date
     var updatedAt: Date
     var lastMessageAt: Date?
+    var contextSelectionID: String? = nil
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -56,6 +60,7 @@ struct GradeyAIConversation: Codable, Equatable, Identifiable, Sendable {
         case createdAt = "created_at"
         case updatedAt = "updated_at"
         case lastMessageAt = "last_message_at"
+        case contextSelectionID
     }
 }
 
@@ -114,10 +119,22 @@ struct GradeyAIMessage: Codable, Equatable, Identifiable, Sendable {
     }
 }
 
-enum GradeyAIContextSection: String, Codable, Equatable, Sendable {
+enum GradeyAIContextSection: String, Codable, Equatable, Hashable, Sendable {
     case marks
     case trends
     case timetable
+    case events
+    case insights
+
+    var localizedName: String {
+        switch self {
+        case .marks: AppL10n.string("gradey.ai.context.section.marks")
+        case .trends: AppL10n.string("gradey.ai.context.section.trends")
+        case .timetable: AppL10n.string("gradey.ai.context.section.timetable")
+        case .events: AppL10n.string("gradey.ai.context.section.events")
+        case .insights: AppL10n.string("gradey.ai.context.section.insights")
+        }
+    }
 }
 
 struct GradeyAIMarkContext: Codable, Equatable, Sendable {
@@ -148,6 +165,7 @@ struct GradeyAISubjectContext: Codable, Equatable, Identifiable, Sendable {
     let pointsOnly: Bool
     let totalMarkCount: Int
     let recentMarks: [GradeyAIMarkContext]
+    var calculation: GradeyAIGradeCalculationContext? = nil
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -157,6 +175,35 @@ struct GradeyAISubjectContext: Codable, Equatable, Identifiable, Sendable {
         case pointsOnly = "points_only"
         case totalMarkCount = "total_mark_count"
         case recentMarks = "recent_marks"
+        case calculation
+    }
+}
+
+/// A bounded summary of the same prepared baseline used by the local simulator.
+/// It gives AI the full arithmetic basis without disclosing every recorded grade.
+nonisolated struct GradeyAIGradeCalculationContext: Codable, Equatable, Sendable {
+    let localAverage: Double?
+    let providerAverage: Double?
+    let weightedSum: Double?
+    let totalWeight: Double?
+    let includedCount: Int
+    let excludedCount: Int
+    let confidence: String
+    let issues: [String]
+
+    @MainActor init(prepared: PreparedGradeCalculation) {
+        localAverage = Self.bounded(prepared.calculatedAverage)
+        providerAverage = Self.bounded(prepared.officialAverage)
+        weightedSum = Self.bounded(prepared.weightedSum)
+        totalWeight = Self.bounded(prepared.totalWeight)
+        includedCount = prepared.marks.count
+        excludedCount = max(0, prepared.excludedMarkCount)
+        confidence = prepared.confidence.rawValue
+        issues = Array(prepared.issues.map(\.rawValue).prefix(10))
+    }
+
+    private static func bounded(_ value: Double?) -> Double? {
+        value.flatMap { $0.isFinite && abs($0) <= 1e12 ? $0 : nil }
     }
 }
 
@@ -229,6 +276,10 @@ struct GradeyAIContextSnapshot: Codable, Equatable, Sendable {
     let trends: [GradeyAITrendContext]
     let timetable: [GradeyAILessonContext]
 
+    var events: [GradeyAIEventContext]? = nil
+    var insights: [GradeyAIInsightContext]? = nil
+    var sourceFreshness: [GradeyAISourceFreshness]? = nil
+
     var isPartial: Bool {
         !unavailableSections.isEmpty
     }
@@ -241,6 +292,9 @@ struct GradeyAIContextSnapshot: Codable, Equatable, Sendable {
         case subjects
         case trends
         case timetable
+        case events
+        case insights
+        case sourceFreshness
     }
 }
 
@@ -335,4 +389,109 @@ enum GradeyAIStreamEvent: Codable, Equatable, Sendable {
 struct GradeyAIConversationDetail: Equatable, Sendable {
     let conversation: GradeyAIConversation
     let messages: [GradeyAIMessage]
+}
+
+
+nonisolated enum GradeyAIAction: String, Codable, CaseIterable, Equatable, Sendable {
+    case reply
+    case tomorrow
+    case studyPriorities = "study_priorities"
+    case weekSummary = "week_summary"
+    case subjectHelp = "subject_help"
+    case testPreparation = "test_preparation"
+
+    var titleKey: String { "gradey.ai.action." + rawValue }
+}
+
+nonisolated struct GradeyAIContextSelection: Codable, Equatable, Sendable {
+    var action: GradeyAIAction = .reply
+    var subjectID: String? = nil
+    var eventID: UUID? = nil
+    var includeNotes = false
+    var weekStart: Date? = nil
+
+    var identifier: String {
+        let input = [action.rawValue, subjectID ?? "", eventID?.uuidString ?? "", includeNotes ? "notes" : "no-notes", weekStart?.ISO8601Format() ?? ""].map { "\($0.utf8.count):\($0)" }.joined(separator: "|")
+        return "selection_" + SHA256.hash(data: Data(input.utf8)).map { String(format: "%02x", $0) }.joined()
+    }
+}
+
+nonisolated struct GradeyComputeAction: Codable, Equatable, Identifiable, Sendable {
+    let id: String
+    let cost: Int
+    let available: Bool
+}
+
+nonisolated struct GradeyComputeBalance: Codable, Equatable, Sendable {
+    let schemaVersion: Int
+    let catalogVersion: String
+    let allowance: Int
+    let used: Int
+    let reserved: Int
+    var remaining: Int
+    let resetAt: Double?
+    let supportTier: String
+    let actions: [GradeyComputeAction]
+}
+
+nonisolated struct GradeyAIEventContext: Codable, Equatable, Sendable {
+    let id: String
+    let title: String
+    let type: String
+    let subjectID: String?
+    let subjectName: String?
+    let date: String
+    let hasTime: Bool
+    let notes: String?
+}
+
+nonisolated struct GradeyAIInsightContext: Codable, Equatable, Sendable {
+    let id: String
+    let subjectID: String?
+    let kind: String
+    let summary: String
+    let observedAt: Double?
+    let isEstimated: Bool
+}
+
+nonisolated struct GradeyAISourceFreshness: Codable, Equatable, Sendable {
+    let section: String
+    let fetchedAt: Double?
+    let isStale: Bool
+}
+
+struct GradeyAIReplyRequest: Equatable, Sendable {
+    let locale = AppLanguageOverride.locale.identifier
+    let conversationID: String
+    let clientMessageID: String
+    let text: String
+    let context: GradeyAIContextSnapshot
+    let actionID: GradeyAIAction
+    let contextSelectionID: String
+    let catalogVersion: String?
+    let maximumComputeCost: Int
+
+    var payloadHash: String {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        encoder.dateEncodingStrategy = .millisecondsSince1970
+        let contextData = (try? encoder.encode(context)) ?? Data()
+        var input = Data([conversationID, clientMessageID, text, actionID.rawValue, contextSelectionID, locale].map { "\($0.utf8.count):\($0)" }.joined().utf8)
+        input.append(contextData)
+        return SHA256.hash(data: input).map { String(format: "%02x", $0) }.joined()
+    }
+}
+
+nonisolated struct GradeyAIPendingRequest: Codable, Equatable, Sendable {
+    let conversationID: String
+    let clientMessageID: String
+    let schoolScope: String
+    let contextSelectionID: String
+    let payloadHash: String
+}
+
+struct GradeyAIGenerationRecovery: Equatable, Sendable {
+    let state: String
+    let message: GradeyAIMessage?
+    let status: GradeyAIStatus?
 }

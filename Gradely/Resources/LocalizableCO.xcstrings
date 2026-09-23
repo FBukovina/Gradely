@@ -7,13 +7,13 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "až škola pošle absenci, spadne to sem."
+            "value" : "až škola zpřístupní absenci, spadne to sem."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "when school sends absence data, it lands here."
+            "value" : "when your school makes absence records available, they land here."
           }
         }
       }
@@ -132,7 +132,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "log out"
+            "value" : "sign out"
           }
         }
       }
@@ -296,13 +296,13 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "zeptej se na známky nebo rozvrh. literally cokoliv."
+            "value" : "zeptej se na cokoli. pro pomoc se známkami, rozvrhem nebo testem nejdřív vyber školní údaje ke sdílení."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ask anything about your marks or timetable."
+            "value" : "ask a question. for help with your marks, timetable or a test, choose the school information to share first."
           }
         }
       }
@@ -330,13 +330,13 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "zeptej se na známky nebo rozvrh…"
+            "value" : "napiš zprávu…"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ask about marks or the timetable…"
+            "value" : "write your message…"
           }
         }
       }
@@ -398,13 +398,13 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "zeptej se na poslední známky, na co se zaměřit, nebo co tě čeká v rozvrhu."
+            "value" : "nech si pomoct s učením. pro pomoc se známkami, rozvrhem nebo testem vyber, které školní údaje chceš sdílet."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ask about recent marks, where to focus, or what's next in the timetable."
+            "value" : "get help with studying. choose what school information to share when you want help with your marks, timetable or a test."
           }
         }
       }
@@ -472,7 +472,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "your private account for marks, meals, notifications, widgets, and future devices."
+            "value" : "your private account for marks, meals, notifications, and widgets across your devices."
           }
         }
       }
@@ -534,13 +534,13 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "přihlas se školou a měj známky, průměry i absenci po ruce."
+            "value" : "přihlas se školním účtem a měj známky, průměry i absenci po ruce."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "sign in with school and keep marks, averages, and absences close."
+            "value" : "sign in with your school account and keep marks, averages, and absences at hand."
           }
         }
       }
@@ -585,13 +585,13 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "udělej si soukromé Gradey ID přes Apple, ať se nastavení syncne a notifikace fungujou. žádný extra heslo."
+            "value" : "udělej si soukromé Gradey ID přes Apple, ať se nastavení syncne a notifikace fungujou. nebo pokračuj bez něj a školu připoj hned."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "create a private Gradey ID with Apple to sync settings and turn on notifications. no extra password to remember."
+            "value" : "create a private Gradey ID with Apple to sync settings and turn on notifications. or skip it and connect school now."
           }
         }
       }
@@ -608,7 +608,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "log in to Gradey"
+            "value" : "sign in to Gradey"
           }
         }
       }
@@ -693,7 +693,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "log in"
+            "value" : "sign in"
           }
         }
       }
@@ -942,13 +942,13 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "zeptej se Gradey AI na známky nebo rozvrh a zůstaň v obraze díky notifikacím a widgetům."
+            "value" : "získej pomoc od Gradey AI podle školních údajů, které vybereš, a měj přehled díky oznámením a widgetům."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ask Gradey AI about marks or the timetable, then stay in the loop with notifications and widgets."
+            "value" : "get focused help from Gradey AI using the school information you choose, and stay up to date with notifications and widgets."
           }
         }
       }
@@ -1271,7 +1271,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "your data, safely"
+            "value" : "manage your data"
           }
         }
       }
@@ -1418,13 +1418,13 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "vezme angličtinu nebo češtinu z tohoto zařízení."
+            "value" : "vezme angličtinu nebo češtinu podle jazyka zařízení."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "follows english or czech from this device."
+            "value" : "uses english or czech to match your device language."
           }
         }
       }
@@ -1503,13 +1503,13 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "skryj záložku jídelny, pokud neobjednáváš jídlo."
+            "value" : "skryj záložku jídelna, pokud neobjednáváš jídlo."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "hide the canteen tab if you don't order meals."
+            "value" : "hide the meals tab if you don’t order meals."
           }
         }
       }
@@ -1588,13 +1588,13 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "obnov a předměty se známkama se tu objeví."
+            "value" : "obnov a mrkni, jestli už jsou předměty a známky ze školy."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "refresh and subjects with marks will show up here."
+            "value" : "refresh to check for subjects and marks from school."
           }
         }
       }

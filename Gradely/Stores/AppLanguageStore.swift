@@ -134,6 +134,11 @@ enum ChronicallyOnlineText {
         "Azure AI",
         "Microsoft",
         "Azure",
+        "OpenAI",
+        "Google",
+        "Compute",
+        "AI",
+        "UTC",
         "CAPTCHA",
         "HTTPS",
         "JSON",
@@ -142,7 +147,7 @@ enum ChronicallyOnlineText {
     ].sorted { $0.count > $1.count }
 
     private static let formatRegex: NSRegularExpression = {
-        let pattern = "%(?:\\d+\\$)?[-+0 #]*(?:\\d+)?(?:\\.\\d+)?(?:ll|l|h)?[@diouxXeEfFgGcs%]"
+        let pattern = "%(?:\\d+\\$)?#@[^@]+@|%(?:\\d+\\$)?[-+0 #]*(?:\\d+)?(?:\\.\\d+)?(?:ll|l|h)?[@diouxXeEfFgGcs%]"
         return try! NSRegularExpression(pattern: pattern)
     }()
 
@@ -169,7 +174,7 @@ enum ChronicallyOnlineText {
 
         for brand in preservedTokens {
             let regex = try! NSRegularExpression(
-                pattern: NSRegularExpression.escapedPattern(for: brand),
+                pattern: "(?<!\\w)" + NSRegularExpression.escapedPattern(for: brand) + "(?!\\w)",
                 options: [.caseInsensitive]
             )
             let matches = regex.matches(
@@ -194,6 +199,7 @@ enum ChronicallyOnlineText {
         value: String?,
         table tableName: String?,
         in bundle: Bundle,
+        fallbackBundle: Bundle? = nil,
         lookup: (Bundle, String, String?, String?) -> String
     ) -> String {
         let coValue = lookup(bundle, key, missingSentinel, AppLanguage.chronicallyOnlineTableName)
@@ -202,7 +208,19 @@ enum ChronicallyOnlineText {
         }
 
         let standardTable = tableName == AppLanguage.chronicallyOnlineTableName ? "Localizable" : tableName
-        return transform(lookup(bundle, key, value, standardTable))
+        if let fallbackBundle {
+            // The dialect catalog contains authored copy, not only automatic
+            // casing. Keep it verbatim, including its plural resource metadata.
+            let preferredValue = lookup(bundle, key, missingSentinel, standardTable)
+            if preferredValue != missingSentinel { return preferredValue }
+            return resolve(key: key, value: value, table: standardTable, in: fallbackBundle, lookup: lookup)
+        }
+
+        let standardValue = lookup(bundle, key, value, standardTable)
+        // NSString plural formats carry a stringsdict association. Returning the
+        // original format keeps that association and the selected locale intact.
+        if standardValue.contains("#@") { return standardValue }
+        return transform(standardValue)
     }
 }
 
@@ -323,19 +341,23 @@ extension Bundle {
             bundle.gradely_localizedString(forKey: key, value: value, table: table)
         }
 
-        if let code = config.localizationCode,
-           let preferred = Bundle.gradelyLprojBundle(for: code) {
-            return lookup(preferred, key, value, tableName)
-        }
-
         if config.isChronicallyOnline {
+            let baseCode = config.localizationCode?.hasPrefix("cs") == true ? "cs" : "en"
+            let base = Bundle.gradelyLprojBundle(for: baseCode) ?? Bundle.main
+            let preferred = config.localizationCode.flatMap(Bundle.gradelyLprojBundle(for:))
             return ChronicallyOnlineText.resolve(
                 key: key,
                 value: value,
                 table: tableName,
-                in: self === Bundle.main ? self : Bundle.main,
+                in: preferred ?? base,
+                fallbackBundle: preferred == nil ? nil : base,
                 lookup: lookup
             )
+        }
+
+        if let code = config.localizationCode,
+           let preferred = Bundle.gradelyLprojBundle(for: code) {
+            return lookup(preferred, key, value, tableName)
         }
 
         return lookup(self, key, value, tableName)

@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="login_title">Connect Bakaláři</string>
+    <string name="login_subtitle">Sign in with the same school address, username, and password you use for Bakaláři.</string>
+    <string name="login_back">Back</string>
+    <string name="login_credentials_title">Bakaláři credentials</string>
+    <string name="login_find_school">Find your school</string>
+    <string name="login_school_search_placeholder">School name or town</string>
+    <string name="login_retry">Retry</string>
+    <string name="login_no_matching_school">No matching school. You can enter its address below.</string>
+    <string name="login_manual_address_prompt">Or enter the Bakaláři school address</string>
+    <string name="login_use_demo_account">Use demo account</string>
+    <string name="login_school_url">School URL</string>
+    <string name="login_school_url_placeholder" translatable="false">school.example.cz</string>
+    <string name="login_school_url_required">School URL is required.</string>
+    <string name="login_school_url_invalid">Enter a valid school URL.</string>
+    <string name="login_username">Username</string>
+    <string name="login_username_required">Username is required.</string>
+    <string name="login_password">Password</string>
+    <string name="login_password_required">Password is required.</string>
+    <string name="login_hide_password">Hide password</string>
+    <string name="login_show_password">Show password</string>
+    <string name="login_connecting">Connecting…</string>
+    <string name="login_try_again">Try again</string>
+    <string name="login_connect_school">Connect school</string>
+    <string name="login_cancel">Cancel</string>
+    <string name="login_credentials_privacy">Your credentials are stored in Android encrypted storage and are used only to connect to your school server.</string>
+    <string name="login_manual_address_steps">1. Open your school’s Bakaláři website.\n2. Copy the address from the browser.\n3. Paste the full address below.\n4. Enter your Bakaláři username and password.</string>
+    <string name="login_manual_address_example">Example: https://school.example.cz</string>
+    <string name="login_help">Help</string>
+    <string name="login_github">GitHub</string>
+</resources>

@@ -33,6 +33,41 @@ export async function markFingerprint(provider: string, linkedAccountID: string,
   };
 }
 
+export interface MarkCandidate {
+  subjectID: string;
+  providerMarkID: string | null;
+  source: string;
+  fingerprint: string;
+  subjectAbbrev: string | null;
+  subjectName: string | null;
+  markText: string;
+}
+
+/** Fingerprints every mark in a provider response once, in response order. */
+export async function markCandidates(
+  provider: string,
+  linkedAccountID: string,
+  subjects: Record<string, any>[],
+): Promise<MarkCandidate[]> {
+  const seen = new Set<string>();
+  const candidates: MarkCandidate[] = [];
+  for (const subject of subjects) {
+    const subjectID = String(subject.Subject?.Id || "unknown-subject");
+    for (const mark of subject.Marks ?? []) {
+      const fingerprint = await markFingerprint(provider, linkedAccountID, subjectID, mark);
+      if (seen.has(fingerprint.fingerprint)) continue;
+      seen.add(fingerprint.fingerprint);
+      candidates.push({
+        ...fingerprint,
+        subjectAbbrev: subject.Subject?.Abbrev ?? null,
+        subjectName: subject.Subject?.Name ?? null,
+        markText: String(mark.MarkText || ""),
+      });
+    }
+  }
+  return candidates;
+}
+
 export function notificationBody(markText: string, subjectAbbrev?: string | null, subjectName?: string | null) {
   return `${markText} from ${subjectAbbrev || subjectName || "school"}`;
 }

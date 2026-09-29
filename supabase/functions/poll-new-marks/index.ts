@@ -6,8 +6,12 @@ import {
 } from "../_shared/bakalari-provider-session.ts";
 import { adminClient, providerSecretKey } from "../_shared/client.ts";
 import { errorResponse, handleOptions, json } from "../_shared/http.ts";
-import { markFingerprint, notificationBody } from "../_shared/marks.ts";
+import { markCandidates } from "../_shared/marks.ts";
 import { requireSafeProviderURL } from "../_shared/provider-url.ts";
+
+const POLL_LEASE_MS = 10 * 60 * 1000;
+const PROVIDER_REQUEST_BUDGET_MS = 30_000;
+const POLL_BATCH_BUDGET_MS = 60_000;
 
 Deno.serve(async (req) => {
   const options = handleOptions(req);
@@ -17,6 +21,7 @@ Deno.serve(async (req) => {
     assertCronSecret(req);
     const supabase = adminClient();
     const now = new Date();
+    const batchDeadline = now.getTime() + POLL_BATCH_BUDGET_MS;
 
     const { data: accounts, error } = await supabase
       .from("linked_accounts")
@@ -29,7 +34,12 @@ Deno.serve(async (req) => {
 
     const outcomes = [];
     for (const account of accounts ?? []) {
-      outcomes.push(await pollAccount(supabase, account));
+      // Leave time for the final account to finish before the cron HTTP timeout.
+      // Remaining accounts stay due for the next scheduled invocation.
+      if (Date.now() >= batchDeadline) break;
+      const leasedAccount = await leaseAccount(supabase, account);
+      if (!leasedAccount) continue;
+      outcomes.push(await pollAccount(supabase, leasedAccount));
     }
 
     return json({ polled: outcomes.length, outcomes });
@@ -48,80 +58,35 @@ async function pollAccount(supabase: ReturnType<typeof adminClient>, account: Re
     });
     if (secretError) throw secretError;
 
-    const marksResponse = await fetchMarks(supabase, account, secret);
-    const newEvents = [];
-    const isBaseline = !account.last_polled_at;
+    const marksResponse = await fetchMarks(
+      supabase, account, secret, AbortSignal.timeout(PROVIDER_REQUEST_BUDGET_MS),
+    );
+    const subjects = marksResponse.Subjects ?? [];
 
-    for (const subject of marksResponse.Subjects ?? []) {
+    for (const subject of subjects) {
       await recordGradeHistory(supabase, account, subject);
-
-      const subjectID = String(subject.Subject?.Id || "unknown-subject");
-      for (const mark of subject.Marks ?? []) {
-        const fingerprint = await markFingerprint(account.provider, account.id, subjectID, mark);
-
-        const { data: insertedFingerprint, error: insertError } = await supabase
-          .from("mark_fingerprints")
-          .insert({
-            user_id: account.user_id,
-            linked_account_id: account.id,
-            provider: account.provider,
-            subject_id: subjectID,
-            provider_mark_id: fingerprint.providerMarkID,
-            fingerprint: fingerprint.fingerprint,
-            source: fingerprint.source,
-          })
-          .select()
-          .maybeSingle();
-
-        if (insertError && insertError.code !== "23505") throw insertError;
-        if (!insertedFingerprint || isBaseline) continue;
-
-        const subjectAbbrev = subject.Subject?.Abbrev ?? null;
-        const subjectName = subject.Subject?.Name ?? null;
-        const markText = String(mark.MarkText || "");
-        const { data: event, error: eventError } = await supabase
-          .from("new_mark_events")
-          .insert({
-            user_id: account.user_id,
-            linked_account_id: account.id,
-            fingerprint_id: insertedFingerprint.id,
-            provider: account.provider,
-            subject_id: subjectID,
-            subject_abbrev: subjectAbbrev,
-            subject_name: subjectName,
-            mark_text: markText,
-            notification_title: "New mark",
-            notification_body: notificationBody(markText, subjectAbbrev, subjectName),
-          })
-          .select()
-          .single();
-        if (eventError) throw eventError;
-
-        newEvents.push(event);
-      }
     }
 
-    const nextPoll = nextPollDate(new Date());
-    await supabase
-      .from("linked_accounts")
-      .update({
-        last_polled_at: new Date().toISOString(),
-        last_synced_at: new Date().toISOString(),
-        next_poll_at: nextPoll.toISOString(),
-        failure_count: 0,
-      })
-      .eq("id", account.id);
-
-    if (newEvents.length > 0) {
-      await invokeSendAPNS(newEvents.map((event) => event.id));
+    // Fingerprints, notification events, and baseline completion must commit
+    // together, including when the worker dies or the RPC response is lost.
+    const { data: recorded, error: recordError } = await supabase.rpc("record_polled_marks", {
+      p_account_id: account.id,
+      p_secret_id: account.secret_id,
+      p_candidates: await markCandidates(account.provider, account.id, subjects),
+      p_next_poll_at: nextPollDate(new Date()).toISOString(),
+    });
+    if (recordError) throw recordError;
+    const eventIDs: string[] = recorded.eventIDs;
+    if (eventIDs.length > 0) {
+      await invokeSendAPNS(eventIDs);
     }
 
-    return { accountID: account.id, newMarks: newEvents.length, baseline: isBaseline };
+    return { accountID: account.id, newMarks: eventIDs.length, baseline: recorded.baseline, skipped: recorded.skipped };
   } catch (error) {
     const failureCount = (account.failure_count ?? 0) + 1;
     const authenticationFailure = isProviderAuthenticationError(error);
     const requiresAction = authenticationFailure && failureCount >= 3;
-    await supabase
+    const { error: failureError } = await supabase
       .from("linked_accounts")
       .update({
         failure_count: failureCount,
@@ -131,25 +96,51 @@ async function pollAccount(supabase: ReturnType<typeof adminClient>, account: Re
           ? "Provider session expired. Reconnect this account in Gradey."
           : account.action_required_reason,
       })
-      .eq("id", account.id);
+      .eq("id", account.id)
+      .eq("secret_id", account.secret_id)
+      .eq("status", "active");
+    if (failureError) throw failureError;
 
     return { accountID: account.id, error: error instanceof Error ? error.message : "poll_failed" };
   }
+}
+
+/**
+ * Overlapping cron runs must not poll the same account: both would redeem the
+ * same single-use Bakaláři refresh token, and the loser breaks the chain.
+ */
+async function leaseAccount(
+  supabase: ReturnType<typeof adminClient>,
+  account: Record<string, any>,
+) {
+  const now = new Date();
+  const { data, error } = await supabase
+    .from("linked_accounts")
+    .update({ next_poll_at: new Date(now.getTime() + POLL_LEASE_MS).toISOString() })
+    .eq("id", account.id)
+    .eq("secret_id", account.secret_id)
+    .eq("status", "active")
+    .or(`next_poll_at.is.null,next_poll_at.lte.${now.toISOString()}`)
+    .select("*")
+    .maybeSingle();
+  if (error) throw error;
+  return data;
 }
 
 async function fetchMarks(
   supabase: ReturnType<typeof adminClient>,
   account: Record<string, any>,
   secret: Record<string, any>,
+  signal: AbortSignal,
 ) {
   const baseURL = requireSafeProviderURL(secret.baseURL, "Stored school URL");
 
   if (account.provider === "bakalari") {
-    return await fetchBakalariMarks(supabase, account, secret, baseURL);
+    return await fetchBakalariMarks(supabase, account, secret, baseURL, signal);
   }
 
   if (account.provider === "eduPage") {
-    return await fetchEduPageMarks(secret, baseURL);
+    return await fetchEduPageMarks(secret, baseURL, signal);
   }
 
   throw new Error(`unsupported_provider_${account.provider}`);
@@ -160,10 +151,11 @@ async function fetchBakalariMarks(
   account: Record<string, any>,
   secret: Record<string, any>,
   baseURL: string,
+  signal: AbortSignal,
 ) {
-  const resolved = await resolveAndPersistBakalariSecret(supabase, account, secret, baseURL);
+  const resolved = await resolveAndPersistBakalariSecret(supabase, account, secret, baseURL, signal);
   let activeSecret = resolved.secret;
-  let response = await requestBakalariMarks(activeSecret, baseURL);
+  let response = await requestBakalariMarks(activeSecret, baseURL, signal);
 
   if (response.status === 401 && !resolved.didMutate) {
     activeSecret = (await resolveAndPersistBakalariSecret(
@@ -171,9 +163,10 @@ async function fetchBakalariMarks(
       account,
       activeSecret,
       baseURL,
+      signal,
       true,
     )).secret;
-    response = await requestBakalariMarks(activeSecret, baseURL);
+    response = await requestBakalariMarks(activeSecret, baseURL, signal);
   }
 
   if (response.status === 401) throw new ProviderAuthenticationError("bakalari_auth_failed");
@@ -181,13 +174,14 @@ async function fetchBakalariMarks(
   return await response.json();
 }
 
-function requestBakalariMarks(secret: Record<string, any>, baseURL: string) {
+function requestBakalariMarks(secret: Record<string, any>, baseURL: string, signal: AbortSignal) {
   return fetch(new URL("api/3/marks", baseURL).toString(), {
     headers: {
       Authorization: `${secret.tokenType || "Bearer"} ${secret.accessToken}`,
       Accept: "application/json",
     },
     redirect: "error",
+    signal,
   });
 }
 
@@ -196,6 +190,7 @@ async function resolveAndPersistBakalariSecret(
   account: Record<string, any>,
   secret: Record<string, any>,
   baseURL: string,
+  signal: AbortSignal,
   forceRefresh = false,
 ) {
   const resolved = await resolveBakalariPollingSecret(secret, {
@@ -203,7 +198,7 @@ async function resolveAndPersistBakalariSecret(
     refresh: (refreshToken) => requestBakalariTokens(baseURL, {
       grant_type: "refresh_token",
       refresh_token: refreshToken,
-    }),
+    }, signal),
   });
   if (!resolved.didMutate) {
     return { secret: resolved.secret as Record<string, any>, didMutate: false };
@@ -214,7 +209,7 @@ async function resolveAndPersistBakalariSecret(
   };
 }
 
-async function requestBakalariTokens(baseURL: string, fields: Record<string, string>) {
+async function requestBakalariTokens(baseURL: string, fields: Record<string, string>, signal: AbortSignal) {
   const body = new URLSearchParams({
     client_id: "ANDR",
     ...fields,
@@ -227,6 +222,7 @@ async function requestBakalariTokens(baseURL: string, fields: Record<string, str
     },
     body,
     redirect: "error",
+    signal,
   });
 
   if (response.status === 400 || response.status === 401) {
@@ -321,7 +317,7 @@ function numbersEqual(first: number | null, second: number | null) {
   return Math.abs(first - second) < 0.0001;
 }
 
-async function fetchEduPageMarks(secret: Record<string, any>, baseURL: string) {
+async function fetchEduPageMarks(secret: Record<string, any>, baseURL: string, signal: AbortSignal) {
   const eduPage = secret.eduPage;
   if (!eduPage?.sessionID) throw new ProviderAuthenticationError("edupage_auth_failed");
 
@@ -333,6 +329,7 @@ async function fetchEduPageMarks(secret: Record<string, any>, baseURL: string) {
       Cookie: `PHPSESSID=${eduPage.sessionID}`,
     },
     redirect: "error",
+    signal,
   });
   if (response.status === 401 || response.status === 403) {
     throw new ProviderAuthenticationError("edupage_auth_failed");

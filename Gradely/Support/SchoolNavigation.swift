@@ -101,7 +101,8 @@ final class SchoolNotificationRouter: NSObject, UNUserNotificationCenterDelegate
                delegate.responds(to: #selector(UNUserNotificationCenterDelegate.userNotificationCenter(_:willPresent:withCompletionHandler:))) {
                 delegate.userNotificationCenter?(center, willPresent: notification, withCompletionHandler: completionHandler)
             } else {
-                completionHandler([])
+                // Without this, a new-mark push that lands while Gradey is open is silently dropped.
+                completionHandler([.banner, .list, .sound])
             }
         }
     }

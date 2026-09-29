@@ -2,6 +2,9 @@
 
 This folder contains the Gradey ID platform backend:
 
+For the current notification rollout, deployed versions, tests, and outstanding
+device verification, see [29 September 2026 rollout](../Docs/PushNotifications-2026-09-29.md).
+
 - Auth uses Supabase Auth with Sign in with Apple.
 - Linked provider sessions are stored as encrypted payloads through `store_provider_secret`; school and canteen passwords are intentionally not accepted by the app payloads.
 - `poll-new-marks` baselines marks on first link, then inserts new mark events only for unseen fingerprints.

@@ -917,8 +917,15 @@ final class GradelyUITests: XCTestCase {
         XCTAssertTrue(consentButton.waitForExistence(timeout: 3))
         consentButton.tap()
 
-        XCTAssertTrue(app.descendants(matching: .any)["gradeyAIEmptyConversations"].waitForExistence(timeout: 5))
+        // Consent lands straight on a new chat; past chats live in History.
+        XCTAssertTrue(app.descendants(matching: .any)["gradeyAIWelcome"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.descendants(matching: .any)["gradeyAIComposer"].exists)
         XCTAssertTrue(app.buttons["gradeyAINewChatButton"].exists)
+
+        let historyButton = app.buttons["gradeyAIHistoryButton"]
+        XCTAssertTrue(historyButton.exists)
+        historyButton.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["gradeyAIEmptyConversations"].waitForExistence(timeout: 5))
     }
 
     @MainActor
@@ -946,7 +953,7 @@ final class GradelyUITests: XCTestCase {
         XCTAssertTrue(consentButton.waitForExistence(timeout: 3))
         consentButton.tap()
 
-        XCTAssertTrue(app.descendants(matching: .any)["gradeyAIEmptyConversations"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.descendants(matching: .any)["gradeyAIWelcome"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.descendants(matching: .any)["gradeyAIContextStatus"].exists)
         XCTAssertTrue(app.descendants(matching: .any)["gradeyAIRemainingMessages"].exists)
         XCTAssertTrue(app.descendants(matching: .any)["gradeyAIServiceUnavailableBanner"].exists)

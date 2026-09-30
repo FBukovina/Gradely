@@ -464,6 +464,7 @@ struct GradeyAIToolbarButton: View {
     var body: some View {
         Button(action: onOpen) {
             GradelyIcon(systemName: "sparkles")
+                .foregroundStyle(Brand.gradient)
                 .gradelyToolbarIconButton()
         }
         .accessibilityLabel(AppL10n.string("gradey.ai.title"))

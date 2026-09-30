@@ -96,25 +96,31 @@ struct GradeyAIMarkdownText: View {
 
     var body: some View {
         let blocks = GradeyAIMarkdown.blocks(from: markdown)
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 10) {
             ForEach(Array(blocks.enumerated()), id: \.offset) { _, block in
                 switch block {
                 case .heading(let text, let level):
                     Text(GradeyAIMarkdown.inlineAttributed(text))
-                        .font(level <= 2 ? .headline : .subheadline.weight(.semibold))
-                        .padding(.top, 2)
+                        .font(level <= 2
+                            ? .gradelyDisplay(size: 19, relativeTo: .headline)
+                            : .subheadline.weight(.semibold))
+                        .padding(.top, 4)
+                        .accessibilityAddTraits(.isHeader)
                 case .paragraph(let text):
                     Text(GradeyAIMarkdown.inlineAttributed(text))
+                        .lineSpacing(3)
                         .fixedSize(horizontal: false, vertical: true)
                 case .list(let items):
-                    VStack(alignment: .leading, spacing: 6) {
+                    VStack(alignment: .leading, spacing: 7) {
                         ForEach(Array(items.enumerated()), id: \.offset) { _, item in
-                            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                                Text("•")
-                                    .fontWeight(.semibold)
-                                    .foregroundStyle(Brand.primary)
+                            HStack(alignment: .firstTextBaseline, spacing: 10) {
+                                Text("●")
+                                    .font(.system(size: 7))
+                                    .foregroundStyle(Brand.gradient)
+                                    .baselineOffset(2)
                                     .accessibilityHidden(true)
                                 Text(GradeyAIMarkdown.inlineAttributed(item))
+                                    .lineSpacing(3)
                                     .fixedSize(horizontal: false, vertical: true)
                             }
                         }

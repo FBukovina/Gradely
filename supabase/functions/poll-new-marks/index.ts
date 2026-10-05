@@ -174,11 +174,16 @@ async function fetchBakalariMarks(
   return await response.json();
 }
 
+// Deno's fetch sends `Accept-Language: *` by default. Bakaláři's IIS servers
+// cannot map `*` to a culture and answer every request with HTTP 500.
+const BAKALARI_ACCEPT_LANGUAGE = "cs-CZ";
+
 function requestBakalariMarks(secret: Record<string, any>, baseURL: string, signal: AbortSignal) {
   return fetch(new URL("api/3/marks", baseURL).toString(), {
     headers: {
       Authorization: `${secret.tokenType || "Bearer"} ${secret.accessToken}`,
       Accept: "application/json",
+      "Accept-Language": BAKALARI_ACCEPT_LANGUAGE,
     },
     redirect: "error",
     signal,
@@ -218,6 +223,7 @@ async function requestBakalariTokens(baseURL: string, fields: Record<string, str
     method: "POST",
     headers: {
       Accept: "application/json",
+      "Accept-Language": BAKALARI_ACCEPT_LANGUAGE,
       "Content-Type": "application/x-www-form-urlencoded; charset=utf-8",
     },
     body,

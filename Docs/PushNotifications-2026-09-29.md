@@ -79,3 +79,35 @@ completes its baseline and continues polling beyond its access-token lifetime,
 then verify a genuinely new mark reaches a physical device. Deployment and
 database tests alone do not prove those outcomes. Paused accounts were not
 blindly reactivated, and no application binary was uploaded by this rollout.
+
+## Follow-up — 4 October 2026: the HTTP 500s were ours
+
+The `bakalari_status_500` responses above were not temporary school failures.
+Deno's `fetch` sends `Accept-Language: *` by default, and Bakaláři's IIS servers
+answer any request carrying it with `500 {"Message":"An error has occurred."}`.
+`curl` with the same header reproduces it; with `Accept-Language: cs-CZ` the same
+servers return the expected 401 to an invalid token. Probes used only a bogus
+bearer token against three linked schools. The app was unaffected because iOS
+sends a real language.
+
+Consequently, before this fix no account had ever completed a poll: all 35
+school links had `last_polled_at = NULL`, one active account had 64 consecutive
+failures, and no new-mark events existed. Cron execution and `pg_net` delivery
+were healthy (every call in the 6-hour response window returned HTTP 200).
+
+`poll-new-marks` version 9 sets `Accept-Language: cs-CZ` on both Bakaláři
+requests (marks and token refresh). The deployed bundle was downloaded and
+matched the checkout; `verify_jwt` remains false for the cron caller. At
+17:20 UTC the first-ever successful poll baselined an account: 22 marks across
+11 subjects, 11 grade-history rows, zero notification events (baselines are
+silent), failure count reset, next poll 15 minutes later.
+
+By 17:50 UTC three accounts had baselined with no poll errors, and the first
+had completed a follow-up (non-baseline) poll. Their polling tokens were last
+uploaded 104–125 hours earlier, so every one of these polls first renewed an
+expired access token through the poller's own refresh token: the refresh path
+works, and an unredeemed Bakaláři refresh token was still accepted after five
+days. The remaining active accounts baseline as their backoff windows expire.
+
+Still to verify: a genuinely new mark reaching a physical device. The 17
+`action_required` accounts recover when their owners next open Gradey.

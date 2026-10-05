@@ -1,4 +1,5 @@
-import { adminClient, requireUser } from "../_shared/client.ts";
+import { requireUser } from "../_shared/client.ts";
+import { fetchAllOwnedRows, fetchWebAccountData } from "../_shared/account-export.ts";
 import {
   corsHeaders,
   errorResponse,
@@ -24,6 +25,7 @@ Deno.serve(async (req) => {
       newMarkEvents,
       gradeHistory,
       auditLogs,
+      webData,
     ] = await Promise.all([
       supabase
         .from("profiles")
@@ -67,13 +69,14 @@ Deno.serve(async (req) => {
         user.id,
         "id,user_id,linked_account_id,event_name,metadata,created_at",
       ),
+      fetchWebAccountData(supabase, user.id),
     ]);
 
     if (profile.error) throw profile.error;
     if (preferences.error) throw preferences.error;
 
     const payload = {
-      schemaVersion: 2,
+      schemaVersion: 3,
       exportedAt: new Date().toISOString(),
       profile: profile.data,
       linkedAccounts,
@@ -82,6 +85,7 @@ Deno.serve(async (req) => {
       newMarkEvents,
       gradeHistoryEvents: gradeHistory,
       accountAuditLogs: auditLogs,
+      ...webData,
     };
 
     return new Response(JSON.stringify(payload, null, 2), {
@@ -99,37 +103,3 @@ Deno.serve(async (req) => {
     return errorResponse(error, "Could not export Gradey account data");
   }
 });
-
-async function fetchAllOwnedRows(
-  supabase: ReturnType<typeof adminClient>,
-  table: string,
-  userID: string,
-  columns: string,
-) {
-  const rows: Record<string, unknown>[] = [];
-  let cursor: string | null = null;
-
-  while (true) {
-    let query = supabase
-      .from(table)
-      .select(columns)
-      .eq("user_id", userID)
-      .order("id", { ascending: true })
-      .limit(500);
-    if (cursor) query = query.gt("id", cursor);
-
-    const { data, error } = await query;
-    if (error) throw error;
-    const page = (data ?? []) as unknown as Record<string, unknown>[];
-    rows.push(...page);
-
-    if (page.length < 500) break;
-    const nextCursor = page.at(-1)?.id;
-    if (typeof nextCursor !== "string" || nextCursor === cursor) {
-      throw new Error(`Could not paginate ${table}`);
-    }
-    cursor = nextCursor;
-  }
-
-  return rows;
-}

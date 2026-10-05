@@ -6,6 +6,9 @@ import Observation
 final class GradeyIDViewModel {
     var isLoading = false
     var errorMessage: String?
+    var email = ""
+    var emailCode = ""
+    private(set) var emailCodeSent = false
 
     private let authClient: any GradeyAuthClient
 
@@ -29,6 +32,22 @@ final class GradeyIDViewModel {
 
     func clearError() {
         errorMessage = nil
+    }
+
+    func requestEmailCode() async {
+        errorMessage = nil; isLoading = true
+        defer { isLoading = false }
+        do { try await authClient.requestEmailCode(email: email); emailCodeSent = true }
+        catch { errorMessage = userFacingMessage(for: error) }
+    }
+
+    func changeEmail() { emailCodeSent = false; emailCode = ""; errorMessage = nil }
+
+    func verifyEmailCode() async -> Bool {
+        errorMessage = nil; isLoading = true
+        defer { isLoading = false }
+        do { _ = try await authClient.verifyEmailCode(email: email, code: emailCode); return true }
+        catch { errorMessage = userFacingMessage(for: error); return false }
     }
 
     private func userFacingMessage(for error: Error) -> String {

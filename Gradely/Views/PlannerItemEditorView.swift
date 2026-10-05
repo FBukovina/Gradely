@@ -3,6 +3,8 @@ import SwiftUI
 struct PlannerItemEditorView: View {
     let store: PlannerStore
     let resolver: PlannerLessonResolver
+    @State private var accountScopeToken: UUID
+    @State private var expectedCloudRecord: PlannerCloudRecord?
     var displayedWeek: TimetableWeek?
     var subjects: [PlannerSubjectReference] = []
     @State private var item: PlannerItem
@@ -18,6 +20,8 @@ struct PlannerItemEditorView: View {
     init(item: PlannerItem, store: PlannerStore, resolver: PlannerLessonResolver, displayedWeek: TimetableWeek? = nil, subjects: [PlannerSubjectReference] = []) {
         _item = State(initialValue: item)
         self.store = store
+        _accountScopeToken = State(initialValue: store.accountScopeToken)
+        _expectedCloudRecord = State(initialValue: store.cloudRecord(id: item.id))
         self.resolver = resolver
         self.displayedWeek = displayedWeek
         self.subjects = subjects
@@ -68,6 +72,7 @@ struct PlannerItemEditorView: View {
         .frame(minWidth: 480, idealWidth: 560, minHeight: 560)
         #endif
         .onAppear { store.loadIfNeeded() }
+        .onChange(of: store.accountScopeToken) { dismiss() }
         .onDisappear { nextLessonTask?.cancel() }
         .confirmationDialog(AppL10n.string("planner.delete.confirm"), isPresented: $isConfirmingDelete, titleVisibility: .visible) {
             Button(AppL10n.string("planner.delete"), role: .destructive) {
@@ -321,7 +326,7 @@ struct PlannerItemEditorView: View {
         isSaving = true
         defer { isSaving = false }
         do {
-            try await store.save(item)
+            try await store.save(item, expectedScopeToken: accountScopeToken, expectedCloudRecord: expectedCloudRecord)
             if let warning = store.calendarError, store.pendingCalendarCount > 0 {
                 savedWithCalendarWarning = true
                 errorMessage = warning
@@ -337,7 +342,7 @@ struct PlannerItemEditorView: View {
         isSaving = true
         defer { isSaving = false }
         do {
-            try await store.delete(id: item.id)
+            try await store.delete(id: item.id, expectedScopeToken: accountScopeToken)
             dismiss()
         } catch {
             errorMessage = error.localizedDescription

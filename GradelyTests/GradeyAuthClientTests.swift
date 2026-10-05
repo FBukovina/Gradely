@@ -4,6 +4,34 @@ import Testing
 
 @Suite(.serialized)
 struct GradeyAuthClientTests {
+    @Test func emailCodeRequestDoesNotCreateSessionBeforeVerification() async throws {
+        let sessionStore = InMemoryGradeyAuthSessionStore()
+        let client = Self.makeClient(sessionStore: sessionStore, urlSession: Self.makeURLSession())
+        GradeyAuthURLProtocol.reset(); defer { GradeyAuthURLProtocol.reset() }
+        GradeyAuthURLProtocol.responseData = Data("{}".utf8)
+        try await client.requestEmailCode(email: " student@example.com ")
+        #expect(sessionStore.session == nil)
+        #expect(GradeyAuthURLProtocol.lastRequest?.url?.path == "/auth/v1/otp")
+        let data = try #require(GradeyAuthURLProtocol.lastRequestBody)
+        let body = try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        #expect(body["email"] as? String == "student@example.com")
+        #expect(body["create_user"] as? Bool == true)
+    }
+
+    @Test func emailCodeVerificationPersistsGradeySession() async throws {
+        let sessionStore = InMemoryGradeyAuthSessionStore()
+        let client = Self.makeClient(sessionStore: sessionStore, urlSession: Self.makeURLSession())
+        GradeyAuthURLProtocol.reset(); defer { GradeyAuthURLProtocol.reset() }
+        GradeyAuthURLProtocol.responseData = Data(Self.appleTokenResponse.utf8)
+        let session = try await client.verifyEmailCode(email: "student@example.com", code: " 123456 ")
+        #expect(sessionStore.session == session)
+        #expect(GradeyAuthURLProtocol.lastRequest?.url?.path == "/auth/v1/verify")
+        let data = try #require(GradeyAuthURLProtocol.lastRequestBody)
+        let body = try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        #expect(body["token"] as? String == "123456")
+        #expect(body["type"] as? String == "email")
+    }
+
     @Test func appleSignInAcceptsProviderMetadataWithMixedJSONTypes() async throws {
         let urlSession = Self.makeURLSession()
         let sessionStore = InMemoryGradeyAuthSessionStore()

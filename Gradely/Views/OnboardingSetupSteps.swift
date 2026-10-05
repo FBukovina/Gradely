@@ -47,6 +47,8 @@ struct OnboardingAccountStep: View {
                         onMockSignIn: signInForUITesting
                     )
 
+                    GradeyEmailSignInSection(viewModel: viewModel, onSignedIn: onSignedIn)
+
                     if viewModel.isLoading {
                         HStack(spacing: Spacing.sm) {
                             ProgressView()

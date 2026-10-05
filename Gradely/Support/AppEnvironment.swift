@@ -146,7 +146,11 @@ import Foundation
             devicePushTokenClient: devicePushTokenClient,
             notificationSettingsStore: notificationSettingsStore,
             requiresGradeyID: true,
-            makePlannerStore: { PlannerStore.shared }
+            makePlannerStore: {
+                let store = PlannerStore.shared
+                store.configureCloud(authClient: gradeyAuthClient)
+                return store
+            }
         )
     }
 

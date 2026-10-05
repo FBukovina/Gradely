@@ -6,7 +6,11 @@ site_url = "gradey://auth"
 additional_redirect_urls = ["gradey://auth"]
 
 [auth.email]
-enable_signup = false
+enable_signup = true
+
+[auth.email.template.magic_link]
+subject = "Your Gradey sign-in code"
+content_path = "./supabase/templates/magic-link.html"
 
 [auth.external.apple]
 enabled = true
@@ -24,6 +28,9 @@ verify_jwt = true
 verify_jwt = true
 
 [functions.grade-history]
+verify_jwt = true
+
+[functions.planner-sync]
 verify_jwt = true
 
 [functions.link-stravacz-account]

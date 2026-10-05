@@ -11,11 +11,16 @@ struct PlannerView: View {
     @State private var editorItem: PlannerItem?
     @State private var deletionItem: PlannerItem?
     @State private var errorMessage: String?
+    @State private var showsLegacyImport = false
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: Spacing.lg) {
                 filter
+
+                if store.cloudOwnerID != nil {
+                    cloudStatus
+                }
 
                 if let storageError = store.storageError {
                     notice(
@@ -61,7 +66,7 @@ struct PlannerView: View {
                     }
                 }
 
-                Text("planner.private")
+                Text(store.cloudOwnerID == nil ? "planner.private" : "planner.cloud.private")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -94,6 +99,9 @@ struct PlannerView: View {
         .sheet(item: $editorItem) { item in
             PlannerItemEditorView(item: item, store: store, resolver: resolver, displayedWeek: displayedWeek, subjects: subjects)
         }
+        .sheet(isPresented: $showsLegacyImport) {
+            PlannerLegacyImportView(store: store)
+        }
         .confirmationDialog(AppL10n.string("planner.delete.confirm"), isPresented: Binding(
             get: { deletionItem != nil }, set: { if !$0 { deletionItem = nil } }
         ), titleVisibility: .visible) {
@@ -109,6 +117,40 @@ struct PlannerView: View {
         )) {
             Button(AppL10n.string("action.done")) {}
         } message: { Text(errorMessage ?? "") }
+    }
+
+    private var cloudStatus: some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            HStack {
+                Text(store.cloudAccountLabel).font(.subheadline.weight(.semibold))
+                Spacer()
+                if store.isCloudSyncing { ProgressView().controlSize(.small) }
+                Button("action.retry") { Task { await store.activate() } }.disabled(store.isCloudSyncing)
+            }
+            Text(store.cloudError ?? AppL10n.string(store.pendingCloudCount > 0 ? "planner.cloud.pending" : "planner.cloud.synced"))
+                .font(.footnote).foregroundStyle(.secondary)
+            if !store.legacyImportItems.isEmpty {
+                Button("planner.cloud.import.review") { showsLegacyImport = true }
+                    .accessibilityIdentifier("plannerReviewLegacyImport")
+            }
+            ForEach(store.cloudConflicts) { conflict in
+                VStack(alignment: .leading, spacing: Spacing.xs) {
+                    Text(store.items.first(where: { $0.id == conflict.itemId })?.title ?? AppL10n.string("planner.title"))
+                        .font(.subheadline.weight(.semibold))
+                    Text("planner.cloud.conflict").font(.footnote).foregroundStyle(.secondary)
+                    HStack {
+                        Button("planner.cloud.useRemote") {
+                            perform { try await store.resolveCloudConflict(id: conflict.itemId, keepLocal: false) }
+                        }
+                        Button(AppL10n.string(conflict.remote?.item.deletedAt == nil ? "planner.cloud.keepLocal" : "planner.cloud.keepAsNew")) {
+                            perform { try await store.resolveCloudConflict(id: conflict.itemId, keepLocal: true) }
+                        }
+                    }
+                }
+            }
+        }
+        .padding(Spacing.md)
+        .background(Color.gradelyTertiaryFill, in: RoundedRectangle(cornerRadius: Radius.md))
     }
 
     // MARK: - Filter
@@ -277,6 +319,56 @@ struct PlannerView: View {
             do { try await action() }
             catch { errorMessage = error.localizedDescription }
         }
+    }
+}
+
+private struct PlannerLegacyImportView: View {
+    let store: PlannerStore
+    @State private var ownerID: String?
+    @Environment(\.dismiss) private var dismiss
+    @State private var selected: Set<UUID> = []
+    @State private var isImporting = false
+    @State private var errorMessage: String?
+
+    init(store: PlannerStore) { self.store = store; _ownerID = State(initialValue: store.cloudOwnerID) }
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    Text(store.cloudAccountLabel).font(.headline)
+                    Text("planner.cloud.import.body").foregroundStyle(.secondary)
+                }
+                Section {
+                    ForEach(store.legacyImportItems) { item in
+                        Toggle(isOn: Binding(get: { selected.contains(item.id) }, set: { enabled in
+                            if enabled { selected.insert(item.id) } else { selected.remove(item.id) }
+                        })) {
+                            VStack(alignment: .leading) {
+                                Text(item.title)
+                                if let date = item.orderingDate { Text(date, style: .date).font(.caption).foregroundStyle(.secondary) }
+                            }
+                        }
+                    }
+                }
+                if let errorMessage { Text(errorMessage).foregroundStyle(.red) }
+            }
+            .navigationTitle("planner.cloud.import.review")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("action.cancel") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("planner.cloud.import.confirm") {
+                        isImporting = true
+                        Task {
+                            do { try await store.importLegacyItems(ids: selected, expectedOwnerID: ownerID); dismiss() }
+                            catch { errorMessage = error.localizedDescription }
+                            isImporting = false
+                        }
+                    }.disabled(selected.isEmpty || isImporting)
+                }
+            }
+        }
+        .onChange(of: store.cloudOwnerID) { dismiss() }
     }
 }
 

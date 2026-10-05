@@ -84,7 +84,14 @@ protocol GradeyAuthClient {
     func refreshAccount() async throws -> GradeyAccount
     func updateFullName(_ fullName: String) async throws -> GradeyAccount
     func signInWithApple(identityToken: String, nonce: String?, fullName: String?) async throws -> GradeyAuthSession
+    func requestEmailCode(email: String) async throws
+    func verifyEmailCode(email: String, code: String) async throws -> GradeyAuthSession
     func signOut() async
+}
+
+extension GradeyAuthClient {
+    func requestEmailCode(email: String) async throws { throw GradeyAuthError.notConfigured }
+    func verifyEmailCode(email: String, code: String) async throws -> GradeyAuthSession { throw GradeyAuthError.notConfigured }
 }
 
 final class SupabaseGradeyAuthClient: GradeyAuthClient {
@@ -178,6 +185,19 @@ final class SupabaseGradeyAuthClient: GradeyAuthClient {
             _ = try? await updateFullName(normalizedFullName)
         }
         return (try? sessionStore.loadSession()) ?? session
+    }
+
+    func requestEmailCode(email: String) async throws {
+        try await sendEmpty(path: "auth/v1/otp", method: "POST", body: EmailCodeRequest(email: email.trimmingCharacters(in: .whitespacesAndNewlines)))
+    }
+
+    func verifyEmailCode(email: String, code: String) async throws -> GradeyAuthSession {
+        cancelRefreshTask()
+        let response: SupabaseTokenResponse = try await send(path: "auth/v1/verify", method: "POST",
+            body: EmailCodeVerification(email: email.trimmingCharacters(in: .whitespacesAndNewlines), token: code.trimmingCharacters(in: .whitespacesAndNewlines)))
+        let session = response.makeSession(now: dateProvider())
+        try sessionStore.save(session: session)
+        return session
     }
 
     func signOut() async {
@@ -447,6 +467,16 @@ private struct UpdateUserMetadata: Encodable {
 }
 
 private struct EmptyBody: Encodable {}
+
+private struct EmailCodeRequest: Encodable {
+    let email: String
+    let create_user = true
+}
+private struct EmailCodeVerification: Encodable {
+    let email: String
+    let token: String
+    let type = "email"
+}
 
 private struct SupabaseTokenResponse: Decodable {
     let accessToken: String

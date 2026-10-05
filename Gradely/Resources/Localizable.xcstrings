@@ -1,6 +1,557 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+  "planner.cloud.contentTooLarge": {
+    "extractionState": "manual",
+    "localizations": {
+      "en": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Use a title of up to 500 characters and notes of up to 20,000 characters to sync this item."
+        }
+      },
+      "cs": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Pro synchronizaci použijte název do 500 znaků a poznámky do 20 000 znaků."
+        }
+      },
+      "en-CO": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Use a title of up to 500 characters and notes of up to 20,000 characters to sync this item."
+        }
+      },
+      "cs-US": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Pro synchronizaci použijte název do 500 znaků a poznámky do 20 000 znaků."
+        }
+      }
+    }
+  },
+  "gradey.auth.email.change": {
+    "extractionState": "manual",
+    "localizations": {
+      "en": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Change email"
+        }
+      },
+      "cs": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Změnit e-mail"
+        }
+      },
+      "en-CO": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "change email"
+        }
+      },
+      "cs-US": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "změnit e-mail"
+        }
+      }
+    }
+  },
+  "gradey.auth.email": {
+    "extractionState": "manual",
+    "localizations": {
+      "en": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Email address"
+        }
+      },
+      "cs": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "E-mailová adresa"
+        }
+      },
+      "en-CO": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Email address"
+        }
+      },
+      "cs-US": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "E-mailová adresa"
+        }
+      }
+    }
+  },
+  "gradey.auth.email.sent": {
+    "extractionState": "manual",
+    "localizations": {
+      "en": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Enter the code from your email to sign in to Gradey ID."
+        }
+      },
+      "cs": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Pro přihlášení ke Gradey ID zadejte kód z e-mailu."
+        }
+      },
+      "en-CO": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Enter the code from your email to sign in to Gradey ID."
+        }
+      },
+      "cs-US": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Pro přihlášení ke Gradey ID zadejte kód z e-mailu."
+        }
+      }
+    }
+  },
+  "gradey.auth.email.code": {
+    "extractionState": "manual",
+    "localizations": {
+      "en": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Email code"
+        }
+      },
+      "cs": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Kód z e-mailu"
+        }
+      },
+      "en-CO": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Email code"
+        }
+      },
+      "cs-US": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Kód z e-mailu"
+        }
+      }
+    }
+  },
+  "gradey.auth.email.verify": {
+    "extractionState": "manual",
+    "localizations": {
+      "en": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Sign in with code"
+        }
+      },
+      "cs": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Přihlásit kódem"
+        }
+      },
+      "en-CO": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Sign in with code"
+        }
+      },
+      "cs-US": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Přihlásit kódem"
+        }
+      }
+    }
+  },
+  "gradey.auth.email.send": {
+    "extractionState": "manual",
+    "localizations": {
+      "en": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Send email code"
+        }
+      },
+      "cs": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Poslat kód e-mailem"
+        }
+      },
+      "en-CO": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Send email code"
+        }
+      },
+      "cs-US": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Poslat kód e-mailem"
+        }
+      }
+    }
+  },
+  "gradey.auth.email.resend": {
+    "extractionState": "manual",
+    "localizations": {
+      "en": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Resend code"
+        }
+      },
+      "cs": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Poslat kód znovu"
+        }
+      },
+      "en-CO": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Resend code"
+        }
+      },
+      "cs-US": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Poslat kód znovu"
+        }
+      }
+    }
+  },
+  "planner.cloud.error": {
+    "extractionState": "manual",
+    "localizations": {
+      "en": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Planner could not sync. Your changes are saved on this device. Retry when you are online."
+        }
+      },
+      "cs": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Plánovač se nepodařilo synchronizovat. Změny jsou uložené v tomto zařízení. Zkuste to znovu online."
+        }
+      },
+      "en-CO": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Planner could not sync. Your changes are saved on this device. Retry when you are online."
+        }
+      },
+      "cs-US": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Plánovač se nepodařilo synchronizovat. Změny jsou uložené v tomto zařízení. Zkuste to znovu online."
+        }
+      }
+    }
+  },
+  "planner.cloud.pending": {
+    "extractionState": "manual",
+    "localizations": {
+      "en": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Changes saved on this device are waiting to sync."
+        }
+      },
+      "cs": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Změny uložené v tomto zařízení čekají na synchronizaci."
+        }
+      },
+      "en-CO": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Changes saved on this device are waiting to sync."
+        }
+      },
+      "cs-US": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Změny uložené v tomto zařízení čekají na synchronizaci."
+        }
+      }
+    }
+  },
+  "planner.cloud.synced": {
+    "extractionState": "manual",
+    "localizations": {
+      "en": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Planner is connected to your Gradey ID."
+        }
+      },
+      "cs": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Plánovač je propojený s vaším Gradey ID."
+        }
+      },
+      "en-CO": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Planner is connected to your Gradey ID."
+        }
+      },
+      "cs-US": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Plánovač je propojený s vaším Gradey ID."
+        }
+      }
+    }
+  },
+  "planner.cloud.private": {
+    "extractionState": "manual",
+    "localizations": {
+      "en": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Your Planner syncs across devices signed in to this Gradey ID. Calendar export settings stay on each device."
+        }
+      },
+      "cs": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Plánovač se synchronizuje mezi zařízeními se stejným Gradey ID. Nastavení exportu do Kalendáře zůstává v každém zařízení."
+        }
+      },
+      "en-CO": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Your Planner syncs across devices signed in to this Gradey ID. Calendar export settings stay on each device."
+        }
+      },
+      "cs-US": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Plánovač se synchronizuje mezi zařízeními se stejným Gradey ID. Nastavení exportu do Kalendáře zůstává v každém zařízení."
+        }
+      }
+    }
+  },
+  "planner.cloud.import.review": {
+    "extractionState": "manual",
+    "localizations": {
+      "en": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Review local Planner items"
+        }
+      },
+      "cs": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Zkontrolovat místní položky"
+        }
+      },
+      "en-CO": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Review local Planner items"
+        }
+      },
+      "cs-US": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Zkontrolovat místní položky"
+        }
+      }
+    }
+  },
+  "planner.cloud.import.body": {
+    "extractionState": "manual",
+    "localizations": {
+      "en": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Choose the local items to copy to this Gradey ID. The original local Planner stays on this device. Calendar exports are not copied."
+        }
+      },
+      "cs": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Vyberte místní položky, které chcete zkopírovat do tohoto Gradey ID. Původní místní plánovač zůstane v zařízení. Exporty do Kalendáře se nekopírují."
+        }
+      },
+      "en-CO": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Choose the local items to copy to this Gradey ID. The original local Planner stays on this device. Calendar exports are not copied."
+        }
+      },
+      "cs-US": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Vyberte místní položky, které chcete zkopírovat do tohoto Gradey ID. Původní místní plánovač zůstane v zařízení. Exporty do Kalendáře se nekopírují."
+        }
+      }
+    }
+  },
+  "planner.cloud.import.confirm": {
+    "extractionState": "manual",
+    "localizations": {
+      "en": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Copy selected"
+        }
+      },
+      "cs": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Zkopírovat vybrané"
+        }
+      },
+      "en-CO": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Copy selected"
+        }
+      },
+      "cs-US": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Zkopírovat vybrané"
+        }
+      }
+    }
+  },
+  "planner.cloud.conflict": {
+    "extractionState": "manual",
+    "localizations": {
+      "en": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "This item changed on another device. Choose which version to keep."
+        }
+      },
+      "cs": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Položka se změnila na jiném zařízení. Vyberte verzi, kterou chcete ponechat."
+        }
+      },
+      "en-CO": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "This item changed on another device. Choose which version to keep."
+        }
+      },
+      "cs-US": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Položka se změnila na jiném zařízení. Vyberte verzi, kterou chcete ponechat."
+        }
+      }
+    }
+  },
+  "planner.cloud.useRemote": {
+    "extractionState": "manual",
+    "localizations": {
+      "en": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Use synced version"
+        }
+      },
+      "cs": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Použít synchronizovanou verzi"
+        }
+      },
+      "en-CO": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Use synced version"
+        }
+      },
+      "cs-US": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Použít synchronizovanou verzi"
+        }
+      }
+    }
+  },
+  "planner.cloud.keepLocal": {
+    "extractionState": "manual",
+    "localizations": {
+      "en": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Keep this version"
+        }
+      },
+      "cs": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Ponechat tuto verzi"
+        }
+      },
+      "en-CO": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Keep this version"
+        }
+      },
+      "cs-US": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Ponechat tuto verzi"
+        }
+      }
+    }
+  },
+  "planner.cloud.keepAsNew": {
+    "extractionState": "manual",
+    "localizations": {
+      "en": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Keep as new item"
+        }
+      },
+      "cs": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Ponechat jako novou položku"
+        }
+      },
+      "en-CO": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Keep as new item"
+        }
+      },
+      "cs-US": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Ponechat jako novou položku"
+        }
+      }
+    }
+  },
     "gradey.ai.history.open" : {
       "localizations" : {
         "cs" : {

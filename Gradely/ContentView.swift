@@ -311,6 +311,10 @@ struct ContentView: View {
             siriLessonTarget = nil
         }
         .onChange(of: plannerStore.items) { Task { await reconcilePlannerReminders() } }
+        .onChange(of: appViewModel.gradeyAccount?.id) {
+            plannerStore.refreshAccountScope()
+            Task { await plannerStore.activate() }
+        }
         .onChange(of: plannerRemindersEnabled) { Task { await reconcilePlannerReminders() } }
         .onChange(of: notificationSettingsStore.preferences) { Task { await reconcilePlannerReminders() } }
         .onChange(of: notificationRouter.pendingURL) { Task { await consumeNotificationRoute() } }

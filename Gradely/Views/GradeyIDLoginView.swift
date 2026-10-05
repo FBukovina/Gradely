@@ -83,6 +83,8 @@ struct GradeyIDLoginView: View {
                     onMockSignIn: signInForUITesting
                 )
 
+                GradeyEmailSignInSection(viewModel: viewModel, onSignedIn: onSignedIn)
+
                 if viewModel.isLoading {
                     HStack(spacing: Spacing.sm) {
                         ProgressView()
@@ -167,4 +169,37 @@ struct GradeyTwoPointZeroBackground: View {
 
 #Preview("Gradey ID") {
     GradeyIDLoginView(authClient: MockGradeyAuthClient(session: nil)) {}
+}
+
+struct GradeyEmailSignInSection: View {
+    @Bindable var viewModel: GradeyIDViewModel
+    let onSignedIn: () -> Void
+    var body: some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+                Divider()
+                TextField("gradey.auth.email", text: $viewModel.email)
+                    .textContentType(.emailAddress)
+                    .textFieldStyle(.roundedBorder)
+                    .disabled(viewModel.isLoading || viewModel.emailCodeSent)
+                    .accessibilityIdentifier("gradeyIDEmail")
+                if viewModel.emailCodeSent {
+                    Button("gradey.auth.email.change") { viewModel.changeEmail() }.disabled(viewModel.isLoading)
+                    Text("gradey.auth.email.sent").font(.footnote).foregroundStyle(.secondary)
+                    TextField("gradey.auth.email.code", text: $viewModel.emailCode)
+                        .textContentType(.oneTimeCode)
+                        .textFieldStyle(.roundedBorder)
+                        .accessibilityIdentifier("gradeyIDEmailCode")
+                    Button("gradey.auth.email.verify") {
+                        Task { if await viewModel.verifyEmailCode() { onSignedIn() } }
+                    }
+                    .disabled(viewModel.isLoading || viewModel.emailCode.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+                Button(viewModel.emailCodeSent ? "gradey.auth.email.resend" : "gradey.auth.email.send") {
+                    Task { await viewModel.requestEmailCode() }
+                }
+                .disabled(viewModel.isLoading || !viewModel.email.contains("@"))
+                .accessibilityIdentifier("gradeyIDSendEmailCode")
+
+        }
+    }
 }

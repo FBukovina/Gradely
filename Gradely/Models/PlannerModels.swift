@@ -124,7 +124,7 @@ struct PlannerItem: Identifiable, Codable, Equatable {
 }
 
 enum PlannerError: LocalizedError {
-    case titleRequired, dateRequired, storageUnavailable, calendarPermission, calendarUnavailable, timetableUnavailable
+    case titleRequired, dateRequired, storageUnavailable, calendarPermission, calendarUnavailable, timetableUnavailable, cloudContentTooLarge
 
     var errorDescription: String? {
         switch self {
@@ -134,6 +134,7 @@ enum PlannerError: LocalizedError {
         case .calendarPermission: AppL10n.string("planner.error.calendarPermission")
         case .calendarUnavailable: AppL10n.string("planner.error.calendarUnavailable")
         case .timetableUnavailable: AppL10n.string("planner.error.timetableUnavailable")
+        case .cloudContentTooLarge: AppL10n.string("planner.cloud.contentTooLarge")
         }
     }
 }

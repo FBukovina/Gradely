@@ -508,7 +508,12 @@ private struct LessonRow: View {
         Button(action: onTap) {
             HStack(alignment: .top, spacing: Spacing.md) {
                 hourRail
-                LessonCard(lesson: lesson, isCurrent: LessonClock.isCurrent(lesson.hour, isToday: isToday), plannerItems: plannerItems)
+                LessonCard(
+                    lesson: lesson,
+                    // A cancelled hour is not "happening now", so it never takes the live highlight.
+                    isCurrent: !lesson.isCanceled && LessonClock.isCurrent(lesson.hour, isToday: isToday),
+                    plannerItems: plannerItems
+                )
             }
         }
         .buttonStyle(.plain)
@@ -519,10 +524,11 @@ private struct LessonRow: View {
             Text(lesson.hour.caption)
                 .font(.headline.weight(.bold))
                 .monospacedDigit()
+                .foregroundStyle(lesson.isCanceled ? .secondary : .primary)
             if !lesson.hour.beginTime.isEmpty {
                 Text(lesson.hour.beginTime)
                     .font(.caption2)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(lesson.isCanceled ? .tertiary : .secondary)
                     .monospacedDigit()
                 Text(lesson.hour.endTime)
                     .font(.caption2)
@@ -541,26 +547,28 @@ private struct LessonCard: View {
     let plannerItems: [PlannerItem]
 
     var body: some View {
-        HStack(spacing: Spacing.md) {
-            RoundedRectangle(cornerRadius: Radius.md, style: .continuous)
-                .fill(accent.opacity(0.14))
-                .frame(width: 40, height: 40)
-                .overlay {
-                    Text(lesson.title)
-                        .font(.subheadline.weight(.bold))
-                        .foregroundStyle(accent)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.6)
-                        .padding(.horizontal, 4)
-                }
+        HStack(alignment: .top, spacing: Spacing.md) {
+            LessonTile(lesson: lesson)
 
             VStack(alignment: .leading, spacing: Spacing.xs) {
-                Text(subjectTitle)
-                    .font(.headline)
-                    .lineLimit(1)
-                    .strikethrough(lesson.isCanceled, color: .secondary)
+                HStack(alignment: .firstTextBaseline, spacing: Spacing.sm) {
+                    Text(LessonText.subject(for: lesson))
+                        .font(.headline)
+                        .lineLimit(1)
+                        .strikethrough(lesson.isCanceled, color: LessonChangeKind.canceled.color.opacity(0.8))
+                        .foregroundStyle(lesson.isCanceled ? .secondary : .primary)
 
-                if lesson.roomAbbrev != nil || teacher != nil {
+                    Spacer(minLength: Spacing.xs)
+
+                    if let label = lesson.changeKind.localizedLabel {
+                        StatusChip(text: label, color: lesson.changeKind.color)
+                            .fixedSize()
+                    }
+                }
+
+                // A cancelled hour has no room or teacher worth reading; the
+                // school's note on why it was cancelled matters more.
+                if !lesson.isCanceled, lesson.roomAbbrev != nil || teacher != nil {
                     HStack(spacing: Spacing.md) {
                         if let room = lesson.roomAbbrev {
                             inlineLabel(room, systemImage: "door.left.hand.open")
@@ -573,13 +581,25 @@ private struct LessonCard: View {
                     .foregroundStyle(.secondary)
                 }
 
-                if !lesson.cycles.isEmpty {
+                if let note = LessonText.changeNote(for: lesson) {
+                    HStack(alignment: .firstTextBaseline, spacing: Spacing.xs + 2) {
+                        GradelyIcon(systemName: "info.circle", size: 12)
+                            .foregroundStyle(lesson.changeKind.color)
+                        Text(note)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(2)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .font(.caption)
+                }
+
+                if !lesson.isCanceled, !lesson.cycles.isEmpty {
                     Text(lesson.cycles.joined(separator: ", "))
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.secondary)
                 }
 
-                if let theme = lesson.theme {
+                if !lesson.isCanceled, let theme = lesson.theme {
                     Text(theme)
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -596,35 +616,36 @@ private struct LessonCard: View {
                     .lineLimit(1)
                 }
             }
-
-            Spacer(minLength: Spacing.sm)
-
-            if let label = lesson.changeKind.localizedLabel {
-                StatusChip(text: label, color: lesson.changeKind.color)
-            }
         }
         .padding(Spacing.md)
-        .opacity(lesson.isCanceled ? 0.6 : 1)
-        .background(
-            RoundedRectangle(cornerRadius: Radius.xl, style: .continuous)
-                .fill(Color.gradelySecondaryGroupedBackground)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: Radius.xl, style: .continuous)
-                .strokeBorder(borderColor, lineWidth: isCurrent ? 2 : 1)
-        )
-    }
-
-    private var accent: Color {
-        lesson.changeKind == .none ? Brand.primary : lesson.changeKind.color
+        .background {
+            let shape = RoundedRectangle(cornerRadius: Radius.xl, style: .continuous)
+            if lesson.isCanceled {
+                shape
+                    .fill(Color.gradelySecondaryGroupedBackground)
+                    .overlay(shape.fill(LessonChangeKind.canceled.color.opacity(0.05)))
+            } else {
+                shape.fill(Color.gradelySecondaryGroupedBackground)
+            }
+        }
+        .overlay {
+            let shape = RoundedRectangle(cornerRadius: Radius.xl, style: .continuous)
+            if lesson.isCanceled {
+                // Dashed outline reads as an empty slot rather than a greyed-out lesson.
+                shape.strokeBorder(
+                    LessonChangeKind.canceled.color.opacity(0.45),
+                    style: StrokeStyle(lineWidth: 1.5, dash: [5, 4])
+                )
+            } else {
+                shape.strokeBorder(borderColor, lineWidth: isCurrent ? 2 : 1)
+            }
+        }
     }
 
     private var borderColor: Color {
-        isCurrent ? Brand.primary : Color.primary.opacity(0.05)
-    }
-
-    private var subjectTitle: String {
-        lesson.subjectName ?? lesson.subjectAbbrev ?? AppL10n.string("timetable.lesson.unknown")
+        if isCurrent { return Brand.primary }
+        if lesson.changeKind != .none { return lesson.changeKind.color.opacity(0.35) }
+        return Color.primary.opacity(0.05)
     }
 
     private var teacher: String? {
@@ -636,6 +657,65 @@ private struct LessonCard: View {
             .labelStyle(.titleAndIcon)
             .imageScale(.small)
             .lineLimit(1)
+    }
+}
+
+/// Subject abbreviation tile; tinted by the change, and struck through with a
+/// calendar-remove fallback when a cancelled hour carries no subject at all.
+private struct LessonTile: View {
+    let lesson: ScheduledLesson
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: Radius.md, style: .continuous)
+            .fill(accent.opacity(lesson.isCanceled ? 0.10 : 0.14))
+            .frame(width: 40, height: 40)
+            .overlay {
+                if let abbreviation = LessonText.abbreviation(for: lesson) {
+                    Text(abbreviation)
+                        .font(.subheadline.weight(.bold))
+                        .strikethrough(lesson.isCanceled, color: accent)
+                        .foregroundStyle(accent)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.6)
+                        .padding(.horizontal, 4)
+                } else {
+                    GradelyIcon(systemName: lesson.isCanceled ? "calendar.badge.exclamationmark" : "calendar", size: 18)
+                        .foregroundStyle(accent)
+                }
+            }
+    }
+
+    private var accent: Color {
+        lesson.changeKind == .none ? Brand.primary : lesson.changeKind.color
+    }
+}
+
+/// Display strings shared by the lesson card and its detail sheet. Cancelled
+/// hours often arrive without a subject id, so the change's own subject is the
+/// fallback before the generic "unknown lesson".
+private enum LessonText {
+    static func subject(for lesson: ScheduledLesson) -> String {
+        lesson.subjectName ?? lesson.subjectAbbrev ?? changeSubject(for: lesson)
+            ?? AppL10n.string("timetable.lesson.unknown")
+    }
+
+    static func abbreviation(for lesson: ScheduledLesson) -> String? {
+        lesson.title.isEmpty ? changeSubject(for: lesson) : lesson.title
+    }
+
+    static func changeNote(for lesson: ScheduledLesson) -> String? {
+        guard lesson.changeKind != .none,
+              let description = lesson.change?.description?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !description.isEmpty
+        else { return nil }
+        return description
+    }
+
+    private static func changeSubject(for lesson: ScheduledLesson) -> String? {
+        guard let subject = lesson.change?.changeSubject?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !subject.isEmpty
+        else { return nil }
+        return subject
     }
 }
 
@@ -708,6 +788,11 @@ private struct LessonDetailSheet: View {
                 VStack(alignment: .leading, spacing: Spacing.lg) {
                     header
 
+                    // The change is the news: show it before the regular details.
+                    if let change = lesson.change, lesson.changeKind != .none {
+                        changeCard(change)
+                    }
+
                     SettingsModalSurface {
                         VStack(alignment: .leading, spacing: Spacing.md) {
                             if let teacher = lesson.teacherName ?? lesson.teacherAbbrev {
@@ -743,10 +828,6 @@ private struct LessonDetailSheet: View {
                         }
                     }
 
-                    if let change = lesson.change, lesson.changeKind != .none {
-                        changeCard(change)
-                    }
-
                     if let scope {
                         plannerSection(scope: scope)
                     }
@@ -758,7 +839,7 @@ private struct LessonDetailSheet: View {
             .background {
                 SettingsModalBackground()
             }
-            .navigationTitle(lesson.subjectName ?? lesson.title)
+            .navigationTitle(LessonText.subject(for: lesson))
             .gradelyNavigationTitleDisplayMode(.inline)
             .gradelyModalDismissButton {
                 dismiss()
@@ -819,34 +900,46 @@ private struct LessonDetailSheet: View {
                  : "\(lesson.hour.beginTime) – \(lesson.hour.endTime)")
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(.white.opacity(0.85))
-            Text(lesson.subjectName ?? lesson.title)
+            Text(LessonText.subject(for: lesson))
                 .font(.title2.bold())
                 .foregroundStyle(.white)
+                .strikethrough(lesson.isCanceled, color: .white.opacity(0.7))
                 .lineLimit(2)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(Spacing.xl)
-        .background(Brand.gradient, in: RoundedRectangle(cornerRadius: Radius.xl, style: .continuous))
+        .background(headerGradient, in: RoundedRectangle(cornerRadius: Radius.xl, style: .continuous))
+    }
+
+    private var headerGradient: LinearGradient {
+        guard lesson.changeKind != .none else { return Brand.gradient }
+        let color = lesson.changeKind.color
+        return LinearGradient(colors: [color, color.opacity(0.78)], startPoint: .topLeading, endPoint: .bottomTrailing)
     }
 
     private func changeCard(_ change: TimetableChange) -> some View {
         SettingsModalSurface {
-            VStack(alignment: .leading, spacing: Spacing.sm) {
-                HStack(spacing: Spacing.sm) {
-                    GradelyIcon(systemName: "exclamationmark.triangle.fill")
+            HStack(alignment: .top, spacing: Spacing.md) {
+                GradelyIcon(systemName: lesson.isCanceled ? "calendar.badge.exclamationmark" : "exclamationmark.triangle.fill", size: 20)
+                    .foregroundStyle(lesson.changeKind.color)
+                    .frame(width: 36, height: 36)
+                    .background(lesson.changeKind.color.opacity(0.14), in: RoundedRectangle(cornerRadius: Radius.sm - 2, style: .continuous))
+
+                VStack(alignment: .leading, spacing: Spacing.xs) {
                     Text(lesson.changeKind.localizedLabel ?? AppL10n.string("timetable.detail.change"))
                         .font(.headline)
-                }
-                .foregroundStyle(lesson.changeKind.color)
+                        .foregroundStyle(lesson.changeKind.color)
 
-                if let description = change.description?.trimmingCharacters(in: .whitespacesAndNewlines),
-                   !description.isEmpty {
-                    Text(description)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                    if let description = change.description?.trimmingCharacters(in: .whitespacesAndNewlines),
+                       !description.isEmpty {
+                        Text(description)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                 }
+                Spacer(minLength: 0)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 }

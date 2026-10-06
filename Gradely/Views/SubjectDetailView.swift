@@ -171,19 +171,22 @@ struct SubjectDetailView: View {
                             style: .detail,
                             overlayMarks: viewModel.averageTimeline
                         )
-                        .frame(height: 180)
+                        .frame(height: 220)
 
-                        HStack {
-                            Text(sourceCaption)
-                                .font(.caption2)
+                        Divider()
+
+                        HStack(spacing: Spacing.sm) {
+                            GradelyIcon(systemName: viewModel.chartSource == .cloud ? "cloud.fill" : "chart.line.uptrend.xyaxis", size: 13)
                                 .foregroundStyle(.secondary)
+                            Text(sourceCaption)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
 
-                            Spacer()
+                            Spacer(minLength: Spacing.sm)
 
                             if let delta = viewModel.chartDelta {
-                                Text(String(format: "%+.2f", delta))
-                                    .font(.caption.weight(.bold).monospacedDigit())
-                                    .foregroundStyle(delta > 0 ? GradeBand.poor.foregroundColor : Brand.primary)
+                                AverageDeltaChip(delta: delta)
                             }
                         }
                     }
@@ -297,73 +300,210 @@ private struct MarkRow: View {
     let mark: Mark
     let resolvedWeight: ResolvedMarkWeight
 
+    @State private var isExpanded = false
+    @State private var isCaptionTruncated = false
+    @State private var isDescriptionTruncated = false
+
+    private var canExpand: Bool {
+        isExpanded || isCaptionTruncated || isDescriptionTruncated
+    }
+
     var body: some View {
         let band = GradeMath.band(for: mark)
 
         HStack(alignment: .top, spacing: Spacing.md) {
-            VStack(alignment: .leading, spacing: Spacing.xs) {
-                Text(mark.displayCaption)
-                    .font(.headline)
-                    .lineLimit(2)
-
-                if mark.shouldShowTheme, let theme = mark.theme {
-                    Text(theme.trimmingCharacters(in: .whitespacesAndNewlines))
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(2)
-                }
-
-                HStack(spacing: Spacing.sm - 1) {
-                    Text(MarkDateFormatter.relativeDate(mark.markDate))
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(Brand.primary)
-
-                    Text(MarkDateFormatter.fullDate(mark.markDate))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-
-                HStack(spacing: Spacing.sm) {
-                    StatusChip(
-                        text: (mark.typeNote?.trimmingCharacters(in: .whitespacesAndNewlines)).flatMap { $0.isEmpty ? nil : $0 }
-                            ?? mark.type,
-                        color: .secondary
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(alignment: .firstTextBaseline, spacing: Spacing.xs + 2) {
+                    TruncationAwareText(
+                        text: mark.displayCaption,
+                        lineLimit: 2,
+                        isExpanded: isExpanded,
+                        isTruncated: $isCaptionTruncated
                     )
+                    .font(.headline)
 
-                    if !mark.isPoints, resolvedWeight.source == .explicit, resolvedWeight.value != 1 {
-                        StatusChip(
-                            text: String.localizedStringWithFormat(
-                                AppL10n.string("detail.weight.decimal"),
-                                GradeMath.formattedWeight(resolvedWeight.value)
-                            ),
-                            color: Brand.secondary
-                        )
+                    if mark.isNew {
+                        Circle()
+                            .fill(Brand.primary)
+                            .frame(width: 7, height: 7)
+                            .accessibilityElement()
+                            .accessibilityLabel(AppL10n.string("New mark"))
                     }
+                }
 
-                    if !mark.isPoints, resolvedWeight.source == .inferred, resolvedWeight.value != 1 {
-                        StatusChip(
-                            text: String.localizedStringWithFormat(
-                                AppL10n.string("detail.weight.estimated.decimal"),
-                                GradeMath.formattedWeight(resolvedWeight.value)
-                            ),
-                            color: Brand.secondary
-                        )
-                    }
+                if let description {
+                    TruncationAwareText(
+                        text: description,
+                        lineLimit: 2,
+                        isExpanded: isExpanded,
+                        isTruncated: $isDescriptionTruncated
+                    )
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                }
 
-                    if mark.isPoints, let maxPoints = mark.maxPoints {
-                        StatusChip(
-                            text: "\(mark.markText)/\(maxPoints)",
-                            color: .teal
-                        )
+                metadataLine
+
+                if !chips.isEmpty {
+                    HStack(spacing: Spacing.sm) {
+                        ForEach(chips) { chip in
+                            StatusChip(text: chip.text, color: chip.color)
+                        }
                     }
+                    .padding(.top, 2)
                 }
             }
 
             Spacer(minLength: Spacing.sm)
 
-            GradeBadge(text: mark.markText, band: band, size: .regular)
+            VStack(spacing: Spacing.sm) {
+                GradeBadge(text: mark.markText, band: band, size: .regular)
+
+                if canExpand {
+                    GradelyIcon("arrow-down-01", size: 14)
+                        .foregroundStyle(.tertiary)
+                        .rotationEffect(.degrees(isExpanded ? 180 : 0))
+                        .accessibilityHidden(true)
+                }
+            }
         }
         .padding(Spacing.md)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            guard canExpand else { return }
+            withAnimation(.snappy(duration: 0.25)) { isExpanded.toggle() }
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    /// The topic, when it adds something beyond the caption.
+    private var description: String? {
+        guard mark.shouldShowTheme, let theme = mark.theme else { return nil }
+        return theme.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// The teacher's mark-type note ("Písemka", "Ústní zkoušení"). Provider
+    /// type codes (`X`, `grade`, `points`) and symbols like `%` are internal and
+    /// never shown, nor is a note that just repeats the caption.
+    private var typeLabel: String? {
+        guard let note = mark.typeNote?.trimmingCharacters(in: .whitespacesAndNewlines),
+              note.count > 1, note.contains(where: \.isLetter),
+              note.localizedCaseInsensitiveCompare(mark.displayCaption) != .orderedSame
+        else { return nil }
+        return note
+    }
+
+    private var isRecent: Bool {
+        guard let date = MarkDateFormatter.date(from: mark.markDate) else { return false }
+        return Date().timeIntervalSince(date) < 7 * 86_400
+    }
+
+    private var metadataLine: some View {
+        HStack(spacing: Spacing.xs + 2) {
+            if isRecent {
+                Text(MarkDateFormatter.relativeDate(mark.markDate))
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Brand.primary)
+                separator
+            }
+            Text(MarkDateFormatter.fullDate(mark.markDate))
+                .monospacedDigit()
+            if let typeLabel {
+                separator
+                Text(typeLabel)
+                    .lineLimit(1)
+            }
+        }
+        .font(.caption)
+        .foregroundStyle(.secondary)
+    }
+
+    private var separator: some View {
+        Text(verbatim: "·").foregroundStyle(.tertiary)
+    }
+
+    private struct Chip: Identifiable {
+        let text: String
+        let color: Color
+        var id: String { text }
+    }
+
+    private var chips: [Chip] {
+        if mark.isPoints {
+            guard let maxPoints = mark.maxPoints else { return [] }
+            return [Chip(text: "\(mark.markText)/\(maxPoints)", color: .teal)]
+        }
+        guard resolvedWeight.value != 1 else { return [] }
+        switch resolvedWeight.source {
+        case .explicit:
+            return [Chip(text: String.localizedStringWithFormat(
+                AppL10n.string("detail.weight.decimal"),
+                GradeMath.formattedWeight(resolvedWeight.value)
+            ), color: Brand.secondary)]
+        case .inferred:
+            return [Chip(text: String.localizedStringWithFormat(
+                AppL10n.string("detail.weight.estimated.decimal"),
+                GradeMath.formattedWeight(resolvedWeight.value)
+            ), color: Brand.secondary)]
+        case .fallback:
+            return []
+        }
+    }
+}
+
+/// Text clamped to `lineLimit` lines that reports whether the clamp actually
+/// hides anything, so rows only offer to expand when there is more to read.
+private struct TruncationAwareText: View {
+    let text: String
+    let lineLimit: Int
+    let isExpanded: Bool
+    @Binding var isTruncated: Bool
+
+    var body: some View {
+        Text(text)
+            .lineLimit(isExpanded ? nil : lineLimit)
+            .fixedSize(horizontal: false, vertical: true)
+            .background {
+                if !isExpanded {
+                    // Offered the clamped height, the full text either fits
+                    // (first branch) or falls through to the empty view.
+                    ViewThatFits(in: .vertical) {
+                        Text(text)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .hidden()
+                            .onAppear { isTruncated = false }
+                        Color.clear
+                            .onAppear { isTruncated = true }
+                    }
+                }
+            }
+    }
+}
+
+// MARK: - Average delta
+
+/// Change of the average across the charted period, following the subject
+/// list's convention: the arrow follows the sign, teal is better, rose worse.
+private struct AverageDeltaChip: View {
+    let delta: Double
+
+    var body: some View {
+        let color = delta > 0 ? GradeBand.poor.foregroundColor : Brand.primary
+
+        HStack(spacing: 3) {
+            GradelyIcon(systemName: delta < 0 ? "arrow.down.right" : "arrow.up.right", size: 12)
+            Text(String(format: "%+.2f", locale: .current, delta))
+                .font(.caption.weight(.bold).monospacedDigit())
+        }
+        .foregroundStyle(color)
+        .padding(.horizontal, Spacing.sm)
+        .padding(.vertical, 4)
+        .background(color.opacity(0.12), in: Capsule())
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(String.localizedStringWithFormat(
+            AppL10n.string(delta > 0 ? "detail.intelligence.worsening" : "detail.intelligence.improving"),
+            abs(delta)
+        ))
     }
 }
 

@@ -325,7 +325,7 @@ private struct MarksTrendChartRow: View {
             Spacer(minLength: Spacing.sm)
 
             if let delta = trend.averageDelta {
-                Text(String(format: "%+.2f", delta))
+                Text(String(format: "%+.2f", locale: .current, delta))
                     .font(.subheadline.weight(.bold).monospacedDigit())
                     .foregroundStyle(delta > 0 ? GradeBand.poor.foregroundColor : Brand.primary)
             }
@@ -444,7 +444,7 @@ private struct SubjectRow: View {
                     if let delta = trendDelta {
                         HStack(spacing: 2) {
                             GradelyIcon(systemName: delta < 0 ? "arrow.down.right" : "arrow.up.right")
-                            Text(String(format: "%+.2f", delta))
+                            Text(String(format: "%+.2f", locale: .current, delta))
                         }
                         .font(.caption.weight(.bold).monospacedDigit())
                         .foregroundStyle(delta < 0 ? Brand.primary : GradeBand.poor.foregroundColor)

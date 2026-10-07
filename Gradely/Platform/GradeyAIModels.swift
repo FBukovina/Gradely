@@ -461,7 +461,7 @@ nonisolated struct GradeyAISourceFreshness: Codable, Equatable, Sendable {
 }
 
 struct GradeyAIReplyRequest: Equatable, Sendable {
-    let locale = AppLanguageOverride.locale.identifier
+    let locale = AppLanguageOverride.locale.gradeyAIWireIdentifier
     let conversationID: String
     let clientMessageID: String
     let text: String
@@ -479,6 +479,18 @@ struct GradeyAIReplyRequest: Equatable, Sendable {
         var input = Data([conversationID, clientMessageID, text, actionID.rawValue, contextSelectionID, locale].map { "\($0.utf8.count):\($0)" }.joined().utf8)
         input.append(contextData)
         return SHA256.hash(data: input).map { String(format: "%02x", $0) }.joined()
+    }
+}
+
+extension Locale {
+    /// `language_REGION` (e.g. `en_CZ`), the only shape the Gradey AI backend
+    /// accepts. macOS reports a region chosen separately from the language as
+    /// a keyword (`en_US@rg=czzzzz`), which the backend rejects with
+    /// "locale must be a language identifier".
+    var gradeyAIWireIdentifier: String {
+        guard let languageCode = language.languageCode?.identifier else { return "en" }
+        guard let regionCode = region?.identifier else { return languageCode }
+        return "\(languageCode)_\(regionCode)"
     }
 }
 

@@ -212,6 +212,14 @@ struct BundledLanguageFallbackTests {
         }
     }
 
+    @Test func aiRequestLocaleDropsMacRegionKeywords() {
+        #expect(Locale(identifier: "en_US@rg=czzzzz").gradeyAIWireIdentifier == "en_CZ")
+        #expect(Locale(identifier: "cs_CZ@calendar=gregorian;numbers=latn").gradeyAIWireIdentifier == "cs_CZ")
+        #expect(Locale(identifier: "cs_CZ").gradeyAIWireIdentifier == "cs_CZ")
+        #expect(Locale(identifier: "en_CO").gradeyAIWireIdentifier == "en_CO")
+        #expect(Locale(identifier: "en").gradeyAIWireIdentifier == "en")
+    }
+
     @Test func aiServerFailuresAndContextSectionsUseTheAppLanguageWithoutExposingDiagnostics() throws {
         let codes = ["quota_exceeded", "catalog_changed", "price_changed", "request_pending", "cancelled", "timeout",
             "content-filter", "provider-rate-limit", "provider-error", "accounting_blocked", "idempotency_conflict",

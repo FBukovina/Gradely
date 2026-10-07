@@ -1,0 +1,2680 @@
+package com.bukovinafilip.gradey.data
+
+import com.bukovinafilip.gradey.domain.BakalariClient
+import com.bukovinafilip.gradey.domain.AbsenceSubjectResolutionFailure
+import com.bukovinafilip.gradey.domain.AbsenceSubjectResolutionSource
+import com.bukovinafilip.gradey.domain.AbsenceLessonSelections
+import com.bukovinafilip.gradey.domain.GradeyIdentityChangedException
+import com.bukovinafilip.gradey.domain.SchoolSessionExpiredException
+import com.bukovinafilip.gradey.model.Absence
+import com.bukovinafilip.gradey.model.AbsencePerSubject
+import com.bukovinafilip.gradey.model.AbsenceResponse
+import com.bukovinafilip.gradey.model.BakalariCredentials
+import com.bukovinafilip.gradey.model.CachedSchoolDirectory
+import com.bukovinafilip.gradey.model.DashboardData
+import com.bukovinafilip.gradey.model.LoginResponse
+import com.bukovinafilip.gradey.model.LinkedSchoolAccount
+import com.bukovinafilip.gradey.model.LinkedAccountProvider
+import com.bukovinafilip.gradey.model.MarksResponse
+import com.bukovinafilip.gradey.model.NextLessonWidgetLesson
+import com.bukovinafilip.gradey.model.NextLessonWidgetSnapshot
+import com.bukovinafilip.gradey.model.SchoolDirectorySchool
+import com.bukovinafilip.gradey.model.SchoolProvider
+import com.bukovinafilip.gradey.model.StoredSession
+import com.bukovinafilip.gradey.model.Subject
+import com.bukovinafilip.gradey.model.SubjectInfo
+import com.bukovinafilip.gradey.model.TimetableAtom
+import com.bukovinafilip.gradey.model.TimetableDayDTO
+import com.bukovinafilip.gradey.model.TimetableEntity
+import com.bukovinafilip.gradey.model.TimetableHour
+import com.bukovinafilip.gradey.model.TimetableResponse
+import com.bukovinafilip.gradey.model.UserResponse
+import com.bukovinafilip.gradey.network.BakalariApiException
+import com.bukovinafilip.gradey.network.GradeyJson
+import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.yield
+import java.time.LocalDate
+import org.junit.Test
+
+class AndroidSchoolRepositoryTest {
+    @Test
+    fun bootstrapRestoresStoredSessionWithoutCallingBakalari() = runTest {
+        val client = FakeBakalariClient()
+        val session = validSession()
+        val repository = repository(client, InMemorySchoolSessionStorage(session))
+
+        val restored = repository.bootstrapSession()
+
+        assertThat(restored).isEqualTo(session)
+        assertThat(client.loginCalls).isEqualTo(0)
+        assertThat(client.refreshCalls).isEqualTo(0)
+        assertThat(client.marksCalls).isEqualTo(0)
+    }
+
+    @Test
+    fun loginNormalizesInputAndPersistsTheReturnedTokenFamilyWithCredentials() = runTest {
+        val client = FakeBakalariClient()
+        val sessions = InMemorySchoolSessionStorage(null)
+        val repository = repository(client, sessions)
+
+        val session = repository.login(
+            schoolURL = " SCHOOL.EXAMPLE.CZ/login ",
+            username = "  student  ",
+            password = " secret with spaces ",
+        )
+
+        assertThat(client.loginCalls).isEqualTo(1)
+        assertThat(client.lastLoginBaseURL).isEqualTo("https://school.example.cz")
+        assertThat(client.lastLoginUsername).isEqualTo("student")
+        assertThat(client.lastLoginPassword).isEqualTo(" secret with spaces ")
+        assertThat(session.accessToken).isEqualTo("login-access")
+        assertThat(session.refreshToken).isEqualTo("login-refresh")
+        assertThat(session.bakalari).isEqualTo(BakalariCredentials("student", " secret with spaces "))
+        assertThat(sessions.load()).isEqualTo(session)
+    }
+
+    @Test
+    fun `plain login isolates the same username on two school paths`() = runTest {
+        val repository = repository(FakeBakalariClient(), InMemorySchoolSessionStorage(null))
+
+        val schoolA = repository.login(
+            schoolURL = "https://school.example.cz/school-a",
+            username = "student",
+            password = "secret",
+        )
+        val schoolB = repository.login(
+            schoolURL = "https://school.example.cz/school-b",
+            username = "student",
+            password = "secret",
+        )
+
+        assertThat(schoolA.localCacheIdentity).isNotNull()
+        assertThat(schoolB.localCacheIdentity).isNotNull()
+        assertThat(schoolA.cacheScope).isNotEqualTo(schoolB.cacheScope)
+    }
+
+    @Test
+    fun `authenticated reconnect candidate and dashboard do not replace the durable previous session`() = runTest {
+        val previous = validSession().copy(
+            linkedAccountID = "previous-account",
+            linkedAccountDisplayName = "Previous Student",
+        )
+        val sessions = InMemorySchoolSessionStorage(previous)
+        val client = FakeBakalariClient()
+        val repository = repository(client, sessions)
+        val token = repository.captureSchoolCloudMutationToken()
+
+        val candidate = repository.authenticateSchoolSessionCandidate(
+            schoolURL = "https://candidate.example.cz",
+            username = "candidate-student",
+            password = "candidate-secret",
+            cloudMutationToken = token,
+        )
+
+        assertThat(candidate.session.baseURL).isEqualTo("https://candidate.example.cz")
+        assertThat(candidate.session.bakalari)
+            .isEqualTo(BakalariCredentials("candidate-student", "candidate-secret"))
+        assertThat(candidate.dashboard.user?.fullName).isEqualTo("Student")
+        assertThat(sessions.load()).isEqualTo(previous)
+        assertThat(client.loginCalls).isEqualTo(1)
+        assertThat(client.marksCalls).isEqualTo(1)
+    }
+
+    @Test
+    fun `failed cloud reconnect after candidate authentication leaves previous session durable`() = runTest {
+        val previous = validSession().copy(linkedAccountID = "previous-account")
+        val sessions = InMemorySchoolSessionStorage(previous)
+        val repository = repository(FakeBakalariClient(), sessions)
+        val token = repository.captureSchoolCloudMutationToken()
+
+        val failure = runCatching {
+            repository.authenticateSchoolSessionCandidate(
+                schoolURL = "https://candidate.example.cz",
+                username = "candidate-student",
+                password = "candidate-secret",
+                cloudMutationToken = token,
+            )
+            throw java.io.IOException("cloud reconnect failed")
+        }.exceptionOrNull()
+
+        assertThat(failure).isInstanceOf(java.io.IOException::class.java)
+        assertThat(sessions.load()).isEqualTo(previous)
+    }
+
+    @Test
+    fun `successful cloud reconnect promotion atomically replaces and associates candidate`() = runTest {
+        val previous = validSession().copy(linkedAccountID = "previous-account")
+        val sessions = InMemorySchoolSessionStorage(previous)
+        val repository = repository(FakeBakalariClient(), sessions)
+        val token = repository.captureSchoolCloudMutationToken()
+        val candidate = repository.authenticateSchoolSessionCandidate(
+            schoolURL = "https://candidate.example.cz",
+            username = "candidate-student",
+            password = "candidate-secret",
+            cloudMutationToken = token,
+        )
+        val account = LinkedSchoolAccount(
+            id = "reconnected-account",
+            provider = LinkedAccountProvider.BAKALARI,
+            displayName = "Reconnected Student",
+            schoolName = "Reconnected School",
+        )
+
+        val promoted = repository.promoteAuthenticatedSchoolSessionCandidate(candidate, account, token)
+
+        assertThat(promoted.accessToken).isEqualTo(candidate.session.accessToken)
+        assertThat(promoted.linkedAccountID).isEqualTo(account.id)
+        assertThat(promoted.linkedAccountDisplayName).isEqualTo(account.displayName)
+        assertThat(promoted.linkedAccountSchoolName).isEqualTo(account.schoolName)
+        assertThat(sessions.load()).isEqualTo(promoted)
+    }
+
+    @Test
+    fun `same student reconnect promotion carries detached local cache into linked scope`() = runTest {
+        val local = validSession()
+        val sessions = InMemorySchoolSessionStorage(local)
+        val cache = RoomGradeyCache(InMemoryCacheEntryDao(), GradeyJson)
+        val cached = DashboardData(MarksResponse(), user = UserResponse("Offline student"))
+        val widget = NextLessonWidgetSnapshot(
+            cachedAtEpochMillis = 1,
+            lessons = listOf(NextLessonWidgetLesson("same-student", 1)),
+        )
+        cache.saveDashboard(local.cacheScope, cached)
+        cache.saveNextLessonSnapshot(widget)
+        val repository = repository(FakeBakalariClient(), sessions, cache)
+        val token = repository.captureSchoolCloudMutationToken()
+        val candidate = repository.authenticateSchoolSessionCandidate(
+            schoolURL = local.baseURL,
+            username = checkNotNull(local.bakalari).username,
+            password = local.bakalari!!.password,
+            cloudMutationToken = token,
+        )
+        val account = LinkedSchoolAccount(
+            id = "account-a",
+            provider = LinkedAccountProvider.BAKALARI,
+            displayName = "Student A",
+            schoolName = "School A",
+        )
+
+        val promoted = repository.promoteAuthenticatedSchoolSessionCandidate(candidate, account, token)
+
+        assertThat(cache.loadDashboard(promoted.cacheScope)).isEqualTo(cached)
+        assertThat(cache.loadDashboard(local.cacheScope)).isEqualTo(cached)
+        assertThat(cache.loadNextLessonSnapshot()).isEqualTo(widget)
+        assertThat(sessions.load()).isEqualTo(promoted)
+    }
+
+    @Test
+    fun `different student promotion never copies prior account cache`() = runTest {
+        val accountA = validSession().copy(
+            baseURL = "https://school.example.cz",
+            bakalari = BakalariCredentials("student-a", "secret-a"),
+            linkedAccountID = "account-a",
+        )
+        val sessions = InMemorySchoolSessionStorage(accountA)
+        val cache = RoomGradeyCache(InMemoryCacheEntryDao(), GradeyJson)
+        val cachedA = DashboardData(MarksResponse(), user = UserResponse("Student A"))
+        cache.saveDashboard(accountA.cacheScope, cachedA)
+        cache.saveNextLessonSnapshot(
+            NextLessonWidgetSnapshot(1, listOf(NextLessonWidgetLesson("account-a", 1))),
+        )
+        val repository = repository(FakeBakalariClient(), sessions, cache)
+        val token = repository.captureSchoolCloudMutationToken()
+        val candidateB = repository.authenticateSchoolSessionCandidate(
+            schoolURL = "https://school.example.cz",
+            username = "student-b",
+            password = "secret-b",
+            cloudMutationToken = token,
+        )
+        val linkedB = LinkedSchoolAccount(
+            id = "account-b",
+            provider = LinkedAccountProvider.BAKALARI,
+            displayName = "Student B",
+            schoolName = "School",
+        )
+
+        val promotedB = repository.promoteAuthenticatedSchoolSessionCandidate(candidateB, linkedB, token)
+
+        assertThat(cache.loadDashboard(accountA.cacheScope)).isEqualTo(cachedA)
+        assertThat(cache.loadDashboard(promotedB.cacheScope)).isNull()
+        assertThat(cache.loadNextLessonSnapshot()).isNull()
+        assertThat(sessions.load()).isEqualTo(promotedB)
+    }
+
+    @Test
+    fun `same school username cannot rekey a linked account A cache into linked account B`() = runTest {
+        val accountA = validSession().copy(
+            baseURL = "https://school.example.cz/path",
+            bakalari = BakalariCredentials("shared-name", "secret-a"),
+            linkedAccountID = "account-a",
+        )
+        val sessions = InMemorySchoolSessionStorage(accountA)
+        val cache = RoomGradeyCache(InMemoryCacheEntryDao(), GradeyJson)
+        val cachedA = DashboardData(MarksResponse(), user = UserResponse("Account A"))
+        cache.saveDashboard(accountA.cacheScope, cachedA)
+        val repository = repository(FakeBakalariClient(), sessions, cache)
+        val token = repository.captureSchoolCloudMutationToken()
+        val candidateB = repository.authenticateSchoolSessionCandidate(
+            schoolURL = accountA.baseURL,
+            username = checkNotNull(accountA.bakalari).username,
+            password = "secret-b",
+            cloudMutationToken = token,
+        )
+        val accountB = LinkedSchoolAccount(
+            id = "account-b",
+            provider = LinkedAccountProvider.BAKALARI,
+            displayName = "Account B",
+            schoolName = "School",
+        )
+
+        val promotedB = repository.promoteAuthenticatedSchoolSessionCandidate(
+            candidateB,
+            accountB,
+            token,
+        )
+
+        assertThat(cache.loadDashboard(accountA.cacheScope)).isEqualTo(cachedA)
+        assertThat(cache.loadDashboard(promotedB.cacheScope)).isNull()
+        assertThat(sessions.load()).isEqualTo(promotedB)
+    }
+
+    @Test
+    fun `association refuses to relabel a session owned by another linked account`() = runTest {
+        val accountA = validSession().copy(linkedAccountID = "account-a")
+        val sessions = InMemorySchoolSessionStorage(accountA)
+        val cache = RoomGradeyCache(InMemoryCacheEntryDao(), GradeyJson)
+        val cachedA = DashboardData(MarksResponse(), user = UserResponse("Account A"))
+        cache.saveDashboard(accountA.cacheScope, cachedA)
+        val repository = repository(FakeBakalariClient(), sessions, cache)
+
+        val failure = runCatching {
+            repository.associateCurrentSession(
+                LinkedSchoolAccount(
+                    id = "account-b",
+                    provider = LinkedAccountProvider.BAKALARI,
+                    displayName = "Account B",
+                ),
+            )
+        }.exceptionOrNull()
+
+        assertThat(failure).isInstanceOf(IllegalArgumentException::class.java)
+        assertThat(sessions.load()).isEqualTo(accountA)
+        assertThat(cache.loadDashboard(accountA.cacheScope)).isEqualTo(cachedA)
+        assertThat(cache.loadDashboard("linked-account-b")).isNull()
+    }
+
+    @Test
+    fun `same epoch activation winner cannot be overwritten by concurrent login`() = runTest {
+        val loginStarted = CompletableDeferred<Unit>()
+        val activationStarted = CompletableDeferred<Unit>()
+        val releaseLogin = CompletableDeferred<Unit>()
+        val releaseActivation = CompletableDeferred<Unit>()
+        val sessions = InMemorySchoolSessionStorage(validSession())
+        val client = FakeBakalariClient().apply {
+            loginResult = { _, username, _ ->
+                when (username) {
+                    "login-student" -> {
+                        loginStarted.complete(Unit)
+                        releaseLogin.await()
+                        LoginResponse("login-would-be-stale", "login-refresh", "Bearer", 3_600)
+                    }
+                    "activation-student" -> {
+                        activationStarted.complete(Unit)
+                        releaseActivation.await()
+                        LoginResponse("activation-winner", "activation-refresh", "Bearer", 3_600)
+                    }
+                    else -> error("Unexpected user $username")
+                }
+            }
+        }
+        val repository = repository(client, sessions)
+        val token = repository.captureSchoolCloudMutationToken()
+        val incoming = validSession().copy(
+            baseURL = "https://activation.example.cz",
+            bakalari = BakalariCredentials("activation-student", "activation-secret"),
+            linkedAccountID = "activation-account",
+        )
+
+        val loggingIn = async {
+            runCatching {
+                repository.login(
+                    "https://login.example.cz",
+                    "login-student",
+                    "login-secret",
+                    token,
+                )
+            }
+        }
+        val activating = async {
+            runCatching { repository.activateLinkedSchoolAccount(incoming, token) }
+        }
+        loginStarted.await()
+        activationStarted.await()
+        releaseActivation.complete(Unit)
+        val activation = activating.await().getOrThrow()
+        releaseLogin.complete(Unit)
+        val loginFailure = loggingIn.await().exceptionOrNull()
+
+        assertThat(loginFailure).isInstanceOf(CancellationException::class.java)
+        assertThat(activation.accessToken).isEqualTo("activation-winner")
+        assertThat(sessions.load()).isEqualTo(activation)
+    }
+
+    @Test
+    fun `restore session replaces a reconnect candidate without network access`() = runTest {
+        val original = validSession().copy(linkedAccountID = "original")
+        val candidate = validSession().copy(
+            accessToken = "candidate-access",
+            linkedAccountID = "candidate",
+        )
+        val client = FakeBakalariClient()
+        val sessions = InMemorySchoolSessionStorage(candidate)
+        val repository = repository(client, sessions)
+
+        val restored = repository.restoreSession(original)
+
+        assertThat(restored).isEqualTo(original)
+        assertThat(repository.currentStoredSession()).isEqualTo(original)
+        assertThat(client.loginCalls).isEqualTo(0)
+        assertThat(client.refreshCalls).isEqualTo(0)
+    }
+
+    @Test
+    fun `activation preserves the device token family for the same linked account`() = runTest {
+        val current = validSession().copy(
+            linkedAccountID = "account-1",
+            linkedAccountDisplayName = "Old name",
+        )
+        val incoming = current.copy(
+            accessToken = "cloud-poller-access",
+            refreshToken = "cloud-poller-refresh",
+            linkedAccountDisplayName = "Canonical name",
+            linkedAccountSchoolName = "Canonical school",
+        )
+        val client = FakeBakalariClient()
+        val sessions = InMemorySchoolSessionStorage(current)
+
+        val activated = repository(client, sessions).activateLinkedSchoolAccount(incoming)
+
+        assertThat(activated.accessToken).isEqualTo("old-access")
+        assertThat(activated.refreshToken).isEqualTo("old-refresh")
+        assertThat(activated.linkedAccountDisplayName).isEqualTo("Canonical name")
+        assertThat(activated.linkedAccountSchoolName).isEqualTo("Canonical school")
+        assertThat(client.loginCalls).isEqualTo(0)
+        assertThat(sessions.load()).isEqualTo(activated)
+    }
+
+    @Test
+    fun `activation of another linked account mints a device Bakalari token family`() = runTest {
+        val incoming = validSession().copy(
+            accessToken = "cloud-poller-access",
+            refreshToken = "cloud-poller-refresh",
+            linkedAccountID = "account-2",
+            linkedAccountDisplayName = "Second student",
+            linkedAccountSchoolName = "Second school",
+            bakalari = BakalariCredentials("second-student", "second-secret"),
+        )
+        val client = FakeBakalariClient()
+        val sessions = InMemorySchoolSessionStorage(validSession().copy(linkedAccountID = "account-1"))
+        val cache = RoomGradeyCache(InMemoryCacheEntryDao(), GradeyJson)
+        cache.saveNextLessonSnapshot(
+            NextLessonWidgetSnapshot(
+                cachedAtEpochMillis = 1,
+                lessons = listOf(NextLessonWidgetLesson("account-1-lesson", 1)),
+            ),
+        )
+
+        val activated = repository(client, sessions, cache).activateLinkedSchoolAccount(incoming)
+
+        assertThat(client.loginCalls).isEqualTo(1)
+        assertThat(client.lastLoginUsername).isEqualTo("second-student")
+        assertThat(client.lastLoginPassword).isEqualTo("second-secret")
+        assertThat(activated.accessToken).isEqualTo("login-access")
+        assertThat(activated.refreshToken).isEqualTo("login-refresh")
+        assertThat(activated.linkedAccountID).isEqualTo("account-2")
+        assertThat(sessions.load()).isEqualTo(activated)
+        assertThat(cache.loadNextLessonSnapshot()).isNull()
+    }
+
+    @Test
+    fun `associating a newly linked account keeps current school credentials and tokens`() = runTest {
+        val current = validSession()
+        val sessions = InMemorySchoolSessionStorage(current)
+        val linked = LinkedSchoolAccount(
+            id = "linked-account",
+            provider = LinkedAccountProvider.BAKALARI,
+            displayName = "Student",
+            schoolName = "School",
+        )
+
+        val associated = repository(FakeBakalariClient(), sessions).associateCurrentSession(linked)
+
+        assertThat(associated.accessToken).isEqualTo(current.accessToken)
+        assertThat(associated.bakalari).isEqualTo(current.bakalari)
+        assertThat(associated.linkedAccountID).isEqualTo("linked-account")
+        assertThat(associated.linkedAccountDisplayName).isEqualTo("Student")
+        assertThat(associated.linkedAccountSchoolName).isEqualTo("School")
+    }
+
+    @Test
+    fun `unlinking the active cloud account detaches metadata but keeps local school access`() = runTest {
+        val current = validSession().copy(
+            linkedAccountID = "linked-account",
+            linkedAccountDisplayName = "Student",
+            linkedAccountSchoolName = "School",
+        )
+        val sessions = InMemorySchoolSessionStorage(current)
+        val cache = RoomGradeyCache(InMemoryCacheEntryDao(), GradeyJson)
+        val cached = DashboardData(MarksResponse(), user = UserResponse("Student"))
+        val absence = AbsenceResponse(percentageThreshold = 25.0)
+        val selections = AbsenceLessonSelections(mapOf("2026-08-31" to listOf("lesson-1")))
+        val rawWeek = TimetableResponse()
+        val mappedWeek = com.bukovinafilip.gradey.model.TimetableWeek(
+            "2026-08-31",
+            emptyList(),
+            emptyList(),
+        )
+        cache.saveDashboard(current.cacheScope, cached)
+        cache.saveMarks(current.cacheScope, cached.marksResponse)
+        cache.saveAbsence(current.cacheScope, absence)
+        cache.saveAbsenceLessonSelections(current.cacheScope, selections)
+        cache.saveRawTimetable(current.cacheScope, mappedWeek.weekStart, rawWeek)
+        cache.saveTimetable(current.cacheScope, mappedWeek.weekStart, mappedWeek)
+        val repository = repository(FakeBakalariClient(), sessions, cache)
+        val token = repository.captureSchoolCloudMutationToken()
+
+        val local = repository.disassociateCurrentSession("linked-account", token)
+        val staleAssociation = runCatching {
+            repository.associateCurrentSession(
+                LinkedSchoolAccount(
+                    id = "linked-account",
+                    provider = LinkedAccountProvider.BAKALARI,
+                    displayName = "Student",
+                    schoolName = "School",
+                ),
+                token,
+            )
+        }.exceptionOrNull()
+
+        assertThat(local?.accessToken).isEqualTo(current.accessToken)
+        assertThat(local?.bakalari).isEqualTo(current.bakalari)
+        assertThat(local?.linkedAccountID).isNull()
+        assertThat(local?.linkedAccountDisplayName).isNull()
+        assertThat(local?.linkedAccountSchoolName).isNull()
+        assertThat(local?.cacheScope).doesNotContain("default")
+        assertThat(cache.loadDashboard(checkNotNull(local).cacheScope)).isEqualTo(cached)
+        assertThat(repository.loadCachedDashboard()).isEqualTo(cached)
+        assertThat(repository.loadCachedAbsence()).isEqualTo(absence)
+        assertThat(repository.loadCachedTimetable("2026-09-02")).isEqualTo(mappedWeek)
+        assertThat(cache.loadMarks(local.cacheScope)).isEqualTo(cached.marksResponse)
+        assertThat(cache.loadAbsenceLessonSelections(local.cacheScope)).isEqualTo(selections)
+        assertThat(cache.loadRawTimetable(local.cacheScope, mappedWeek.weekStart)).isEqualTo(rawWeek)
+        assertThat(cache.loadDashboard(current.cacheScope)).isEqualTo(cached)
+        assertThat(sessions.load()).isEqualTo(local)
+        assertThat(staleAssociation).isInstanceOf(GradeyIdentityChangedException::class.java)
+    }
+
+    @Test
+    fun `metadata association round trip keeps the active visible cache and global projection`() = runTest {
+        val current = validSession()
+        val sessions = InMemorySchoolSessionStorage(current)
+        val cache = RoomGradeyCache(InMemoryCacheEntryDao(), GradeyJson)
+        val beforeLink = DashboardData(MarksResponse(), user = UserResponse("Before link"))
+        val afterLink = DashboardData(MarksResponse(), user = UserResponse("After link"))
+        val widget = NextLessonWidgetSnapshot(
+            cachedAtEpochMillis = 1,
+            lessons = listOf(NextLessonWidgetLesson("same-student", 1)),
+        )
+        cache.saveDashboard(current.cacheScope, beforeLink)
+        cache.saveNextLessonSnapshot(widget)
+        val repository = repository(FakeBakalariClient(), sessions, cache)
+        val account = LinkedSchoolAccount(
+            id = "linked-account",
+            provider = LinkedAccountProvider.BAKALARI,
+            providerUserID = "provider-user",
+            displayName = "Student",
+            schoolName = "School",
+        )
+
+        val associated = repository.associateCurrentSession(account)
+        cache.saveDashboard(associated.cacheScope, afterLink)
+        val detached = repository.disassociateCurrentSession(account.id)
+
+        assertThat(cache.loadDashboard(associated.cacheScope)).isEqualTo(afterLink)
+        assertThat(cache.loadDashboard(checkNotNull(detached).cacheScope)).isEqualTo(afterLink)
+        assertThat(detached.cacheScope).isEqualTo(current.cacheScope)
+        assertThat(cache.loadNextLessonSnapshot()).isEqualTo(widget)
+    }
+
+    @Test
+    fun `credentialless linked students on one host detach into isolated readable scopes`() = runTest {
+        val cache = RoomGradeyCache(InMemoryCacheEntryDao(), GradeyJson)
+        val linkedA = validSession().copy(
+            bakalari = null,
+            linkedAccountID = "account-a",
+            linkedAccountDisplayName = "Student A",
+        )
+        val linkedB = validSession().copy(
+            bakalari = null,
+            linkedAccountID = "account-b",
+            linkedAccountDisplayName = "Student B",
+        )
+        val dashboardA = DashboardData(MarksResponse(), user = UserResponse("Student A"))
+        val dashboardB = DashboardData(MarksResponse(), user = UserResponse("Student B"))
+        cache.saveDashboard(linkedA.cacheScope, dashboardA)
+        cache.saveDashboard(linkedB.cacheScope, dashboardB)
+
+        val localA = repository(
+            FakeBakalariClient(),
+            InMemorySchoolSessionStorage(linkedA),
+            cache,
+        ).disassociateCurrentSession("account-a")
+        val localB = repository(
+            FakeBakalariClient(),
+            InMemorySchoolSessionStorage(linkedB),
+            cache,
+        ).disassociateCurrentSession("account-b")
+
+        assertThat(checkNotNull(localA).cacheScope).isNotEqualTo(checkNotNull(localB).cacheScope)
+        assertThat(localA.cacheScope).doesNotContain("default")
+        assertThat(localB.cacheScope).doesNotContain("default")
+        assertThat(cache.loadDashboard(localA.cacheScope)).isEqualTo(dashboardA)
+        assertThat(cache.loadDashboard(localB.cacheScope)).isEqualTo(dashboardB)
+    }
+
+    @Test
+    fun `credentialless provider identity carries detached offline updates through credential reconnect`() = runTest {
+        val account = LinkedSchoolAccount(
+            id = "account-a",
+            provider = LinkedAccountProvider.BAKALARI,
+            providerUserID = "provider-user-a",
+            displayName = "Student A",
+            schoolName = "School",
+        )
+        val linked = validSession().copy(
+            bakalari = null,
+            linkedAccountID = account.id,
+            linkedAccountDisplayName = account.displayName,
+        ).stabilizedLocalCacheIdentity(
+            providerUserID = account.providerUserID,
+            linkedAccountID = account.id,
+        )
+        val sessions = InMemorySchoolSessionStorage(linked)
+        val cache = RoomGradeyCache(InMemoryCacheEntryDao(), GradeyJson)
+        val repository = repository(FakeBakalariClient(), sessions, cache)
+
+        val detached = checkNotNull(repository.disassociateCurrentSession(account.id))
+        val offlineUpdate = DashboardData(MarksResponse(), user = UserResponse("Offline update"))
+        cache.saveDashboard(detached.cacheScope, offlineUpdate)
+        val reconnectToken = repository.captureSchoolCloudMutationToken()
+        val candidate = repository.authenticateSchoolSessionCandidate(
+            schoolURL = linked.baseURL,
+            username = "student-a",
+            password = "secret-a",
+            cloudMutationToken = reconnectToken,
+        )
+
+        val promoted = repository.promoteAuthenticatedSchoolSessionCandidate(
+            candidate,
+            account,
+            reconnectToken,
+        )
+
+        assertThat(cache.loadDashboard(promoted.cacheScope)).isEqualTo(offlineUpdate)
+        assertThat(cache.loadDashboard(detached.cacheScope)).isEqualTo(offlineUpdate)
+        assertThat(sessions.load()).isEqualTo(promoted)
+    }
+
+    @Test
+    fun `cloud commit before identity invalidation is atomically detached without clearing local state`() = runTest {
+        val original = validSession()
+        val sessions = InMemorySchoolSessionStorage(original)
+        val cache = RoomGradeyCache(InMemoryCacheEntryDao(), GradeyJson)
+        val widgetSnapshot = NextLessonWidgetSnapshot(
+            cachedAtEpochMillis = 1,
+            lessons = listOf(NextLessonWidgetLesson("retained-lesson", 1)),
+        )
+        cache.saveNextLessonSnapshot(widgetSnapshot)
+        val repository = repository(FakeBakalariClient(), sessions, cache)
+        val token = repository.captureSchoolCloudMutationToken()
+        val account = LinkedSchoolAccount(
+            id = "account-a",
+            provider = LinkedAccountProvider.BAKALARI,
+            displayName = "Student A",
+            schoolName = "School A",
+        )
+
+        val associated = repository.associateCurrentSession(account, token)
+        val cloudScopedDashboard = DashboardData(MarksResponse(), user = UserResponse("Student A"))
+        cache.saveDashboard(associated.cacheScope, cloudScopedDashboard)
+        val invalidation = repository.invalidateSchoolCloudMutationsAndDisassociate()
+        val detached = invalidation.retainedSession
+
+        assertThat(associated.linkedAccountID).isEqualTo("account-a")
+        assertThat(invalidation.previousLinkedAccountID).isEqualTo("account-a")
+        assertThat(detached?.linkedAccountID).isNull()
+        assertThat(detached?.linkedAccountDisplayName).isNull()
+        assertThat(detached?.linkedAccountSchoolName).isNull()
+        assertThat(detached?.accessToken).isEqualTo(original.accessToken)
+        assertThat(detached?.refreshToken).isEqualTo(original.refreshToken)
+        assertThat(detached?.bakalari).isEqualTo(original.bakalari)
+        assertThat(sessions.load()).isEqualTo(detached)
+        assertThat(cache.loadDashboard(associated.cacheScope)).isEqualTo(cloudScopedDashboard)
+        assertThat(cache.loadNextLessonSnapshot()).isEqualTo(widgetSnapshot)
+    }
+
+    @Test
+    fun `identity invalidation before old cloud commits rejects every stale mutation`() = runTest {
+        val current = validSession().copy(
+            linkedAccountID = "account-a",
+            linkedAccountDisplayName = "Student A",
+            linkedAccountSchoolName = "School A",
+        )
+        val sessions = InMemorySchoolSessionStorage(current)
+        val client = FakeBakalariClient()
+        val repository = repository(client, sessions)
+        val staleToken = repository.captureSchoolCloudMutationToken()
+        val invalidation = repository.invalidateSchoolCloudMutationsAndDisassociate()
+        val detached = invalidation.retainedSession
+        val accountA = LinkedSchoolAccount(
+            id = "account-a",
+            provider = LinkedAccountProvider.BAKALARI,
+            displayName = "Student A",
+            schoolName = "School A",
+        )
+
+        val loginFailure = runCatching {
+            repository.login("https://school-a.example.cz", "student-a", "secret-a", staleToken)
+        }.exceptionOrNull()
+        val associationFailure = runCatching {
+            repository.associateCurrentSession(accountA, staleToken)
+        }.exceptionOrNull()
+        val activationFailure = runCatching {
+            repository.activateLinkedSchoolAccount(current, staleToken)
+        }.exceptionOrNull()
+        val disassociationFailure = runCatching {
+            repository.disassociateCurrentSession("account-a", staleToken)
+        }.exceptionOrNull()
+        val rollbackFailure = runCatching {
+            repository.restoreSessionIfCurrentCandidate(
+                candidate = current,
+                previous = current.copy(linkedAccountID = "previous-account-a"),
+                cloudMutationToken = staleToken,
+            )
+        }.exceptionOrNull()
+
+        assertThat(loginFailure).isInstanceOf(GradeyIdentityChangedException::class.java)
+        assertThat(associationFailure).isInstanceOf(GradeyIdentityChangedException::class.java)
+        assertThat(activationFailure).isInstanceOf(GradeyIdentityChangedException::class.java)
+        assertThat(disassociationFailure).isInstanceOf(GradeyIdentityChangedException::class.java)
+        assertThat(rollbackFailure).isInstanceOf(GradeyIdentityChangedException::class.java)
+        assertThat(client.loginCalls).isEqualTo(0)
+        assertThat(invalidation.previousLinkedAccountID).isEqualTo("account-a")
+        assertThat(sessions.load()).isEqualTo(detached)
+        assertThat(sessions.load()?.linkedAccountID).isNull()
+    }
+
+    @Test
+    fun `identity invalidation advances during held login and rejects its stale response`() = runTest {
+        val loginStarted = CompletableDeferred<Unit>()
+        val releaseLogin = CompletableDeferred<Unit>()
+        val current = validSession().copy(
+            linkedAccountID = "account-a",
+            linkedAccountDisplayName = "Student A",
+            linkedAccountSchoolName = "School A",
+        )
+        val sessions = InMemorySchoolSessionStorage(current)
+        val client = FakeBakalariClient().apply {
+            loginResult = { _, _, _ ->
+                loginStarted.complete(Unit)
+                releaseLogin.await()
+                LoginResponse("stale-access", "stale-refresh", "Bearer", 3_600)
+            }
+        }
+        val repository = repository(client, sessions)
+        val token = repository.captureSchoolCloudMutationToken()
+
+        val loggingIn = async {
+            runCatching {
+                repository.login(
+                    "https://school-b.example.cz",
+                    "student-b",
+                    "secret-b",
+                    token,
+                )
+            }
+        }
+        loginStarted.await()
+        val invalidating = async { repository.invalidateSchoolCloudMutationsAndDisassociate() }
+        yield()
+        val invalidationCompletedWhileNetworkWasHeld = invalidating.isCompleted
+        releaseLogin.complete(Unit)
+
+        val invalidation = invalidating.await()
+        val loginFailure = loggingIn.await().exceptionOrNull()
+        val retained = invalidation.retainedSession
+
+        assertThat(invalidationCompletedWhileNetworkWasHeld).isTrue()
+        assertThat(loginFailure).isInstanceOf(GradeyIdentityChangedException::class.java)
+        assertThat(invalidation.previousLinkedAccountID).isEqualTo("account-a")
+        assertThat(retained?.accessToken).isEqualTo(current.accessToken)
+        assertThat(retained?.bakalari).isEqualTo(current.bakalari)
+        assertThat(retained?.linkedAccountID).isNull()
+        assertThat(sessions.load()).isEqualTo(retained)
+    }
+
+    @Test
+    fun `identity invalidation advances during held activation and rejects its stale response`() = runTest {
+        val activationStarted = CompletableDeferred<Unit>()
+        val releaseActivation = CompletableDeferred<Unit>()
+        val current = validSession().copy(
+            linkedAccountID = "account-a",
+            linkedAccountDisplayName = "Student A",
+            linkedAccountSchoolName = "School A",
+        )
+        val incoming = validSession().copy(
+            accessToken = "cloud-poller-access-b",
+            refreshToken = "cloud-poller-refresh-b",
+            baseURL = "https://school-b.example.cz",
+            bakalari = BakalariCredentials("student-b", "secret-b"),
+            linkedAccountID = "account-b",
+            linkedAccountDisplayName = "Student B",
+            linkedAccountSchoolName = "School B",
+        )
+        val sessions = InMemorySchoolSessionStorage(current)
+        val client = FakeBakalariClient().apply {
+            loginResult = { _, _, _ ->
+                activationStarted.complete(Unit)
+                releaseActivation.await()
+                LoginResponse("stale-access-b", "stale-refresh-b", "Bearer", 3_600)
+            }
+        }
+        val repository = repository(client, sessions)
+        val token = repository.captureSchoolCloudMutationToken()
+
+        val activating = async {
+            runCatching { repository.activateLinkedSchoolAccount(incoming, token) }
+        }
+        activationStarted.await()
+        val invalidating = async { repository.invalidateSchoolCloudMutationsAndDisassociate() }
+        yield()
+        val invalidationCompletedWhileNetworkWasHeld = invalidating.isCompleted
+        releaseActivation.complete(Unit)
+
+        val invalidation = invalidating.await()
+        val activationFailure = activating.await().exceptionOrNull()
+        val retained = invalidation.retainedSession
+
+        assertThat(invalidationCompletedWhileNetworkWasHeld).isTrue()
+        assertThat(activationFailure).isInstanceOf(GradeyIdentityChangedException::class.java)
+        assertThat(invalidation.previousLinkedAccountID).isEqualTo("account-a")
+        assertThat(retained?.accessToken).isEqualTo(current.accessToken)
+        assertThat(retained?.bakalari).isEqualTo(current.bakalari)
+        assertThat(retained?.linkedAccountID).isNull()
+        assertThat(sessions.load()).isEqualTo(retained)
+    }
+
+    @Test
+    fun `identity invalidation clears only the session when detached persistence fails`() = runTest {
+        val current = validSession().copy(
+            linkedAccountID = "account-a",
+            linkedAccountDisplayName = "Student A",
+            linkedAccountSchoolName = "School A",
+        )
+        val sessions = FailingDetachSchoolSessionStorage(current)
+        val cache = RoomGradeyCache(InMemoryCacheEntryDao(), GradeyJson)
+        val cachedDashboard = DashboardData(MarksResponse(), user = UserResponse("Student A"))
+        cache.saveDashboard(current.cacheScope, cachedDashboard)
+        val repository = repository(FakeBakalariClient(), sessions, cache)
+        val staleToken = repository.captureSchoolCloudMutationToken()
+
+        val invalidation = repository.invalidateSchoolCloudMutationsAndDisassociate()
+        val staleFailure = runCatching {
+            repository.disassociateCurrentSession("account-a", staleToken)
+        }.exceptionOrNull()
+
+        assertThat(invalidation.previousLinkedAccountID).isEqualTo("account-a")
+        assertThat(invalidation.retainedSession).isNull()
+        assertThat(sessions.load()).isNull()
+        assertThat(sessions.clearCalls).isEqualTo(1)
+        assertThat(cache.loadDashboard(current.cacheScope)).isEqualTo(cachedDashboard)
+        val detachedScope = current
+            .stabilizedLocalCacheIdentity(linkedAccountID = "account-a")
+            .copy(linkedAccountID = null)
+            .cacheScope
+        assertThat(cache.loadDashboard(detachedScope)).isEqualTo(cachedDashboard)
+        assertThat(staleFailure).isInstanceOf(GradeyIdentityChangedException::class.java)
+    }
+
+    @Test
+    fun `explicit disassociation clears stale linked session when cache copy fails`() = runTest {
+        val current = validSession().copy(
+            linkedAccountID = "account-a",
+            linkedAccountDisplayName = "Student A",
+        )
+        val sessions = InMemorySchoolSessionStorage(current)
+        val backingDao = InMemoryCacheEntryDao()
+        val backingCache = RoomGradeyCache(backingDao, GradeyJson)
+        val cached = DashboardData(MarksResponse(), user = UserResponse("Student A"))
+        backingCache.saveDashboard(current.cacheScope, cached)
+        val repository = repository(
+            FakeBakalariClient(),
+            sessions,
+            RoomGradeyCache(FailingScopeCopyDao(backingDao), GradeyJson),
+        )
+        val token = repository.captureSchoolCloudMutationToken()
+
+        val retained = repository.disassociateCurrentSession("account-a", token)
+        val staleMutation = runCatching {
+            repository.associateCurrentSession(
+                LinkedSchoolAccount(
+                    id = "account-a",
+                    provider = LinkedAccountProvider.BAKALARI,
+                    displayName = "Student A",
+                ),
+                token,
+            )
+        }.exceptionOrNull()
+
+        assertThat(retained).isNull()
+        assertThat(sessions.load()).isNull()
+        assertThat(backingCache.loadDashboard(current.cacheScope)).isEqualTo(cached)
+        assertThat(staleMutation).isInstanceOf(GradeyIdentityChangedException::class.java)
+    }
+
+    @Test
+    fun `disassociation clears stale metadata and propagates cache copy cancellation`() = runTest {
+        val current = validSession().copy(
+            linkedAccountID = "account-a",
+            linkedAccountDisplayName = "Student A",
+        )
+        val sessions = InMemorySchoolSessionStorage(current)
+        val backingDao = InMemoryCacheEntryDao()
+        val cancellation = CancellationException("scope copy cancelled")
+        val cancelingDao = object : CacheEntryDao by backingDao {
+            override suspend fun saveEntriesAtomically(entries: List<CacheEntryEntity>) {
+                throw cancellation
+            }
+        }
+        val repository = repository(
+            FakeBakalariClient(),
+            sessions,
+            RoomGradeyCache(cancelingDao, GradeyJson),
+        )
+
+        val failure = runCatching {
+            repository.disassociateCurrentSession("account-a")
+        }.exceptionOrNull()
+
+        assertThat(failure).isSameInstanceAs(cancellation)
+        assertThat(sessions.load()).isNull()
+    }
+
+    @Test
+    fun `explicit disassociation clears session after save failure but leaves complete cache aliases`() = runTest {
+        val current = validSession().copy(
+            linkedAccountID = "account-a",
+            linkedAccountDisplayName = "Student A",
+        )
+        val detached = current
+            .stabilizedLocalCacheIdentity(linkedAccountID = "account-a")
+            .copy(linkedAccountID = null, linkedAccountDisplayName = null)
+        val sessions = FailingDetachSchoolSessionStorage(current)
+        val cache = RoomGradeyCache(InMemoryCacheEntryDao(), GradeyJson)
+        val cachedDashboard = DashboardData(MarksResponse(), user = UserResponse("Student A"))
+        val cachedAbsence = AbsenceResponse(percentageThreshold = 25.0)
+        val cachedWeek = com.bukovinafilip.gradey.model.TimetableWeek(
+            "2026-08-31",
+            emptyList(),
+            emptyList(),
+        )
+        cache.saveDashboard(current.cacheScope, cachedDashboard)
+        cache.saveAbsence(current.cacheScope, cachedAbsence)
+        cache.saveTimetable(current.cacheScope, cachedWeek.weekStart, cachedWeek)
+        val repository = repository(FakeBakalariClient(), sessions, cache)
+
+        val retained = repository.disassociateCurrentSession("account-a")
+
+        assertThat(retained).isNull()
+        assertThat(sessions.load()).isNull()
+        assertThat(sessions.clearCalls).isEqualTo(1)
+        assertThat(cache.loadDashboard(current.cacheScope)).isEqualTo(cachedDashboard)
+        assertThat(cache.loadAbsence(current.cacheScope)).isEqualTo(cachedAbsence)
+        assertThat(cache.loadTimetable(current.cacheScope, cachedWeek.weekStart)).isEqualTo(cachedWeek)
+        assertThat(cache.loadDashboard(detached.cacheScope)).isEqualTo(cachedDashboard)
+        assertThat(cache.loadAbsence(detached.cacheScope)).isEqualTo(cachedAbsence)
+        assertThat(cache.loadTimetable(detached.cacheScope, cachedWeek.weekStart)).isEqualTo(cachedWeek)
+    }
+
+    @Test
+    fun `cloud epoch remains invalidated when both detach persistence and fallback clear fail`() = runTest {
+        val current = validSession().copy(linkedAccountID = "account-a")
+        val sessions = FailingDetachSchoolSessionStorage(current, failClear = true)
+        val repository = repository(FakeBakalariClient(), sessions)
+        val staleToken = repository.captureSchoolCloudMutationToken()
+
+        val invalidationFailure = runCatching {
+            repository.invalidateSchoolCloudMutationsAndDisassociate()
+        }.exceptionOrNull()
+        val staleFailure = runCatching {
+            repository.associateCurrentSession(
+                LinkedSchoolAccount(
+                    id = "account-a",
+                    provider = LinkedAccountProvider.BAKALARI,
+                    displayName = "Student A",
+                    schoolName = "School A",
+                ),
+                staleToken,
+            )
+        }.exceptionOrNull()
+
+        assertThat(invalidationFailure).hasMessageThat().isEqualTo("detached session write failed")
+        assertThat(invalidationFailure?.suppressed?.singleOrNull())
+            .hasMessageThat()
+            .isEqualTo("session clear failed")
+        assertThat(staleFailure).isInstanceOf(GradeyIdentityChangedException::class.java)
+    }
+
+    @Test
+    fun `current cloud token permits guarded school mutations`() = runTest {
+        val sessions = InMemorySchoolSessionStorage(null)
+        val client = FakeBakalariClient()
+        val repository = repository(client, sessions)
+        val token = repository.captureSchoolCloudMutationToken()
+        val account = LinkedSchoolAccount(
+            id = "account-a",
+            provider = LinkedAccountProvider.BAKALARI,
+            displayName = "Student A",
+            schoolName = "School A",
+        )
+
+        val loggedIn = repository.login(
+            "https://school-a.example.cz",
+            "student-a",
+            "secret-a",
+            token,
+        )
+        val associated = repository.associateCurrentSession(account, token)
+        val detached = repository.disassociateCurrentSession(account.id, token)
+        val staleActivation = runCatching {
+            repository.activateLinkedSchoolAccount(
+                loggedIn.copy(linkedAccountID = account.id),
+                token,
+            )
+        }.exceptionOrNull()
+        val postDetachToken = repository.captureSchoolCloudMutationToken()
+        val activated = repository.activateLinkedSchoolAccount(
+            loggedIn.copy(
+                linkedAccountID = account.id,
+                linkedAccountDisplayName = account.displayName,
+                linkedAccountSchoolName = account.schoolName,
+            ),
+            postDetachToken,
+        )
+
+        assertThat(associated.linkedAccountID).isEqualTo(account.id)
+        assertThat(detached?.linkedAccountID).isNull()
+        assertThat(staleActivation).isInstanceOf(GradeyIdentityChangedException::class.java)
+        assertThat(activated.linkedAccountID).isEqualTo(account.id)
+        assertThat(sessions.load()).isEqualTo(activated)
+        assertThat(client.loginCalls).isEqualTo(2)
+    }
+
+    @Test
+    fun `reconnect rollback restores previous session only while its candidate and token are current`() = runTest {
+        val previous = validSession().copy(linkedAccountID = "previous-account")
+        val candidate = validSession().copy(
+            accessToken = "candidate-access",
+            refreshToken = "candidate-refresh",
+            baseURL = "https://candidate.example.cz",
+            bakalari = BakalariCredentials("candidate", "candidate-secret"),
+            linkedAccountID = null,
+        )
+        val sessions = InMemorySchoolSessionStorage(candidate)
+        val repository = repository(FakeBakalariClient(), sessions)
+        val token = repository.captureSchoolCloudMutationToken()
+
+        val restored = repository.restoreSessionIfCurrentCandidate(candidate, previous, token)
+
+        assertThat(restored).isEqualTo(previous)
+        assertThat(sessions.load()).isEqualTo(previous)
+    }
+
+    @Test
+    fun `reconnect rollback leaves a newer school session unchanged`() = runTest {
+        val previous = validSession().copy(linkedAccountID = "previous-account")
+        val candidate = validSession().copy(
+            accessToken = "candidate-access",
+            baseURL = "https://candidate.example.cz",
+        )
+        val newer = validSession().copy(
+            accessToken = "newer-access",
+            baseURL = "https://newer.example.cz",
+            bakalari = BakalariCredentials("newer", "newer-secret"),
+            linkedAccountID = "newer-account",
+        )
+        val sessions = InMemorySchoolSessionStorage(candidate)
+        val repository = repository(FakeBakalariClient(), sessions)
+        val token = repository.captureSchoolCloudMutationToken()
+        repository.restoreSession(newer)
+
+        val retained = repository.restoreSessionIfCurrentCandidate(candidate, previous, token)
+
+        assertThat(retained).isEqualTo(newer)
+        assertThat(sessions.load()).isEqualTo(newer)
+    }
+
+    @Test
+    fun serverFailureDoesNotRefreshOrRelogin() = runTest {
+        val client = FakeBakalariClient().apply {
+            marks = { _, _ -> throw BakalariApiException(500, "server unavailable") }
+        }
+        val sessions = InMemorySchoolSessionStorage(validSession())
+        val repository = repository(client, sessions)
+
+        val failure = runCatching { repository.loadDashboard() }.exceptionOrNull()
+
+        assertThat(failure).isInstanceOf(BakalariApiException::class.java)
+        assertThat(client.refreshCalls).isEqualTo(0)
+        assertThat(client.loginCalls).isEqualTo(0)
+        assertThat(sessions.load()?.accessToken).isEqualTo("old-access")
+    }
+
+    @Test
+    fun primaryRefreshFailureDoesNotDeleteCachedDashboard() = runTest {
+        val session = validSession()
+        val cached = DashboardData(MarksResponse(), user = UserResponse("Cached Student"))
+        val cache = RoomGradeyCache(InMemoryCacheEntryDao(), GradeyJson)
+        cache.saveDashboard(session.cacheScope, cached)
+        val client = FakeBakalariClient().apply {
+            marks = { _, _ -> throw java.io.IOException("offline") }
+        }
+        val repository = repository(client, InMemorySchoolSessionStorage(session), cache)
+
+        val failure = runCatching { repository.loadDashboard(forceRefresh = true) }.exceptionOrNull()
+
+        assertThat(failure).isInstanceOf(java.io.IOException::class.java)
+        assertThat(cache.loadDashboard(session.cacheScope)).isEqualTo(cached)
+        assertThat(repository.loadCachedDashboard()).isEqualTo(cached)
+    }
+
+    @Test
+    fun `dashboard resolves a placeholder Bakalari school name from the cached directory`() = runTest {
+        val session = validSession().copy(linkedAccountSchoolName = "Linked School")
+        val cache = RoomGradeyCache(InMemoryCacheEntryDao(), GradeyJson)
+        cache.saveSchoolDirectory(
+            CachedSchoolDirectory(
+                schools = listOf(
+                    SchoolDirectorySchool(
+                        id = "school",
+                        name = "Directory Gymnázium",
+                        town = "Praha",
+                        schoolURL = "https://school.example.cz/",
+                    ),
+                ),
+                cachedAtEpochMillis = 1,
+            ),
+        )
+        val client = FakeBakalariClient().apply {
+            user = { _, _ ->
+                UserResponse(
+                    fullName = "Student One",
+                    schoolOrganizationName = "název školy",
+                    schoolName = "nazev skoly",
+                )
+            }
+        }
+        val repository = repository(client, InMemorySchoolSessionStorage(session), cache)
+
+        val dashboard = repository.loadDashboard()
+
+        assertThat(dashboard.user?.displaySchoolName).isEqualTo("Directory Gymnázium")
+        assertThat(cache.loadDashboard(session.cacheScope)?.user?.displaySchoolName)
+            .isEqualTo("Directory Gymnázium")
+    }
+
+    @Test
+    fun `valid API school name wins over directory and linked metadata`() = runTest {
+        val session = validSession().copy(linkedAccountSchoolName = "Linked School")
+        val cache = RoomGradeyCache(InMemoryCacheEntryDao(), GradeyJson)
+        cache.saveSchoolDirectory(
+            CachedSchoolDirectory(
+                schools = listOf(
+                    SchoolDirectorySchool(
+                        id = "school",
+                        name = "Directory School",
+                        town = "Praha",
+                        schoolURL = session.baseURL,
+                    ),
+                ),
+                cachedAtEpochMillis = 1,
+            ),
+        )
+        val client = FakeBakalariClient().apply {
+            user = { _, _ ->
+                UserResponse(
+                    fullName = "Student One",
+                    schoolOrganizationName = "API School",
+                    schoolName = "Fallback API School",
+                )
+            }
+        }
+
+        val dashboard = repository(client, InMemorySchoolSessionStorage(session), cache).loadDashboard()
+
+        assertThat(dashboard.user?.displaySchoolName).isEqualTo("API School")
+    }
+
+    @Test
+    fun `ambiguous directory falls back to sanitized linked school metadata`() = runTest {
+        val session = validSession().copy(
+            baseURL = "https://school.example.cz/student",
+            linkedAccountSchoolName = "  Linked School  ",
+        )
+        val cache = RoomGradeyCache(InMemoryCacheEntryDao(), GradeyJson)
+        cache.saveSchoolDirectory(
+            CachedSchoolDirectory(
+                schools = listOf(
+                    SchoolDirectorySchool(
+                        "first",
+                        "First School",
+                        "Praha",
+                        "https://school.example.cz/first",
+                    ),
+                    SchoolDirectorySchool(
+                        "second",
+                        "Second School",
+                        "Praha",
+                        "https://school.example.cz/second",
+                    ),
+                ),
+                cachedAtEpochMillis = 1,
+            ),
+        )
+        val client = FakeBakalariClient().apply {
+            user = { _, _ -> UserResponse(fullName = "Student One", schoolName = "název školy") }
+        }
+
+        val dashboard = repository(client, InMemorySchoolSessionStorage(session), cache).loadDashboard()
+
+        assertThat(dashboard.user?.displaySchoolName).isEqualTo("Linked School")
+    }
+
+    @Test
+    fun rejectedAccessTokenRefreshesAndRetriesOnce() = runTest {
+        val client = FakeBakalariClient().apply {
+            marks = { _, token ->
+                if (token == "old-access") throw BakalariApiException(401, "expired")
+                MarksResponse()
+            }
+        }
+        val sessions = InMemorySchoolSessionStorage(validSession())
+        val repository = repository(client, sessions)
+
+        repository.loadDashboard()
+
+        assertThat(client.marksCalls).isEqualTo(2)
+        assertThat(client.refreshCalls).isEqualTo(1)
+        assertThat(client.loginCalls).isEqualTo(0)
+        assertThat(sessions.load()?.accessToken).isEqualTo("new-access")
+    }
+
+    @Test
+    fun rejectedRefreshTokenFallsBackToStoredCredentials() = runTest {
+        val client = FakeBakalariClient().apply {
+            refresh = { _, _ -> throw BakalariApiException(400, "invalid_grant") }
+        }
+        val sessions = InMemorySchoolSessionStorage(expiredSession())
+        val repository = repository(client, sessions)
+
+        repository.loadDashboard()
+
+        assertThat(client.refreshCalls).isEqualTo(1)
+        assertThat(client.loginCalls).isEqualTo(1)
+        assertThat(client.lastLoginUsername).isEqualTo("student")
+        assertThat(sessions.load()?.accessToken).isEqualTo("login-access")
+    }
+
+    @Test
+    fun refreshNetworkFailureDoesNotAttemptCredentialLogin() = runTest {
+        val client = FakeBakalariClient().apply {
+            refresh = { _, _ -> throw java.io.IOException("offline") }
+        }
+        val sessions = InMemorySchoolSessionStorage(expiredSession())
+        val repository = repository(client, sessions)
+
+        val failure = runCatching { repository.loadDashboard() }.exceptionOrNull()
+
+        assertThat(failure).isInstanceOf(java.io.IOException::class.java)
+        assertThat(client.refreshCalls).isEqualTo(1)
+        assertThat(client.loginCalls).isEqualTo(0)
+        assertThat(sessions.load()?.accessToken).isEqualTo("old-access")
+    }
+
+    @Test
+    fun offlineExpiredSessionStillBootstrapsScopedCacheBeforeRefreshFailure() = runTest {
+        val session = expiredSession()
+        val cached = DashboardData(MarksResponse(), user = UserResponse("Offline Student"))
+        val cache = RoomGradeyCache(InMemoryCacheEntryDao(), GradeyJson)
+        cache.saveDashboard(session.cacheScope, cached)
+        val repository = repository(
+            FakeBakalariClient().apply {
+                refresh = { _, _ -> throw java.io.IOException("offline") }
+            },
+            InMemorySchoolSessionStorage(session),
+            cache,
+        )
+
+        assertThat(repository.bootstrapSession()).isEqualTo(session)
+        assertThat(repository.loadCachedDashboard()).isEqualTo(cached)
+
+        val failure = runCatching { repository.loadDashboard() }.exceptionOrNull()
+
+        assertThat(failure).isInstanceOf(java.io.IOException::class.java)
+        assertThat(repository.loadCachedDashboard()).isEqualTo(cached)
+        assertThat(repository.bootstrapSession()).isEqualTo(session)
+    }
+
+    @Test
+    fun concurrentExpiredRequestsShareOneRefresh() = runTest {
+        val client = FakeBakalariClient().apply {
+            refresh = { _, _ ->
+                delay(50)
+                refreshedResponse()
+            }
+        }
+        val sessions = InMemorySchoolSessionStorage(expiredSession())
+        val repository = repository(client, sessions)
+
+        val first = async { repository.loadDashboard() }
+        val second = async { repository.loadDashboard() }
+        first.await()
+        second.await()
+
+        assertThat(client.refreshCalls).isEqualTo(1)
+        assertThat(client.loginCalls).isEqualTo(0)
+    }
+
+    @Test
+    fun `concurrent expired requests share one failing refresh result`() = runTest {
+        val refreshStarted = CompletableDeferred<Unit>()
+        val releaseRefresh = CompletableDeferred<Unit>()
+        val refreshFailure = java.io.IOException("offline")
+        val client = FakeBakalariClient().apply {
+            refresh = { _, _ ->
+                refreshStarted.complete(Unit)
+                releaseRefresh.await()
+                throw refreshFailure
+            }
+        }
+        val repository = repository(client, InMemorySchoolSessionStorage(expiredSession()))
+
+        val first = async { runCatching { repository.loadDashboard() } }
+        val second = async { runCatching { repository.loadDashboard() } }
+        refreshStarted.await()
+        yield()
+        val callsWhileHeld = client.refreshCalls
+        releaseRefresh.complete(Unit)
+
+        val firstFailure = first.await().exceptionOrNull()
+        val secondFailure = second.await().exceptionOrNull()
+
+        assertThat(callsWhileHeld).isEqualTo(1)
+        assertThat(client.refreshCalls).isEqualTo(1)
+        assertThat(firstFailure).isInstanceOf(java.io.IOException::class.java)
+        assertThat(firstFailure).hasMessageThat().isEqualTo("offline")
+        assertThat(secondFailure).isInstanceOf(java.io.IOException::class.java)
+        assertThat(secondFailure).hasMessageThat().isEqualTo("offline")
+    }
+
+    @Test
+    fun `stale refresh flight cannot displace current flight or split its followers`() = runTest {
+        val staleRefreshStarted = CompletableDeferred<Unit>()
+        val currentRefreshStarted = CompletableDeferred<Unit>()
+        val releaseStaleRefresh = CompletableDeferred<Unit>()
+        val releaseCurrentRefresh = CompletableDeferred<Unit>()
+        var staleRefreshCalls = 0
+        var currentRefreshCalls = 0
+        val stale = expiredSession().copy(baseURL = "https://stale.example.cz")
+        val current = expiredSession().copy(
+            accessToken = "current-expired-access",
+            refreshToken = "current-expired-refresh",
+            baseURL = "https://current.example.cz",
+            bakalari = BakalariCredentials("current-student", "current-secret"),
+        )
+        val sessions = InMemorySchoolSessionStorage(stale)
+        val client = FakeBakalariClient().apply {
+            refresh = { baseURL, _ ->
+                if (baseURL == stale.baseURL) {
+                    staleRefreshCalls += 1
+                    staleRefreshStarted.complete(Unit)
+                    releaseStaleRefresh.await()
+                    LoginResponse("stale-refreshed", "stale-refreshed-token", "Bearer", 3_600)
+                } else {
+                    currentRefreshCalls += 1
+                    currentRefreshStarted.complete(Unit)
+                    releaseCurrentRefresh.await()
+                    LoginResponse("current-refreshed", "current-refreshed-token", "Bearer", 3_600)
+                }
+            }
+        }
+        val repository = repository(client, sessions)
+
+        val staleRequest = async { runCatching { repository.loadDashboard() } }
+        staleRefreshStarted.await()
+        repository.restoreSession(current)
+        val currentLeader = async { repository.loadDashboard() }
+        currentRefreshStarted.await()
+        val currentFollower = async { repository.loadDashboard() }
+        yield()
+        val currentCallsWhileHeld = currentRefreshCalls
+        releaseCurrentRefresh.complete(Unit)
+        currentLeader.await()
+        currentFollower.await()
+        releaseStaleRefresh.complete(Unit)
+        val staleFailure = staleRequest.await().exceptionOrNull()
+
+        assertThat(currentCallsWhileHeld).isEqualTo(1)
+        assertThat(currentRefreshCalls).isEqualTo(1)
+        assertThat(staleRefreshCalls).isEqualTo(1)
+        assertThat(client.refreshCalls).isEqualTo(2)
+        assertThat(staleFailure).isInstanceOf(CancellationException::class.java)
+        assertThat(sessions.load()?.accessToken).isEqualTo("current-refreshed")
+    }
+
+    @Test
+    fun `logout completes during a held refresh and cannot be undone by the late response`() = runTest {
+        val refreshStarted = CompletableDeferred<Unit>()
+        val releaseRefresh = CompletableDeferred<Unit>()
+        val accountA = expiredSession().copy(linkedAccountID = "account-a")
+        val sessions = InMemorySchoolSessionStorage(accountA)
+        val cache = RoomGradeyCache(InMemoryCacheEntryDao(), GradeyJson)
+        val weekStart = "2026-08-31"
+        cache.saveDashboard(accountA.cacheScope, DashboardData(MarksResponse()))
+        cache.saveMarks(accountA.cacheScope, MarksResponse())
+        cache.saveAbsence(accountA.cacheScope, AbsenceResponse())
+        cache.saveAbsenceLessonSelections(accountA.cacheScope, AbsenceLessonSelections())
+        cache.saveRawTimetable(accountA.cacheScope, weekStart, TimetableResponse())
+        cache.saveTimetable(
+            accountA.cacheScope,
+            weekStart,
+            com.bukovinafilip.gradey.model.TimetableWeek(weekStart, emptyList(), emptyList()),
+        )
+        cache.saveNextLessonSnapshot(NextLessonWidgetSnapshot(cachedAtEpochMillis = 1, lessons = emptyList()))
+        val client = FakeBakalariClient().apply {
+            refresh = { _, _ ->
+                refreshStarted.complete(Unit)
+                releaseRefresh.await()
+                refreshedResponse()
+            }
+        }
+        val repository = repository(client, sessions, cache)
+
+        val refreshing = async { repository.loadDashboard() }
+        refreshStarted.await()
+        val logout = async { repository.logout() }
+        yield()
+        val logoutCompletedWhileRefreshWasHeld = logout.isCompleted
+        logout.await()
+        val sessionAfterLogout = sessions.load()
+        releaseRefresh.complete(Unit)
+
+        val failure = runCatching { refreshing.await() }.exceptionOrNull()
+
+        assertThat(logoutCompletedWhileRefreshWasHeld).isTrue()
+        assertThat(sessionAfterLogout).isNull()
+        assertThat(failure).isInstanceOf(CancellationException::class.java)
+        assertThat(client.refreshCalls).isEqualTo(1)
+        assertThat(client.marksCalls).isEqualTo(0)
+        assertThat(sessions.load()).isNull()
+        assertThat(cache.loadDashboard(accountA.cacheScope)).isNull()
+        assertThat(cache.loadMarks(accountA.cacheScope)).isNull()
+        assertThat(cache.loadAbsence(accountA.cacheScope)).isNull()
+        assertThat(cache.loadAbsenceLessonSelections(accountA.cacheScope)).isNull()
+        assertThat(cache.loadRawTimetable(accountA.cacheScope, weekStart)).isNull()
+        assertThat(cache.loadTimetable(accountA.cacheScope, weekStart)).isNull()
+        assertThat(cache.loadNextLessonSnapshot()).isNull()
+    }
+
+    @Test
+    fun `rejected held refresh after logout never sends stored credentials`() = runTest {
+        val refreshStarted = CompletableDeferred<Unit>()
+        val releaseRefresh = CompletableDeferred<Unit>()
+        val sessions = InMemorySchoolSessionStorage(expiredSession())
+        val client = FakeBakalariClient().apply {
+            refresh = { _, _ ->
+                refreshStarted.complete(Unit)
+                releaseRefresh.await()
+                throw BakalariApiException(401, "refresh rejected")
+            }
+        }
+        val repository = repository(client, sessions)
+
+        val refreshing = async { runCatching { repository.loadDashboard() } }
+        refreshStarted.await()
+        repository.logout()
+        releaseRefresh.complete(Unit)
+
+        val refreshFailure = refreshing.await().exceptionOrNull()
+
+        assertThat(refreshFailure).isInstanceOf(GradeyIdentityChangedException::class.java)
+        assertThat(client.refreshCalls).isEqualTo(1)
+        assertThat(client.loginCalls).isEqualTo(0)
+        assertThat(sessions.load()).isNull()
+    }
+
+    @Test
+    fun `identity invalidation completes during a held refresh and stale response cannot relink`() = runTest {
+        val refreshStarted = CompletableDeferred<Unit>()
+        val releaseRefresh = CompletableDeferred<Unit>()
+        val accountA = expiredSession().copy(
+            linkedAccountID = "account-a",
+            linkedAccountDisplayName = "Student A",
+            linkedAccountSchoolName = "School A",
+        )
+        val sessions = InMemorySchoolSessionStorage(accountA)
+        val cache = RoomGradeyCache(InMemoryCacheEntryDao(), GradeyJson)
+        val widgetSnapshot = NextLessonWidgetSnapshot(
+            cachedAtEpochMillis = 1,
+            lessons = listOf(NextLessonWidgetLesson("account-a-lesson", 1)),
+        )
+        val cachedDashboard = DashboardData(MarksResponse(), user = UserResponse("Cached Student A"))
+        cache.saveDashboard(accountA.cacheScope, cachedDashboard)
+        cache.saveNextLessonSnapshot(widgetSnapshot)
+        val client = FakeBakalariClient().apply {
+            refresh = { _, _ ->
+                refreshStarted.complete(Unit)
+                releaseRefresh.await()
+                refreshedResponse()
+            }
+        }
+        val repository = repository(client, sessions, cache)
+
+        val refreshing = async { repository.loadDashboard() }
+        refreshStarted.await()
+        val invalidating = async { repository.invalidateSchoolCloudMutationsAndDisassociate() }
+        yield()
+        val invalidationCompletedWhileRefreshWasHeld = invalidating.isCompleted
+        val invalidation = invalidating.await()
+        releaseRefresh.complete(Unit)
+
+        val refreshFailure = runCatching { refreshing.await() }.exceptionOrNull()
+        val retained = invalidation.retainedSession
+
+        assertThat(invalidationCompletedWhileRefreshWasHeld).isTrue()
+        assertThat(refreshFailure).isInstanceOf(CancellationException::class.java)
+        assertThat(retained?.accessToken).isEqualTo(accountA.accessToken)
+        assertThat(retained?.refreshToken).isEqualTo(accountA.refreshToken)
+        assertThat(retained?.bakalari).isEqualTo(accountA.bakalari)
+        assertThat(retained?.linkedAccountID).isNull()
+        assertThat(retained?.linkedAccountDisplayName).isNull()
+        assertThat(retained?.linkedAccountSchoolName).isNull()
+        assertThat(sessions.load()).isEqualTo(retained)
+        assertThat(cache.loadDashboard(accountA.cacheScope)).isEqualTo(cachedDashboard)
+        assertThat(cache.loadDashboard(checkNotNull(retained).cacheScope)).isEqualTo(cachedDashboard)
+        assertThat(cache.loadNextLessonSnapshot()).isEqualTo(widgetSnapshot)
+        assertThat(client.marksCalls).isEqualTo(0)
+    }
+
+    @Test
+    fun `logout queued behind detach clears both cache aliases without resurrection`() = runTest {
+        val linked = validSession().copy(
+            linkedAccountID = "account-a",
+            linkedAccountDisplayName = "Student A",
+        )
+        val localScope = linked
+            .stabilizedLocalCacheIdentity(linkedAccountID = "account-a")
+            .copy(linkedAccountID = null)
+            .cacheScope
+        val sessions = InMemorySchoolSessionStorage(linked)
+        val backingDao = InMemoryCacheEntryDao()
+        val blockingDao = BlockingScopeCopyDao(backingDao)
+        val cache = RoomGradeyCache(blockingDao, GradeyJson)
+        cache.saveDashboard(
+            linked.cacheScope,
+            DashboardData(MarksResponse(), user = UserResponse("Student A")),
+        )
+        cache.saveNextLessonSnapshot(
+            NextLessonWidgetSnapshot(1, listOf(NextLessonWidgetLesson("account-a", 1))),
+        )
+        blockingDao.blockNextCopy()
+        val repository = repository(FakeBakalariClient(), sessions, cache)
+
+        val detaching = async { repository.disassociateCurrentSession("account-a") }
+        blockingDao.copyStarted.await()
+        val loggingOut = async { repository.logout() }
+        yield()
+        val logoutCompletedWhileCopyHeld = loggingOut.isCompleted
+        blockingDao.releaseCopy.complete(Unit)
+
+        val detached = detaching.await()
+        loggingOut.await()
+
+        assertThat(logoutCompletedWhileCopyHeld).isFalse()
+        assertThat(detached?.cacheScope).isEqualTo(localScope)
+        assertThat(sessions.load()).isNull()
+        assertThat(cache.loadDashboard(linked.cacheScope)).isNull()
+        assertThat(cache.loadDashboard(localScope)).isNull()
+        assertThat(cache.loadNextLessonSnapshot()).isNull()
+    }
+
+    @Test
+    fun `rejected held refresh after detach never sends stored credentials`() = runTest {
+        val refreshStarted = CompletableDeferred<Unit>()
+        val releaseRefresh = CompletableDeferred<Unit>()
+        val linked = expiredSession().copy(
+            linkedAccountID = "account-a",
+            linkedAccountDisplayName = "Student A",
+            linkedAccountSchoolName = "School A",
+        )
+        val sessions = InMemorySchoolSessionStorage(linked)
+        val client = FakeBakalariClient().apply {
+            refresh = { _, _ ->
+                refreshStarted.complete(Unit)
+                releaseRefresh.await()
+                throw BakalariApiException(401, "refresh rejected")
+            }
+        }
+        val repository = repository(client, sessions)
+
+        val refreshing = async { runCatching { repository.loadDashboard() } }
+        refreshStarted.await()
+        val retained = repository.invalidateSchoolCloudMutationsAndDisassociate().retainedSession
+        releaseRefresh.complete(Unit)
+
+        val refreshFailure = refreshing.await().exceptionOrNull()
+
+        assertThat(refreshFailure).isInstanceOf(GradeyIdentityChangedException::class.java)
+        assertThat(client.refreshCalls).isEqualTo(1)
+        assertThat(client.loginCalls).isEqualTo(0)
+        assertThat(retained?.bakalari).isEqualTo(linked.bakalari)
+        assertThat(retained?.linkedAccountID).isNull()
+        assertThat(sessions.load()).isEqualTo(retained)
+    }
+
+    @Test
+    fun `rejected stale refresh cannot send credentials or clear a replacement session`() = runTest {
+        val refreshStarted = CompletableDeferred<Unit>()
+        val releaseRefresh = CompletableDeferred<Unit>()
+        val accountA = expiredSession().copy(
+            baseURL = "https://school-a.example.cz",
+            linkedAccountID = "account-a",
+        )
+        val accountB = validSession().copy(
+            accessToken = "replacement-access-b",
+            refreshToken = "replacement-refresh-b",
+            baseURL = "https://school-b.example.cz",
+            bakalari = BakalariCredentials("student-b", "secret-b"),
+            linkedAccountID = "account-b",
+        )
+        val sessions = InMemorySchoolSessionStorage(accountA)
+        val client = FakeBakalariClient().apply {
+            refresh = { _, _ ->
+                refreshStarted.complete(Unit)
+                releaseRefresh.await()
+                throw BakalariApiException(401, "refresh rejected")
+            }
+            loginResult = { _, _, _ -> throw BakalariApiException(401, "login rejected") }
+        }
+        val repository = repository(client, sessions)
+
+        val refreshing = async { repository.loadDashboard() }
+        refreshStarted.await()
+        val restored = repository.restoreSession(accountB)
+        releaseRefresh.complete(Unit)
+
+        val refreshFailure = runCatching { refreshing.await() }.exceptionOrNull()
+
+        assertThat(refreshFailure).isInstanceOf(CancellationException::class.java)
+        assertThat(restored).isEqualTo(accountB)
+        assertThat(sessions.load()).isEqualTo(accountB)
+        assertThat(client.refreshCalls).isEqualTo(1)
+        assertThat(client.loginCalls).isEqualTo(0)
+        assertThat(client.marksCalls).isEqualTo(0)
+    }
+
+    @Test
+    fun `logout advances during held login and stale response cannot restore the session`() = runTest {
+        val loginStarted = CompletableDeferred<Unit>()
+        val releaseLogin = CompletableDeferred<Unit>()
+        val sessions = InMemorySchoolSessionStorage(validSession())
+        val client = FakeBakalariClient().apply {
+            loginResult = { _, _, _ ->
+                loginStarted.complete(Unit)
+                releaseLogin.await()
+                LoginResponse("stale-access", "stale-refresh", "Bearer", 3_600)
+            }
+        }
+        val repository = repository(client, sessions)
+
+        val loggingIn = async {
+            runCatching {
+                repository.login(
+                    "https://school-b.example.cz",
+                    "student-b",
+                    "secret-b",
+                )
+            }
+        }
+        loginStarted.await()
+        val loggingOut = async { repository.logout() }
+        yield()
+        val logoutCompletedWhileNetworkWasHeld = loggingOut.isCompleted
+        releaseLogin.complete(Unit)
+
+        loggingOut.await()
+        val loginFailure = loggingIn.await().exceptionOrNull()
+
+        assertThat(logoutCompletedWhileNetworkWasHeld).isTrue()
+        assertThat(loginFailure).isInstanceOf(GradeyIdentityChangedException::class.java)
+        assertThat(sessions.load()).isNull()
+    }
+
+    @Test
+    fun `logout advances during held activation and stale response cannot restore the session`() = runTest {
+        val activationStarted = CompletableDeferred<Unit>()
+        val releaseActivation = CompletableDeferred<Unit>()
+        val current = validSession().copy(linkedAccountID = "account-a")
+        val incoming = validSession().copy(
+            accessToken = "cloud-poller-access-b",
+            refreshToken = "cloud-poller-refresh-b",
+            baseURL = "https://school-b.example.cz",
+            bakalari = BakalariCredentials("student-b", "secret-b"),
+            linkedAccountID = "account-b",
+            linkedAccountDisplayName = "Student B",
+            linkedAccountSchoolName = "School B",
+        )
+        val sessions = InMemorySchoolSessionStorage(current)
+        val client = FakeBakalariClient().apply {
+            loginResult = { _, _, _ ->
+                activationStarted.complete(Unit)
+                releaseActivation.await()
+                LoginResponse("stale-access-b", "stale-refresh-b", "Bearer", 3_600)
+            }
+        }
+        val repository = repository(client, sessions)
+
+        val activating = async {
+            runCatching { repository.activateLinkedSchoolAccount(incoming) }
+        }
+        activationStarted.await()
+        val loggingOut = async { repository.logout() }
+        yield()
+        val logoutCompletedWhileNetworkWasHeld = loggingOut.isCompleted
+        releaseActivation.complete(Unit)
+
+        loggingOut.await()
+        val activationFailure = activating.await().exceptionOrNull()
+
+        assertThat(logoutCompletedWhileNetworkWasHeld).isTrue()
+        assertThat(activationFailure).isInstanceOf(GradeyIdentityChangedException::class.java)
+        assertThat(sessions.load()).isNull()
+    }
+
+    @Test
+    fun `account activation completes during an old refresh and remains the active session`() = runTest {
+        val refreshStarted = CompletableDeferred<Unit>()
+        val releaseRefresh = CompletableDeferred<Unit>()
+        val accountA = expiredSession().copy(
+            baseURL = "https://school-a.example.cz",
+            linkedAccountID = "account-a",
+        )
+        val accountB = validSession().copy(
+            accessToken = "cloud-poller-access-b",
+            refreshToken = "cloud-poller-refresh-b",
+            baseURL = "https://school-b.example.cz",
+            linkedAccountID = "account-b",
+            linkedAccountDisplayName = "Student B",
+            linkedAccountSchoolName = "School B",
+            bakalari = BakalariCredentials("student-b", "secret-b"),
+        )
+        val sessions = InMemorySchoolSessionStorage(accountA)
+        val cache = RoomGradeyCache(InMemoryCacheEntryDao(), GradeyJson)
+        cache.saveNextLessonSnapshot(
+            NextLessonWidgetSnapshot(
+                cachedAtEpochMillis = 1,
+                lessons = listOf(NextLessonWidgetLesson("account-a-lesson", 1)),
+            ),
+        )
+        val client = FakeBakalariClient().apply {
+            refresh = { _, _ ->
+                refreshStarted.complete(Unit)
+                releaseRefresh.await()
+                refreshedResponse()
+            }
+        }
+        val repository = repository(client, sessions, cache)
+
+        val refreshingAccountA = async { repository.loadDashboard() }
+        refreshStarted.await()
+        val activatingAccountB = async { repository.activateLinkedSchoolAccount(accountB) }
+        yield()
+        val activationCompletedWhileRefreshWasHeld = activatingAccountB.isCompleted
+        val activated = activatingAccountB.await()
+        releaseRefresh.complete(Unit)
+        val refreshFailure = runCatching { refreshingAccountA.await() }.exceptionOrNull()
+
+        assertThat(activationCompletedWhileRefreshWasHeld).isTrue()
+        assertThat(refreshFailure).isInstanceOf(CancellationException::class.java)
+        assertThat(client.refreshCalls).isEqualTo(1)
+        assertThat(client.loginCalls).isEqualTo(1)
+        assertThat(activated.linkedAccountID).isEqualTo("account-b")
+        assertThat(activated.baseURL).isEqualTo("https://school-b.example.cz")
+        assertThat(activated.bakalari).isEqualTo(BakalariCredentials("student-b", "secret-b"))
+        assertThat(sessions.load()).isEqualTo(activated)
+        assertThat(cache.loadNextLessonSnapshot()).isNull()
+    }
+
+    @Test
+    fun `rejected request cannot retry a new account into the old account cache scope`() = runTest {
+        val firstMarksRequestStarted = CompletableDeferred<Unit>()
+        val releaseFirstMarksRequest = CompletableDeferred<Unit>()
+        val accountA = validSession().copy(
+            baseURL = "https://school-a.example.cz",
+            linkedAccountID = "account-a",
+        )
+        val accountB = validSession().copy(
+            accessToken = "cloud-poller-access-b",
+            refreshToken = "cloud-poller-refresh-b",
+            baseURL = "https://school-b.example.cz",
+            linkedAccountID = "account-b",
+            bakalari = BakalariCredentials("student-b", "secret-b"),
+        )
+        val sessions = InMemorySchoolSessionStorage(accountA)
+        val cache = RoomGradeyCache(InMemoryCacheEntryDao(), GradeyJson)
+        val client = FakeBakalariClient().apply {
+            marks = { _, token ->
+                if (token == "old-access") {
+                    firstMarksRequestStarted.complete(Unit)
+                    releaseFirstMarksRequest.await()
+                    throw BakalariApiException(401, "expired")
+                }
+                MarksResponse(
+                    subjects = listOf(
+                        Subject(subjectInfo = SubjectInfo("account-b-subject", "B", "Account B")),
+                    ),
+                )
+            }
+        }
+        val repository = repository(client, sessions, cache)
+
+        val loadingAccountA = async { repository.loadDashboard() }
+        firstMarksRequestStarted.await()
+        val activated = repository.activateLinkedSchoolAccount(accountB)
+        releaseFirstMarksRequest.complete(Unit)
+
+        val failure = runCatching { loadingAccountA.await() }.exceptionOrNull()
+
+        assertThat(failure).isInstanceOf(CancellationException::class.java)
+        assertThat(client.marksCalls).isEqualTo(1)
+        assertThat(activated.linkedAccountID).isEqualTo("account-b")
+        assertThat(sessions.load()).isEqualTo(activated)
+        assertThat(cache.loadMarks(accountA.cacheScope)).isNull()
+        assertThat(cache.loadMarks(accountB.cacheScope)).isNull()
+    }
+
+    @Test
+    fun `old account timetable cannot publish caches or widget after account activation`() = runTest {
+        val timetableRequestStarted = CompletableDeferred<Unit>()
+        val releaseTimetableRequest = CompletableDeferred<Unit>()
+        val accountA = validSession().copy(
+            baseURL = "https://school-a.example.cz",
+            linkedAccountID = "account-a",
+        )
+        val accountB = validSession().copy(
+            accessToken = "cloud-poller-access-b",
+            refreshToken = "cloud-poller-refresh-b",
+            baseURL = "https://school-b.example.cz",
+            linkedAccountID = "account-b",
+            bakalari = BakalariCredentials("student-b", "secret-b"),
+        )
+        val sessions = InMemorySchoolSessionStorage(accountA)
+        val cache = RoomGradeyCache(InMemoryCacheEntryDao(), GradeyJson)
+        val client = FakeBakalariClient().apply {
+            timetable = { _, _, date ->
+                timetableRequestStarted.complete(Unit)
+                releaseTimetableRequest.await()
+                TimetableResponse(
+                    hours = listOf(TimetableHour("1", "1", "08:00", "08:45")),
+                    days = listOf(
+                        TimetableDayDTO(
+                            atoms = listOf(TimetableAtom(hourID = "1", subjectID = "account-a-subject")),
+                            dayOfWeek = 1,
+                            date = date,
+                        ),
+                    ),
+                    subjects = listOf(TimetableEntity("account-a-subject", "A", "Account A")),
+                )
+            }
+        }
+        val repository = repository(client, sessions, cache)
+        val weekStart = "2026-08-31"
+
+        val loadingAccountA = async { repository.loadTimetable(weekStart) }
+        timetableRequestStarted.await()
+        val activated = repository.activateLinkedSchoolAccount(accountB)
+        releaseTimetableRequest.complete(Unit)
+
+        val failure = runCatching { loadingAccountA.await() }.exceptionOrNull()
+
+        assertThat(failure).isInstanceOf(CancellationException::class.java)
+        assertThat(sessions.load()).isEqualTo(activated)
+        assertThat(cache.loadRawTimetable(accountA.cacheScope, weekStart)).isNull()
+        assertThat(cache.loadTimetable(accountA.cacheScope, weekStart)).isNull()
+        assertThat(cache.loadNextLessonSnapshot()).isNull()
+    }
+
+    @Test
+    fun `held data cannot publish after logout and relogin to the same cache scope`() = runTest {
+        val marksStarted = CompletableDeferred<Unit>()
+        val releaseMarks = CompletableDeferred<Unit>()
+        val original = validSession()
+        val sessions = InMemorySchoolSessionStorage(original)
+        val cache = RoomGradeyCache(InMemoryCacheEntryDao(), GradeyJson)
+        val client = FakeBakalariClient().apply {
+            marks = { _, accessToken ->
+                if (accessToken == original.accessToken) {
+                    marksStarted.complete(Unit)
+                    releaseMarks.await()
+                }
+                MarksResponse(
+                    subjects = listOf(
+                        Subject(subjectInfo = SubjectInfo("stale-subject", "S", "Stale subject")),
+                    ),
+                )
+            }
+            loginResult = { _, _, _ ->
+                LoginResponse("same-scope-new-access", "same-scope-new-refresh", "Bearer", 3_600)
+            }
+        }
+        val repository = repository(client, sessions, cache)
+
+        val loadingOldSession = async { repository.loadDashboard() }
+        marksStarted.await()
+        repository.logout()
+        val replacement = repository.login(
+            original.baseURL,
+            requireNotNull(original.bakalari).username,
+            original.bakalari!!.password,
+        )
+        assertThat(replacement.cacheScope).isEqualTo(original.cacheScope)
+        releaseMarks.complete(Unit)
+
+        val failure = runCatching { loadingOldSession.await() }.exceptionOrNull()
+
+        assertThat(failure).isInstanceOf(CancellationException::class.java)
+        assertThat(sessions.load()).isEqualTo(replacement)
+        assertThat(cache.loadMarks(original.cacheScope)).isNull()
+        assertThat(cache.loadDashboard(original.cacheScope)).isNull()
+    }
+
+    @Test
+    fun optionalAbsenceAndUserFailuresDoNotFailDashboard() = runTest {
+        val client = FakeBakalariClient().apply {
+            absences = { _, _ -> throw BakalariApiException(404, "not supported") }
+            user = { _, _ -> throw BakalariApiException(404, "not supported") }
+        }
+        val repository = repository(client, InMemorySchoolSessionStorage(validSession()))
+
+        val dashboard = repository.loadDashboard()
+
+        assertThat(dashboard.marksResponse).isEqualTo(MarksResponse())
+        assertThat(dashboard.absencesPerSubject).isEmpty()
+        assertThat(dashboard.user).isNull()
+    }
+
+    @Test
+    fun loadAbsenceReturnsAndCachesOfficialPerSubjectValues() = runTest {
+        val session = validSession()
+        val official = AbsenceResponse(
+            percentageThreshold = 25.0,
+            absencesPerSubject = listOf(
+                AbsencePerSubject(
+                    subjectName = "Mathematics",
+                    lessonsCount = 80,
+                    base = 12,
+                    late = 2,
+                    soon = 1,
+                    school = 3,
+                    distanceTeaching = 4,
+                ),
+            ),
+        )
+        val client = FakeBakalariClient().apply {
+            absences = { _, token ->
+                assertThat(token).isEqualTo("old-access")
+                official
+            }
+        }
+        val cache = RoomGradeyCache(InMemoryCacheEntryDao(), GradeyJson)
+        val repository = repository(client, InMemorySchoolSessionStorage(session), cache)
+
+        val response = repository.loadAbsence(forceRefresh = true)
+
+        assertThat(response).isEqualTo(official)
+        assertThat(response.absencesPerSubject).isEqualTo(official.absencesPerSubject)
+        assertThat(repository.loadCachedAbsence()).isEqualTo(official)
+        assertThat(cache.loadAbsence(session.cacheScope)).isEqualTo(official)
+        assertThat(client.absenceCalls).isEqualTo(1)
+    }
+
+    @Test
+    fun officialSubjectResolutionDoesNotLoadMarksOrTimetables() = runTest {
+        val official = listOf(AbsencePerSubject("Mathematics", lessonsCount = 80, base = 12))
+        val client = FakeBakalariClient()
+        val repository = repository(client, InMemorySchoolSessionStorage(null))
+
+        val resolution = repository.resolveAbsenceSubjects(
+            AbsenceResponse(
+                absences = listOf(Absence("2026-02-03", ok = 1)),
+                absencesPerSubject = official,
+            ),
+        )
+
+        assertThat(resolution.subjects).isEqualTo(official)
+        assertThat(resolution.source).isEqualTo(AbsenceSubjectResolutionSource.OFFICIAL)
+        assertThat(client.marksCalls).isEqualTo(0)
+        assertThat(client.timetableCalls).isEqualTo(0)
+    }
+
+    @Test
+    fun fallbackReusesCachedWeeksAndReportsPartialProgress() = runTest {
+        val session = validSession()
+        val cache = RoomGradeyCache(InMemoryCacheEntryDao(), GradeyJson)
+        val cachedWeek = TimetableResponse(
+            subjects = listOf(TimetableEntity(id = "math", name = "Math alias")),
+            days = listOf(
+                TimetableDayDTO(
+                    date = "2026-02-03",
+                    atoms = listOf(TimetableAtom(hourID = "1", subjectID = "math")),
+                ),
+                TimetableDayDTO(
+                    date = "2026-02-04",
+                    atoms = listOf(TimetableAtom(hourID = "1", subjectID = "math")),
+                ),
+            ),
+        )
+        cache.saveMarks(
+            session.cacheScope,
+            MarksResponse(subjects = listOf(Subject(subjectInfo = SubjectInfo("math", "MAT", "Mathematics")))),
+        )
+        cache.saveRawTimetable(session.cacheScope, "2026-02-02", cachedWeek)
+        val client = FakeBakalariClient().apply {
+            timetable = { _, _, _ -> throw java.io.IOException("missing week") }
+        }
+        val progress = mutableListOf<com.bukovinafilip.gradey.domain.AbsenceSubjectResolutionProgress>()
+        val repository = repository(
+            client = client,
+            sessions = InMemorySchoolSessionStorage(session),
+            cache = cache,
+            dateProvider = { LocalDate.of(2026, 2, 8) },
+        )
+
+        val resolution = repository.resolveAbsenceSubjects(
+            AbsenceResponse(absences = listOf(Absence("2026-02-03", ok = 1))),
+            onProgress = progress::add,
+        )
+
+        assertThat(resolution.source).isEqualTo(AbsenceSubjectResolutionSource.PARTIAL_SYNTHESIZED)
+        assertThat(resolution.isPartial).isTrue()
+        assertThat(resolution.loadedWeeks).isEqualTo(1)
+        assertThat(resolution.totalWeeks).isEqualTo(2)
+        assertThat(resolution.subjects).containsExactly(
+            AbsencePerSubject("Mathematics", lessonsCount = 2, base = 1),
+        )
+        assertThat(progress.first()).isEqualTo(
+            com.bukovinafilip.gradey.domain.AbsenceSubjectResolutionProgress(1, 1, 2),
+        )
+        assertThat(progress.last()).isEqualTo(
+            com.bukovinafilip.gradey.domain.AbsenceSubjectResolutionProgress(1, 2, 2),
+        )
+        assertThat(client.timetableDates).containsExactly("2026-01-26")
+        assertThat(client.marksCalls).isEqualTo(0)
+    }
+
+    @Test
+    fun fallbackTimesOutMissingWeekWithoutHangingOrCachingIt() = runTest {
+        val session = validSession()
+        val cache = RoomGradeyCache(InMemoryCacheEntryDao(), GradeyJson)
+        cache.saveMarks(session.cacheScope, MarksResponse())
+        val client = FakeBakalariClient().apply {
+            timetable = { _, _, _ ->
+                delay(100)
+                TimetableResponse()
+            }
+        }
+        val repository = repository(
+            client = client,
+            sessions = InMemorySchoolSessionStorage(session),
+            cache = cache,
+            dateProvider = { LocalDate.of(2026, 2, 1) },
+            timetableFallbackTimeoutMillis = 1,
+        )
+
+        val resolution = repository.resolveAbsenceSubjects(
+            AbsenceResponse(absences = listOf(Absence("2026-02-01", ok = 1))),
+        )
+
+        assertThat(resolution.source).isEqualTo(AbsenceSubjectResolutionSource.UNAVAILABLE)
+        assertThat(resolution.failure).isEqualTo(AbsenceSubjectResolutionFailure.NO_USABLE_TIMETABLE)
+        assertThat(client.timetableCalls).isEqualTo(1)
+        assertThat(cache.loadRawTimetable(session.cacheScope, "2026-01-26")).isNull()
+    }
+
+    @Test
+    fun absenceFallbackPropagatesTerminalTimetableSessionExpiry() = runTest {
+        val session = validSession()
+        val sessions = InMemorySchoolSessionStorage(session)
+        val cache = RoomGradeyCache(InMemoryCacheEntryDao(), GradeyJson)
+        cache.saveMarks(session.cacheScope, MarksResponse())
+        val client = FakeBakalariClient().apply {
+            timetable = { _, _, _ -> throw BakalariApiException(401, "expired") }
+            refresh = { _, _ -> throw BakalariApiException(400, "invalid_grant") }
+            loginResult = { _, _, _ -> throw BakalariApiException(400, "invalid credentials") }
+        }
+        val repository = repository(
+            client = client,
+            sessions = sessions,
+            cache = cache,
+            dateProvider = { LocalDate.of(2026, 2, 1) },
+        )
+
+        val failure = runCatching {
+            repository.resolveAbsenceSubjects(
+                AbsenceResponse(absences = listOf(Absence("2026-02-01", ok = 1))),
+            )
+        }.exceptionOrNull()
+
+        assertThat(failure).isInstanceOf(SchoolSessionExpiredException::class.java)
+        assertThat(sessions.load()).isNull()
+    }
+
+    @Test
+    fun manualSelectionsPersistInSchoolScopeAndRecomputePartialDay() = runTest {
+        val session = validSession()
+        val otherSession = validSession().copy(linkedAccountID = "other-school")
+        val cache = RoomGradeyCache(InMemoryCacheEntryDao(), GradeyJson)
+        cache.saveMarks(session.cacheScope, MarksResponse())
+        cache.saveRawTimetable(
+            session.cacheScope,
+            "2026-01-26",
+            TimetableResponse(
+                subjects = listOf(
+                    TimetableEntity("math", "MAT", "Mathematics"),
+                    TimetableEntity("czech", "CJ", "Czech"),
+                    TimetableEntity("english", "AJ", "English"),
+                ),
+                days = listOf(
+                    TimetableDayDTO(
+                        date = "2026-02-01",
+                        atoms = listOf(
+                            TimetableAtom(hourID = "1", subjectID = "math"),
+                            TimetableAtom(hourID = "2", subjectID = "czech"),
+                            TimetableAtom(hourID = "3", subjectID = "english"),
+                        ),
+                    ),
+                ),
+            ),
+        )
+        val repository = repository(
+            client = FakeBakalariClient(),
+            sessions = InMemorySchoolSessionStorage(session),
+            cache = cache,
+            dateProvider = { LocalDate.of(2026, 2, 1) },
+        )
+        val response = AbsenceResponse(absences = listOf(Absence("2026-02-01", ok = 2)))
+
+        val unresolved = repository.resolveAbsenceSubjects(response)
+        val partialDay = unresolved.unresolvedPartialDays.single()
+        val selected = partialDay.lessons.take(2).map { it.id }.toSet()
+        repository.saveManualAbsenceLessonSelections(mapOf(partialDay.dateKey to selected))
+        val recomputed = repository.resolveAbsenceSubjects(response)
+
+        assertThat(cache.loadAbsenceLessonSelections(session.cacheScope)).isEqualTo(
+            AbsenceLessonSelections(mapOf(partialDay.dateKey to selected.sorted())),
+        )
+        assertThat(cache.loadAbsenceLessonSelections(otherSession.cacheScope)).isNull()
+        assertThat(recomputed.unresolvedPartialDays).isEmpty()
+        assertThat(recomputed.appliedManualSelectionCount).isEqualTo(2)
+        assertThat(recomputed.subjects.map { it.base }).containsExactly(1, 1, 0).inOrder()
+    }
+
+    @Test
+    fun predictionLessonsReuseSchoolScopedRawTimetableWithoutNetwork() = runTest {
+        val session = validSession()
+        val cache = RoomGradeyCache(InMemoryCacheEntryDao(), GradeyJson)
+        cache.saveMarks(
+            session.cacheScope,
+            MarksResponse(subjects = listOf(Subject(subjectInfo = SubjectInfo("math", "MAT", "Mathematics")))),
+        )
+        cache.saveRawTimetable(
+            session.cacheScope,
+            "2026-06-15",
+            TimetableResponse(
+                hours = listOf(TimetableHour("1", "1", "08:00", "08:45")),
+                subjects = listOf(TimetableEntity("math", "MAT", "Math alias")),
+                days = listOf(
+                    TimetableDayDTO(
+                        date = "2026-06-16",
+                        atoms = listOf(TimetableAtom(hourID = "1", subjectID = "math")),
+                    ),
+                ),
+            ),
+        )
+        val client = FakeBakalariClient()
+
+        val lessons = repository(client, InMemorySchoolSessionStorage(session), cache)
+            .loadAbsencePredictionLessons("2026-06-16")
+
+        assertThat(lessons.map { it.subjectName }).containsExactly("Mathematics")
+        assertThat(lessons.single().timeRange).isEqualTo("08:00-08:45")
+        assertThat(client.timetableCalls).isEqualTo(0)
+        assertThat(client.marksCalls).isEqualTo(0)
+    }
+
+    @Test
+    fun predictionLessonsFetchAndCacheMissingWeekOnlyOnce() = runTest {
+        val session = validSession()
+        val cache = RoomGradeyCache(InMemoryCacheEntryDao(), GradeyJson)
+        cache.saveMarks(session.cacheScope, MarksResponse())
+        val client = FakeBakalariClient().apply {
+            timetable = { _, _, _ ->
+                TimetableResponse(
+                    subjects = listOf(TimetableEntity("biology", "BIO", "Biology")),
+                    days = listOf(
+                        TimetableDayDTO(
+                            date = "2026-06-17",
+                            atoms = listOf(TimetableAtom(hourID = "3", subjectID = "biology")),
+                        ),
+                    ),
+                )
+            }
+        }
+        val repository = repository(client, InMemorySchoolSessionStorage(session), cache)
+
+        val first = repository.loadAbsencePredictionLessons("2026-06-17")
+        val second = repository.loadAbsencePredictionLessons("2026-06-17")
+
+        assertThat(first.map { it.subjectName }).containsExactly("Biology")
+        assertThat(second).isEqualTo(first)
+        assertThat(client.timetableDates).containsExactly("2026-06-15")
+        assertThat(cache.loadRawTimetable(session.cacheScope, "2026-06-15")).isNotNull()
+    }
+
+    @Test
+    fun predictionLessonSubjectLookupPropagatesTerminalSessionExpiry() = runTest {
+        val session = validSession()
+        val sessions = InMemorySchoolSessionStorage(session)
+        val cache = RoomGradeyCache(InMemoryCacheEntryDao(), GradeyJson)
+        cache.saveRawTimetable(session.cacheScope, "2026-06-15", TimetableResponse())
+        val client = FakeBakalariClient().apply {
+            marks = { _, _ -> throw BakalariApiException(401, "expired") }
+            refresh = { _, _ -> throw BakalariApiException(400, "invalid_grant") }
+            loginResult = { _, _, _ -> throw BakalariApiException(400, "invalid credentials") }
+        }
+        val repository = repository(client, sessions, cache)
+
+        val failure = runCatching {
+            repository.loadAbsencePredictionLessons("2026-06-16")
+        }.exceptionOrNull()
+
+        assertThat(failure).isInstanceOf(SchoolSessionExpiredException::class.java)
+        assertThat(sessions.load()).isNull()
+    }
+
+    @Test
+    fun `what-if prediction uses the authenticated endpoint and parses its returned average`() = runTest {
+        val subject = Subject(
+            subjectInfo = SubjectInfo(id = "math", name = "Mathematics"),
+            averageText = "2.10",
+            markPredictionEnabled = true,
+        )
+        val client = FakeBakalariClient().apply {
+            prediction = { _, token, predictedSubject, markText, weight ->
+                assertThat(token).isEqualTo("old-access")
+                assertThat(predictedSubject).isEqualTo(subject)
+                assertThat(markText).isEqualTo("1-")
+                assertThat(weight).isEqualTo(4)
+                predictedSubject.copy(averageText = "1,85")
+            }
+        }
+
+        val average = repository(client, InMemorySchoolSessionStorage(validSession()))
+            .predictSubjectAverage(subject, "1-", 4)
+
+        assertThat(average).isEqualTo(1.85)
+        assertThat(client.predictionCalls).isEqualTo(1)
+    }
+
+    @Test
+    fun `what-if prediction refreshes a rejected access token and retries once`() = runTest {
+        val subject = Subject(subjectInfo = SubjectInfo(id = "math", name = "Mathematics"))
+        val client = FakeBakalariClient().apply {
+            prediction = { _, token, predictedSubject, _, _ ->
+                if (token == "old-access") throw BakalariApiException(401, "expired")
+                predictedSubject.copy(averageText = "2.00")
+            }
+        }
+        val sessions = InMemorySchoolSessionStorage(validSession())
+
+        val average = repository(client, sessions).predictSubjectAverage(subject, "2", 1)
+
+        assertThat(average).isEqualTo(2.0)
+        assertThat(client.predictionCalls).isEqualTo(2)
+        assertThat(client.refreshCalls).isEqualTo(1)
+        assertThat(sessions.load()?.accessToken).isEqualTo("new-access")
+    }
+
+    @Test
+    fun optionalFailuresPreservePreviouslyCachedDashboardContent() = runTest {
+        val session = validSession()
+        val cache = RoomGradeyCache(InMemoryCacheEntryDao(), GradeyJson)
+        val cachedAbsence = AbsenceResponse(
+            absencesPerSubject = listOf(AbsencePerSubject("Mathematics", 100, 7)),
+        )
+        val cachedUser = UserResponse("Cached Student", "Cached School")
+        cache.saveAbsence(session.cacheScope, cachedAbsence)
+        cache.saveDashboard(
+            session.cacheScope,
+            DashboardData(MarksResponse(), cachedAbsence.absencesPerSubject, cachedUser),
+        )
+        val client = FakeBakalariClient().apply {
+            absences = { _, _ -> throw java.io.IOException("offline") }
+            user = { _, _ -> throw BakalariApiException(404, "not supported") }
+        }
+        val repository = repository(client, InMemorySchoolSessionStorage(session), cache)
+
+        val dashboard = repository.loadDashboard()
+
+        assertThat(dashboard.absencesPerSubject).isEqualTo(cachedAbsence.absencesPerSubject)
+        assertThat(dashboard.user).isEqualTo(cachedUser)
+        assertThat(cache.loadDashboard(session.cacheScope)?.user).isEqualTo(cachedUser)
+    }
+
+    @Test
+    fun optionalEndpointCancellationIsNotSwallowed() = runTest {
+        val client = FakeBakalariClient().apply {
+            absences = { _, _ -> throw CancellationException("cancelled") }
+        }
+        val repository = repository(client, InMemorySchoolSessionStorage(validSession()))
+
+        val failure = runCatching { repository.loadDashboard() }.exceptionOrNull()
+
+        assertThat(failure).isInstanceOf(CancellationException::class.java)
+    }
+
+    @Test
+    fun unrecoverableExpiredSessionIsClearedButScopedCacheIsRetained() = runTest {
+        val session = expiredSession()
+        val sessions = InMemorySchoolSessionStorage(session)
+        val cache = RoomGradeyCache(InMemoryCacheEntryDao(), GradeyJson)
+        val cached = DashboardData(MarksResponse(), user = UserResponse("Cached Student"))
+        cache.saveDashboard(session.cacheScope, cached)
+        cache.saveNextLessonSnapshot(
+            NextLessonWidgetSnapshot(
+                cachedAtEpochMillis = 1,
+                lessons = listOf(NextLessonWidgetLesson("stale-lesson", 1)),
+            ),
+        )
+        val client = FakeBakalariClient().apply {
+            refresh = { _, _ -> throw BakalariApiException(400, "invalid_grant") }
+            loginResult = { _, _, _ -> throw BakalariApiException(400, "invalid credentials") }
+        }
+        val repository = repository(client, sessions, cache)
+
+        val failure = runCatching { repository.loadDashboard() }.exceptionOrNull()
+
+        assertThat(failure).isInstanceOf(SchoolSessionExpiredException::class.java)
+        assertThat(sessions.load()).isNull()
+        assertThat(cache.loadDashboard(session.cacheScope)).isEqualTo(cached)
+        assertThat(cache.loadNextLessonSnapshot()).isNull()
+    }
+
+    @Test
+    fun rejectedRefreshWithoutStoredCredentialsClearsExpiredSession() = runTest {
+        val client = FakeBakalariClient().apply {
+            refresh = { _, _ -> throw BakalariApiException(401, "invalid refresh token") }
+        }
+        val sessions = InMemorySchoolSessionStorage(expiredSession().copy(bakalari = null))
+        val repository = repository(client, sessions)
+
+        val failure = runCatching { repository.loadDashboard() }.exceptionOrNull()
+
+        assertThat(failure).isInstanceOf(SchoolSessionExpiredException::class.java)
+        assertThat(client.loginCalls).isEqualTo(0)
+        assertThat(sessions.load()).isNull()
+    }
+
+    @Test
+    fun damagedWidgetCacheCannotMaskUnrecoverableSessionExpiry() = runTest {
+        val backingDao = InMemoryCacheEntryDao()
+        val failingDao = object : CacheEntryDao by backingDao {
+            override suspend fun clear(key: String) {
+                if (key == "next-lesson-widget-snapshot") error("damaged cache")
+                backingDao.clear(key)
+            }
+        }
+        val client = FakeBakalariClient().apply {
+            refresh = { _, _ -> throw BakalariApiException(401, "invalid refresh token") }
+        }
+        val sessions = InMemorySchoolSessionStorage(expiredSession().copy(bakalari = null))
+        val repository = repository(client, sessions, RoomGradeyCache(failingDao, GradeyJson))
+
+        val failure = runCatching { repository.loadDashboard() }.exceptionOrNull()
+
+        assertThat(failure).isInstanceOf(SchoolSessionExpiredException::class.java)
+        assertThat(sessions.load()).isNull()
+    }
+
+    @Test
+    fun signedOutProjectionCleanupCannotClearAReplacementSessionsWidget() = runTest {
+        val session = validSession()
+        val sessions = InMemorySchoolSessionStorage(session)
+        val cache = RoomGradeyCache(InMemoryCacheEntryDao(), GradeyJson)
+        val snapshot = NextLessonWidgetSnapshot(
+            cachedAtEpochMillis = 1,
+            lessons = listOf(NextLessonWidgetLesson("replacement-lesson", 1)),
+        )
+        cache.saveNextLessonSnapshot(snapshot)
+        val repository = repository(FakeBakalariClient(), sessions, cache)
+
+        assertThat(repository.clearNextLessonSnapshotIfSignedOut()).isFalse()
+        assertThat(cache.loadNextLessonSnapshot()).isEqualTo(snapshot)
+
+        sessions.clear()
+
+        assertThat(repository.clearNextLessonSnapshotIfSignedOut()).isTrue()
+        assertThat(cache.loadNextLessonSnapshot()).isNull()
+    }
+
+    @Test
+    fun transientCredentialLoginFailureRetainsExpiredSessionForRetry() = runTest {
+        val client = FakeBakalariClient().apply {
+            refresh = { _, _ -> throw BakalariApiException(400, "invalid_grant") }
+            loginResult = { _, _, _ -> throw java.io.IOException("offline") }
+        }
+        val sessions = InMemorySchoolSessionStorage(expiredSession())
+        val repository = repository(client, sessions)
+
+        val failure = runCatching { repository.loadDashboard() }.exceptionOrNull()
+
+        assertThat(failure).isInstanceOf(java.io.IOException::class.java)
+        assertThat(sessions.load()?.accessToken).isEqualTo("old-access")
+    }
+
+    @Test
+    fun successfulTimetableLoadPublishesRealWidgetSnapshot() = runTest {
+        val cache = RoomGradeyCache(InMemoryCacheEntryDao(), GradeyJson)
+        val client = FakeBakalariClient().apply {
+            timetable = { _, _, _ ->
+                TimetableResponse(
+                    hours = listOf(TimetableHour("1", "1", "08:00", "08:45")),
+                    days = listOf(
+                        TimetableDayDTO(
+                            atoms = listOf(TimetableAtom(hourID = "1", subjectID = "math")),
+                            dayOfWeek = 1,
+                            date = "2026-08-31",
+                        ),
+                    ),
+                    subjects = listOf(TimetableEntity("math", "M", "Mathematics")),
+                )
+            }
+        }
+        val repository = repository(client, InMemorySchoolSessionStorage(validSession()), cache)
+
+        repository.loadTimetable("2026-08-31")
+
+        val snapshot = cache.loadNextLessonSnapshot()
+        assertThat(snapshot).isNotNull()
+        assertThat(snapshot!!.lessons).hasSize(1)
+        assertThat(snapshot.lessons.single().subjectName).isEqualTo("Mathematics")
+        assertThat(snapshot.lessons.single().subjectAbbrev).isEqualTo("M")
+        assertThat(snapshot.lessons.single().timeRange).isEqualTo("08:00-08:45")
+    }
+
+    @Test
+    fun failedTimetableRefreshRetainsTheCachedWeek() = runTest {
+        val session = validSession()
+        val cache = RoomGradeyCache(InMemoryCacheEntryDao(), GradeyJson)
+        val cachedWeek = com.bukovinafilip.gradey.model.TimetableWeek("2026-08-31", emptyList(), emptyList())
+        cache.saveTimetable(session.cacheScope, cachedWeek.weekStart, cachedWeek)
+        val client = FakeBakalariClient().apply {
+            timetable = { _, _, _ -> throw java.io.IOException("offline") }
+        }
+        val repository = repository(client, InMemorySchoolSessionStorage(session), cache)
+
+        val failure = runCatching { repository.loadTimetable("2026-09-01") }.exceptionOrNull()
+
+        assertThat(failure).isInstanceOf(java.io.IOException::class.java)
+        assertThat(repository.loadCachedTimetable("2026-09-01")).isEqualTo(cachedWeek)
+    }
+
+    @Test
+    fun separateTimetableWeeksRemainIndependentlyCached() = runTest {
+        val session = validSession()
+        val dao = InMemoryCacheEntryDao()
+        val cache = RoomGradeyCache(dao, GradeyJson)
+        val client = FakeBakalariClient().apply {
+            timetable = { _, _, date ->
+                TimetableResponse(days = listOf(TimetableDayDTO(dayOfWeek = 1, date = date)))
+            }
+        }
+        val repository = repository(client, InMemorySchoolSessionStorage(session), cache)
+
+        repository.loadTimetable("2026-08-31")
+        repository.loadTimetable("2026-09-07")
+
+        assertThat(repository.loadCachedTimetable("2026-08-31")?.weekStart).isEqualTo("2026-08-31")
+        assertThat(repository.loadCachedTimetable("2026-09-07")?.weekStart).isEqualTo("2026-09-07")
+        assertThat(dao.load("timetable-week:${session.cacheScope}-2026-08-31")?.cachedAtEpochMillis).isGreaterThan(0)
+        assertThat(dao.load("timetable-week:${session.cacheScope}-2026-09-07")?.cachedAtEpochMillis).isGreaterThan(0)
+    }
+
+    @Test
+    fun logoutClearsAllLocalSchoolCachesAndWidgetSnapshot() = runTest {
+        val session = validSession()
+        val sessions = InMemorySchoolSessionStorage(session)
+        val cache = RoomGradeyCache(InMemoryCacheEntryDao(), GradeyJson)
+        val unrelatedScope = "bakalari-other.example.cz-unrelated"
+        val unrelated = DashboardData(MarksResponse(), user = UserResponse("Other Student"))
+        val selections = AbsenceLessonSelections(mapOf("2026-02-01" to listOf("lesson-1")))
+        cache.saveDashboard(session.cacheScope, DashboardData(MarksResponse()))
+        cache.saveDashboard(unrelatedScope, unrelated)
+        cache.saveAbsenceLessonSelections(session.cacheScope, selections)
+        cache.saveAbsenceLessonSelections(unrelatedScope, selections)
+        cache.saveNextLessonSnapshot(
+            NextLessonWidgetSnapshot(
+                cachedAtEpochMillis = 1,
+                lessons = listOf(NextLessonWidgetLesson("lesson", 1)),
+            ),
+        )
+        val repository = repository(FakeBakalariClient(), sessions, cache)
+
+        repository.logout()
+
+        assertThat(sessions.load()).isNull()
+        assertThat(cache.loadDashboard(session.cacheScope)).isNull()
+        assertThat(cache.loadAbsenceLessonSelections(session.cacheScope)).isNull()
+        assertThat(cache.loadNextLessonSnapshot()).isNull()
+        assertThat(cache.loadDashboard(unrelatedScope)).isNull()
+        assertThat(cache.loadAbsenceLessonSelections(unrelatedScope)).isNull()
+    }
+
+    private fun repository(
+        client: BakalariClient,
+        sessions: SchoolSessionStorage,
+        cache: RoomGradeyCache = RoomGradeyCache(InMemoryCacheEntryDao(), GradeyJson),
+        dateProvider: () -> LocalDate = { com.bukovinafilip.gradey.domain.TimetableDates.today() },
+        timetableFallbackTimeoutMillis: Long = 12_000L,
+    ): AndroidSchoolRepository = AndroidSchoolRepository(
+        bakalariClient = client,
+        sessionStore = sessions,
+        cache = cache,
+        dateProvider = dateProvider,
+        timetableFallbackTimeoutMillis = timetableFallbackTimeoutMillis,
+    )
+
+    private fun validSession() = session(expiresAt = System.currentTimeMillis() + 3_600_000)
+    private fun expiredSession() = session(expiresAt = System.currentTimeMillis() - 1_000)
+
+    private fun session(expiresAt: Long) = StoredSession(
+        accessToken = "old-access",
+        refreshToken = "old-refresh",
+        tokenType = "Bearer",
+        expiresAtEpochMillis = expiresAt,
+        baseURL = "https://school.example.cz",
+        provider = SchoolProvider.BAKALARI,
+        bakalari = BakalariCredentials("student", "secret"),
+    )
+}
+
+private class InMemorySchoolSessionStorage(
+    private var session: StoredSession?,
+) : SchoolSessionStorage {
+    override fun load(): StoredSession? = session
+    override fun save(session: StoredSession) {
+        this.session = session
+    }
+    override fun clear() {
+        session = null
+    }
+}
+
+private class FailingDetachSchoolSessionStorage(
+    private var session: StoredSession?,
+    private val failClear: Boolean = false,
+) : SchoolSessionStorage {
+    var clearCalls = 0
+        private set
+
+    override fun load(): StoredSession? = session
+
+    override fun save(session: StoredSession) {
+        throw IllegalStateException("detached session write failed")
+    }
+
+    override fun clear() {
+        clearCalls += 1
+        if (failClear) throw IllegalStateException("session clear failed")
+        session = null
+    }
+}
+
+private class InMemoryCacheEntryDao : CacheEntryDao {
+    private val entries = mutableMapOf<String, CacheEntryEntity>()
+
+    override suspend fun load(key: String): CacheEntryEntity? = entries[key]
+    override suspend fun loadExactPrefix(prefix: String): List<CacheEntryEntity> =
+        entries.values.filter { it.key.startsWith(prefix) }
+    override suspend fun save(entity: CacheEntryEntity) {
+        entries[entity.key] = entity
+    }
+    override suspend fun clear(key: String) {
+        entries.remove(key)
+    }
+    override suspend fun clearPrefix(prefix: String) {
+        entries.keys.filter { it.startsWith(prefix) }.forEach(entries::remove)
+    }
+    override suspend fun clearAll() {
+        entries.clear()
+    }
+}
+
+private class FailingScopeCopyDao(
+    private val delegate: CacheEntryDao,
+) : CacheEntryDao by delegate {
+    override suspend fun saveEntriesAtomically(entries: List<CacheEntryEntity>) {
+        throw IllegalStateException("scope copy failed")
+    }
+}
+
+private class BlockingScopeCopyDao(
+    private val delegate: CacheEntryDao,
+) : CacheEntryDao by delegate {
+    val copyStarted = CompletableDeferred<Unit>()
+    val releaseCopy = CompletableDeferred<Unit>()
+    private var shouldBlock = false
+
+    fun blockNextCopy() {
+        shouldBlock = true
+    }
+
+    override suspend fun saveEntriesAtomically(entries: List<CacheEntryEntity>) {
+        if (shouldBlock) {
+            shouldBlock = false
+            copyStarted.complete(Unit)
+            releaseCopy.await()
+        }
+        entries.forEach { delegate.save(it) }
+    }
+}
+
+private class FakeBakalariClient : BakalariClient {
+    var refreshCalls = 0
+    var loginCalls = 0
+    var marksCalls = 0
+    var absenceCalls = 0
+    var timetableCalls = 0
+    val timetableDates = mutableListOf<String>()
+    var predictionCalls = 0
+    var lastLoginBaseURL: String? = null
+    var lastLoginUsername: String? = null
+    var lastLoginPassword: String? = null
+
+    var loginResult: suspend (String, String, String) -> LoginResponse = { _, _, _ ->
+        LoginResponse("login-access", "login-refresh", "Bearer", 3_600)
+    }
+    var refresh: suspend (String, String) -> LoginResponse = { _, _ -> refreshedResponse() }
+    var marks: suspend (String, String) -> MarksResponse = { _, _ -> MarksResponse() }
+    var absences: suspend (String, String) -> AbsenceResponse = { _, _ -> AbsenceResponse() }
+    var user: suspend (String, String) -> UserResponse = { _, _ -> UserResponse("Student") }
+    var timetable: suspend (String, String, String) -> TimetableResponse = { _, _, _ -> TimetableResponse() }
+    var prediction: suspend (String, String, Subject, String, Int) -> Subject = { _, _, subject, _, _ -> subject }
+
+    override suspend fun login(baseURL: String, username: String, password: String): LoginResponse {
+        loginCalls += 1
+        lastLoginBaseURL = baseURL
+        lastLoginUsername = username
+        lastLoginPassword = password
+        return loginResult(baseURL, username, password)
+    }
+
+    override suspend fun refreshToken(baseURL: String, refreshToken: String): LoginResponse {
+        refreshCalls += 1
+        return refresh(baseURL, refreshToken)
+    }
+
+    override suspend fun fetchMarks(baseURL: String, accessToken: String): MarksResponse {
+        marksCalls += 1
+        return marks(baseURL, accessToken)
+    }
+
+    override suspend fun fetchAbsences(baseURL: String, accessToken: String): AbsenceResponse {
+        absenceCalls += 1
+        return absences(baseURL, accessToken)
+    }
+    override suspend fun fetchUser(baseURL: String, accessToken: String): UserResponse =
+        user(baseURL, accessToken)
+    override suspend fun fetchTimetable(baseURL: String, accessToken: String, date: String): TimetableResponse {
+        timetableCalls += 1
+        timetableDates += date
+        return timetable(baseURL, accessToken, date)
+    }
+    override suspend fun predictSubject(
+        baseURL: String,
+        accessToken: String,
+        subject: Subject,
+        markText: String,
+        weight: Int,
+    ): Subject {
+        predictionCalls += 1
+        return prediction(baseURL, accessToken, subject, markText, weight)
+    }
+}
+
+private fun refreshedResponse() = LoginResponse("new-access", "new-refresh", "Bearer", 3_600)

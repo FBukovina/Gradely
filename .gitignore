@@ -37,3 +37,15 @@ Firebase*.plist
 
 # Local editor/tooling
 .commandcode/
+
+# Android/Gradle local state
+.gradle/
+.idea/
+.kotlin/
+local.properties
+*.iml
+*.keystore
+*.jks
+*.apk
+*.aab
+google-services.json

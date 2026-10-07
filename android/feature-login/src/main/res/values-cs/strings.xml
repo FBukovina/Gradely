@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="login_title">Připojit Bakaláře</string>
+    <string name="login_subtitle">Přihlaste se stejnou adresou školy, uživatelským jménem a heslem, které používáte pro Bakaláře.</string>
+    <string name="login_back">Zpět</string>
+    <string name="login_credentials_title">Přihlašovací údaje k Bakalářům</string>
+    <string name="login_find_school">Najít školu</string>
+    <string name="login_school_search_placeholder">Název školy nebo město</string>
+    <string name="login_retry">Zkusit znovu</string>
+    <string name="login_no_matching_school">Žádná odpovídající škola. Její adresu můžete zadat níže.</string>
+    <string name="login_manual_address_prompt">Nebo zadejte adresu Bakalářů své školy</string>
+    <string name="login_use_demo_account">Použít ukázkový účet</string>
+    <string name="login_school_url">Adresa školy</string>
+    <string name="login_school_url_required">Adresa školy je povinná.</string>
+    <string name="login_school_url_invalid">Zadejte platnou adresu školy.</string>
+    <string name="login_username">Uživatelské jméno</string>
+    <string name="login_username_required">Uživatelské jméno je povinné.</string>
+    <string name="login_password">Heslo</string>
+    <string name="login_password_required">Heslo je povinné.</string>
+    <string name="login_hide_password">Skrýt heslo</string>
+    <string name="login_show_password">Zobrazit heslo</string>
+    <string name="login_connecting">Připojování…</string>
+    <string name="login_try_again">Zkusit znovu</string>
+    <string name="login_connect_school">Připojit školu</string>
+    <string name="login_cancel">Zrušit</string>
+    <string name="login_credentials_privacy">Vaše přihlašovací údaje jsou uložené v šifrovaném úložišti Androidu a používají se pouze k připojení ke školnímu serveru.</string>
+    <string name="login_manual_address_steps">1. Otevřete web Bakalářů své školy.\n2. Zkopírujte adresu z prohlížeče.\n3. Vložte celou adresu níže.\n4. Zadejte uživatelské jméno a heslo k Bakalářům.</string>
+    <string name="login_manual_address_example">Příklad: https://school.example.cz</string>
+    <string name="login_help">Nápověda</string>
+    <string name="login_github">GitHub</string>
+</resources>

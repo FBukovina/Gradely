@@ -2,6 +2,7 @@ import {
   canonicalSchoolBaseURL,
   canonicalSchoolProviderUserID,
   schoolAccountIdentityKey,
+  schoolProviderIdentitiesMatchForRelink,
 } from "./school-account-identity.ts";
 
 Deno.test("EduPage identity prefers the active child represented by credentials", () => {
@@ -81,6 +82,30 @@ Deno.test("different EduPage children retain independent links", async () => {
     "child-2",
   );
   assertNotEquals(first, second);
+});
+
+Deno.test("relink requires matching nonblank canonical provider identities", () => {
+  const cases: Array<[unknown, unknown, boolean]> = [
+    ["student-1", "student-1", true],
+    [" student-1 ", "student-1", true],
+    ["student-1", " student-1 ", true],
+    ["student-1", "student-2", false],
+    [null, "student-1", false],
+    [undefined, "student-1", false],
+    ["", "student-1", false],
+    ["   ", "student-1", false],
+    ["student-1", null, false],
+    ["student-1", undefined, false],
+    ["student-1", "", false],
+    ["student-1", "   ", false],
+  ];
+
+  for (const [existing, candidate, expected] of cases) {
+    assertEquals(
+      schoolProviderIdentitiesMatchForRelink(existing, candidate),
+      expected,
+    );
+  }
 });
 
 function assertEquals(actual: unknown, expected: unknown) {

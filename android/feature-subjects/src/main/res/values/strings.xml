@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="marks_search_prompt">Search subjects</string>
+    <string name="marks_search_empty">No subjects</string>
+    <string name="marks_search_clear">Clear subject search</string>
+    <string name="mark_prediction_invalid">Enter a mark such as 1, 2+, or 3-.</string>
+    <string name="mark_untitled">Untitled</string>
+    <string name="mark_date_unavailable">Date unavailable</string>
+    <string name="mark_date_today">Today</string>
+    <string name="mark_date_yesterday">Yesterday</string>
+    <plurals name="mark_date_days_ago">
+        <item quantity="one">%1$d day ago</item>
+        <item quantity="other">%1$d days ago</item>
+    </plurals>
+    <plurals name="mark_date_weeks_ago">
+        <item quantity="one">%1$d week ago</item>
+        <item quantity="other">%1$d weeks ago</item>
+    </plurals>
+    <plurals name="mark_date_months_ago">
+        <item quantity="one">%1$d month ago</item>
+        <item quantity="other">%1$d months ago</item>
+    </plurals>
+    <plurals name="mark_date_years_ago">
+        <item quantity="one">%1$d year ago</item>
+        <item quantity="other">%1$d years ago</item>
+    </plurals>
+    <string name="mark_weight">Weight %1$s×</string>
+    <string name="mark_weight_estimated">Estimated weight %1$s×</string>
+    <string name="mark_new">New</string>
+    <string name="subject_average">Average</string>
+    <string name="subject_predicted_average">Predicted average</string>
+    <plurals name="subject_mark_count">
+        <item quantity="one">%1$d mark</item>
+        <item quantity="other">%1$d marks</item>
+    </plurals>
+    <string name="subject_absence">Absence %1$s %%</string>
+    <string name="subject_absence_unavailable">Absence —</string>
+    <string name="subject_notes_section">NOTES</string>
+    <string name="subject_note_label">Subject note</string>
+    <string name="subject_temporary_mark_label">Temporary mark</string>
+    <string name="subject_history_section">AVERAGE OVER TIME</string>
+    <string name="subject_history_source_cloud">Synced by Gradey</string>
+    <string name="subject_history_source_local">Computed from marks</string>
+    <string name="subject_history_empty_title">No average history</string>
+    <string name="subject_history_empty_body">Dated grades will build this chart. Gradey ID can also sync longer-term history.</string>
+    <string name="subject_trend_better">Average improved by %1$s</string>
+    <string name="subject_trend_worse">Average worsened by %1$s</string>
+    <string name="subject_prediction_section">TRY A MARK</string>
+    <string name="subject_prediction_placeholder">Mark, e.g. 2+</string>
+    <string name="subject_prediction_unavailable">Prediction unavailable</string>
+    <string name="subject_prediction_weight">Weight %1$d</string>
+    <string name="subject_prediction_decrease_weight">Decrease weight</string>
+    <string name="subject_prediction_increase_weight">Increase weight</string>
+    <string name="subject_prediction_new_average">New average %1$s</string>
+    <string name="subject_prediction_better">%1$s better</string>
+    <string name="subject_prediction_worse">%1$s worse</string>
+    <string name="subject_prediction_same">Same average</string>
+    <string name="subject_prediction_checking">Checking with Bakaláři…</string>
+    <string name="subject_prediction_exact">Calculated by Bakaláři</string>
+    <string name="subject_prediction_local">Estimated locally</string>
+    <string name="marks_title">Marks</string>
+    <string name="marks_overall_average">Overall average</string>
+    <plurals name="marks_subject_count">
+        <item quantity="one">%1$d subject</item>
+        <item quantity="other">%1$d subjects</item>
+    </plurals>
+    <string name="marks_subjects_section">SUBJECTS</string>
+    <string name="marks_sort_focus">Focus</string>
+    <string name="marks_sort_average">Average</string>
+    <string name="marks_sort_name">A-Z</string>
+    <string name="marks_empty">No subjects available</string>
+    <string name="marks_row_absence">%1$d%% absent</string>
+    <string name="marks_trends_section">GRADE MOVEMENT</string>
+    <string name="marks_trends_range">90 days</string>
+    <plurals name="marks_trends_new_marks">
+        <item quantity="one">%1$d new mark</item>
+        <item quantity="other">%1$d new marks</item>
+    </plurals>
+    <string name="marks_trends_movement">Average movement</string>
+    <string name="marks_refresh_failed_title">Couldn’t refresh marks</string>
+    <string name="marks_refresh_failed_cached">Showing your last saved marks.</string>
+    <string name="marks_refresh_retry">Try again</string>
+    <string name="marks_open_gradey_tools">Open Gradey tools</string>
+    <string name="marks_refresh_content_description">Refresh marks</string>
+    <string name="marks_open_account">Open account</string>
+    <string name="marks_open_subject">Open %1$s</string>
+    <string name="subject_back">Back</string>
+    <plurals name="subject_average_chart_description">
+        <item quantity="one">Average over time, %1$d point</item>
+        <item quantity="other">Average over time, %1$d points</item>
+    </plurals>
+    <string name="subject_no_marks">No marks yet</string>
+    <string name="subject_marks_section">MARKS</string>
+</resources>

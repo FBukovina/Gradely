@@ -23,6 +23,19 @@ export function canonicalSchoolProviderUserID(
   return nonEmptyString(suppliedProviderUserID) ?? null;
 }
 
+/**
+ * Credential rotation is identity preserving. Missing legacy or candidate
+ * provider identity is not enough evidence to replace an existing account.
+ */
+export function schoolProviderIdentitiesMatchForRelink(
+  existingProviderUserID: unknown,
+  candidateProviderUserID: unknown,
+) {
+  const existing = nonEmptyString(existingProviderUserID);
+  const candidate = nonEmptyString(candidateProviderUserID);
+  return existing !== null && candidate !== null && existing === candidate;
+}
+
 /** Matches the canonicalization performed by school_account_identity_key(). */
 export function canonicalSchoolBaseURL(baseURL: string) {
   const url = new URL(baseURL.trim());

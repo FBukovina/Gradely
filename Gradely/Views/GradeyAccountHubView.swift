@@ -288,7 +288,8 @@ struct GradeyAccountHubView: View {
     @ViewBuilder
     private var adaptiveLayout: some View {
         #if os(macOS)
-        splitLayout
+        macLayout
+            .gradelyMacSheetSize(minWidth: 760, idealWidth: 860, minHeight: 520, idealHeight: 660)
         #else
         if horizontalSizeClass == .regular {
             splitLayout
@@ -332,25 +333,67 @@ struct GradeyAccountHubView: View {
                             splitConnectionRoute(route)
                         }
                 } else {
-                    ContentUnavailableView {
-                        Label {
-                            Text("settings.detail.select.title")
-                        } icon: {
-                            SettingsHugeIcon(
-                                iconName: "gears",
-                                size: 28,
-                                color: .secondary
-                            )
-                        }
-                    } description: {
-                        Text("settings.detail.select.message")
-                    }
-                    .gradelyScreenBackground()
+                    noDestinationSelected
                 }
             }
         }
         .navigationSplitViewStyle(.balanced)
     }
+
+    private var noDestinationSelected: some View {
+        ContentUnavailableView {
+            Label {
+                Text("settings.detail.select.title")
+            } icon: {
+                SettingsHugeIcon(
+                    iconName: "gears",
+                    size: 28,
+                    color: .secondary
+                )
+            }
+        } description: {
+            Text("settings.detail.select.message")
+        }
+        .gradelyScreenBackground()
+    }
+
+    #if os(macOS)
+    /// In a macOS sheet, NavigationSplitView and NavigationStack draw an opaque
+    /// grey title strip, and hiding that toolbar from the sheet also strips the
+    /// main window's title bar. A plain two-column layout avoids both; the
+    /// connection pages are pushed through `detailPath` by hand.
+    private var macLayout: some View {
+        HStack(spacing: 0) {
+            overview(selectedDestination: selectedDestination) { destination in
+                select(destination) {
+                    selectedDestination = destination
+                    detailPath = []
+                }
+            }
+            .frame(width: 340)
+
+            Divider()
+
+            macDetail
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+    }
+
+    @ViewBuilder
+    private var macDetail: some View {
+        if let route = detailPath.last {
+            splitConnectionRoute(route)
+                .settingsMacDetailHeader(title: nil) {
+                    detailPath.removeLast()
+                }
+        } else if let selectedDestination {
+            detailPage(selectedDestination)
+                .settingsMacDetailHeader(title: selectedDestination.title)
+        } else {
+            noDestinationSelected
+        }
+    }
+    #endif
 
     @ViewBuilder
     private func compactRoute(_ route: SettingsRoute) -> some View {
@@ -715,6 +758,7 @@ private extension GradeyAccountHubView {
                             .focused($isFullNameFieldFocused)
                             .gradelyTextInputAutocapitalization(.words)
                             .submitLabel(.done)
+                            .gradelyBorderlessTextFields()
                             .padding(.horizontal, Spacing.md)
                             .frame(minHeight: 48)
                             .background(
@@ -1901,6 +1945,7 @@ private extension GradeyAccountHubView {
                 }
             }
         }
+        .gradelyMacSheetSize(minWidth: 420, idealWidth: 480, minHeight: 360, idealHeight: 460)
     }
 
     func formattedMinute(_ minute: Int) -> String {
@@ -2268,6 +2313,19 @@ private extension GradeyAccountHubView {
 // MARK: - Shared settings components
 
 private extension View {
+    #if os(macOS)
+    /// The macOS settings layout has no navigation bar, so each detail page
+    /// carries its own title and, once pushed, a back button.
+    func settingsMacDetailHeader(
+        title: LocalizedStringKey?,
+        onBack: (() -> Void)? = nil
+    ) -> some View {
+        safeAreaInset(edge: .top, spacing: 0) {
+            SettingsMacDetailHeader(title: title, onBack: onBack)
+        }
+    }
+    #endif
+
     @ViewBuilder
     func settingsRootNavigationChrome() -> some View {
         #if os(iOS)
@@ -2280,6 +2338,49 @@ private extension View {
         #endif
     }
 }
+
+#if os(macOS)
+private struct SettingsMacDetailHeader: View {
+    let title: LocalizedStringKey?
+    let onBack: (() -> Void)?
+
+    var body: some View {
+        HStack(spacing: Spacing.md) {
+            if let onBack {
+                Button(action: onBack) {
+                    SettingsHugeIcon(
+                        iconName: "arrow-left-01",
+                        size: 16,
+                        color: .primary
+                    )
+                    .frame(width: 36, height: 36)
+                    .background(Brand.primary.opacity(0.10), in: Circle())
+                    .contentShape(Circle())
+                }
+                .buttonStyle(.plain)
+                .keyboardShortcut("[", modifiers: .command)
+                .accessibilityLabel(AppL10n.string("settings.back"))
+                .accessibilityIdentifier("settingsBackButton")
+            }
+
+            if let title {
+                Text(title)
+                    .font(.gradelyDisplay(size: 24, relativeTo: .title2))
+                    .lineLimit(1)
+                    .accessibilityAddTraits(.isHeader)
+            }
+
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, Spacing.lg)
+        .frame(height: 68)
+        .background {
+            SettingsScreenBackground()
+        }
+    }
+}
+#endif
 
 private struct SettingsScreenBackground: View {
     @Environment(\.colorScheme) private var colorScheme

@@ -334,7 +334,8 @@ private struct AbsenceCountsList: View {
         .padding(.vertical, Spacing.md)
         .background(isTotal ? Color.gradelyTertiaryGroupedBackground : Color.gradelySecondaryGroupedBackground)
         .overlay(alignment: .bottom) {
-            Divider()
+            // Outside a stack, macOS draws Divider vertically through the row.
+            VStack(spacing: 0) { Divider() }
         }
     }
 
@@ -507,7 +508,8 @@ private struct SubjectAbsenceTable: View {
         .padding(.horizontal, Spacing.md)
         .padding(.vertical, Spacing.md)
         .overlay(alignment: .bottom) {
-            Divider()
+            // Outside a stack, macOS draws Divider vertically through the row.
+            VStack(spacing: 0) { Divider() }
         }
         .accessibilityIdentifier("absenceRow-\(row.stableID)")
     }
@@ -638,6 +640,7 @@ private struct ManualAbsenceLessonSelectionSheet: View {
                 }
             }
         }
+        .gradelyMacSheetSize(minWidth: 480, idealWidth: 560, minHeight: 480, idealHeight: 600)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("absenceManualSelectionSheet")
     }

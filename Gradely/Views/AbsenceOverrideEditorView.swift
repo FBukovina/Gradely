@@ -57,6 +57,7 @@ struct AbsenceOverrideEditorView: View {
             .task { await viewModel.load() }
             .onChange(of: viewModel.didSave) { _, saved in if saved { dismiss() } }
         }
+        .gradelyMacSheetSize(minWidth: 480, idealWidth: 560, minHeight: 480, idealHeight: 600)
         .interactiveDismissDisabled(viewModel.isSaving)
         .accessibilityIdentifier("absenceOverrideEditor")
     }
@@ -238,6 +239,7 @@ struct HiddenAbsencesView: View {
             }
             .sheet(item: $viewModel.editor) { editor in AbsenceOverrideEditorView(viewModel: editor) }
         }
+        .gradelyMacSheetSize(minWidth: 460, idealWidth: 540, minHeight: 420, idealHeight: 560)
         .accessibilityIdentifier("absenceHiddenList")
     }
 }

@@ -37,6 +37,9 @@ struct GradeSimulatorView: View {
                     simulationSection
                 }
             }
+            // macOS defaults to a two-column form that squeezed footers into a
+            // narrow column; grouped matches iOS and reads properly on both.
+            .formStyle(.grouped)
             .navigationTitle(AppL10n.string("detail.simulator.title"))
             .gradelyNavigationTitleDisplayMode(.inline)
             .toolbar {
@@ -45,6 +48,7 @@ struct GradeSimulatorView: View {
                 }
             }
         }
+        .gradelyMacSheetSize(minWidth: 480, idealWidth: 560, minHeight: 520, idealHeight: 640)
         .accessibilityIdentifier("gradeSimulatorView")
     }
 
@@ -77,6 +81,10 @@ struct GradeSimulatorView: View {
                 TextField("2.49", text: $viewModel.targetAverageText)
                     .multilineTextAlignment(.trailing)
                     .gradelyKeyboardType(.numbersAndPunctuation)
+                    #if os(macOS)
+                    // The row already has a label; macOS would repeat "2.49" beside the field.
+                    .labelsHidden()
+                    #endif
                     .frame(maxWidth: 95)
                     .accessibilityLabel(AppL10n.string("detail.simulator.targetAverage"))
                     .accessibilityIdentifier("gradeTargetAverageField")

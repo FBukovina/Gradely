@@ -150,6 +150,44 @@ extension View {
         #endif
     }
 
+    /// Opens a macOS sheet at its ideal size instead of collapsing to the
+    /// minimum, which left settings and Gradey AI cramped. No-op on iOS.
+    @ViewBuilder
+    func gradelyMacSheetSize(
+        minWidth: CGFloat,
+        idealWidth: CGFloat,
+        minHeight: CGFloat,
+        idealHeight: CGFloat
+    ) -> some View {
+        #if os(macOS)
+        self
+            .frame(
+                minWidth: minWidth,
+                idealWidth: idealWidth,
+                maxWidth: .infinity,
+                minHeight: minHeight,
+                idealHeight: idealHeight,
+                maxHeight: .infinity
+            )
+            .presentationSizing(.fitted)
+        #else
+        self
+        #endif
+    }
+
+    /// Strips the macOS bezel and focus ring from text fields that sit inside
+    /// a custom filled container, so the container is the only visible frame.
+    @ViewBuilder
+    func gradelyBorderlessTextFields() -> some View {
+        #if os(macOS)
+        self
+            .textFieldStyle(.plain)
+            .focusEffectDisabled()
+        #else
+        self
+        #endif
+    }
+
     /// Brand-tinted toolbar icons with a consistent visual size on every platform.
     @ViewBuilder
     func gradelyToolbarIconButton() -> some View {

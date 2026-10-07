@@ -237,9 +237,15 @@ struct GradeyAIChatScreen: View {
     }
 
     private var suggestionColumns: [GridItem] {
-        isAccessibilityLayout
+        #if os(macOS)
+        // Wider tiles keep the five suggestions at 3 + 2 instead of 4 + 1.
+        let minimumWidth: CGFloat = 190
+        #else
+        let minimumWidth: CGFloat = 150
+        #endif
+        return isAccessibilityLayout
             ? [GridItem(.flexible())]
-            : [GridItem(.adaptive(minimum: 150), spacing: 10)]
+            : [GridItem(.adaptive(minimum: minimumWidth), spacing: 10)]
     }
 
     private func actionCard(_ action: GradeyAIAction, icon: String) -> some View {

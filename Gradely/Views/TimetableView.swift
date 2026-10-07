@@ -783,72 +783,88 @@ private struct LessonDetailSheet: View {
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
+        sheetContent
+            .presentationDetents([.medium, .large])
+            .gradelyMacSheetSize(minWidth: 460, idealWidth: 520, minHeight: 360, idealHeight: 460)
+            .sheet(item: $plannerItem) { item in
+                PlannerItemEditorView(item: item, store: plannerStore, resolver: resolver,
+                                      displayedWeek: displayedWeek, subjects: subjects)
+            }
+    }
+
+    @ViewBuilder
+    private var sheetContent: some View {
+        #if os(macOS)
+        // The header names the lesson and carries the close button; a
+        // NavigationStack would only add a grey title strip repeating it.
+        detailScroll
+        #else
         NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: Spacing.lg) {
-                    header
+            detailScroll
+                .navigationTitle(LessonText.subject(for: lesson))
+                .gradelyNavigationTitleDisplayMode(.inline)
+                .gradelyModalDismissButton {
+                    dismiss()
+                }
+        }
+        #endif
+    }
 
-                    // The change is the news: show it before the regular details.
-                    if let change = lesson.change, lesson.changeKind != .none {
-                        changeCard(change)
-                    }
+    private var detailScroll: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: Spacing.lg) {
+                header
 
-                    SettingsModalSurface {
-                        VStack(alignment: .leading, spacing: Spacing.md) {
-                            if let teacher = lesson.teacherName ?? lesson.teacherAbbrev {
-                                DetailRow(systemImage: "person.fill", title: "timetable.detail.teacher", value: teacher)
-                            }
-                            if let room = lesson.roomName ?? lesson.roomAbbrev {
-                                DetailRow(systemImage: "door.left.hand.open", title: "timetable.detail.room", value: room)
-                            }
-                            if !lesson.groups.isEmpty {
-                                DetailRow(
-                                    systemImage: "person.3.fill",
-                                    title: "timetable.detail.group",
-                                    value: lesson.groups.joined(separator: ", ")
-                                )
-                            }
-                            if !lesson.cycles.isEmpty {
-                                DetailRow(
-                                    systemImage: "calendar",
-                                    title: "timetable.detail.cycles",
-                                    value: lesson.cycles.joined(separator: ", ")
-                                )
-                            }
-                            if let theme = lesson.theme {
-                                DetailRow(systemImage: "text.book.closed.fill", title: "timetable.detail.theme", value: theme)
-                            }
-                            if lesson.hasHomework {
-                                DetailRow(
-                                    systemImage: "checklist",
-                                    title: "timetable.detail.homework",
-                                    value: AppL10n.string("timetable.detail.homework.has")
-                                )
-                            }
+                // The change is the news: show it before the regular details.
+                if let change = lesson.change, lesson.changeKind != .none {
+                    changeCard(change)
+                }
+
+                SettingsModalSurface {
+                    VStack(alignment: .leading, spacing: Spacing.md) {
+                        if let teacher = lesson.teacherName ?? lesson.teacherAbbrev {
+                            DetailRow(systemImage: "person.fill", title: "timetable.detail.teacher", value: teacher)
+                        }
+                        if let room = lesson.roomName ?? lesson.roomAbbrev {
+                            DetailRow(systemImage: "door.left.hand.open", title: "timetable.detail.room", value: room)
+                        }
+                        if !lesson.groups.isEmpty {
+                            DetailRow(
+                                systemImage: "person.3.fill",
+                                title: "timetable.detail.group",
+                                value: lesson.groups.joined(separator: ", ")
+                            )
+                        }
+                        if !lesson.cycles.isEmpty {
+                            DetailRow(
+                                systemImage: "calendar",
+                                title: "timetable.detail.cycles",
+                                value: lesson.cycles.joined(separator: ", ")
+                            )
+                        }
+                        if let theme = lesson.theme {
+                            DetailRow(systemImage: "text.book.closed.fill", title: "timetable.detail.theme", value: theme)
+                        }
+                        if lesson.hasHomework {
+                            DetailRow(
+                                systemImage: "checklist",
+                                title: "timetable.detail.homework",
+                                value: AppL10n.string("timetable.detail.homework.has")
+                            )
                         }
                     }
-
-                    if let scope {
-                        plannerSection(scope: scope)
-                    }
                 }
-                .padding(Spacing.lg)
-                .frame(maxWidth: 640)
-                .frame(maxWidth: .infinity)
+
+                if let scope {
+                    plannerSection(scope: scope)
+                }
             }
-            .background {
-                SettingsModalBackground()
-            }
-            .navigationTitle(LessonText.subject(for: lesson))
-            .gradelyNavigationTitleDisplayMode(.inline)
-            .gradelyModalDismissButton {
-                dismiss()
-            }
+            .padding(Spacing.lg)
+            .frame(maxWidth: 640)
+            .frame(maxWidth: .infinity)
         }
-        .presentationDetents([.medium, .large])
-        .sheet(item: $plannerItem) { item in
-            PlannerItemEditorView(item: item, store: plannerStore, resolver: resolver,
-                                  displayedWeek: displayedWeek, subjects: subjects)
+        .background {
+            SettingsModalBackground()
         }
     }
 
@@ -908,7 +924,24 @@ private struct LessonDetailSheet: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(Spacing.xl)
+        #if os(macOS)
+        .padding(.trailing, Spacing.xl)
+        #endif
         .background(headerGradient, in: RoundedRectangle(cornerRadius: Radius.xl, style: .continuous))
+        #if os(macOS)
+        .overlay(alignment: .topTrailing) {
+            Button {
+                dismiss()
+            } label: {
+                GradelyModalCloseLabel()
+            }
+            .buttonStyle(.plain)
+            .keyboardShortcut(.cancelAction)
+            .padding(Spacing.md)
+            .accessibilityLabel(AppL10n.string("action.done"))
+            .accessibilityIdentifier("modalDismissButton")
+        }
+        #endif
     }
 
     private var headerGradient: LinearGradient {

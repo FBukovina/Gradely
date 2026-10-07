@@ -659,6 +659,7 @@ private struct TodaySchoolReconnectSheet: View {
         } message: {
             Text(errorMessage ?? "")
         }
+        .gradelyMacSheetSize(minWidth: 560, idealWidth: 640, minHeight: 600, idealHeight: 700)
         .accessibilityIdentifier("todaySchoolReconnectSheet")
     }
 

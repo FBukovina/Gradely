@@ -126,6 +126,7 @@ struct SubjectDetailView: View {
                             }
                         }
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
             .accessibilityIdentifier("subjectInsightSummary")

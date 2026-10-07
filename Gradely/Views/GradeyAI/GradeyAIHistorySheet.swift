@@ -23,7 +23,7 @@ struct GradeyAIHistorySheet: View {
     }
 
     var body: some View {
-        NavigationStack {
+        ModalNavigationContainer {
             ZStack {
                 GradeyAIBackground()
 
@@ -37,9 +37,8 @@ struct GradeyAIHistorySheet: View {
         #if os(iOS)
         .presentationDetents([.medium, .large])
         .presentationDragIndicator(.visible)
-        #else
-        .frame(minWidth: 460, idealWidth: 520, minHeight: 520, idealHeight: 640)
         #endif
+        .gradelyMacSheetSize(minWidth: 460, idealWidth: 540, minHeight: 460, idealHeight: 600)
         .confirmationDialog(
             AppL10n.string("gradey.ai.conversation.delete.title"),
             isPresented: deletionDialogBinding,

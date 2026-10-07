@@ -114,7 +114,8 @@ struct StravaCZView: View {
             StravaCZConnectView(
                 repository: repository,
                 initialCanteenNumber: viewModel.canteenNumber,
-                initialUsername: viewModel.username
+                initialUsername: viewModel.username,
+                usesScreenBackground: true
             ) { session in
                 await viewModel.didConnect(session)
             }

@@ -44,13 +44,11 @@ struct GradeyAIView: View {
                 aiContent
             }
         }
-        #if os(macOS)
-        .frame(minWidth: 560, idealWidth: 720, minHeight: 640, idealHeight: 780)
-        #endif
+        .gradelyMacSheetSize(minWidth: 560, idealWidth: 720, minHeight: 520, idealHeight: 660)
     }
 
     private var signInContent: some View {
-        NavigationStack {
+        ModalNavigationContainer {
             GradeyIDLoginView(
                 authClient: authClient,
                 subtitleKey: "gradey.ai.signIn.subtitle"
@@ -65,7 +63,7 @@ struct GradeyAIView: View {
     }
 
     private var aiContent: some View {
-        NavigationStack {
+        ModalNavigationContainer {
             ZStack {
                 GradeyAIBackground(isActive: viewModel.isStreaming || viewModel.isPreparingReply)
 

@@ -211,6 +211,7 @@ struct AbsencePredictionSheet: View {
                 Task { await viewModel.loadPredictionLessonsForSelectedDate() }
             }
         }
+        .gradelyMacSheetSize(minWidth: 480, idealWidth: 560, minHeight: 480, idealHeight: 620)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("absencePredictionSheet")
     }

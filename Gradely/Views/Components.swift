@@ -232,6 +232,22 @@ struct SettingsModalSectionHeader: View {
     }
 }
 
+/// Hosts a modal that draws its own header. iOS keeps a NavigationStack so the
+/// bar can be hidden. On macOS a NavigationStack in a sheet adds an opaque grey
+/// title strip, and hiding that toolbar from the sheet also strips the main
+/// window's title bar, so the content is shown on its own.
+struct ModalNavigationContainer<Content: View>: View {
+    @ViewBuilder var content: Content
+
+    var body: some View {
+        #if os(macOS)
+        content
+        #else
+        NavigationStack { content }
+        #endif
+    }
+}
+
 extension View {
     @ViewBuilder
     func settingsModalNavigationChrome() -> some View {
@@ -241,7 +257,7 @@ extension View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar(.hidden, for: .navigationBar)
         #else
-        self.navigationTitle("")
+        self
         #endif
     }
 }
@@ -603,6 +619,7 @@ struct GradelyAppleSignInButton: View {
 struct BrandFieldStyle: ViewModifier {
     func body(content: Content) -> some View {
         content
+            .gradelyBorderlessTextFields()
             .padding(.horizontal, Spacing.md)
             .padding(.vertical, Spacing.md)
             .background(

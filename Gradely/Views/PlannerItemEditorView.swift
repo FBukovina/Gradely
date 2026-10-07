@@ -64,9 +64,7 @@ struct PlannerItemEditorView: View {
         .tint(Brand.primary)
         .interactiveDismissDisabled(isSaving)
         .presentationDetents([.large])
-        #if os(macOS)
-        .frame(minWidth: 480, idealWidth: 560, minHeight: 560)
-        #endif
+        .gradelyMacSheetSize(minWidth: 480, idealWidth: 560, minHeight: 520, idealHeight: 620)
         .onAppear { store.loadIfNeeded() }
         .onDisappear { nextLessonTask?.cancel() }
         .confirmationDialog(AppL10n.string("planner.delete.confirm"), isPresented: $isConfirmingDelete, titleVisibility: .visible) {

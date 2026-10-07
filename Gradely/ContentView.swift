@@ -363,6 +363,7 @@ struct ContentView: View {
                 PlannerView(store: plannerStore, resolver: PlannerLessonResolver(repository: repository),
                             focusedDay: target.day, initialItemID: target.itemID)
             }
+            .gradelyMacSheetSize(minWidth: 520, idealWidth: 600, minHeight: 520, idealHeight: 640)
         }
         .privacyPolicyUpdate(isPresented: shouldShowPrivacyPolicyUpdate, onDismiss: {
             waitingForPolicyDismissal = false

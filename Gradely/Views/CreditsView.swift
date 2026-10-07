@@ -4,7 +4,7 @@ struct CreditsView: View {
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        NavigationStack {
+        ModalNavigationContainer {
             ZStack {
                 SettingsModalBackground()
 
@@ -32,6 +32,7 @@ struct CreditsView: View {
             }
             .settingsModalNavigationChrome()
         }
+        .gradelyMacSheetSize(minWidth: 480, idealWidth: 560, minHeight: 520, idealHeight: 640)
     }
 
     private var header: some View {

@@ -32,7 +32,7 @@ struct PrivacyPolicyUpdateView: View {
     }
 
     var body: some View {
-        NavigationStack {
+        ModalNavigationContainer {
             ZStack {
                 SettingsModalBackground()
 
@@ -65,9 +65,7 @@ struct PrivacyPolicyUpdateView: View {
             .settingsModalNavigationChrome()
         }
         .interactiveDismissDisabled(isGated)
-        #if os(macOS)
-        .frame(minWidth: 620, minHeight: 640)
-        #endif
+        .gradelyMacSheetSize(minWidth: 620, idealWidth: 680, minHeight: 560, idealHeight: 660)
         .accessibilityIdentifier("privacyPolicyUpdateView")
         .accessibilityElement(children: .contain)
         .task {

@@ -631,8 +631,10 @@ struct LoginView: View {
                     Text("edupage.twoFactor.deviceSection")
                 }
             }
+            .formStyle(.grouped)
             .navigationTitle("edupage.twoFactor.title")
         }
+        .gradelyMacSheetSize(minWidth: 420, idealWidth: 480, minHeight: 360, idealHeight: 440)
         .interactiveDismissDisabled(viewModel.isLoading)
     }
 
@@ -661,6 +663,7 @@ struct LoginView: View {
             }
             .navigationTitle("edupage.children.title")
         }
+        .gradelyMacSheetSize(minWidth: 420, idealWidth: 480, minHeight: 360, idealHeight: 460)
         .interactiveDismissDisabled(viewModel.isLoading)
     }
 

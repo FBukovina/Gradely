@@ -5,6 +5,7 @@ import SwiftUI
 /// the parent supplies one.
 struct StravaCZConnectView: View {
     private let repository: StravaCZRepository
+    private let usesScreenBackground: Bool
     private let onConnected: (StravaCZStoredSession) async -> Void
 
     @State private var canteenNumber: String
@@ -18,9 +19,11 @@ struct StravaCZConnectView: View {
         repository: StravaCZRepository,
         initialCanteenNumber: String = "",
         initialUsername: String = "",
+        usesScreenBackground: Bool = false,
         onConnected: @escaping (StravaCZStoredSession) async -> Void
     ) {
         self.repository = repository
+        self.usesScreenBackground = usesScreenBackground
         self.onConnected = onConnected
         _canteenNumber = State(initialValue: initialCanteenNumber)
         _username = State(initialValue: initialUsername)
@@ -28,7 +31,11 @@ struct StravaCZConnectView: View {
 
     var body: some View {
         ZStack {
-            SettingsModalBackground()
+            if usesScreenBackground {
+                AuroraBackground()
+            } else {
+                SettingsModalBackground()
+            }
 
             ScrollView {
                 VStack(alignment: .leading, spacing: Spacing.xl) {

@@ -10,7 +10,7 @@ struct SupportTipView: View {
     }
 
     var body: some View {
-        NavigationStack {
+        ModalNavigationContainer {
             ZStack {
                 SettingsModalBackground()
 
@@ -37,6 +37,7 @@ struct SupportTipView: View {
             }
             .settingsModalNavigationChrome()
         }
+        .gradelyMacSheetSize(minWidth: 520, idealWidth: 600, minHeight: 560, idealHeight: 680)
     }
 
     private var header: some View {

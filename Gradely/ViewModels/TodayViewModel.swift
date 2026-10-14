@@ -106,20 +106,6 @@ struct TodaySnapshot: Equatable {
 
     /// Short label for the account chip. With several linked students the name
     /// identifies who is shown; otherwise the class is enough context.
-    var accountChipLabel: String? {
-        if linkedSchoolAccounts.count > 1, let activeAccount {
-            let name = Self.nameWithoutClass(activeAccount.displayName, classAbbrev: user?.userClass?.abbrev)
-            if !name.isEmpty { return name }
-        }
-        if let abbrev = user?.userClass?.abbrev.trimmingCharacters(in: .whitespacesAndNewlines), !abbrev.isEmpty {
-            return abbrev
-        }
-        if let name = activeAccount?.displayName.trimmingCharacters(in: .whitespacesAndNewlines), !name.isEmpty {
-            return name
-        }
-        return nil
-    }
-
     /// The newest recorded marks across all subjects, one entry per mark.
     func recentMarks(limit: Int = 3) -> [TodayNewMark] {
         guard limit > 0 else { return [] }
@@ -190,10 +176,6 @@ struct TodaySnapshot: Equatable {
         return hour * 60 + minute
     }
 
-    var topTrends: [SubjectGradeTrend] {
-        gradeHistory.trends.filter { ($0.averageDelta ?? 0) != 0 }.prefix(4).map { $0 }
-    }
-
     /// The school API's `IsNew` flag is available before the cloud polling
     /// service has enough snapshots to produce new-mark events or trends.
     var newMarks: [TodayNewMark] {
@@ -216,7 +198,6 @@ final class TodayViewModel {
     var snapshot: TodaySnapshot = .empty
     var isLoading = false
     var isRefreshing = false
-    var isActivatingAccountID: String?
     var errorMessage: String?
     private(set) var hasCheckedLinkedAccountStatus = false
 
@@ -311,26 +292,6 @@ final class TodayViewModel {
         await refreshStrava()
         await refreshHistory()
         snapshot.refreshedAt = Date()
-    }
-
-    func activateAccount(_ account: LinkedAccount) async {
-        guard account.provider.isSchoolProvider else { return }
-        isActivatingAccountID = account.id
-        errorMessage = nil
-        defer { isActivatingAccountID = nil }
-
-        do {
-            let activation = try await linkedAccountRepository.activateSchoolAccount(id: account.id)
-            _ = try await repository.activateLinkedSchoolAccount(activation)
-            accountRequiringDeviceSignIn = nil
-            snapshot = .empty
-            loadCachedSnapshot()
-            await refresh(forceRefresh: false)
-        } catch SchoolAuthenticationError.deviceSignInRequired {
-            accountRequiringDeviceSignIn = account
-        } catch {
-            errorMessage = userFacingMessage(for: error)
-        }
     }
 
     func reconnect(_ account: LinkedAccount) async -> Bool {

@@ -72,16 +72,6 @@ final class SchoolSnapshotStore {
         return SubjectInsightEngine.make(subjects: subjects, preparedCalculations: preparedCalculations,
                                   observations: observations, events: events, scope: scope, now: now())
     }
-    func todayInsights(at date: Date = Date()) -> [TodayInsight] {
-        TodayInsightEngine.make(subjectInsights: subjectInsights, events: events, marksFetchedAt: marksFetchedAt,
-                                now: date, calendar: .current,
-                                schoolDataIsStale: sourceState("marks").isStale(at: date, interval: 300))
-    }
-    func markSeen(_ insights: [TodayInsight]) {
-        guard let scope else { return }
-        insightState.markSeen(insights.flatMap(\.observationIDs), scope: scope, at: now())
-        observations = insightState.observations(scope: scope, now: now())
-    }
     func clearDerivedState(scope affectedScope: SchoolDataScope?) {
         if let affectedScope { insightState.clear(scope: affectedScope) }
         else { insightState.clearAll() }

@@ -647,40 +647,6 @@
         }
       }
     },
-    "absence.empty.message" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "až škola zpřístupní absenci, spadne to sem."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "when your school makes absence records available, they land here."
-          }
-        }
-      }
-    },
-    "absence.empty.title" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "žádná absence"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "no absence"
-          }
-        }
-      }
-    },
     "absence.predictor.open" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -919,23 +885,6 @@
         }
       }
     },
-    "gradey.account.empty.title" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "zatím žádné připojené účty"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "no linked accounts yet"
-          }
-        }
-      }
-    },
     "gradey.ai.chat.empty.message" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -987,23 +936,6 @@
         }
       }
     },
-    "gradey.ai.empty.message" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "založ nový chat nebo ťukni na návrh dole."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "start a new chat or tap a suggestion below."
-          }
-        }
-      }
-    },
     "gradey.ai.empty.title" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -1038,40 +970,6 @@
         }
       }
     },
-    "gradey.ai.welcome.message" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "nech si pomoct s učením. pro pomoc se známkami, rozvrhem nebo testem vyber, které školní údaje chceš sdílet."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "get help with studying. choose what school information to share when you want help with your marks, timetable or a test."
-          }
-        }
-      }
-    },
-    "gradey.ai.welcome.title" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "tvůj studijní bestie"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "your study bestie"
-          }
-        }
-      }
-    },
     "gradey.auth.continueWithoutAccount" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -1085,23 +983,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "continue without an account"
-          }
-        }
-      }
-    },
-    "gradey.auth.signInHeading" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "pokračuj přes Apple"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "continue with Apple"
           }
         }
       }
@@ -1174,23 +1055,6 @@
         }
       }
     },
-    "login.subtitle" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "přihlas se školním účtem a měj známky, průměry i absenci po ruce."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "sign in with your school account and keep marks, averages, and absences at hand."
-          }
-        }
-      }
-    },
     "login.title" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -1204,23 +1068,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "sign in"
-          }
-        }
-      }
-    },
-    "marks.search.empty" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "žádné předměty"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "no subjects"
           }
         }
       }
@@ -1293,23 +1140,6 @@
         }
       }
     },
-    "onboarding.continue" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "pokračovat"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "continue"
-          }
-        }
-      }
-    },
     "onboarding.getStarted" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -1340,57 +1170,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "sign in"
-          }
-        }
-      }
-    },
-    "onboarding.meals.notNow" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "teď ne"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "not now"
-          }
-        }
-      }
-    },
-    "onboarding.meals.title" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "školní obědy"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "school meals"
-          }
-        }
-      }
-    },
-    "onboarding.next" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "další"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "next"
           }
         }
       }
@@ -1510,57 +1289,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "find your school"
-          }
-        }
-      }
-    },
-    "onboarding.school.title" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "připoj školu"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "connect your school"
-          }
-        }
-      }
-    },
-    "onboarding.skip" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "přeskočit"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "skip"
-          }
-        }
-      }
-    },
-    "onboarding.skipIntro" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "přeskočit intro"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "skip intro"
           }
         }
       }
@@ -1714,23 +1442,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "hey, welcome to Gradey"
-          }
-        }
-      }
-    },
-    "overview.weakest" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "chce to práci"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "needs work"
           }
         }
       }
@@ -1990,23 +1701,6 @@
         }
       }
     },
-    "settings.language.message" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "vyber, jak má Gradey mluvit."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "pick how Gradey talks."
-          }
-        }
-      }
-    },
     "settings.language.chronicallyOnline.title" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -2024,57 +1718,6 @@
         }
       }
     },
-    "settings.language.standard.subtitle" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "standardní. jako normálně."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "standard. like, normal."
-          }
-        }
-      }
-    },
-    "settings.language.system" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "použít jazyk zařízení"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "use device language"
-          }
-        }
-      }
-    },
-    "settings.language.system.subtitle" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "vezme angličtinu nebo češtinu podle jazyka zařízení."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "uses english or czech to match your device language."
-          }
-        }
-      }
-    },
     "settings.language.title" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -2088,40 +1731,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "language"
-          }
-        }
-      }
-    },
-    "settings.preferences.message" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "vyber si jazyk a co zůstane na liště."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "pick the language and what stays in your tab bar."
-          }
-        }
-      }
-    },
-    "settings.preferences.title" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "předvolby"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "preferences"
           }
         }
       }

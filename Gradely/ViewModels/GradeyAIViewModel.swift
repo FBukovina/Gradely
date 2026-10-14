@@ -21,10 +21,6 @@ final class GradeyAIViewModel {
     private(set) var isRecoveringRequest = false
     var pendingRecoveryMessage: String?
 
-    var selectedConversation: GradeyAIConversation? {
-        currentConversation
-    }
-
     var hasConsent: Bool {
         status?.consentRequired == false
     }

@@ -10,6 +10,7 @@ struct AppLanguageOptionsList: View {
             languageOptions
             chronicallyOnlineToggle
         }
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("appLanguageOptions")
     }
 
@@ -20,7 +21,7 @@ struct AppLanguageOptionsList: View {
                     options
                 }
             } else {
-                SettingsModalSurface(padding: 0) {
+                SettingsSurface(padding: 0) {
                     options
                 }
             }
@@ -34,7 +35,7 @@ struct AppLanguageOptionsList: View {
                     toggleContent
                 }
             } else {
-                SettingsModalSurface {
+                SettingsSurface {
                     toggleContent
                 }
             }

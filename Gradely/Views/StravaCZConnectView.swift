@@ -34,7 +34,7 @@ struct StravaCZConnectView: View {
             if usesScreenBackground {
                 AuroraBackground()
             } else {
-                SettingsModalBackground()
+                SettingsBackground()
             }
 
             ScrollView {
@@ -45,7 +45,7 @@ struct StravaCZConnectView: View {
                         message: "stravacz.connect.message"
                     )
 
-                    SettingsModalSurface {
+                    SettingsSurface {
                         VStack(spacing: Spacing.lg) {
                             TextField(AppL10n.string("stravacz.canteenNumber"), text: $canteenNumber)
                                 .gradelyKeyboardType(.numberPad)

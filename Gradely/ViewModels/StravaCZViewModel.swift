@@ -148,16 +148,6 @@ final class StravaCZViewModel {
         await setMeal(replacement.newMeal, ordered: true)
     }
 
-    func disconnect() async {
-        if let linkedAccountRepository {
-            for account in linkedAccountRepository.loadAccounts() where account.provider == .stravaCZ {
-                try? await linkedAccountRepository.unlinkAccount(id: account.id)
-            }
-        }
-        await repository.logout()
-        resetSignedOutState()
-    }
-
     func clearError() {
         errorMessage = nil
     }

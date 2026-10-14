@@ -160,37 +160,6 @@ enum GradeMath {
         )
     }
 
-    /// Each option repeats one ordinary grade at the user's chosen weight.
-    /// The <= target comparison uses unrounded arithmetic, never display text.
-    static func targetOptions(
-        for prepared: PreparedGradeCalculation,
-        targetAverage: Double,
-        weight: Int = 1,
-        maximumCount: Int = 10
-    ) -> GradeTargetResult {
-        func result(_ status: GradeTargetResult.Status, _ options: [GradeTargetOption] = []) -> GradeTargetResult {
-            GradeTargetResult(status: status, options: options, confidence: prepared.confidence)
-        }
-        guard targetAverage.isFinite, (1.0...5.0).contains(targetAverage), (1...10).contains(weight), maximumCount > 0 else {
-            return result(.invalidTarget)
-        }
-        guard let current = prepared.calculatedAverage, prepared.canSimulate else { return result(.unavailable) }
-        if current <= targetAverage { return result(.alreadyReached) }
-        var options: [GradeTargetOption] = []
-        for grade in 1...5 {
-            for count in 1...min(maximumCount, maximumHypotheticalGrades) {
-                let additions = (0..<count).map { _ in HypotheticalGrade(value: Double(grade), weight: weight) }
-                if let simulation = simulate(prepared, adding: additions), simulation.estimatedAverage <= targetAverage {
-                    options.append(GradeTargetOption(grade: grade, count: count, weight: weight,
-                                                    estimatedAverage: simulation.estimatedAverage))
-                    break
-                }
-            }
-        }
-        options.sort { $0.count == $1.count ? $0.grade > $1.grade : $0.count < $1.count }
-        return result(options.isEmpty ? .unreachable : .options, Array(options.prefix(3)))
-    }
-
     // Compatibility entry points use the same prepared arithmetic as new consumers.
     static func weightedAverage(for marks: [Mark]) -> Double? {
         prepare(calculationSubject(marks: marks)).calculatedAverage

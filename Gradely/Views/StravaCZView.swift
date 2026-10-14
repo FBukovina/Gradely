@@ -47,23 +47,6 @@ struct StravaCZView: View {
                             .accessibilityLabel(AppL10n.string("action.refresh"))
                             .accessibilityIdentifier("stravaCZRefreshButton")
                         }
-
-                        ToolbarItem(placement: .gradelyTopBarTrailing) {
-                            Menu {
-                                Button(role: .destructive) {
-                                    Task { await viewModel.disconnect() }
-                                } label: {
-                                    GradelyLabel(AppL10n.string("stravacz.disconnect"), systemImage: "rectangle.portrait.and.arrow.right")
-                                }
-                                .accessibilityIdentifier("stravaCZDisconnectButton")
-                            } label: {
-                                GradelyIcon(systemName: "fork.knife.circle.fill")
-                                    .font(.title3)
-                                    .foregroundStyle(Brand.primary)
-                            }
-                            .accessibilityLabel(AppL10n.string("stravacz.account.menu"))
-                            .accessibilityIdentifier("stravaCZAccountMenuButton")
-                        }
                     }
                 }
         }

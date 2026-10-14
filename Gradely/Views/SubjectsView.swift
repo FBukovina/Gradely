@@ -124,11 +124,6 @@ struct SubjectsView: View {
 
                 MarksHero(viewModel: viewModel)
 
-                if !recentTrends.isEmpty {
-                    MarksTrendSection(trends: Array(recentTrends.prefix(4)))
-                        .accessibilityIdentifier("marksTrendSection")
-                }
-
                 if viewModel.hasLocalAbsenceAdjustments {
                     GradelyLabel(AppL10n.string("absence.title") + " · " + AppL10n.string("absence.override.adjusted"), systemImage: "eye.slash")
                         .font(.caption)
@@ -182,10 +177,6 @@ struct SubjectsView: View {
                 }
                 return firstAverage < secondAverage
             }
-        case .name:
-            return subjects.sorted {
-                $0.trimmedName.localizedCaseInsensitiveCompare($1.trimmedName) == .orderedAscending
-            }
         }
     }
 
@@ -197,17 +188,6 @@ struct SubjectsView: View {
         }
     }
 
-    /// The "Grade movement" section stays scoped to the last 90 days even though
-    /// the view model loads the whole school year for the detail charts.
-    private var recentTrends: [SubjectGradeTrend] {
-        guard let cutoff = Calendar.current.date(byAdding: .day, value: -90, to: Date()) else {
-            return viewModel.trends
-        }
-        let recentEvents = viewModel.trends
-            .flatMap(\.events)
-            .filter { $0.capturedAt >= cutoff }
-        return SubjectGradeTrend.make(from: recentEvents)
-    }
 }
 
 // MARK: - Sort
@@ -215,7 +195,6 @@ struct SubjectsView: View {
 private enum SubjectSortMode: String, CaseIterable, Identifiable, Hashable {
     case focus
     case average
-    case name
 
     var id: String { rawValue }
 
@@ -223,7 +202,6 @@ private enum SubjectSortMode: String, CaseIterable, Identifiable, Hashable {
         switch self {
         case .focus: AppL10n.string("marks.sort.focus")
         case .average: AppL10n.string("marks.sort.average")
-        case .name: AppL10n.string("marks.sort.name")
         }
     }
 }
@@ -260,91 +238,6 @@ private struct MarksHero: View {
         .shadow(color: Brand.primary.opacity(0.24), radius: 16, x: 0, y: 8)
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier("marksHeroCard")
-    }
-}
-
-// MARK: - Trends
-
-private struct MarksTrendSection: View {
-    let trends: [SubjectGradeTrend]
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: Spacing.sm) {
-            HStack {
-                SectionHeader("marks.trends.title")
-                Spacer()
-                Text("marks.trends.range90")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
-            }
-
-            VStack(spacing: 0) {
-                ForEach(Array(trends.enumerated()), id: \.element.id) { index, trend in
-                    MarksTrendChartRow(trend: trend)
-                        .padding(.horizontal, Spacing.md)
-                        .padding(.vertical, Spacing.sm)
-
-                    if index < trends.count - 1 {
-                        Divider()
-                            .padding(.leading, Spacing.md)
-                    }
-                }
-            }
-            .background(Color.gradelySecondaryGroupedBackground, in: RoundedRectangle(cornerRadius: Radius.sm, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: Radius.sm, style: .continuous)
-                    .strokeBorder(Color.primary.opacity(0.06), lineWidth: 1)
-            }
-        }
-    }
-}
-
-private struct MarksTrendChartRow: View {
-    let trend: SubjectGradeTrend
-
-    var body: some View {
-        let band = GradeMath.band(for: trend.latestAverage)
-
-        HStack(spacing: Spacing.md) {
-            AverageHistoryChart(points: points, band: band, style: .sparkline)
-                .frame(width: 64, height: 26)
-                .padding(.horizontal, 6)
-                .padding(.vertical, 4)
-                .background(band.soft, in: RoundedRectangle(cornerRadius: Radius.sm, style: .continuous))
-
-            VStack(alignment: .leading, spacing: Spacing.xs) {
-                Text(trend.displayName)
-                    .font(.subheadline.weight(.bold))
-                    .lineLimit(1)
-                Text(detail)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-            }
-
-            Spacer(minLength: Spacing.sm)
-
-            if let delta = trend.averageDelta {
-                Text(String(format: "%+.2f", locale: .current, delta))
-                    .font(.subheadline.weight(.bold).monospacedDigit())
-                    .foregroundStyle(delta > 0 ? GradeBand.poor.foregroundColor : Brand.primary)
-            }
-        }
-        .accessibilityElement(children: .combine)
-    }
-
-    private var points: [AveragePoint] {
-        trend.events.compactMap { event in
-            event.averageValue.map { AveragePoint(id: event.id, date: event.capturedAt, value: $0) }
-        }
-    }
-
-    private var detail: String {
-        let newMarks = trend.latestMarkCount - trend.firstMarkCount
-        if newMarks > 0 {
-            return String(format: AppL10n.string("marks.trends.newMarks"), newMarks)
-        }
-        return AppL10n.string("marks.trends.movement")
     }
 }
 
@@ -390,7 +283,6 @@ private struct SubjectDirectory: View {
                         SubjectRow(
                             subject: subject,
                             absence: absence(subject),
-                            trend: trend(subject),
                             prepared: snapshotStore?.preparedCalculations[subject.id]
                         )
                     }
@@ -415,7 +307,6 @@ private struct SubjectDirectory: View {
 private struct SubjectRow: View {
     let subject: Subject
     let absence: AbsencePerSubject?
-    let trend: SubjectGradeTrend?
     var prepared: PreparedGradeCalculation? = nil
 
     var body: some View {
@@ -439,16 +330,6 @@ private struct SubjectRow: View {
 
                     if let latestMark = subject.marks.first {
                         InlineMark(text: latestMark.displayText, band: GradeMath.band(for: latestMark))
-                    }
-
-                    if let delta = trendDelta {
-                        HStack(spacing: 2) {
-                            GradelyIcon(systemName: delta < 0 ? "arrow.down.right" : "arrow.up.right")
-                            Text(String(format: "%+.2f", locale: .current, delta))
-                        }
-                        .font(.caption.weight(.bold).monospacedDigit())
-                        .foregroundStyle(delta < 0 ? Brand.primary : GradeBand.poor.foregroundColor)
-                        .accessibilityLabel(trendAccessibilityLabel(for: delta))
                     }
                 }
                 .lineLimit(1)
@@ -485,17 +366,6 @@ private struct SubjectRow: View {
     private var abbrev: String {
         let trimmed = subject.trimmedAbbrev
         return trimmed.isEmpty ? String(subject.trimmedName.prefix(2)).uppercased() : trimmed
-    }
-
-    private var trendDelta: Double? {
-        guard let delta = trend?.averageDelta, delta != 0 else { return nil }
-        return delta
-    }
-
-    private func trendAccessibilityLabel(for delta: Double) -> String {
-        delta < 0
-            ? String(format: AppL10n.string("marks.row.trendBetter"), abs(delta))
-            : String(format: AppL10n.string("marks.row.trendWorse"), delta)
     }
 }
 

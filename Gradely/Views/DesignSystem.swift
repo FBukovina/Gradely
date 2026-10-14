@@ -60,22 +60,6 @@ extension Color {
         #endif
     }
 
-    static var gradelySystemGray: Color {
-        #if os(macOS)
-        Color(nsColor: .secondaryLabelColor)
-        #else
-        Color(.systemGray)
-        #endif
-    }
-
-    static var gradelySystemGray5: Color {
-        #if os(macOS)
-        Color(nsColor: .separatorColor)
-        #else
-        Color(.systemGray5)
-        #endif
-    }
-
     static var gradelySystemOrange: Color {
         #if os(macOS)
         Color(nsColor: .systemOrange)

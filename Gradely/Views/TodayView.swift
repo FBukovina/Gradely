@@ -1,8 +1,6 @@
 import SwiftUI
 
 struct TodayView: View {
-    @Environment(\.requestGradeyAIAction) private var requestAI
-    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State private var viewModel: TodayViewModel
     @State private var reconnectAccount: LinkedAccount?
     @Environment(\.scenePhase) private var scenePhase
@@ -10,7 +8,6 @@ struct TodayView: View {
     private let repository: SchoolRepository
     private let schoolDirectoryProvider: any SchoolDirectoryProviding
     private let onOpenGradeyAI: () -> Void
-    private let onOpenAbsence: () -> Void
     private let onOpenTimetable: (() -> Void)?
     private let onOpenMarks: (() -> Void)?
     private let snapshotStore: SchoolSnapshotStore?
@@ -27,7 +24,6 @@ struct TodayView: View {
         snapshotStore: SchoolSnapshotStore? = nil,
         accountHub: AnyView? = nil,
         onOpenGradeyAI: @escaping () -> Void = {},
-        onOpenAbsence: @escaping () -> Void,
         onOpenTimetable: (() -> Void)? = nil,
         onOpenMarks: (() -> Void)? = nil
     ) {
@@ -35,7 +31,6 @@ struct TodayView: View {
         self.schoolDirectoryProvider = schoolDirectoryProvider
         self.accountHub = accountHub
         self.onOpenGradeyAI = onOpenGradeyAI
-        self.onOpenAbsence = onOpenAbsence
         self.onOpenTimetable = onOpenTimetable
         self.onOpenMarks = onOpenMarks
         self.snapshotStore = snapshotStore
@@ -89,7 +84,7 @@ struct TodayView: View {
                     Task { await viewModel.refresh(forceRefresh: false) }
                 }
             }
-            .navigationDestination(for: TodayInsight.Destination.self) { destination in
+            .navigationDestination(for: TodayDestination.self) { destination in
                 insightDestination(destination)
             }
             .alert(AppL10n.string("error.title"), isPresented: errorBinding) {
@@ -121,24 +116,13 @@ struct TodayView: View {
                 if let account = viewModel.accountRequiringReconnect {
                     schoolConnectionNotice(account)
                 }
-                TodayHero(
-                    snapshot: viewModel.snapshot,
-                    now: now,
-                    isRefreshing: viewModel.isRefreshing,
-                    isActivatingAccount: viewModel.isActivatingAccountID != nil,
-                    selectedAccountID: selectedSchoolAccountID
-                )
+                TodayHero(snapshot: viewModel.snapshot, now: now)
                 if viewModel.isLoading {
                     loadingRow
                 }
                 dayCard(at: now)
-                attentionCard(at: now)
-                gradeyActions
                 recentMarksCard
                 plannerCard(at: now)
-                if let risk = viewModel.snapshot.absenceRisk, let highest = risk.highestRisk {
-                    absenceRiskCard(risk, highest: highest)
-                }
                 if showMealsTab, viewModel.snapshot.stravaSession != nil {
                     lunchCard
                 }
@@ -324,102 +308,6 @@ struct TodayView: View {
         return parts.joined(separator: " · ")
     }
 
-    // MARK: - Attention
-
-    private func attentionCard(at now: Date) -> some View {
-        let insights = snapshotStore?.todayInsights(at: now) ?? []
-        return Card {
-            VStack(alignment: .leading, spacing: Spacing.md) {
-                HStack(alignment: .firstTextBaseline) {
-                    SectionHeader("today.attention.title")
-                    if !insights.isEmpty {
-                        StatusChip(text: "\(insights.count)", color: Brand.primary)
-                    }
-                }
-                if insights.isEmpty {
-                    TodayInfoRow(
-                        title: Text("today.attention.emptyTitle"),
-                        subtitle: Text("today.attention.empty"),
-                        icon: "checkmark-circle-02",
-                        tint: Brand.primary
-                    )
-                } else {
-                    ForEach(insights) { insight in
-                        NavigationLink(value: insight.destination) {
-                            TodayInsightRow(insight: insight, subtitle: insightSubtitle(insight))
-                        }
-                        .buttonStyle(.plain)
-                        .simultaneousGesture(TapGesture().onEnded { snapshotStore?.markSeen([insight]) })
-                        .accessibilityIdentifier("todayInsight-\(insight.id)")
-                    }
-                }
-                if let snapshotStore, snapshotStore.sourceState("marks").error != nil {
-                    Text("today.cached.warning").font(.caption).foregroundStyle(.secondary)
-                }
-            }
-        }
-        .accessibilityIdentifier("todayAttentionCard")
-    }
-
-    // MARK: - Gradey AI
-
-    private var gradeyActions: some View {
-        VStack(alignment: .leading, spacing: Spacing.sm) {
-            SectionHeader("today.ai.title")
-                .padding(.horizontal, Spacing.xs)
-            if dynamicTypeSize.isAccessibilitySize {
-                VStack(spacing: Spacing.sm) {
-                    studyPrioritiesAction(expandsVertically: false)
-                    weekSummaryAction(expandsVertically: false)
-                }
-            } else {
-                HStack(alignment: .top, spacing: Spacing.sm) {
-                    studyPrioritiesAction(expandsVertically: true)
-                    weekSummaryAction(expandsVertically: true)
-                }
-                .fixedSize(horizontal: false, vertical: true)
-            }
-        }
-    }
-
-    private func studyPrioritiesAction(expandsVertically: Bool) -> some View {
-        gradeyAction(
-            .studyPriorities,
-            title: "gradey.ai.action.study_priorities",
-            subtitle: "today.ai.studyPriorities.subtitle",
-            icon: "target-02",
-            identifier: "todayStudyPrioritiesButton",
-            expandsVertically: expandsVertically
-        )
-    }
-
-    private func weekSummaryAction(expandsVertically: Bool) -> some View {
-        gradeyAction(
-            .weekSummary,
-            title: "gradey.ai.action.week_summary",
-            subtitle: "today.ai.weekSummary.subtitle",
-            icon: "calendar-check-in-02",
-            identifier: "todayWeekSummaryButton",
-            expandsVertically: expandsVertically
-        )
-    }
-
-    private func gradeyAction(
-        _ action: GradeyAIAction,
-        title: LocalizedStringKey,
-        subtitle: LocalizedStringKey,
-        icon: String,
-        identifier: String,
-        expandsVertically: Bool
-    ) -> some View {
-        Button { requestAI(action, nil, nil) } label: {
-            TodayActionCardLabel(title: title, subtitle: subtitle, icon: icon, expandsVertically: expandsVertically)
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(Text(title))
-        .accessibilityIdentifier(identifier)
-    }
-
     // MARK: - Recent marks
 
     private var recentMarksCard: some View {
@@ -445,12 +333,15 @@ struct TodayView: View {
                     )
                 } else {
                     ForEach(marks) { mark in
-                        NavigationLink(value: TodayInsight.Destination.subject(mark.subjectID)) {
+                        NavigationLink(value: TodayDestination.subject(mark.subjectID)) {
                             TodayMarkRow(mark: mark)
                         }
                         .buttonStyle(.plain)
                         .accessibilityIdentifier("todayRecentMark-\(mark.id)")
                     }
+                }
+                if let snapshotStore, snapshotStore.sourceState("marks").error != nil {
+                    Text("today.cached.warning").font(.caption).foregroundStyle(.secondary)
                 }
             }
         }
@@ -469,7 +360,7 @@ struct TodayView: View {
                 VStack(alignment: .leading, spacing: Spacing.md) {
                     HStack(alignment: .firstTextBaseline) {
                         SectionHeader("planner.title")
-                        NavigationLink(value: TodayInsight.Destination.planner) {
+                        NavigationLink(value: TodayDestination.planner) {
                             TodayLinkLabel(title: "action.open")
                         }
                         .buttonStyle(.plain)
@@ -484,7 +375,7 @@ struct TodayView: View {
                         )
                     } else {
                         ForEach(Array(events)) { event in
-                            NavigationLink(value: TodayInsight.Destination.plannerItem(event.id)) {
+                            NavigationLink(value: TodayDestination.plannerItem(event.id)) {
                                 TodayPlannerRow(event: event)
                             }
                             .buttonStyle(.plain)
@@ -497,40 +388,7 @@ struct TodayView: View {
         }
     }
 
-    // MARK: - Absence & lunch
-
-    private func absenceRiskCard(_ risk: AbsenceRiskSummary, highest: AbsenceRiskSubject) -> some View {
-        let others = risk.subjects.filter { $0.id != highest.id }.prefix(2)
-        return Card {
-            VStack(alignment: .leading, spacing: Spacing.md) {
-                HStack(alignment: .firstTextBaseline) {
-                    SectionHeader("Absence risk")
-                    Button(action: onOpenAbsence) {
-                        TodayLinkLabel(title: "action.open")
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityIdentifier("todayOpenAbsenceButton")
-                }
-
-                if viewModel.snapshot.hasLocalAbsenceAdjustments {
-                    GradelyLabel("absence.override.adjusted", systemImage: "eye.slash")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .accessibilityIdentifier("todayAbsenceAdjusted")
-                }
-                TodayRiskRow(subject: highest)
-                ForEach(Array(others)) { subject in
-                    TodayRiskRow(subject: subject)
-                }
-                if risk.isThresholdUnavailable {
-                    Text("School limit unavailable. Current percentages are shown without guessing a threshold.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
-        }
-        .accessibilityIdentifier("todayAbsenceRiskCard")
-    }
+    // MARK: - Lunch
 
     private var lunchCard: some View {
         Card {
@@ -558,7 +416,7 @@ struct TodayView: View {
 
     // MARK: - Navigation
 
-    @ViewBuilder private func insightDestination(_ destination: TodayInsight.Destination) -> some View {
+    @ViewBuilder private func insightDestination(_ destination: TodayDestination) -> some View {
         switch destination {
         case .subject(let id):
             if let subject = viewModel.snapshot.subjects.first(where: { $0.id == id }) {
@@ -585,32 +443,10 @@ struct TodayView: View {
         }
     }
 
-    private func insightSubtitle(_ insight: TodayInsight) -> String {
-        if let eventID = insight.eventIDs.first {
-            if let event = snapshotStore?.events.first(where: { $0.id == eventID }) {
-                return SchoolDateFormatting.eventDate(event, includeTime: false)
-            }
-            return SchoolDateFormatting.date(insight.relevantAt)
-        }
-        return AppL10n.string("today.insight.recordedAverage")
-    }
-
     private var errorBinding: Binding<Bool> {
         Binding(
             get: { viewModel.errorMessage != nil },
             set: { if !$0 { viewModel.clearError() } }
-        )
-    }
-
-    private var selectedSchoolAccountID: Binding<String> {
-        Binding(
-            get: { viewModel.snapshot.activeAccount?.id ?? "" },
-            set: { id in
-                guard let account = viewModel.snapshot.linkedSchoolAccounts.first(where: { $0.id == id }) else {
-                    return
-                }
-                Task { await viewModel.activateAccount(account) }
-            }
         )
     }
 
@@ -752,34 +588,16 @@ private enum TodayLessonCopy {
 private struct TodayHero: View {
     let snapshot: TodaySnapshot
     let now: Date
-    let isRefreshing: Bool
-    let isActivatingAccount: Bool
-    @Binding var selectedAccountID: String
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.lg) {
-            if dynamicTypeSize.isAccessibilitySize {
-                VStack(alignment: .leading, spacing: Spacing.sm) {
-                    accountChip
-                    dateRow
-                }
-            } else {
-                HStack(alignment: .center, spacing: Spacing.sm) {
-                    dateRow
-                    Spacer(minLength: Spacing.sm)
-                    accountChip
-                }
-            }
-
             Text(verbatim: greeting)
                 .font(.gradelyDisplay(size: 30, relativeTo: .title))
                 .foregroundStyle(Brand.onAccent)
                 .lineLimit(3)
                 .minimumScaleFactor(0.7)
                 .fixedSize(horizontal: false, vertical: true)
-
-            statusPanel
 
             statTiles
         }
@@ -789,175 +607,6 @@ private struct TodayHero: View {
         .shadow(color: Brand.primary.opacity(0.24), radius: 16, x: 0, y: 8)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("todayHeroCard")
-    }
-
-    private var dateRow: some View {
-        HStack(alignment: .center, spacing: Spacing.sm) {
-            Text(verbatim: dateText)
-                .font(.caption.weight(.bold))
-                .textCase(.uppercase)
-                .kerning(0.6)
-                .foregroundStyle(Brand.onAccent.opacity(0.72))
-                .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
-                .minimumScaleFactor(0.8)
-                .fixedSize(horizontal: false, vertical: true)
-            if isRefreshing {
-                ProgressView()
-                    .controlSize(.mini)
-                    .tint(Brand.onAccent)
-            }
-        }
-    }
-
-    // MARK: Account chip
-
-    @ViewBuilder private var accountChip: some View {
-        if let label = snapshot.accountChipLabel {
-            let canSwitch = snapshot.linkedSchoolAccounts.count > 1
-            let chip = HStack(spacing: Spacing.xs) {
-                if !dynamicTypeSize.isAccessibilitySize {
-                    GradelyIcon("user-group", size: 13)
-                }
-                Text(verbatim: label)
-                    .lineLimit(1)
-                if canSwitch {
-                    GradelyIcon("arrow-data-transfer-vertical", size: 12)
-                }
-            }
-            .font(.caption.weight(.bold))
-            .foregroundStyle(Brand.onAccent)
-            .padding(.horizontal, Spacing.sm + 2)
-            .frame(minHeight: 30)
-            .background(.white.opacity(0.22), in: Capsule())
-            .frame(maxWidth: dynamicTypeSize.isAccessibilitySize ? nil : 190, alignment: .trailing)
-
-            if canSwitch {
-                Menu {
-                    Picker(selection: $selectedAccountID) {
-                        ForEach(snapshot.linkedSchoolAccounts) { account in
-                            Text(verbatim: account.displayName)
-                                .tag(account.id)
-                        }
-                    } label: {
-                        EmptyView()
-                    }
-                    .pickerStyle(.inline)
-                } label: {
-                    if isActivatingAccount {
-                        ProgressView()
-                            .controlSize(.small)
-                            .tint(Brand.onAccent)
-                            .frame(minHeight: 30)
-                    } else {
-                        chip
-                    }
-                }
-                .menuIndicator(.hidden)
-                .buttonStyle(.plain)
-                .disabled(isActivatingAccount)
-                .accessibilityLabel(snapshot.activeAccount?.displayName ?? AppL10n.string("today.schoolAccount"))
-                .accessibilityIdentifier("todayAccountSwitcher")
-            } else {
-                chip
-                    .accessibilityElement(children: .ignore)
-                    .accessibilityLabel(snapshot.activeAccount?.displayName ?? label)
-                    .accessibilityIdentifier("todayAccountSwitcher")
-            }
-        }
-    }
-
-    // MARK: Status
-
-    private var statusPanel: some View {
-        HStack(alignment: .top, spacing: Spacing.md) {
-            GradelyIcon(statusIcon, size: 18)
-                .foregroundStyle(Brand.onAccent)
-                .frame(width: 38, height: 38)
-                .background(.white.opacity(0.22), in: Circle())
-
-            VStack(alignment: .leading, spacing: Spacing.xs) {
-                Text(verbatim: statusTitle)
-                    .font(.headline.weight(.bold))
-                    .foregroundStyle(Brand.onAccent)
-                    .fixedSize(horizontal: false, vertical: true)
-                if let statusSubtitle {
-                    Text(verbatim: statusSubtitle)
-                        .font(.subheadline)
-                        .foregroundStyle(Brand.onAccent.opacity(0.78))
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                if let progress = snapshot.currentLessonProgress {
-                    GeometryReader { geo in
-                        ZStack(alignment: .leading) {
-                            Capsule().fill(Brand.onAccent.opacity(0.14))
-                            Capsule()
-                                .fill(Brand.onAccent)
-                                .frame(width: max(geo.size.width * progress, 6))
-                        }
-                    }
-                    .frame(height: 5)
-                    .padding(.top, Spacing.xs)
-                    .accessibilityHidden(true)
-                }
-            }
-
-            Spacer(minLength: 0)
-        }
-        .padding(Spacing.md)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.white.opacity(0.16), in: RoundedRectangle(cornerRadius: Radius.md, style: .continuous))
-        .accessibilityElement(children: .combine)
-        .accessibilityIdentifier("todayHeroStatus")
-    }
-
-    private var statusIcon: String {
-        guard let summary = snapshot.timetableSummary else { return "calendar-03" }
-        switch summary.state {
-        case .empty: return "sun-01"
-        case .beforeSchool: return "sunrise"
-        case .current: return "play-circle"
-        case .betweenLessons: return "coffee-02"
-        case .afterSchool: return "checkmark-circle-02"
-        }
-    }
-
-    private var statusTitle: String {
-        guard let summary = snapshot.timetableSummary else {
-            return AppL10n.string("today.timetableUnavailable")
-        }
-        switch summary.state {
-        case .empty:
-            return AppL10n.string("timetable.summary.empty.title")
-        case .beforeSchool:
-            return AppL10n.string("timetable.summary.beforeSchool.title")
-        case .current:
-            return String(
-                format: AppL10n.string("timetable.summary.now.title"),
-                summary.currentLesson.map { TodayLessonCopy.subject(for: $0) } ?? AppL10n.string("timetable.summary.lessonFallback")
-            )
-        case .betweenLessons:
-            return AppL10n.string("timetable.summary.between.title")
-        case .afterSchool:
-            return AppL10n.string("timetable.summary.after.title")
-        }
-    }
-
-    private var statusSubtitle: String? {
-        guard let summary = snapshot.timetableSummary else {
-            return AppL10n.string("today.timetableUnavailable.subtitle")
-        }
-        switch summary.state {
-        case .empty:
-            return AppL10n.string("timetable.summary.empty.message")
-        case .beforeSchool, .betweenLessons:
-            guard let next = summary.nextLesson else { return nil }
-            return TodayLessonCopy.nextLessonSummary(next, minutes: summary.minutesUntilNext)
-        case .current:
-            guard let minutes = summary.minutesRemainingInCurrent else { return nil }
-            return String(format: AppL10n.string("timetable.summary.remaining"), minutes)
-        case .afterSchool:
-            return AppL10n.string(summary.hasChanges ? "timetable.summary.after.changes" : "timetable.summary.after.done")
-        }
     }
 
     // MARK: Stats
@@ -1009,10 +658,6 @@ private struct TodayHero: View {
     }
 
     // MARK: Copy
-
-    private var dateText: String {
-        now.formatted(Date.FormatStyle(locale: AppLanguageOverride.locale).weekday(.wide).day().month(.wide))
-    }
 
     private var greeting: String {
         let hour = Calendar.current.component(.hour, from: now)
@@ -1227,55 +872,6 @@ private struct TodayLessonRow: View {
     }
 }
 
-private struct TodayInsightRow: View {
-    let insight: TodayInsight
-    let subtitle: String
-
-    var body: some View {
-        HStack(spacing: Spacing.md) {
-            GradelyIcon(icon, size: 16)
-                .foregroundStyle(tint)
-                .frame(width: 34, height: 34)
-                .background(tint.opacity(0.14), in: RoundedRectangle(cornerRadius: Radius.sm, style: .continuous))
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(verbatim: insight.title)
-                    .font(.subheadline.weight(.bold))
-                    .fixedSize(horizontal: false, vertical: true)
-                Text(verbatim: subtitle)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-
-            Spacer(minLength: Spacing.sm)
-
-            TodayDisclosureIcon()
-        }
-        .contentShape(Rectangle())
-    }
-
-    private var icon: String {
-        switch insight.kind {
-        case .assessment: "edit-02"
-        case .busyTests: "task-daily-02"
-        case .deadline: "check-list"
-        case .averageChange: "chart-line-data-01"
-        case .worseningTrend: "chart-down"
-        case .recentGrade: "checkmark-badge-02"
-        }
-    }
-
-    private var tint: Color {
-        switch insight.kind {
-        case .assessment, .busyTests: GradeBand.average.foregroundColor
-        case .deadline: .gradelySystemPurple
-        case .worseningTrend: GradeBand.poor.foregroundColor
-        case .averageChange, .recentGrade: Brand.primary
-        }
-    }
-}
-
 private struct TodayMarkRow: View {
     let mark: TodayNewMark
 
@@ -1402,44 +998,6 @@ private struct TodayLinkLabel: View {
     }
 }
 
-private struct TodayActionCardLabel: View {
-    let title: LocalizedStringKey
-    let subtitle: LocalizedStringKey
-    let icon: String
-    let expandsVertically: Bool
-
-    var body: some View {
-        HStack(alignment: .top, spacing: Spacing.md) {
-            GradelyIcon(icon, size: 16)
-                .foregroundStyle(Brand.onAccent)
-                .frame(width: 34, height: 34)
-                .background(Brand.gradient, in: Circle())
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(.subheadline.weight(.bold))
-                    .foregroundStyle(.primary)
-                Text(subtitle)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            .multilineTextAlignment(.leading)
-            .fixedSize(horizontal: false, vertical: true)
-
-            Spacer(minLength: 0)
-        }
-        .padding(Spacing.md)
-        .frame(maxWidth: .infinity, maxHeight: expandsVertically ? .infinity : nil, alignment: .topLeading)
-        .frame(minHeight: 44)
-        .background(Color.gradelySecondaryGroupedBackground, in: RoundedRectangle(cornerRadius: Radius.md, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: Radius.md, style: .continuous)
-                .strokeBorder(Brand.primary.opacity(0.18), lineWidth: 1)
-        )
-        .contentShape(RoundedRectangle(cornerRadius: Radius.md, style: .continuous))
-    }
-}
-
 private struct TodayInfoRow: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     let title: Text
@@ -1466,190 +1024,6 @@ private struct TodayInfoRow: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
             Spacer(minLength: 0)
-        }
-    }
-}
-
-private struct TodayRiskRow: View {
-    let subject: AbsenceRiskSubject
-
-    var body: some View {
-        HStack(alignment: .center, spacing: Spacing.md) {
-            AbsenceRiskRing(
-                percentage: subject.percentage,
-                threshold: subject.threshold,
-                level: subject.level
-            )
-            VStack(alignment: .leading, spacing: Spacing.xs) {
-                Text(subject.subjectName)
-                    .font(.subheadline.weight(.bold))
-                    .lineLimit(1)
-                Text(subtitle)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            Spacer(minLength: 0)
-            Text(String(format: "%.0f%%", subject.percentage))
-                .font(.headline.monospacedDigit())
-                .foregroundStyle(tint)
-        }
-        .frame(minHeight: 44)
-    }
-
-    private var subtitle: String {
-        guard let misses = subject.missesUntilLimit else {
-            return String(
-                format: AppL10n.string("absence.risk.missed"),
-                subject.missedLessons,
-                subject.totalLessons
-            )
-        }
-        if misses == 0 {
-            return AppL10n.string("absence.risk.overLimit")
-        }
-        return String(format: AppL10n.string("absence.risk.untilLimit"), misses)
-    }
-
-    private var tint: Color {
-        switch subject.level {
-        case .overLimit, .high: .red
-        case .watch: .gradelySystemOrange
-        case .safe: Brand.primary
-        case .unavailable: .secondary
-        }
-    }
-}
-
-struct TrendRow: View {
-    let trend: SubjectGradeTrend
-
-    var body: some View {
-        HStack(spacing: Spacing.md) {
-            TrendSparkline(events: trend.events)
-                .frame(width: 76, height: 34)
-            VStack(alignment: .leading, spacing: Spacing.xs) {
-                Text(trend.displayName)
-                    .font(.subheadline.weight(.bold))
-                    .lineLimit(1)
-                Text(detail)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            Spacer()
-            if let delta = trend.averageDelta {
-                Text(String(format: "%+.2f", delta))
-                    .font(.headline.monospacedDigit())
-                    .foregroundStyle(delta <= 0 ? Brand.primary : .red)
-            }
-        }
-    }
-
-    private var detail: String {
-        let marks = trend.latestMarkCount - trend.firstMarkCount
-        if marks > 0 {
-            return String(format: AppL10n.string("marks.trends.newMarks"), marks)
-        }
-        return AppL10n.string("marks.trends.movement")
-    }
-}
-
-struct TrendSparkline: View {
-    let events: [GradeHistoryEvent]
-
-    var body: some View {
-        GeometryReader { proxy in
-            let values = events.compactMap(\.averageValue)
-            Path { path in
-                guard values.count > 1,
-                      let minValue = values.min(),
-                      let maxValue = values.max()
-                else { return }
-                let range = max(maxValue - minValue, 0.01)
-                for index in values.indices {
-                    let x = proxy.size.width * CGFloat(index) / CGFloat(max(values.count - 1, 1))
-                    let yRatio = (values[index] - minValue) / range
-                    let y = proxy.size.height - (proxy.size.height * CGFloat(yRatio))
-                    if index == values.startIndex {
-                        path.move(to: CGPoint(x: x, y: y))
-                    } else {
-                        path.addLine(to: CGPoint(x: x, y: y))
-                    }
-                }
-            }
-            .stroke(Brand.primary, style: StrokeStyle(lineWidth: 2.5, lineCap: .round, lineJoin: .round))
-        }
-        .padding(6)
-        .background(Brand.primary.opacity(0.10), in: RoundedRectangle(cornerRadius: Radius.sm, style: .continuous))
-    }
-}
-
-struct GradeTrendsView: View {
-    enum Range: String, CaseIterable, Identifiable {
-        case thirty
-        case ninety
-        case schoolYear
-
-        var id: String { rawValue }
-
-        var title: LocalizedStringKey {
-            switch self {
-            case .thirty: "marks.trends.range30"
-            case .ninety: "marks.trends.range90"
-            case .schoolYear: "marks.trends.schoolYear"
-            }
-        }
-    }
-
-    let trends: [SubjectGradeTrend]
-    @State private var selectedRange: Range = .ninety
-
-    var body: some View {
-        List {
-            Picker("marks.trends.range", selection: $selectedRange) {
-                ForEach(Range.allCases) { range in
-                    Text(range.title).tag(range)
-                }
-            }
-            .pickerStyle(.segmented)
-            .listRowSeparator(.hidden)
-
-            if trends.isEmpty {
-                ContentUnavailableView {
-                    GradelyLabel(
-                        "No grade history",
-                        systemImage: "chart.line.uptrend.xyaxis",
-                        iconSize: 28
-                    )
-                } description: {
-                    Text("today.trends.cloudSubtitle")
-                }
-                    .listRowSeparator(.hidden)
-            } else {
-                ForEach(filteredTrends) { trend in
-                    TrendRow(trend: trend)
-                }
-            }
-        }
-        .navigationTitle("marks.trends.title")
-        .gradelyNavigationTitleDisplayMode(.inline)
-    }
-
-    private var filteredTrends: [SubjectGradeTrend] {
-        let cutoff: Date?
-        switch selectedRange {
-        case .thirty:
-            cutoff = Calendar.current.date(byAdding: .day, value: -30, to: Date())
-        case .ninety:
-            cutoff = Calendar.current.date(byAdding: .day, value: -90, to: Date())
-        case .schoolYear:
-            cutoff = nil
-        }
-
-        guard let cutoff else { return trends }
-        return trends.compactMap { trend in
-            let events = trend.events.filter { $0.capturedAt >= cutoff }
-            guard !events.isEmpty else { return nil }
-            return SubjectGradeTrend.make(from: events).first
         }
     }
 }

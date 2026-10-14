@@ -102,15 +102,6 @@ struct LinkedAccount: Codable, Equatable, Identifiable, Sendable {
     }
 }
 
-struct DevicePushToken: Codable, Equatable, Identifiable, Sendable {
-    var id: String { tokenHash }
-    let platform: String
-    let environment: String
-    let tokenHash: String
-    let registeredAt: Date
-    let lastSeenAt: Date
-}
-
 enum NotificationLockScreenDetail: String, Codable, CaseIterable, Equatable, Sendable {
     case privateSummary = "private_summary"
     case markAndSubject = "mark_and_subject"

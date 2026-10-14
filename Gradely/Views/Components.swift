@@ -33,7 +33,7 @@ struct Card<Content: View>: View {
 
 /// Quiet teal-tinted background shared by Settings and the modal surfaces
 /// launched from it. This stays separate from the app-wide card treatment.
-struct SettingsModalBackground: View {
+struct SettingsBackground: View {
     @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
@@ -49,7 +49,7 @@ struct SettingsModalBackground: View {
     }
 }
 
-private struct SettingsModalSurfaceShape: View {
+struct SettingsSurfaceShape: View {
     @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
@@ -83,8 +83,8 @@ private struct SettingsModalSurfaceShape: View {
     }
 }
 
-/// The flat 28-point surface used inside Settings-adjacent sheets.
-struct SettingsModalSurface<Content: View>: View {
+/// The flat 28-point surface used by Settings and the sheets launched from it.
+struct SettingsSurface<Content: View>: View {
     var padding: CGFloat = 20
     @ViewBuilder var content: Content
 
@@ -92,7 +92,7 @@ struct SettingsModalSurface<Content: View>: View {
         content
             .padding(padding)
             .background {
-                SettingsModalSurfaceShape()
+                SettingsSurfaceShape()
             }
     }
 }
@@ -143,7 +143,7 @@ struct GradelyModalCloseLabel: View {
 
 /// Compact, unboxed Settings icon. The visible glyph is intentionally small;
 /// the consuming row remains responsible for its full interactive target.
-struct SettingsModalIcon: View {
+struct SettingsIcon: View {
     static let frameSize: CGFloat = 32
 
     let name: String
@@ -167,7 +167,7 @@ struct SettingsModalSystemIcon: View {
     var body: some View {
         GradelyIcon(systemName: systemName, size: size)
             .foregroundStyle(color)
-            .frame(width: SettingsModalIcon.frameSize, height: SettingsModalIcon.frameSize)
+            .frame(width: SettingsIcon.frameSize, height: SettingsIcon.frameSize)
     }
 }
 
@@ -200,7 +200,7 @@ struct SettingsModalFlowHero: View {
     }
 }
 
-struct SettingsModalDisclosureIcon: View {
+struct SettingsDisclosureIcon: View {
     var body: some View {
         GradelyIcon("arrow-right-01", size: 14)
             .foregroundStyle(Color.secondary.opacity(0.58))
@@ -208,8 +208,8 @@ struct SettingsModalDisclosureIcon: View {
     }
 }
 
-struct SettingsModalRowDivider: View {
-    var leadingInset: CGFloat = 20 + SettingsModalIcon.frameSize + Spacing.md
+struct SettingsRowDivider: View {
+    var leadingInset: CGFloat = 20 + SettingsIcon.frameSize + Spacing.md
 
     var body: some View {
         Divider()
@@ -364,42 +364,6 @@ struct RiskCapsuleBar: View {
             }
         }
         .frame(height: 6)
-        .accessibilityHidden(true)
-    }
-}
-
-/// Circular progress ring showing absence percentage relative to the school
-/// threshold; falls back to a 0–100 % scale when no threshold is known.
-struct AbsenceRiskRing: View {
-    let percentage: Double
-    let threshold: Double?
-    let level: AbsenceRiskLevel
-    var size: CGFloat = 38
-    var lineWidth: CGFloat = 4.5
-
-    private var fraction: Double {
-        if let threshold, threshold > 0 {
-            return min(max(percentage / threshold, 0), 1)
-        }
-        return min(max(percentage / 100, 0), 1)
-    }
-
-    private var fillColor: Color {
-        threshold == nil ? Color.secondary.opacity(0.5) : level.color
-    }
-
-    var body: some View {
-        ZStack {
-            Circle()
-                .stroke(fillColor.opacity(0.22), lineWidth: lineWidth)
-            Circle()
-                .trim(from: 0, to: fraction)
-                .stroke(fillColor, style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
-                .rotationEffect(.degrees(-90))
-        }
-        .padding(lineWidth / 2)
-        .frame(width: size, height: size)
-        .fixedSize()
         .accessibilityHidden(true)
     }
 }

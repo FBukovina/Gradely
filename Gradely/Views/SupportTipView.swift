@@ -12,7 +12,7 @@ struct SupportTipView: View {
     var body: some View {
         ModalNavigationContainer {
             ZStack {
-                SettingsModalBackground()
+                SettingsBackground()
 
                 ScrollView {
                     VStack(alignment: .leading, spacing: Spacing.xl) {
@@ -41,9 +41,9 @@ struct SupportTipView: View {
     }
 
     private var header: some View {
-        SettingsModalSurface {
+        SettingsSurface {
             HStack(alignment: .top, spacing: Spacing.md) {
-                SettingsModalIcon(name: "favourite")
+                SettingsIcon(name: "favourite")
 
                 VStack(alignment: .leading, spacing: Spacing.xs) {
                     Text("support.tips.heading")
@@ -108,7 +108,7 @@ struct SupportTipOptionsContent: View {
     }
 
     private var loading: some View {
-        SettingsModalSurface {
+        SettingsSurface {
             HStack(spacing: Spacing.md) {
                 ProgressView()
                     .tint(Brand.primary)
@@ -158,7 +158,7 @@ struct SupportTipOptionsContent: View {
                 signInRequiredCard
             }
 
-            SettingsModalSurface {
+            SettingsSurface {
                 Picker(selection: $viewModel.selectedInterval) {
                     Text("support.plans.interval.monthly")
                         .tag(SupportInterval.monthly)
@@ -179,7 +179,7 @@ struct SupportTipOptionsContent: View {
                 }
             }
 
-            SettingsModalSurface(padding: 0) {
+            SettingsSurface(padding: 0) {
                 VStack(spacing: 0) {
                     ForEach(Array(viewModel.visiblePlans.enumerated()), id: \.element.id) { index, plan in
                         SupportPlanRow(
@@ -192,7 +192,7 @@ struct SupportTipOptionsContent: View {
                         }
 
                         if index < viewModel.visiblePlans.count - 1 {
-                            SettingsModalRowDivider()
+                            SettingsRowDivider()
                         }
                     }
                 }
@@ -206,12 +206,12 @@ struct SupportTipOptionsContent: View {
     }
 
     private var offerCodeRow: some View {
-        SettingsModalSurface(padding: 0) {
+        SettingsSurface(padding: 0) {
             Button {
                 isOfferCodeRedemptionPresented = true
             } label: {
                 HStack(spacing: Spacing.md) {
-                    SettingsModalIcon(name: "favourite")
+                    SettingsIcon(name: "favourite")
 
                     VStack(alignment: .leading, spacing: Spacing.xs) {
                         Text("support.plans.offerCode.title")
@@ -230,7 +230,7 @@ struct SupportTipOptionsContent: View {
                             .tint(Brand.primary)
                             .accessibilityLabel(AppL10n.string("support.plans.offerCode.refresh.progress"))
                     } else {
-                        SettingsModalDisclosureIcon()
+                        SettingsDisclosureIcon()
                     }
                 }
                 .padding(.horizontal, 20)
@@ -246,9 +246,9 @@ struct SupportTipOptionsContent: View {
     }
 
     private var activePlanCard: some View {
-        SettingsModalSurface {
+        SettingsSurface {
             HStack(alignment: .top, spacing: Spacing.md) {
-                SettingsModalIcon(name: "checkmark-badge-02")
+                SettingsIcon(name: "checkmark-badge-02")
 
                 VStack(alignment: .leading, spacing: Spacing.xs) {
                     HStack(spacing: Spacing.xs) {
@@ -286,9 +286,9 @@ struct SupportTipOptionsContent: View {
     }
 
     private var signInRequiredCard: some View {
-        SettingsModalSurface {
+        SettingsSurface {
             HStack(alignment: .top, spacing: Spacing.md) {
-                SettingsModalIcon(name: "alert-circle", color: .secondary, size: 15)
+                SettingsIcon(name: "alert-circle", color: .secondary, size: 15)
                 Text("support.plans.signIn.required")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
@@ -303,7 +303,7 @@ struct SupportTipOptionsContent: View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
             SettingsModalSectionHeader(title: "support.tips.section")
 
-            SettingsModalSurface(padding: 0) {
+            SettingsSurface(padding: 0) {
                 VStack(spacing: 0) {
                     ForEach(Array(viewModel.tips.enumerated()), id: \.element.id) { index, tip in
                         SupportTipRow(
@@ -315,7 +315,7 @@ struct SupportTipOptionsContent: View {
                         }
 
                         if index < viewModel.tips.count - 1 {
-                            SettingsModalRowDivider()
+                            SettingsRowDivider()
                         }
                     }
                 }
@@ -378,10 +378,10 @@ struct SupportTipOptionsContent: View {
     }
 
     private func unavailable(message: String, canRetry: Bool) -> some View {
-        SettingsModalSurface {
+        SettingsSurface {
             VStack(alignment: .leading, spacing: Spacing.md) {
                 HStack(alignment: .top, spacing: Spacing.md) {
-                    SettingsModalIcon(
+                    SettingsIcon(
                         name: "alert-circle",
                         color: .secondary,
                         size: 15
@@ -413,10 +413,10 @@ struct SupportTipOptionsContent: View {
     }
 
     private var thankYou: some View {
-        SettingsModalSurface {
+        SettingsSurface {
             VStack(alignment: .leading, spacing: Spacing.md) {
                 HStack(alignment: .top, spacing: Spacing.md) {
-                    SettingsModalIcon(name: "checkmark-badge-02")
+                    SettingsIcon(name: "checkmark-badge-02")
 
                     VStack(alignment: .leading, spacing: Spacing.xs) {
                         Text("support.tips.thankYou.title")
@@ -474,7 +474,7 @@ private struct SupportPlanRow: View {
     var body: some View {
         Button(action: onPurchase) {
             HStack(spacing: Spacing.md) {
-                SettingsModalIcon(name: plan.tier == .plus ? "sparkles" : "favourite")
+                SettingsIcon(name: plan.tier == .plus ? "sparkles" : "favourite")
 
                 VStack(alignment: .leading, spacing: Spacing.xs) {
                     Text(plan.title)
@@ -507,7 +507,7 @@ private struct SupportPlanRow: View {
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(Brand.primary)
                 } else {
-                    SettingsModalDisclosureIcon()
+                    SettingsDisclosureIcon()
                 }
             }
             .padding(.horizontal, 20)
@@ -541,7 +541,7 @@ private struct SupportTipRow: View {
     var body: some View {
         Button(action: onPurchase) {
             HStack(spacing: Spacing.md) {
-                SettingsModalIcon(name: "favourite")
+                SettingsIcon(name: "favourite")
 
                 VStack(alignment: .leading, spacing: Spacing.xs) {
                     Text(tip.title)
@@ -560,7 +560,7 @@ private struct SupportTipRow: View {
                         .tint(Brand.primary)
                         .accessibilityLabel(AppL10n.string("support.tips.purchase.progress"))
                 } else {
-                    SettingsModalDisclosureIcon()
+                    SettingsDisclosureIcon()
                 }
             }
             .padding(.horizontal, 20)

@@ -150,7 +150,7 @@ struct PlannerView: View {
     // MARK: - Rows
 
     private func row(_ item: PlannerItem) -> some View {
-        SettingsModalSurface(padding: Spacing.md) {
+        SettingsSurface(padding: Spacing.md) {
             HStack(alignment: .top, spacing: Spacing.sm) {
                 Button {
                     perform { try await store.setCompleted(!item.isCompleted, id: item.id) }
@@ -168,7 +168,7 @@ struct PlannerView: View {
                     HStack(spacing: Spacing.sm) {
                         PlannerItemSummary(item: item)
                         Spacer(minLength: 0)
-                        SettingsModalDisclosureIcon()
+                        SettingsDisclosureIcon()
                     }
                     .contentShape(Rectangle())
                 }
@@ -191,7 +191,7 @@ struct PlannerView: View {
         isEnabled: Bool,
         onAction: @escaping () -> Void
     ) -> some View {
-        SettingsModalSurface {
+        SettingsSurface {
             VStack(alignment: .leading, spacing: Spacing.md) {
                 HStack(alignment: .top, spacing: Spacing.md) {
                     SettingsModalSystemIcon(systemName: systemImage)
@@ -214,7 +214,7 @@ struct PlannerView: View {
     }
 
     private var emptyState: some View {
-        SettingsModalSurface {
+        SettingsSurface {
             VStack(spacing: Spacing.md) {
                 GradelyIcon(systemName: "checklist", size: 22)
                     .foregroundStyle(Brand.primary.opacity(0.7))

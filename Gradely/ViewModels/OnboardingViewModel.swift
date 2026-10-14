@@ -334,10 +334,6 @@ final class OnboardingViewModel {
         setStep(.account)
     }
 
-    func skipWelcome() {
-        chooseGetStarted()
-    }
-
     func chooseGuest() {
         accountMode = .guest
         notificationStatus = .unavailable

@@ -81,26 +81,3 @@ struct GradeSimulationResult: Equatable, Sendable {
     let confidence: GradeCalculationConfidence
     let issues: [GradeCalculationIssue]
 }
-
-struct GradeTargetOption: Identifiable, Equatable, Sendable {
-    let grade: Int
-    let count: Int
-    let weight: Int
-    let estimatedAverage: Double
-
-    var id: String { "\(grade)-\(count)-\(weight)" }
-}
-
-struct GradeTargetResult: Equatable, Sendable {
-    enum Status: Equatable, Sendable {
-        case options
-        case alreadyReached
-        case unreachable
-        case unavailable
-        case invalidTarget
-    }
-
-    let status: Status
-    let options: [GradeTargetOption]
-    let confidence: GradeCalculationConfidence
-}

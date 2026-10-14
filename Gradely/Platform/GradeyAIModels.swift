@@ -280,10 +280,6 @@ struct GradeyAIContextSnapshot: Codable, Equatable, Sendable {
     var insights: [GradeyAIInsightContext]? = nil
     var sourceFreshness: [GradeyAISourceFreshness]? = nil
 
-    var isPartial: Bool {
-        !unavailableSections.isEmpty
-    }
-
     enum CodingKeys: String, CodingKey {
         case schoolScope
         case generatedAt = "generated_at"

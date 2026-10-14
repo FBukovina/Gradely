@@ -160,9 +160,6 @@ enum SupportTipCatalog {
         ("support_plus_yearly", "\(productIDPrefix).support.plus.yearly", .plus, .yearly),
     ]
 
-    /// Default offering identifier kept for callers that still refer to tips.
-    static let offeringIdentifier = tipsOfferingIdentifier
-
     static let products = tipProducts
 
     static let previewSubscriptionPlans: [SupportPlanOption] = [

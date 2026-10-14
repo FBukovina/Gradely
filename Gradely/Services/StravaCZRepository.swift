@@ -131,11 +131,6 @@ final class StravaCZRepository {
         }
     }
 
-    func clearLocalData() {
-        try? sessionStore.clearSession()
-        try? menuCache.clear()
-    }
-
     func clearCachedMenu() {
         try? menuCache.clear()
     }

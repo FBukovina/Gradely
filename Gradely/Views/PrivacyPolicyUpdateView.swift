@@ -34,7 +34,7 @@ struct PrivacyPolicyUpdateView: View {
     var body: some View {
         ModalNavigationContainer {
             ZStack {
-                SettingsModalBackground()
+                SettingsBackground()
 
                 ScrollView {
                     VStack(alignment: .leading, spacing: Spacing.xl) {
@@ -144,11 +144,11 @@ struct PrivacyPolicyUpdateView: View {
         VStack(alignment: .leading, spacing: Spacing.md) {
             SectionHeader("privacy.update.changes.title")
 
-            SettingsModalSurface(padding: 0) {
+            SettingsSurface(padding: 0) {
                 VStack(spacing: 0) {
                     ForEach(Array(PrivacyPolicyRevision.changes.enumerated()), id: \.element.id) { index, change in
                         if index > 0 {
-                            SettingsModalRowDivider()
+                            SettingsRowDivider()
                         }
                         changeRow(change)
                             .opacity(hasAppeared ? 1 : 0)
@@ -177,7 +177,7 @@ struct PrivacyPolicyUpdateView: View {
                 HStack(alignment: .top, spacing: Spacing.md) {
                     GradelyIcon(change.iconName, size: 17)
                         .foregroundStyle(Brand.primary.opacity(0.88))
-                        .frame(width: SettingsModalIcon.frameSize, height: SettingsModalIcon.frameSize)
+                        .frame(width: SettingsIcon.frameSize, height: SettingsIcon.frameSize)
 
                     VStack(alignment: .leading, spacing: Spacing.xs) {
                         Text(change.titleKey)
@@ -207,7 +207,7 @@ struct PrivacyPolicyUpdateView: View {
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
-                    .padding(.leading, SettingsModalIcon.frameSize + Spacing.md)
+                    .padding(.leading, SettingsIcon.frameSize + Spacing.md)
                     .accessibilityIdentifier("privacyPolicyUpdateDetail-\(change.id)")
             }
         }

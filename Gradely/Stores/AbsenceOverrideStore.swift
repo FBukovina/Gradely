@@ -91,7 +91,6 @@ struct AbsenceOverrideMetadata: Equatable {
     static let empty = Self(activeOverrides: [], reviewOverrides: [])
     var hiddenCount: Int { activeOverrides.reduce(0) { $0 + $1.hiddenAllocationIDs.count } }
     var hasLocalAdjustments: Bool { !activeOverrides.isEmpty }
-    var hasSavedOverrides: Bool { !activeOverrides.isEmpty || !reviewOverrides.isEmpty }
 }
 
 protocol AbsenceOverrideStoring {

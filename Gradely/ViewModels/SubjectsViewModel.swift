@@ -45,20 +45,6 @@ final class SubjectsViewModel {
         user?.displaySchoolName
     }
 
-    /// Subject with the best (lowest) average — `1` is best in the Czech scale.
-    var bestSubject: Subject? {
-        subjects
-            .compactMap { subject in GradeMath.subjectAverage(subject).map { (subject, $0) } }
-            .min { $0.1 < $1.1 }?.0
-    }
-
-    /// Subject with the weakest (highest) average.
-    var weakestSubject: Subject? {
-        subjects
-            .compactMap { subject in GradeMath.subjectAverage(subject).map { (subject, $0) } }
-            .max { $0.1 < $1.1 }?.0
-    }
-
     func loadIfNeeded() async {
         guard !hasLoaded else { return }
         hasLoaded = true

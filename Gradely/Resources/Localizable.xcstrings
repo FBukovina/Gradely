@@ -182,9 +182,6 @@
     "●" : {
 
     },
-    "2.49" : {
-
-    },
     "Abbreviation" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -210,34 +207,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "abbreviation"
-          }
-        }
-      }
-    },
-    "Absence risk" : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Riziko absence"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "riziko absence"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Absence risk"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "absence risk"
           }
         }
       }
@@ -466,180 +435,6 @@
         }
       }
     },
-    "absence.column.absent" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Absence"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "absence"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Absent"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "absent"
-          }
-        }
-      }
-    },
-    "absence.column.day" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Den"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "den"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Day"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "day"
-          }
-        }
-      }
-    },
-    "absence.column.lessons" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hodiny"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "hodiny"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lessons"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "lessons"
-          }
-        }
-      }
-    },
-    "absence.column.month" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Měsíc"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "měsíc"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Month"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "month"
-          }
-        }
-      }
-    },
-    "absence.column.percent" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Procenta"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "procenta"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Percent"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "percent"
-          }
-        }
-      }
-    },
-    "absence.column.subject" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Předmět"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "předmět"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Subject"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "subject"
-          }
-        }
-      }
-    },
     "absence.days.empty" : {
       "localizations" : {
         "cs" : {
@@ -664,64 +459,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "no daily absence records."
-          }
-        }
-      }
-    },
-    "absence.empty.message" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Záznamy absence se tu objeví, až je škola zpřístupní."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "až škola zpřístupní absenci, spadne to sem."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Your absence records will appear here when they are available from your school."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "when your school makes absence records available, they land here."
-          }
-        }
-      }
-    },
-    "absence.empty.title" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Žádná absence"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "žádná absence"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No absence"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "no absence"
           }
         }
       }
@@ -2164,62 +1901,6 @@
         }
       }
     },
-    "absence.predictor.empty.message" : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vyber budoucí hodiny, které plánuješ zameškat, a podívej se na odhad absence."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "vyber budoucí hodiny, které plánuješ zameškat, a podívej se na odhad absence."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Choose future lessons you expect to miss to estimate your absence."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "choose future lessons you expect to miss to estimate your absence."
-          }
-        }
-      }
-    },
-    "absence.predictor.empty.title" : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Žádné plánované absence"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "žádné plánované absence"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No planned absences"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "no planned absences"
-          }
-        }
-      }
-    },
     "absence.predictor.loading" : {
       "localizations" : {
         "cs" : {
@@ -2440,35 +2121,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%.1f %% → %.1f %%"
-          }
-        }
-      }
-    },
-    "absence.predictor.summary.message" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Orientační výsledek pro vybrané budoucí hodiny."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "orientační výsledek pro vybrané budoucí hodiny."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Projected result for selected future lessons."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "projected result for selected future lessons."
           }
         }
       }
@@ -3118,35 +2770,6 @@
         }
       }
     },
-    "account.menu" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Účet"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "účet"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Account"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "account"
-          }
-        }
-      }
-    },
     "action.cancel" : {
       "localizations" : {
         "cs" : {
@@ -3516,35 +3139,6 @@
         }
       }
     },
-    "age.gate.blocked.body" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pokud ti ještě není 16, požádej rodiče nebo zákonného zástupce, aby si přečetl zásady ochrany osobních údajů a souhlasil se zpracováním tvých údajů v Gradey."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "pokud ti ještě není 16, požádej rodiče nebo zákonného zástupce, aby si přečetl zásady ochrany osobních údajů a souhlasil se zpracováním tvých údajů v Gradey."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "If you are under 16, ask a parent or guardian to review the privacy policy and agree to Gradey processing your data."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "if you are under 16, ask a parent or guardian to review the privacy policy and agree to Gradey processing your data."
-          }
-        }
-      }
-    },
     "age.gate.blocked.change" : {
       "localizations" : {
         "cs" : {
@@ -3569,35 +3163,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "choose a different age"
-          }
-        }
-      }
-    },
-    "age.gate.blocked.title" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Souhlas rodiče"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "souhlas rodiče"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Parental consent"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "parental consent"
           }
         }
       }
@@ -3938,35 +3503,6 @@
         }
       }
     },
-    "app.name" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gradey"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gradey"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gradey"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gradey"
-          }
-        }
-      }
-    },
     "Arrive" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -4282,35 +3818,6 @@
         }
       }
     },
-    "Cloud trends start after Gradey records grade snapshots." : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cloudové trendy se objeví, až Gradey zaznamená snímky známek."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "cloudové trendy se objeví, až Gradey zaznamená snímky známek."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cloud trends start after Gradey records grade snapshots."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "cloud trends start after Gradey records grade snapshots."
-          }
-        }
-      }
-    },
     "Confirmed" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -4393,35 +3900,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "developed by"
-          }
-        }
-      }
-    },
-    "credits.menu" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tvůrci"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "tvůrci"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Credits"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "credits"
           }
         }
       }
@@ -5604,35 +5082,6 @@
         }
       }
     },
-    "detail.calculator.newAverage" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nový průměr %.2f"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "nový průměr %.2f"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "New average %.2f"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "new average %.2f"
-          }
-        }
-      }
-    },
     "detail.calculator.same" : {
       "localizations" : {
         "cs" : {
@@ -5713,35 +5162,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%.2f worse"
-          }
-        }
-      }
-    },
-    "detail.chart.empty" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Zatím málo dat pro graf"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "zatím málo dat pro graf"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Not enough data for a chart yet"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "not enough data for a chart yet"
           }
         }
       }
@@ -5917,64 +5337,6 @@
         }
       }
     },
-    "detail.intelligence.contributionExplanation" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Započtení známky %@ mění vypočtený průměr o %+.2f oproti výpočtu bez ní. Výpočet používá aktuální váhy. Nejde o záznam tehdejšího rozhodnutí učitele."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "započtení známky %@ mění vypočtený průměr o %+.2f oproti výpočtu bez ní. výpočet používá aktuální váhy. nejde o záznam tehdejšího rozhodnutí učitele."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Including mark %@ changes the calculated average by %+.2f compared with leaving it out. This uses the current weights and does not reconstruct your teacher’s past decisions."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "including mark %@ changes the calculated average by %+.2f compared with leaving it out. this uses the current weights and does not reconstruct your teacher’s past decisions."
-          }
-        }
-      }
-    },
-    "detail.intelligence.estimatedAverage" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Odhadovaný průměr"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "odhadovaný průměr"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Estimated average"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "estimated average"
-          }
-        }
-      }
-    },
     "detail.intelligence.improving" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -6033,64 +5395,6 @@
         }
       }
     },
-    "detail.intelligence.insights" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Stojí za pozornost"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "stojí za pozornost"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Worth your attention"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "worth your attention"
-          }
-        }
-      }
-    },
-    "detail.intelligence.insufficientHistory" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pro zobrazení trendu zatím není dost srovnatelných nedávných záznamů."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "pro zobrazení trendu zatím není dost srovnatelných nedávných záznamů."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Not enough comparable recent records to show a trend."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "not enough comparable recent records to show a trend."
-          }
-        }
-      }
-    },
     "detail.intelligence.modifierEstimate" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -6116,35 +5420,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Gradey converts marks with plus and minus signs to numeric values. your school may use a different conversion."
-          }
-        }
-      }
-    },
-    "detail.intelligence.observedTrend" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Podle nedávných srovnatelných záznamů."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "podle nedávných srovnatelných záznamů."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "From recent comparable observations."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "from recent comparable observations."
           }
         }
       }
@@ -6178,35 +5453,6 @@
         }
       }
     },
-    "detail.intelligence.recentContribution" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Která nedávná známka měla vliv?"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "která nedávná známka měla vliv?"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Which recent mark mattered?"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "which recent mark mattered?"
-          }
-        }
-      }
-    },
     "detail.intelligence.schoolAverage" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -6236,93 +5482,6 @@
         }
       }
     },
-    "detail.intelligence.source.estimated" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Odhad podle dostupných známek a vah."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "odhad podle dostupných známek a vah."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Estimate based on the available marks and weights."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "estimate based on the available marks and weights."
-          }
-        }
-      }
-    },
-    "detail.intelligence.source.providedWeights" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Výpočet z dostupných známek a uvedených vah."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "výpočet z dostupných známek a uvedených vah."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Calculated using the recorded marks and provided weights."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "calculated using the recorded marks and provided weights."
-          }
-        }
-      }
-    },
-    "detail.intelligence.source.schoolPrediction" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Průměr z hypotetického výpočtu školy."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "průměr z hypotetického výpočtu školy."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Average returned by the school’s what-if calculation."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "average returned by the school’s what-if calculation."
-          }
-        }
-      }
-    },
     "detail.intelligence.subjectUnavailable" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -6348,35 +5507,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "this subject is no longer available"
-          }
-        }
-      }
-    },
-    "detail.intelligence.teacherDisclaimer" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Podle dostupných známek. Konečnou známku určuje učitel."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "podle dostupných známek. konečnou známku určuje učitel."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Based on your recorded marks. Your teacher determines the final grade."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "based on your recorded marks. your teacher determines the final grade."
           }
         }
       }
@@ -6438,354 +5568,6 @@
         }
       }
     },
-    "detail.simulator.addGrade" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Přidat známku"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "přidat známku"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Add a mark"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "add a mark"
-          }
-        }
-      }
-    },
-    "detail.simulator.difference" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Změna oproti vypočtenému průměru: %+.2f"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "změna oproti vypočtenému průměru: %+.2f"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Change from calculated average: %+.2f"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "change from calculated average: %+.2f"
-          }
-        }
-      }
-    },
-    "detail.simulator.done" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hotovo"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "hotovo"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Done"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "done"
-          }
-        }
-      }
-    },
-    "detail.simulator.grade" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Známka"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "známka"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mark"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "mark"
-          }
-        }
-      }
-    },
-    "detail.simulator.gradeNumber" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Budoucí známka %d"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "budoucí známka %d"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Future mark %d"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "future mark %d"
-          }
-        }
-      }
-    },
-    "detail.simulator.hypotheticalGrades" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hypotetické známky"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "hypotetické známky"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hypothetical marks"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "hypothetical marks"
-          }
-        }
-      }
-    },
-    "detail.simulator.invalidTarget" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Zadej cílový průměr od 1 do 5, například 2,49."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "zadej cílový průměr od 1 do 5, například 2,49."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Enter a target average from 1 to 5, such as 2.49."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "enter a target average from 1 to 5, such as 2.49."
-          }
-        }
-      }
-    },
-    "detail.simulator.localOnly" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nejvýše 10 známek. Tyto scénáře zůstávají v simulátoru a nemění školní záznamy."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "nejvýše 10 známek. tyto scénáře zůstávají v simulátoru a nemění školní záznamy."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Up to 10 marks. These scenarios stay in this simulator and do not change your school records."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "up to 10 marks. these scenarios stay in this simulator and do not change your school records."
-          }
-        }
-      }
-    },
-    "detail.simulator.mode" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Režim výpočtu"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "režim výpočtu"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Calculation mode"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "calculation mode"
-          }
-        }
-      }
-    },
-    "detail.simulator.option" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Známka %d × %d"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "známka %d × %d"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mark %d × %d"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "mark %d × %d"
-          }
-        }
-      }
-    },
-    "detail.simulator.options" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Možnosti"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "možnosti"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Options"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "options"
-          }
-        }
-      }
-    },
-    "detail.simulator.removeGrade" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Odebrat hypotetickou známku"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "odebrat hypotetickou známku"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Remove hypothetical mark"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "remove hypothetical mark"
-          }
-        }
-      }
-    },
     "detail.simulator.result" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -6815,151 +5597,6 @@
         }
       }
     },
-    "detail.simulator.target" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cílový průměr"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "cílový průměr"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Target average"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "target average"
-          }
-        }
-      }
-    },
-    "detail.simulator.targetAverage" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Průměr nejvýše"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "průměr nejvýše"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Average at most"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "average at most"
-          }
-        }
-      }
-    },
-    "detail.simulator.targetExplanation" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hledá možnosti s nejvýše 10 stejnými budoucími známkami, každou se zvolenou váhou. Cílový průměr neurčuje výslednou známku."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "hledá možnosti s nejvýše 10 stejnými budoucími známkami, každou se zvolenou váhou. cílový průměr neurčuje výslednou známku."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Finds options with up to 10 identical future marks, each at the selected weight. A target average does not determine your final grade."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "finds options with up to 10 identical future marks, each at the selected weight. a target average does not determine your final grade."
-          }
-        }
-      }
-    },
-    "detail.simulator.targetReached" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vypočtený průměr už tento cíl splňuje."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "vypočtený průměr už tento cíl splňuje."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Your calculated average already meets this target."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "your calculated average already meets this target."
-          }
-        }
-      }
-    },
-    "detail.simulator.title" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Jakou známku potřebuji?"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "jakou známku potřebuji?"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "What mark do I need?"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "what mark do i need?"
-          }
-        }
-      }
-    },
     "detail.simulator.unavailable" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -6985,64 +5622,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "a simulation needs recorded numeric marks. points and unsupported grading scales are not converted."
-          }
-        }
-      }
-    },
-    "detail.simulator.unreachable" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tohoto cíle nelze dosáhnout nejvýše 10 stejnými známkami při této váze. Zkus jiný cíl nebo váhu."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "tohoto cíle nelze dosáhnout nejvýše 10 stejnými známkami při této váze. zkus jiný cíl nebo váhu."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "This target cannot be reached with up to 10 identical marks at this weight. Try a different target or weight."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "this target cannot be reached with up to 10 identical marks at this weight. try a different target or weight."
-          }
-        }
-      }
-    },
-    "detail.simulator.whatIf" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Co když…"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "co když…"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "What if…"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "what if…"
           }
         }
       }
@@ -8861,93 +7440,6 @@
         }
       }
     },
-    "Grade trends" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vývoj známek"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "vývoj známek"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Grade trends"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "grade trends"
-          }
-        }
-      }
-    },
-    "gradey.account.alerts.off" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vypnuto"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "vypnuto"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Off"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "off"
-          }
-        }
-      }
-    },
-    "gradey.account.alerts.on" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Zapnuto"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "zapnuto"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "On"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "on"
-          }
-        }
-      }
-    },
     "gradey.account.appleConnected" : {
       "localizations" : {
         "cs" : {
@@ -8972,93 +7464,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Apple ID connected"
-          }
-        }
-      }
-    },
-    "gradey.account.connect.title" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Připojit účty"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "připojit účty"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Connect accounts"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "connect accounts"
-          }
-        }
-      }
-    },
-    "gradey.account.empty.message" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Připoj školní účet a zobrazuj známky, rozvrh i widgety a dostávej oznámení o nových známkách."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "připoj školní účet a zobrazuj známky, rozvrh i widgety a dostávej oznámení o nových známkách."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Link your school account to enable marks, timetable, widgets, and new mark notifications."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "link your school account to enable marks, timetable, widgets, and new mark notifications."
-          }
-        }
-      }
-    },
-    "gradey.account.empty.title" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Zatím žádné připojené účty"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "zatím žádné připojené účty"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No linked accounts yet"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "no linked accounts yet"
           }
         }
       }
@@ -9091,35 +7496,6 @@
         }
       }
     },
-    "gradey.account.error.pushSettingsFailed" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nastavení push oznámení se nepodařilo aktualizovat."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "nastavení push oznámení se nepodařilo aktualizovat."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Could not update push notification settings."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "could not update push notification settings."
-          }
-        }
-      }
-    },
     "gradey.account.error.requestFailed" : {
       "localizations" : {
         "cs" : {
@@ -9144,64 +7520,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "the Gradey account request failed."
-          }
-        }
-      }
-    },
-    "gradey.account.header.subtitle" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Spravuj školní účty a účty jídelny připojené k tomuto Gradey ID."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "spravuj školní účty a účty jídelny připojené k tomuto Gradey ID."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Manage school and meal accounts linked to this Gradey ID."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "manage school and meal accounts linked to this Gradey ID."
-          }
-        }
-      }
-    },
-    "gradey.account.linked.title" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Připojené účty"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "připojené účty"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Linked accounts"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "linked accounts"
           }
         }
       }
@@ -9234,64 +7552,6 @@
         }
       }
     },
-    "gradey.account.linkSchool.short" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Známky, rozvrh a widgety"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "známky, rozvrh a widgety"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Marks, timetable, widgets"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "marks, timetable, widgets"
-          }
-        }
-      }
-    },
-    "gradey.account.linkSchool.subtitle" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Přihlas se jednou. Hesla zůstávají v Klíčence tohoto zařízení; Gradey ID synchronizuje jen očištěné tokeny poskytovatele Bakaláři nebo EduPage."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "přihlas se jednou. hesla zůstávají v klíčence tohoto zařízení; Gradey ID synchronizuje jen očištěné tokeny poskytovatele Bakaláři nebo EduPage."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sign in once. Passwords stay in this device’s Keychain; Gradey ID synchronizes only sanitized Bakaláři or EduPage provider tokens."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "sign in once. passwords stay in this device’s Keychain; Gradey ID synchronizes only sanitized Bakaláři or EduPage provider tokens."
-          }
-        }
-      }
-    },
     "gradey.account.linkSchool.title" : {
       "localizations" : {
         "cs" : {
@@ -9320,35 +7580,6 @@
         }
       }
     },
-    "gradey.account.linkStrava.short" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Jídla a zůstatek"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "jídla a zůstatek"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Meals and balance"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "meals and balance"
-          }
-        }
-      }
-    },
     "gradey.account.linkStrava.title" : {
       "localizations" : {
         "cs" : {
@@ -9373,35 +7604,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "link Strava.cz"
-          }
-        }
-      }
-    },
-    "gradey.account.moreActions" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Další akce"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "další akce"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "More actions"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "more actions"
           }
         }
       }
@@ -9710,64 +7912,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "notify me about new marks"
-          }
-        }
-      }
-    },
-    "gradey.account.stat.alerts" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Oznámení"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "oznámení"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Alerts"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "alerts"
-          }
-        }
-      }
-    },
-    "gradey.account.stat.linked" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Připojeno"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "připojeno"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Linked"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "linked"
           }
         }
       }
@@ -10741,64 +8885,6 @@
         }
       }
     },
-    "gradey.ai.consent.azure.message" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tvoje dotazy, nedávná historie chatu a omezený školní kontext se bezpečně odesílají přes Firebase Functions do Microsoft Azure AI. Tvoje přihlašovací údaje ke škole ani původní odpovědi školního systému se nikdy neodesílají."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "tvoje dotazy, nedávná historie chatu a omezený školní kontext se bezpečně odesílají přes Firebase Functions do Microsoft Azure AI. tvoje přihlašovací údaje ke škole ani původní odpovědi školního systému se nikdy neodesílají."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Your prompts, recent chat history, and limited school context are sent securely through Firebase Functions to Microsoft Azure AI. Your school credentials and raw school-provider payloads are never sent."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "your prompts, recent chat history, and limited school context are sent securely through Firebase Functions to Microsoft Azure AI. your school credentials and raw school-provider payloads are never sent."
-          }
-        }
-      }
-    },
-    "gradey.ai.consent.azure.title" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Zpracování službou Azure AI"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "zpracování službou Azure AI"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Processed by Azure AI"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "processed by Azure AI"
-          }
-        }
-      }
-    },
     "gradey.ai.consent.processors.message" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -10857,35 +8943,6 @@
         }
       }
     },
-    "gradey.ai.consent.retention.message" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Chaty hostů se smažou po 30 dnech neaktivity. Chaty můžeš kdykoli smazat nebo odvolat souhlas."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "chaty hostů se smažou po 30 dnech neaktivity. chaty můžeš kdykoli smazat nebo odvolat souhlas."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Guest chats are deleted after 30 days of inactivity. You can delete chats or revoke consent at any time."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "guest chats are deleted after 30 days of inactivity. you can delete chats or revoke consent at any time."
-          }
-        }
-      }
-    },
     "gradey.ai.consent.retention.title" : {
       "localizations" : {
         "cs" : {
@@ -10910,35 +8967,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "you stay in control"
-          }
-        }
-      }
-    },
-    "gradey.ai.consent.schoolData.message" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gradey sdílí jen omezený přehled známek a rozvrhu potřebný k odpovědi. Tvoje školní heslo nikdy nesdílí."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gradey sdílí jen omezený přehled známek a rozvrhu potřebný k odpovědi. tvoje školní heslo nikdy nesdílí."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gradey shares only a limited snapshot of your marks and timetable needed to answer. It never shares your school password."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gradey shares only a limited snapshot of your marks and timetable needed to answer. it never shares your school password."
           }
         }
       }
@@ -11343,35 +9371,6 @@
         }
       }
     },
-    "gradey.ai.context.ready" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vybrané školní údaje jsou připravené"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "vybrané školní údaje jsou připravené"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Selected school information is ready"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "selected school information is ready"
-          }
-        }
-      }
-    },
     "gradey.ai.context.refresh" : {
       "localizations" : {
         "cs" : {
@@ -11396,35 +9395,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "refresh school information"
-          }
-        }
-      }
-    },
-    "gradey.ai.context.refreshing" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Obnovuji školní údaje…"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "obnovuji školní údaje…"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Refreshing school information…"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "refreshing school information…"
           }
         }
       }
@@ -11597,35 +9567,6 @@
         }
       }
     },
-    "gradey.ai.context.selectedWeek" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Týden od"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "týden od"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Week of"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "week of"
-          }
-        }
-      }
-    },
     "gradey.ai.context.selectionSummary" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -11712,35 +9653,6 @@
         }
       }
     },
-    "gradey.ai.context.unavailable" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Školní údaje nejsou dostupné"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "školní údaje nejsou dostupné"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "School information is unavailable"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "school information is unavailable"
-          }
-        }
-      }
-    },
     "gradey.ai.conversation.delete.action" : {
       "localizations" : {
         "cs" : {
@@ -11821,35 +9733,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "delete this chat?"
-          }
-        }
-      }
-    },
-    "gradey.ai.conversations.back" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Zpět na chaty"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "zpět na chaty"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Back to chats"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "back to chats"
           }
         }
       }
@@ -12018,35 +9901,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "early access"
-          }
-        }
-      }
-    },
-    "gradey.ai.empty.message" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Začni nový chat nebo vyber některý z návrhů níže."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "založ nový chat nebo ťukni na návrh dole."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Start a new chat or choose a suggestion below."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "start a new chat or tap a suggestion below."
           }
         }
       }
@@ -12443,35 +10297,6 @@
         }
       }
     },
-    "gradey.ai.limit.remaining" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Zbývající Compute dnes: %1$lld z %2$lld"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "zbývající Compute dnes: %1$lld z %2$lld"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Compute remaining today: %1$lld of %2$lld"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Compute remaining today: %1$lld of %2$lld"
-          }
-        }
-      }
-    },
     "gradey.ai.limit.resets" : {
       "localizations" : {
         "cs" : {
@@ -12721,35 +10546,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "new chat"
-          }
-        }
-      }
-    },
-    "gradey.ai.options" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Možnosti Gradey AI"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "možnosti Gradey AI"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gradey AI options"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gradey AI options"
           }
         }
       }
@@ -13293,122 +11089,6 @@
         }
       }
     },
-    "gradey.ai.unavailable.message" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gradey AI je dočasně nedostupná. Zkus to prosím znovu později."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gradey AI je dočasně nedostupná. zkus to prosím znovu později."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gradey AI is temporarily unavailable. Please try again later."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gradey AI is temporarily unavailable. please try again later."
-          }
-        }
-      }
-    },
-    "gradey.ai.unavailable.title" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gradey AI není dostupná"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gradey AI není dostupná"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gradey AI is unavailable"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gradey AI is unavailable"
-          }
-        }
-      }
-    },
-    "gradey.ai.welcome.message" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nech si pomoct s učením. Pro pomoc se známkami, rozvrhem nebo testem vyber, které školní údaje chceš sdílet."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "nech si pomoct s učením. pro pomoc se známkami, rozvrhem nebo testem vyber, které školní údaje chceš sdílet."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Get help with studying. Choose what school information to share when you want help with your marks, timetable or a test."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "get help with studying. choose what school information to share when you want help with your marks, timetable or a test."
-          }
-        }
-      }
-    },
-    "gradey.ai.welcome.title" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tvůj AI pomocník s učením"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "tvůj studijní bestie"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Your AI study assistant"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "your study bestie"
-          }
-        }
-      }
-    },
     "gradey.auth.continueWithoutAccount" : {
       "localizations" : {
         "cs" : {
@@ -13549,35 +11229,6 @@
         }
       }
     },
-    "gradey.auth.privacyNote" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Školní hesla zůstávají v Klíčence tohoto zařízení. Hesla do Strava.cz se neukládají. Gradey ID synchronizuje jen očištěné tokeny poskytovatelů a v případě potřeby hesla tě požádá o nové připojení."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "školní hesla zůstávají v klíčence tohoto zařízení. hesla do Strava.cz se neukládají. Gradey ID synchronizuje jen očištěné tokeny poskytovatelů a v případě potřeby hesla tě požádá o nové připojení."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "School passwords stay in this device’s Keychain. Strava.cz passwords are not stored. Gradey ID syncs only sanitized provider tokens and asks you to reconnect when a password is needed again."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "school passwords stay in this device’s Keychain. Strava.cz passwords are not stored. Gradey ID syncs only sanitized provider tokens and asks you to reconnect when a password is needed again."
-          }
-        }
-      }
-    },
     "gradey.auth.signInBody" : {
       "localizations" : {
         "cs" : {
@@ -13630,35 +11281,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "signing in…"
-          }
-        }
-      }
-    },
-    "gradey.auth.signInHeading" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pokračuj přes Apple"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "pokračuj přes Apple"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Continue with Apple"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "continue with Apple"
           }
         }
       }
@@ -13716,35 +11338,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "your private account for marks, meals, notifications, and widgets across your devices."
-          }
-        }
-      }
-    },
-    "gradey.auth.testingBypass" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pokračovat bez Gradey ID"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "pokračovat bez Gradey ID"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Continue without Gradey ID"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "continue without Gradey ID"
           }
         }
       }
@@ -13829,34 +11422,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "want to use Gradey ID?"
-          }
-        }
-      }
-    },
-    "gradey.guest.accountSection.message" : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vrať se k přihlášení přes Gradey ID a zapni synchronizované funkce účtu. Tvůj školní účet zůstane v tomto zařízení připojený."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "vrať se k přihlášení přes Gradey ID a zapni synchronizované funkce účtu. tvůj školní účet zůstane v tomto zařízení připojený."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Return to Gradey ID sign-in to enable synced account features. Your school account remains connected on this device."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "return to Gradey ID sign-in to enable synced account features. your school account remains connected on this device."
           }
         }
       }
@@ -14146,209 +11711,6 @@
         }
       }
     },
-    "insight.assessment.due" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Příprava: %@"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "příprava: %@"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Prepare for %@"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "prepare for %@"
-          }
-        }
-      }
-    },
-    "insight.average.changed" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@: průměr se změnil z %@ na %@"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@: průměr se změnil z %@ na %@"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@: average changed from %@ to %@"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@: average changed from %@ to %@"
-          }
-        }
-      }
-    },
-    "insight.busy.tests" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Testy v příštích čtyřech dnech: %@"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "testy v příštích čtyřech dnech: %@"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tests in the next four days: %@"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "tests in the next four days: %@"
-          }
-        }
-      }
-    },
-    "insight.deadline.due" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Blíží se termín: %@"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "blíží se termín: %@"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Due soon: %@"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "due soon: %@"
-          }
-        }
-      }
-    },
-    "insight.grade.edited" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Změna známky v předmětu %@"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "změna známky v předmětu %@"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "A recorded mark changed in %@"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "a recorded mark changed in %@"
-          }
-        }
-      }
-    },
-    "insight.grade.new" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nová známka v předmětu %@"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "nová známka v předmětu %@"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "New recorded mark in %@"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "new recorded mark in %@"
-          }
-        }
-      }
-    },
-    "insight.trend.worsening" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@: průměr se zhoršuje"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@: průměr se zhoršuje"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@: your average is getting worse"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@: your average is getting worse"
-          }
-        }
-      }
-    },
     "Instagram" : {
 
     },
@@ -14491,35 +11853,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "lesson"
-          }
-        }
-      }
-    },
-    "Loading today..." : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Načítám Dnes…"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "načítám dnes…"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Loading today..."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "loading today..."
           }
         }
       }
@@ -14777,35 +12110,6 @@
         }
       }
     },
-    "login.subtitle" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Přihlas se školními údaji a měj známky, průměry i absenci po ruce."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "přihlas se školním účtem a měj známky, průměry i absenci po ruce."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sign in with your school account to keep marks, averages, and absences at hand."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "sign in with your school account and keep marks, averages, and absences at hand."
-          }
-        }
-      }
-    },
     "login.support.chat" : {
       "localizations" : {
         "cs" : {
@@ -15003,35 +12307,6 @@
         }
       }
     },
-    "marks.column.subject" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Předmět"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "předmět"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Subject"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "subject"
-          }
-        }
-      }
-    },
     "marks.directory.title" : {
       "localizations" : {
         "cs" : {
@@ -15056,64 +12331,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "subjects"
-          }
-        }
-      }
-    },
-    "marks.header.average" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Průměr"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "průměr"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Average"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "average"
-          }
-        }
-      }
-    },
-    "marks.header.title" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Známky"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "známky"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Marks"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "marks"
           }
         }
       }
@@ -15274,120 +12491,6 @@
         }
       }
     },
-    "marks.row.trendBetter" : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "o %.2f lepší"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "o %.2f lepší"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%.2f better"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%.2f better"
-          }
-        }
-      }
-    },
-    "marks.row.trendWorse" : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "o %.2f horší"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "o %.2f horší"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%.2f worse"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%.2f worse"
-          }
-        }
-      }
-    },
-    "marks.search.empty" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Žádné předměty"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "žádné předměty"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No subjects"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "no subjects"
-          }
-        }
-      }
-    },
-    "marks.search.prompt" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hledat předměty"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "hledat předměty"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Search subjects"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "search subjects"
-          }
-        }
-      }
-    },
     "marks.sort.average" : {
       "localizations" : {
         "cs" : {
@@ -15472,346 +12575,6 @@
         }
       }
     },
-    "marks.sort.name" : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "A-Z"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "a-z"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "A-Z"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "a-z"
-          }
-        }
-      }
-    },
-    "marks.summary.best" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nejlepší"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "nejlepší"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Best"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "best"
-          }
-        }
-      }
-    },
-    "marks.summary.marks" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Známky"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "známky"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Marks"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "marks"
-          }
-        }
-      }
-    },
-    "marks.summary.subjects" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Předměty"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "předměty"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Subjects"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "subjects"
-          }
-        }
-      }
-    },
-    "marks.summary.watch" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pozor na"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "pozor na"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Watch"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "watch"
-          }
-        }
-      }
-    },
-    "marks.trends.movement" : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Změna průměru"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "změna průměru"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Average change"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "average change"
-          }
-        }
-      }
-    },
-    "marks.trends.newMarks" : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nové známky: %d"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "nové známky: %d"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "New marks: %d"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "new marks: %d"
-          }
-        }
-      }
-    },
-    "marks.trends.range" : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Období"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "období"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Range"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "range"
-          }
-        }
-      }
-    },
-    "marks.trends.range30" : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "30 dní"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "30 dní"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "30 days"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "30 days"
-          }
-        }
-      }
-    },
-    "marks.trends.range90" : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "90 dní"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "90 dní"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "90 days"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "90 days"
-          }
-        }
-      }
-    },
-    "marks.trends.schoolYear" : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Školní rok"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "školní rok"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "School year"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "school year"
-          }
-        }
-      }
-    },
-    "marks.trends.title" : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vývoj známek"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "vývoj známek"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mark trends"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "mark trends"
-          }
-        }
-      }
-    },
     "Month" : {
       "localizations" : {
         "cs" : {
@@ -15864,35 +12627,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "new mark"
-          }
-        }
-      }
-    },
-    "New marks and trends" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nové známky a trendy"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "nové známky a trendy"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "New marks and trends"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "new marks and trends"
           }
         }
       }
@@ -15951,34 +12685,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "next: %@"
-          }
-        }
-      }
-    },
-    "No grade history" : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Žádná historie známek"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "žádná historie známek"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No grade history"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "no grade history"
           }
         }
       }
@@ -16237,35 +12943,6 @@
         }
       }
     },
-    "onboarding.continue" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pokračovat"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "pokračovat"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Continue"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "continue"
-          }
-        }
-      }
-    },
     "onboarding.getStarted" : {
       "localizations" : {
         "cs" : {
@@ -16294,35 +12971,6 @@
         }
       }
     },
-    "onboarding.guest.notificationsNote" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Upozornění na nové známky vyžadují Gradey ID. Později je můžeš zapnout v Účtu a nastavení."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "upozornění na nové známky vyžadují Gradey ID. později je můžeš zapnout v účtu a nastavení."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "New-mark notifications require Gradey ID. You can enable them later in Account & Settings."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "new-mark notifications require Gradey ID. you can enable them later in account & settings."
-          }
-        }
-      }
-    },
     "onboarding.logIn" : {
       "localizations" : {
         "cs" : {
@@ -16347,265 +12995,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "sign in"
-          }
-        }
-      }
-    },
-    "onboarding.marks.body" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sleduj průměry, počet známek i předměty, na které se potřebuješ zaměřit."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "sleduj průměry, počet známek i předměty, na které se potřebuješ zaměřit."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Follow averages, mark counts, and subjects that need attention."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "follow averages, mark counts, and subjects that need attention."
-          }
-        }
-      }
-    },
-    "onboarding.marks.title" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Známky na první pohled"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "známky na první pohled"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Marks at a glance"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "marks at a glance"
-          }
-        }
-      }
-    },
-    "onboarding.meals.body" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pokud chceš mít jídelníček po ruce, připoj Strava.cz."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "pokud chceš mít jídelníček po ruce, připoj Strava.cz."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Connect Strava.cz if you want to keep your canteen menu at hand."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "connect Strava.cz if you want to keep your canteen menu at hand."
-          }
-        }
-      }
-    },
-    "onboarding.meals.connect" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Připojit Strava.cz"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "připojit Strava.cz"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Connect Strava.cz"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "connect Strava.cz"
-          }
-        }
-      }
-    },
-    "onboarding.meals.connect.body" : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Přihlas se údaji ke Strava.cz. V Klíčence tohoto zařízení se uloží přihlašovací relace. Heslo se neukládá ani neposílá na servery Gradey."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "přihlas se údaji ke Strava.cz. v klíčence tohoto zařízení se uloží přihlašovací relace. heslo se neukládá ani neposílá na servery Gradey."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sign in with your Strava.cz details. Your session is saved in this device’s Keychain. Your password is not stored or sent to Gradey servers."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "sign in with your Strava.cz details. your session is saved in this device’s Keychain. your password is not stored or sent to Gradey servers."
-          }
-        }
-      }
-    },
-    "onboarding.meals.connect.title" : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Připojit Strava.cz"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "připojit Strava.cz"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Connect Strava.cz"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "connect Strava.cz"
-          }
-        }
-      }
-    },
-    "onboarding.meals.notNow" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Teď ne"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "teď ne"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Not now"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "not now"
-          }
-        }
-      }
-    },
-    "onboarding.meals.title" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Školní obědy"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "školní obědy"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "School meals"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "school meals"
-          }
-        }
-      }
-    },
-    "onboarding.next" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Další"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "další"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Next"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "next"
           }
         }
       }
@@ -16974,64 +13363,6 @@
         }
       }
     },
-    "onboarding.ready.meals" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Obědy"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "obědy"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Meals"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "meals"
-          }
-        }
-      }
-    },
-    "onboarding.ready.notConnected" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nepřipojeno"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "nepřipojeno"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Not connected"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "not connected"
-          }
-        }
-      }
-    },
     "onboarding.ready.notifications" : {
       "localizations" : {
         "cs" : {
@@ -17144,35 +13475,6 @@
         }
       }
     },
-    "onboarding.school.body" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vyber poskytovatele a přihlas se stejnými údaji jako ve škole. Heslo zůstane v Klíčence tohoto zařízení."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "vyber poskytovatele a přihlas se stejnými údaji jako ve škole. heslo zůstane v klíčence tohoto zařízení."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Choose your provider and use the same sign-in details as at school. Your password stays in this device’s Keychain."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "choose your provider and use the same sign-in details as at school. your password stays in this device’s Keychain."
-          }
-        }
-      }
-    },
     "onboarding.school.change" : {
       "localizations" : {
         "cs" : {
@@ -17253,34 +13555,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "find your school"
-          }
-        }
-      }
-    },
-    "onboarding.school.connect" : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Připojit školu"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "připojit školu"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Connect school"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "connect school"
           }
         }
       }
@@ -17453,93 +13727,6 @@
         }
       }
     },
-    "onboarding.school.title" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Připoj svou školu"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "připoj školu"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Connect your school"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "connect your school"
-          }
-        }
-      }
-    },
-    "onboarding.skip" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Přeskočit"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "přeskočit"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Skip"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "skip"
-          }
-        }
-      }
-    },
-    "onboarding.skipIntro" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Přeskočit úvod"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "přeskočit intro"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Skip intro"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "skip intro"
-          }
-        }
-      }
-    },
     "onboarding.sync.warning.meals" : {
       "localizations" : {
         "cs" : {
@@ -17708,35 +13895,6 @@
         }
       }
     },
-    "onboarding.upgrade.account.body" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vytvoř si Gradey ID přes Apple, synchronizuj nastavení mezi zařízeními a zapni upozornění na nové známky. Můžeš také pokračovat a Gradey ID si vytvořit později v Nastavení."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "vytvoř si Gradey ID přes Apple, synchronizuj nastavení mezi zařízeními a zapni upozornění na nové známky. můžeš také pokračovat a Gradey ID si vytvořit později v nastavení."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Create a Gradey ID with Apple to sync settings across devices and enable new-mark notifications. You can also continue now and create it later in Settings."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "create a Gradey ID with apple to sync settings across devices and enable new-mark notifications. you can also continue now and create it later in settings."
-          }
-        }
-      }
-    },
     "onboarding.upgrade.account.continueWithout" : {
       "localizations" : {
         "cs" : {
@@ -17761,35 +13919,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "continue without Gradey ID"
-          }
-        }
-      }
-    },
-    "onboarding.upgrade.account.title" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Připoj Gradey ID"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "připoj Gradey ID"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Connect your Gradey ID"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "connect your Gradey ID"
           }
         }
       }
@@ -18393,209 +14522,6 @@
     },
     "openside.tech" : {
 
-    },
-    "Overall average" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Celkový průměr"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "celkový průměr"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Overall average"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "overall average"
-          }
-        }
-      }
-    },
-    "overview.best" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nejlepší"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "nejlepší"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Best"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "best"
-          }
-        }
-      }
-    },
-    "overview.marks" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Známky"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "známky"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Marks"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "marks"
-          }
-        }
-      }
-    },
-    "overview.overall.title" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Celkový průměr"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "celkový průměr"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Overall average"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "overall average"
-          }
-        }
-      }
-    },
-    "overview.school.accessibility" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Název školy: %@"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "název školy: %@"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "School name: %@"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "school name: %@"
-          }
-        }
-      }
-    },
-    "overview.subjects" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Předměty"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "předměty"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Subjects"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "subjects"
-          }
-        }
-      }
-    },
-    "overview.weakest" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nejslabší"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "chce to práci"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Needs work"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "needs work"
-          }
-        }
-      }
     },
     "Person" : {
       "extractionState" : "manual",
@@ -21756,34 +17682,6 @@
         }
       }
     },
-    "School limit unavailable. Current percentages are shown without guessing a threshold." : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Školní limit není k dispozici. Aktuální procenta se zobrazují bez odhadu limitu."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "školní limit není k dispozici. aktuální procenta se zobrazují bez odhadu limitu."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "School limit unavailable. Current percentages are shown without guessing a threshold."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "school limit unavailable. current percentages are shown without guessing a threshold."
-          }
-        }
-      }
-    },
     "School schedule" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -22208,34 +18106,6 @@
         }
       }
     },
-    "settings.about.message" : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Údaje o verzi, autoři a poděkování."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "údaje o verzi, autoři a poděkování."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Version details, credits, and acknowledgements."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "version details, credits, and acknowledgements."
-          }
-        }
-      }
-    },
     "settings.about.title" : {
       "localizations" : {
         "cs" : {
@@ -22516,34 +18386,6 @@
         }
       }
     },
-    "settings.account.profile.message" : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tvoje identita pro synchronizaci a obnovení účtu."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "tvoje identita pro synchronizaci a obnovení účtu."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Your identity for sync and account recovery."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "your identity for sync and account recovery."
-          }
-        }
-      }
-    },
     "settings.account.profile.title" : {
       "localizations" : {
         "cs" : {
@@ -22568,62 +18410,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Gradey profile"
-          }
-        }
-      }
-    },
-    "settings.account.session.guestMessage" : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Odhlas místní školní účet a účet jídelny v tomto zařízení. Režim hosta zůstane zapnutý."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "odhlas místní školní účet a účet jídelny v tomto zařízení. režim hosta zůstane zapnutý."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sign out of local school and canteen accounts on this device. Guest mode stays on."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "sign out of local school and canteen accounts on this device. guest mode stays on."
-          }
-        }
-      }
-    },
-    "settings.account.session.message" : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Odhlas se z účtu Gradey, školního účtu i účtu jídelny v tomto zařízení."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "odhlas se z účtu Gradey, školního účtu i účtu jídelny v tomto zařízení."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sign out of Gradey, school, and canteen accounts on this device."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "sign out of Gradey, school, and canteen accounts on this device."
           }
         }
       }
@@ -22964,34 +18750,6 @@
         }
       }
     },
-    "settings.connected.canteen.message" : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Synchronizace jídelny a místní relace Jídelny se spravují společně."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "synchronizace jídelny a místní relace jídelny se spravují společně."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Canteen sync and the local Meals session are managed together."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "canteen sync and the local meals session are managed together."
-          }
-        }
-      }
-    },
     "settings.connected.canteen.title" : {
       "localizations" : {
         "cs" : {
@@ -23240,34 +18998,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "sign in to a Gradey account before linking a school."
-          }
-        }
-      }
-    },
-    "settings.connected.school.message" : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Přepínej školy, obnovuj připojení a spravuj upozornění pro každou školu."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "přepínej školy, obnovuj připojení a spravuj upozornění pro každou školu."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Switch schools, recover a connection, and control alerts per school."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "switch schools, recover a connection, and control alerts per school."
           }
         }
       }
@@ -23776,35 +19506,6 @@
         }
       }
     },
-    "settings.group.gradey" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tvoje Gradey"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "tvoje Gradey"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Your Gradey"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "your Gradey"
-          }
-        }
-      }
-    },
     "settings.language.chronicallyOnline.subtitle" : {
       "localizations" : {
         "cs" : {
@@ -23861,121 +19562,6 @@
         }
       }
     },
-    "settings.language.message" : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vyber, jakým jazykem má Gradey mluvit."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "vyber, jak má Gradey mluvit."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Choose how Gradey talks."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "pick how Gradey talks."
-          }
-        }
-      }
-    },
-    "settings.language.standard.subtitle" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Standardní"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "standardní. jako normálně."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Standard"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "standard. like, normal."
-          }
-        }
-      }
-    },
-    "settings.language.system" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Použít jazyk zařízení"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "použít jazyk zařízení"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Use device language"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "use device language"
-          }
-        }
-      }
-    },
-    "settings.language.system.subtitle" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Použije angličtinu nebo češtinu podle jazyka zařízení."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "vezme angličtinu nebo češtinu podle jazyka zařízení."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Uses English or Czech to match your device language."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "uses english or czech to match your device language."
-          }
-        }
-      }
-    },
     "settings.language.title" : {
       "localizations" : {
         "cs" : {
@@ -24000,34 +19586,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "language"
-          }
-        }
-      }
-    },
-    "settings.notifications.device.message" : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Systémové oprávnění platí jen pro toto zařízení."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "systémové oprávnění platí jen pro toto zařízení."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "System permission is specific to this device."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "system permission is specific to this device."
           }
         }
       }
@@ -24256,34 +19814,6 @@
         }
       }
     },
-    "settings.notifications.quietHours.message" : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Upozornění na známky přijaté během klidového režimu počkají do jeho konce. Více známek se sloučí do jednoho souhrnu."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "upozornění na známky přijaté během klidového režimu počkají do jeho konce. více známek se sloučí do jednoho souhrnu."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Alerts for marks received during quiet hours wait until the period ends. Multiple marks are grouped into one summary."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "alerts for marks received during quiet hours wait until the period ends. multiple marks are grouped into one summary."
-          }
-        }
-      }
-    },
     "settings.notifications.quietHours.start" : {
       "localizations" : {
         "cs" : {
@@ -24508,64 +20038,6 @@
         }
       }
     },
-    "settings.overview.meals.hidden" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Záložka Jídelna skryta"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "záložka jídelna skryta"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Meals tab hidden"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "meals tab hidden"
-          }
-        }
-      }
-    },
-    "settings.overview.meals.shown" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Záložka Jídelna zobrazena"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "záložka jídelna zobrazena"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Meals tab shown"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "meals tab shown"
-          }
-        }
-      }
-    },
     "settings.overview.notifications.off" : {
       "localizations" : {
         "cs" : {
@@ -24734,92 +20206,6 @@
         }
       }
     },
-    "settings.preferences.message" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vyber jazyk a funkce, které zůstanou na liště záložek."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "vyber si jazyk a co zůstane na liště."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Choose the language and which features stay in your tab bar."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "pick the language and what stays in your tab bar."
-          }
-        }
-      }
-    },
-    "settings.preferences.title" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Předvolby"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "předvolby"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Preferences"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "preferences"
-          }
-        }
-      }
-    },
-    "settings.privacy.age.message" : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gradey před odesláním školních dat, chatu podpory nebo AI na servery vyžaduje potvrzení věku."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "gradey před odesláním školních dat, chatu podpory nebo AI na servery vyžaduje potvrzení věku."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gradey asks for an age confirmation before school data, support chat, or AI leave the device for our servers."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "gradey asks for an age confirmation before school data, support chat, or AI leave the device for our servers."
-          }
-        }
-      }
-    },
     "settings.privacy.age.sixteen" : {
       "localizations" : {
         "cs" : {
@@ -24956,34 +20342,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "delete Gradey account"
-          }
-        }
-      }
-    },
-    "settings.privacy.delete.caption" : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Smazání účtu je trvalé a nelze je vrátit zpět."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "smazání účtu je trvalé a nelze je vrátit zpět."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Account deletion is permanent and cannot be undone."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "account deletion is permanent and cannot be undone."
           }
         }
       }
@@ -25156,34 +20514,6 @@
         }
       }
     },
-    "settings.privacy.delete.message" : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Trvale odstraň účet Gradey a všechna vlastní data v cloudu."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "trvale odstraň účet Gradey a všechna vlastní data v cloudu."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Permanently remove the Gradey account and all user-owned cloud data."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "permanently remove the Gradey account and all user-owned cloud data."
-          }
-        }
-      }
-    },
     "settings.privacy.delete.title" : {
       "localizations" : {
         "cs" : {
@@ -25208,34 +20538,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "delete account"
-          }
-        }
-      }
-    },
-    "settings.privacy.documents.message" : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Veřejné dokumenty pro Gradey najdeš v centru nápovědy."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "veřejné dokumenty pro Gradey najdeš v centru nápovědy."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Public legal documents for Gradey live in the help center."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "public legal documents for Gradey live in the help center."
           }
         }
       }
@@ -25320,34 +20622,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "includes your profile, linked-account metadata, preferences, mark events, and grade history. secrets and push tokens are excluded."
-          }
-        }
-      }
-    },
-    "settings.privacy.export.message" : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Připrav přenositelnou kopii dat svého účtu Gradey ve formátu JSON."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "připrav přenositelnou kopii dat svého účtu Gradey ve formátu JSON."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Prepare a portable JSON copy of data owned by your Gradey account."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "prepare a portable JSON copy of data owned by your Gradey account."
           }
         }
       }
@@ -25548,35 +20822,6 @@
         }
       }
     },
-    "settings.profile.actionRequired" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vyžaduje pozornost"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "vyžaduje pozornost"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Action required"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "action required"
-          }
-        }
-      }
-    },
     "settings.profile.addName.message" : {
       "localizations" : {
         "cs" : {
@@ -25657,151 +20902,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Gradey ID"
-          }
-        }
-      }
-    },
-    "settings.profile.local" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "V tomto zařízení"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "v tomto zařízení"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "On this device"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "on this device"
-          }
-        }
-      }
-    },
-    "settings.profile.saved" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Uložená data"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "uložená data"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Saved data"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "saved data"
-          }
-        }
-      }
-    },
-    "settings.profile.setupNeeded" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Je třeba nastavit"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "je třeba nastavit"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Setup needed"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "setup needed"
-          }
-        }
-      }
-    },
-    "settings.profile.synced" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Synchronizováno"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "synchronizováno"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Synced"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "synced"
-          }
-        }
-      }
-    },
-    "settings.profile.title" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Profil"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "profil"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Profile"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "profile"
           }
         }
       }
@@ -25970,34 +21070,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "source code, issues, and release notes."
-          }
-        }
-      }
-    },
-    "settings.support.message" : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Získej pomoc, pošli zpětnou vazbu nebo podpoř další vývoj."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "získej pomoc, pošli zpětnou vazbu nebo podpoř další vývoj."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Get help, send feedback, or support continued development."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "get help, send feedback, or support continued development."
           }
         }
       }
@@ -26815,34 +21887,6 @@
         }
       }
     },
-    "stravacz.account.menu" : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Účet Strava.cz"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "účet Strava.cz"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Strava.cz account"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Strava.cz account"
-          }
-        }
-      }
-    },
     "stravacz.balance" : {
       "localizations" : {
         "cs" : {
@@ -27067,34 +22111,6 @@
         }
       }
     },
-    "stravacz.disconnect" : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Odpojit Strava.cz"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "odpojit Strava.cz"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Disconnect Strava.cz"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "disconnect Strava.cz"
-          }
-        }
-      }
-    },
     "stravacz.meal.cancel" : {
       "localizations" : {
         "cs" : {
@@ -27175,35 +22191,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "ordered"
-          }
-        }
-      }
-    },
-    "stravacz.meal.readOnly" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pouze pro čtení"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "pouze pro čtení"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Read only"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "read only"
           }
         }
       }
@@ -29157,122 +24144,6 @@
         }
       }
     },
-    "support.updatePrompt.later" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Možná později"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "možná později"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Maybe later"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "maybe later"
-          }
-        }
-      }
-    },
-    "support.updatePrompt.message" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pokud ti Gradey pomáhá, můžeš vývoj podpořit jednorázovým příspěvkem."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "pokud ti Gradey pomáhá, můžeš vývoj podpořit jednorázovým příspěvkem."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "If Gradey helps you, you can support its development with a one-time tip."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "if Gradey helps you, you can support its development with a one-time tip."
-          }
-        }
-      }
-    },
-    "support.updatePrompt.support" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Podpořit Gradey"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "podpořit Gradey"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Support Gradey"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "support Gradey"
-          }
-        }
-      }
-    },
-    "support.updatePrompt.title" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Díky za aktualizaci"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "díky za aktualizaci"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Thanks for updating"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "thanks for updating"
-          }
-        }
-      }
-    },
     "Task" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -29665,6 +24536,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "room"
+          }
+        }
+      }
+    },
+    "timetable.detail.time" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Čas"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "čas"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Time"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "time"
           }
         }
       }
@@ -30089,146 +24988,6 @@
         }
       }
     },
-    "timetable.summary.after.changes" : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Než to pro dnešek zabalíš, zkontroluj změny v rozvrhu."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "checkni dnešní změny, než to zabalíš."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Check today’s timetable changes before you finish for the day."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "check today's changes before you clock out."
-          }
-        }
-      }
-    },
-    "timetable.summary.after.done" : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Všechny hodiny v rozvrhu už skončily."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "všechny hodiny už padly."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "All listed lessons are over."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "all listed lessons are over. school said bye."
-          }
-        }
-      }
-    },
-    "timetable.summary.after.title" : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pro dnešek hotovo"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "dneska už end"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Done for today"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "done for today. clock out"
-          }
-        }
-      }
-    },
-    "timetable.summary.beforeSchool.title" : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Škola brzy začíná"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "škola za chvíli startuje"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "School starts soon"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "school is about to start. lock in"
-          }
-        }
-      }
-    },
-    "timetable.summary.between.title" : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mezi hodinami"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "mezi hodinama"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Between lessons"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "between lessons. intermission era"
-          }
-        }
-      }
-    },
     "timetable.summary.changes.few" : {
       "localizations" : {
         "cs" : {
@@ -30481,34 +25240,6 @@
         }
       }
     },
-    "timetable.summary.now.title" : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Teď: %@"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "právě teď: %@"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Now: %@"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "live now: %@"
-          }
-        }
-      }
-    },
     "timetable.summary.remaining" : {
       "localizations" : {
         "cs" : {
@@ -30646,180 +25377,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "today"
-          }
-        }
-      }
-    },
-    "today.ai.studyPriorities.subtitle" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Na co se tento týden zaměřit"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "na co se tento týden zaměřit"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "What to focus on this week"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "what to focus on this week"
-          }
-        }
-      }
-    },
-    "today.ai.title" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Zeptej se Gradeyho"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "zeptej se gradeyho"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ask Gradey"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ask Gradey"
-          }
-        }
-      }
-    },
-    "today.ai.weekSummary.subtitle" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Jak ti jde tento týden"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "jak ti jde tento týden"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "How your week is going"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "how your week is going"
-          }
-        }
-      }
-    },
-    "today.attention.empty" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tady se objeví tvoje nejbližší priority."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "tady se objeví tvoje nejbližší priority."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Your next priorities will appear here."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "your next priorities will appear here."
-          }
-        }
-      }
-    },
-    "today.attention.emptyTitle" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Máš vše hotovo"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "máš vše hotovo"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "You're all caught up"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "you're all caught up"
-          }
-        }
-      }
-    },
-    "today.attention.title" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Stojí za pozornost"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "stojí za pozornost"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Worth your attention"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "worth your attention"
           }
         }
       }
@@ -31084,93 +25641,6 @@
         }
       }
     },
-    "today.history.empty" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Zatím žádná uložená historie známek"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "zatím žádná uložená historie známek"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No saved mark history yet"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "no saved mark history yet"
-          }
-        }
-      }
-    },
-    "today.history.empty.subtitle" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vývoj známek se zobrazí, až Gradey postupně uloží další záznamy."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "vývoj známek se zobrazí, až Gradey postupně uloží další záznamy."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Trends will appear as Gradey saves mark records over time."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "trends will appear as Gradey saves mark records over time."
-          }
-        }
-      }
-    },
-    "today.insight.recordedAverage" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Na základě zapsaných známek"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "na základě zapsaných známek"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Based on your recorded marks"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "based on your recorded marks"
-          }
-        }
-      }
-    },
     "today.lesson.nextAt" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -31258,151 +25728,6 @@
         }
       }
     },
-    "today.linkedAccounts" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Propojené účty"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "propojené účty"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Linked accounts"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "linked accounts"
-          }
-        }
-      }
-    },
-    "today.markInSubject" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ z předmětu %@"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ z předmětu %@"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ in %@"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ in %@"
-          }
-        }
-      }
-    },
-    "today.mealsNotConnected" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Jídelna není propojená"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "jídelna není propojená"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Meal account not connected"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "meal account not connected"
-          }
-        }
-      }
-    },
-    "today.mealsNotConnected.subtitle" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Strava.cz propojíš v části Účet."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Strava.cz propojíš v části účet."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Connect Strava.cz in Account."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "connect Strava.cz in Account."
-          }
-        }
-      }
-    },
-    "today.newFromSchool" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nové ze školy"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "nové ze školy"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "New from school"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "new from school"
-          }
-        }
-      }
-    },
     "today.nextLesson" : {
       "localizations" : {
         "cs" : {
@@ -31427,64 +25752,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "next lesson"
-          }
-        }
-      }
-    },
-    "today.noAbsenceRisk" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Přehled absence není k dispozici"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "přehled absence není k dispozici"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No absence summary available"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "no absence summary available"
-          }
-        }
-      }
-    },
-    "today.noAbsenceRisk.subtitle" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Obnov data a zkontroluj dostupnou absenci."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "obnov data a zkontroluj dostupnou absenci."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Refresh to check for absence data."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "refresh to check for absence data."
           }
         }
       }
@@ -31716,35 +25983,6 @@
         }
       }
     },
-    "today.recordedDate.unavailable" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Datum zápisu není dostupné"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "datum zápisu není dostupné"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Recorded date unavailable"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "recorded date unavailable"
-          }
-        }
-      }
-    },
     "today.refreshing" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -31770,34 +26008,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "refreshing school data…"
-          }
-        }
-      }
-    },
-    "today.schoolAccount" : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Školní účet"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "školní účet"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "School account"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "school account"
           }
         }
       }
@@ -31882,34 +26092,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "pull down to refresh or open Timetable."
-          }
-        }
-      }
-    },
-    "today.trends.cloudSubtitle" : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vývoj známek se zobrazí, až Gradey postupně uloží další záznamy."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "vývoj známek se zobrazí, až Gradey postupně uloží další záznamy."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Trends will appear as Gradey saves mark records over time."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "trends will appear as Gradey saves mark records over time."
           }
         }
       }

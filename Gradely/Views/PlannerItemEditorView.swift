@@ -40,7 +40,7 @@ struct PlannerItemEditorView: View {
                 .padding(.horizontal, Spacing.lg)
                 .padding(.vertical, Spacing.md)
             }
-            .background { SettingsModalBackground() }
+            .background { SettingsBackground() }
             .environment(\.timeZone, item.calendar.timeZone)
             .disabled(isSaving || isFindingLesson)
             .navigationTitle(AppL10n.string(isEditing ? "planner.edit" : "planner.add"))
@@ -272,7 +272,7 @@ struct PlannerItemEditorView: View {
     ) -> some View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
             SettingsModalSectionHeader(title: title)
-            SettingsModalSurface {
+            SettingsSurface {
                 VStack(alignment: .leading, spacing: Spacing.md) {
                     content()
                 }

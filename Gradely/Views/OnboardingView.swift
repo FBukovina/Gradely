@@ -349,7 +349,7 @@ struct OnboardingView: View {
             title: "onboarding.notifications.title",
             message: "onboarding.notifications.body"
         ) {
-            SettingsModalSurface {
+            SettingsSurface {
                 GradelyLabel("gradey.account.notifications.message", systemImage: "checkmark.shield.fill")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
@@ -375,7 +375,7 @@ struct OnboardingView: View {
             title: "onboarding.ready.title",
             message: "onboarding.ready.body"
         ) {
-            SettingsModalSurface {
+            SettingsSurface {
                 VStack(spacing: 0) {
                     OnboardingSummaryRow(
                         title: "onboarding.ready.school",
@@ -453,7 +453,7 @@ struct OnboardingView: View {
         @ViewBuilder content: () -> Content
     ) -> some View {
         ZStack {
-            SettingsModalBackground()
+            SettingsBackground()
 
             ScrollView {
                 VStack(alignment: .leading, spacing: Spacing.xl) {
@@ -503,7 +503,7 @@ struct OnboardingView: View {
     }
 
     private func warningCard(_ warning: OnboardingWarning) -> some View {
-        SettingsModalSurface {
+        SettingsSurface {
             VStack(alignment: .leading, spacing: Spacing.md) {
                 GradelyLabel("onboarding.sync.warning.title", systemImage: "exclamationmark.triangle.fill")
                     .font(.headline)

@@ -176,11 +176,6 @@ struct TimetableView: View {
     private var dayContent: some View {
         ScrollView {
             LazyVStack(spacing: Spacing.sm) {
-                if let summary = viewModel.todaySummary {
-                    TodaySummaryCard(summary: summary)
-                        .padding(.bottom, Spacing.xs)
-                }
-
                 if viewModel.isRefreshing {
                     HStack(spacing: Spacing.sm) {
                         ProgressView()
@@ -236,140 +231,6 @@ private struct PlannerLessonSelection: Identifiable {
 }
 
 // MARK: - Today summary
-
-private struct TodaySummaryCard: View {
-    let summary: TimetableTodaySummary
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: Spacing.md) {
-            HStack(alignment: .top, spacing: Spacing.md) {
-                SettingsModalSystemIcon(systemName: icon)
-
-                VStack(alignment: .leading, spacing: Spacing.xs) {
-                    Text(title)
-                        .font(.headline.weight(.bold))
-                    if let subtitle {
-                        Text(subtitle)
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                }
-
-                Spacer(minLength: 0)
-            }
-
-            if let next = summary.nextLesson, summary.currentLesson != nil {
-                Divider()
-                HStack(spacing: Spacing.sm) {
-                    GradelyIcon(systemName: "forward.fill")
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(.secondary)
-                    Text(String(format: AppL10n.string("timetable.summary.next"), lessonTitle(next)))
-                        .font(.caption.weight(.semibold))
-                        .lineLimit(1)
-                    Spacer(minLength: 0)
-                    Text(timeRange(next))
-                        .font(.caption.monospacedDigit())
-                        .foregroundStyle(.secondary)
-                }
-            }
-
-            if summary.hasChanges {
-                HStack(spacing: Spacing.sm) {
-                    GradelyIcon(systemName: "exclamationmark.triangle.fill")
-                        .foregroundStyle(LessonChangeKind.canceled.color)
-                    Text(changeSummary)
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                .padding(.top, Spacing.xs)
-            }
-        }
-        .padding(20)
-        .background(Color.gradelySecondaryGroupedBackground, in: RoundedRectangle(cornerRadius: Radius.xl, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: Radius.xl, style: .continuous)
-                .strokeBorder(Brand.primary.opacity(0.10), lineWidth: 1)
-        }
-        .accessibilityIdentifier("todaySummaryCard")
-    }
-
-    private var title: String {
-        switch summary.state {
-        case .empty:
-            return AppL10n.string("timetable.summary.empty.title")
-        case .beforeSchool:
-            return AppL10n.string("timetable.summary.beforeSchool.title")
-        case .current:
-            return String(
-                format: AppL10n.string("timetable.summary.now.title"),
-                summary.currentLesson.map(lessonTitle) ?? AppL10n.string("timetable.summary.lessonFallback")
-            )
-        case .betweenLessons:
-            return AppL10n.string("timetable.summary.between.title")
-        case .afterSchool:
-            return AppL10n.string("timetable.summary.after.title")
-        }
-    }
-
-    private var subtitle: String? {
-        switch summary.state {
-        case .empty:
-            return AppL10n.string("timetable.summary.empty.message")
-        case .beforeSchool, .betweenLessons:
-            guard let next = summary.nextLesson else { return nil }
-            if let minutes = summary.minutesUntilNext {
-                return String(format: AppL10n.string("timetable.summary.nextIn"), lessonTitle(next), minutes)
-            }
-            return String(format: AppL10n.string("timetable.summary.nextIs"), lessonTitle(next))
-        case .current:
-            if let minutes = summary.minutesRemainingInCurrent {
-                return String(format: AppL10n.string("timetable.summary.remaining"), minutes)
-            }
-            return nil
-        case .afterSchool:
-            return AppL10n.string(
-                summary.hasChanges
-                    ? "timetable.summary.after.changes"
-                    : "timetable.summary.after.done"
-            )
-        }
-    }
-
-    private var icon: String {
-        switch summary.state {
-        case .empty: "calendar.badge.checkmark"
-        case .beforeSchool: "sunrise.fill"
-        case .current: "play.circle.fill"
-        case .betweenLessons: "pause.circle.fill"
-        case .afterSchool: "checkmark.circle.fill"
-        }
-    }
-
-    private var changeSummary: String {
-        let count = summary.changedLessons.count
-        if count == 1, let lesson = summary.changedLessons.first {
-            return String(format: AppL10n.string("timetable.summary.changes.one"), lessonTitle(lesson))
-        }
-        let key: String.LocalizationValue = (2...4).contains(count)
-            ? "timetable.summary.changes.few"
-            : "timetable.summary.changes.many"
-        return String(format: AppL10n.string(key), count)
-    }
-
-    private func lessonTitle(_ lesson: ScheduledLesson) -> String {
-        lesson.subjectName ?? lesson.subjectAbbrev ?? AppL10n.string("timetable.lesson.unknown")
-    }
-
-    private func timeRange(_ lesson: ScheduledLesson) -> String {
-        guard !lesson.hour.beginTime.isEmpty, !lesson.hour.endTime.isEmpty else {
-            return lesson.hour.caption
-        }
-        return "\(lesson.hour.beginTime)-\(lesson.hour.endTime)"
-    }
-}
 
 // MARK: - Week navigation
 
@@ -581,7 +442,7 @@ private struct LessonCard: View {
                     .foregroundStyle(.secondary)
                 }
 
-                if let note = LessonText.changeNote(for: lesson) {
+                if let note = LessonText.distinctChangeNote(for: lesson) {
                     HStack(alignment: .firstTextBaseline, spacing: Spacing.xs + 2) {
                         GradelyIcon(systemName: "info.circle", size: 12)
                             .foregroundStyle(lesson.changeKind.color)
@@ -711,6 +572,24 @@ private enum LessonText {
         return description
     }
 
+    /// The school's note, unless it only restates the change chip and the room or
+    /// teacher the card already shows ("Změna učebny: Aula." next to room Aula).
+    static func distinctChangeNote(for lesson: ScheduledLesson) -> String? {
+        guard let note = changeNote(for: lesson) else { return nil }
+        guard !lesson.isCanceled else { return note }
+        func normalized(_ text: String?) -> String? {
+            guard let text else { return nil }
+            let value = text.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines.union(.punctuationCharacters)).lowercased()
+            return value.isEmpty ? nil : value
+        }
+        let shown = Set([lesson.roomAbbrev, lesson.roomName, lesson.teacherName, lesson.teacherAbbrev,
+                         lesson.changeKind.localizedLabel].compactMap(normalized))
+        let detail = note.split(separator: ":", maxSplits: 1).last.map(String.init)
+        if let whole = normalized(note), shown.contains(whole) { return nil }
+        if note.contains(":"), normalized(detail).map(shown.contains) ?? true { return nil }
+        return note
+    }
+
     private static func changeSubject(for lesson: ScheduledLesson) -> String? {
         guard let subject = lesson.change?.changeSubject?.trimmingCharacters(in: .whitespacesAndNewlines),
               !subject.isEmpty
@@ -820,8 +699,9 @@ private struct LessonDetailSheet: View {
                     changeCard(change)
                 }
 
-                SettingsModalSurface {
+                SettingsSurface {
                     VStack(alignment: .leading, spacing: Spacing.md) {
+                        DetailRow(systemImage: "clock", title: "timetable.detail.time", value: timeText)
                         if let teacher = lesson.teacherName ?? lesson.teacherAbbrev {
                             DetailRow(systemImage: "person.fill", title: "timetable.detail.teacher", value: teacher)
                         }
@@ -864,7 +744,7 @@ private struct LessonDetailSheet: View {
             .frame(maxWidth: .infinity)
         }
         .background {
-            SettingsModalBackground()
+            SettingsBackground()
         }
     }
 
@@ -878,7 +758,7 @@ private struct LessonDetailSheet: View {
             SettingsModalSectionHeader(title: "planner.title")
 
             if !attached.isEmpty {
-                SettingsModalSurface(padding: Spacing.md) {
+                SettingsSurface(padding: Spacing.md) {
                     VStack(spacing: Spacing.sm) {
                         ForEach(Array(attached.enumerated()), id: \.element.id) { index, item in
                             if index > 0 {
@@ -887,7 +767,7 @@ private struct LessonDetailSheet: View {
                             Button { plannerItem = item } label: {
                                 HStack(spacing: Spacing.sm) {
                                     PlannerItemSummary(item: item)
-                                    SettingsModalDisclosureIcon()
+                                    SettingsDisclosureIcon()
                                 }
                                 .contentShape(Rectangle())
                             }
@@ -909,27 +789,16 @@ private struct LessonDetailSheet: View {
         }
     }
 
-    private var header: some View {
-        VStack(alignment: .leading, spacing: Spacing.sm) {
-            Text(lesson.hour.beginTime.isEmpty
-                 ? lesson.hour.caption
-                 : "\(lesson.hour.beginTime) – \(lesson.hour.endTime)")
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(.white.opacity(0.85))
+    /// macOS has no navigation bar here, so the sheet names the lesson itself and
+    /// carries the close button.
+    @ViewBuilder private var header: some View {
+        #if os(macOS)
+        HStack(alignment: .firstTextBaseline, spacing: Spacing.md) {
             Text(LessonText.subject(for: lesson))
                 .font(.title2.bold())
-                .foregroundStyle(.white)
-                .strikethrough(lesson.isCanceled, color: .white.opacity(0.7))
+                .strikethrough(lesson.isCanceled)
                 .lineLimit(2)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(Spacing.xl)
-        #if os(macOS)
-        .padding(.trailing, Spacing.xl)
-        #endif
-        .background(headerGradient, in: RoundedRectangle(cornerRadius: Radius.xl, style: .continuous))
-        #if os(macOS)
-        .overlay(alignment: .topTrailing) {
+            Spacer(minLength: Spacing.sm)
             Button {
                 dismiss()
             } label: {
@@ -937,21 +806,20 @@ private struct LessonDetailSheet: View {
             }
             .buttonStyle(.plain)
             .keyboardShortcut(.cancelAction)
-            .padding(Spacing.md)
             .accessibilityLabel(AppL10n.string("action.done"))
             .accessibilityIdentifier("modalDismissButton")
         }
         #endif
     }
 
-    private var headerGradient: LinearGradient {
-        guard lesson.changeKind != .none else { return Brand.gradient }
-        let color = lesson.changeKind.color
-        return LinearGradient(colors: [color, color.opacity(0.78)], startPoint: .topLeading, endPoint: .bottomTrailing)
+    private var timeText: String {
+        lesson.hour.beginTime.isEmpty
+            ? lesson.hour.caption
+            : "\(lesson.hour.beginTime) – \(lesson.hour.endTime)"
     }
 
     private func changeCard(_ change: TimetableChange) -> some View {
-        SettingsModalSurface {
+        SettingsSurface {
             HStack(alignment: .top, spacing: Spacing.md) {
                 GradelyIcon(systemName: lesson.isCanceled ? "calendar.badge.exclamationmark" : "exclamationmark.triangle.fill", size: 20)
                     .foregroundStyle(lesson.changeKind.color)

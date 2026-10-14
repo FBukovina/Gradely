@@ -190,9 +190,6 @@ struct ContentView: View {
                                 snapshotStore: schoolSnapshotStore,
                                 accountHub: AnyView(accountHub()),
                                 onOpenGradeyAI: presentGradeyAI,
-                                onOpenAbsence: {
-                                    selectedTab = .absence
-                                },
                                 onOpenTimetable: {
                                     selectedTab = .timetable
                                 },

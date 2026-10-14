@@ -212,11 +212,6 @@ final class SupportTipViewModel {
         entitlement.tier == plan.tier && entitlement.interval == plan.interval
     }
 
-    func dismissThankYou() {
-        didCompletePurchase = false
-        completedPurchaseKind = nil
-    }
-
     private func apply(_ catalog: SupportCatalog) {
         tips = catalog.tips
         plans = catalog.plans

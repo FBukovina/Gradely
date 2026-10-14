@@ -61,32 +61,10 @@ struct SubjectInsightSummary: Equatable, Identifiable, Sendable {
     let upcomingEvents: [SchoolEvent]
     var recentContribution: SubjectGradeContribution? = nil
     var id: String { subjectID }
-    var isWorsening: Bool { (trendDelta ?? 0) >= 0.20 - 0.000001 }
 }
 
-struct TodayInsight: Codable, Equatable, Identifiable, Sendable {
-    enum Kind: String, Codable, Sendable {
-        case assessment, deadline, averageChange, busyTests, worseningTrend, recentGrade
-    }
-    enum Destination: Codable, Equatable, Hashable, Sendable {
-        case subject(String)
-        case plannerItem(UUID)
-        case planner
-    }
-    let id: String
-    let kind: Kind
-    let priority: Int
-    let subjectID: String?
-    let eventIDs: [UUID]
-    let observationIDs: [String]
-    let relevantAt: Date
-    let observedAt: Date
-    let expiresAt: Date
-    let titleKey: String
-    let arguments: [String]
-    let destination: Destination
-
-    var title: String {
-        String(format: AppL10n.string(String.LocalizationValue(titleKey)), locale: AppLanguageOverride.locale, arguments: arguments.map { $0 as CVarArg })
-    }
+enum TodayDestination: Hashable, Sendable {
+    case subject(String)
+    case plannerItem(UUID)
+    case planner
 }

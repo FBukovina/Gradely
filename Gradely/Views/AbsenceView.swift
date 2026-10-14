@@ -208,22 +208,10 @@ private struct AbsenceHeader: View {
         Card(padding: Spacing.lg) {
             VStack(alignment: .leading, spacing: Spacing.md) {
                 HStack(alignment: .center, spacing: Spacing.md) {
-                    GradelyIcon(systemName: "calendar.badge.exclamationmark")
-                        .font(.title3.weight(.bold))
-                        .foregroundStyle(Brand.primary)
-                        .frame(width: 46, height: 46)
-                        .background(Brand.primary.opacity(0.14), in: RoundedRectangle(cornerRadius: Radius.sm, style: .continuous))
-
-                    VStack(alignment: .leading, spacing: Spacing.xs) {
-                        Text("absence.title")
+                    if let name = user?.fullName.trimmingCharacters(in: .whitespacesAndNewlines), !name.isEmpty {
+                        Text(name)
                             .font(.headline)
-
-                        if let name = user?.fullName.trimmingCharacters(in: .whitespacesAndNewlines), !name.isEmpty {
-                            Text(name)
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                                .lineLimit(1)
-                        }
+                            .lineLimit(2)
                     }
 
                     Spacer()
@@ -239,17 +227,12 @@ private struct AbsenceHeader: View {
                 }
 
                 if !nonzeroCategories.isEmpty {
-                    LazyVGrid(
-                        columns: [GridItem(.adaptive(minimum: 64), spacing: Spacing.xs, alignment: .leading)],
-                        alignment: .leading,
-                        spacing: Spacing.xs
-                    ) {
+                    VStack(alignment: .leading, spacing: Spacing.xs) {
                         ForEach(nonzeroCategories) { category in
                             StatusChip(
-                                text: "\(category.symbol) \(category.value(in: totalCounts))",
+                                text: "\(category.accessibilityLabel) \(category.value(in: totalCounts))",
                                 color: category.color
                             )
-                            .accessibilityLabel("\(category.accessibilityLabel): \(category.value(in: totalCounts))")
                         }
                     }
                 }
@@ -287,7 +270,13 @@ private struct AbsenceCountsList: View {
                 .accessibilityElement(children: .combine)
                 .accessibilityIdentifier("absenceRow-total")
 
-                ForEach(rows) { row in
+                Divider()
+
+                ForEach(Array(rows.enumerated()), id: \.element.id) { index, row in
+                    if index > 0 {
+                        Divider()
+                            .padding(.leading, Spacing.md)
+                    }
                     if let onSelect {
                         Button { onSelect(row.id) } label: {
                             countRow(title: row.title, counts: row.counts, isTotal: false)
@@ -303,7 +292,8 @@ private struct AbsenceCountsList: View {
                     }
                 }
             }
-            .background(Color.gradelySecondaryGroupedBackground, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+            .background(Color.gradelySecondaryGroupedBackground)
+            .clipShape(RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
                     .strokeBorder(Color.primary.opacity(0.06), lineWidth: 1)
@@ -332,11 +322,7 @@ private struct AbsenceCountsList: View {
         }
         .padding(.horizontal, Spacing.md)
         .padding(.vertical, Spacing.md)
-        .background(isTotal ? Color.gradelyTertiaryGroupedBackground : Color.gradelySecondaryGroupedBackground)
-        .overlay(alignment: .bottom) {
-            // Outside a stack, macOS draws Divider vertically through the row.
-            VStack(spacing: 0) { Divider() }
-        }
+        .contentShape(Rectangle())
     }
 
     private func categoryChips(for counts: AbsenceCounts) -> some View {
@@ -449,11 +435,16 @@ private struct SubjectAbsenceTable: View {
 
     private func riskList(rows: [AbsenceSubjectSummary]) -> some View {
         LazyVStack(spacing: 0) {
-            ForEach(rows, id: \.stableID) { row in
+            ForEach(Array(rows.enumerated()), id: \.element.stableID) { index, row in
+                if index > 0 {
+                    Divider()
+                        .padding(.leading, Spacing.md)
+                }
                 riskRow(row)
             }
         }
-        .background(Color.gradelySecondaryGroupedBackground, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+        .background(Color.gradelySecondaryGroupedBackground)
+        .clipShape(RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
                 .strokeBorder(Color.primary.opacity(0.06), lineWidth: 1)
@@ -507,10 +498,6 @@ private struct SubjectAbsenceTable: View {
         }
         .padding(.horizontal, Spacing.md)
         .padding(.vertical, Spacing.md)
-        .overlay(alignment: .bottom) {
-            // Outside a stack, macOS draws Divider vertically through the row.
-            VStack(spacing: 0) { Divider() }
-        }
         .accessibilityIdentifier("absenceRow-\(row.stableID)")
     }
 

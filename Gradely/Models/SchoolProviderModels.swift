@@ -63,12 +63,6 @@ enum SchoolProvider: String, Codable, CaseIterable, Equatable, Sendable, Identif
 }
 
 struct SchoolProviderCapabilities: Equatable, Sendable {
-    let supportsGrades = true
-    let supportsAverages = true
-    let supportsTimetable = true
-    let supportsAttendance = true
-    let supportsWidgets = true
-    let supportsDirectWatchRefresh = true
     let supportsParentProfiles: Bool
     let supportsTwoFactorAuthentication: Bool
     let supportsRemoteWhatIf: Bool

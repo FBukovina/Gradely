@@ -158,13 +158,6 @@ struct GradeyIDLoginView: View {
     }
 }
 
-/// Kept as an alias so older call sites resolve to the app-wide aurora backdrop.
-struct GradeyTwoPointZeroBackground: View {
-    var body: some View {
-        AuroraBackground()
-    }
-}
-
 #Preview("Gradey ID") {
     GradeyIDLoginView(authClient: MockGradeyAuthClient(session: nil)) {}
 }

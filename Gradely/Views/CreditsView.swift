@@ -6,7 +6,7 @@ struct CreditsView: View {
     var body: some View {
         ModalNavigationContainer {
             ZStack {
-                SettingsModalBackground()
+                SettingsBackground()
 
                 ScrollView {
                     VStack(alignment: .leading, spacing: Spacing.xl) {
@@ -37,7 +37,7 @@ struct CreditsView: View {
 
     private var header: some View {
         Link(destination: AppLinks.opensideWebURL) {
-            SettingsModalSurface {
+            SettingsSurface {
                 VStack(alignment: .leading, spacing: Spacing.sm) {
                     Text("credits.madeBy")
                         .font(.caption.weight(.bold))
@@ -74,7 +74,7 @@ struct CreditsView: View {
     }
 
     private var team: some View {
-        SettingsModalSurface(padding: 0) {
+        SettingsSurface(padding: 0) {
             VStack(spacing: 0) {
                 CreditPersonRow(
                     role: AppL10n.string("credits.role.leadDeveloper"),
@@ -83,7 +83,7 @@ struct CreditsView: View {
                     instagram: AppLinks.filipInstagramURL
                 )
 
-                SettingsModalRowDivider(leadingInset: 20)
+                SettingsRowDivider(leadingInset: 20)
 
                 CreditPersonRow(
                     role: AppL10n.string("credits.role.leadGraphics"),
@@ -98,7 +98,7 @@ struct CreditsView: View {
     }
 
     private var bakalariAttribution: some View {
-        SettingsModalSurface {
+        SettingsSurface {
             VStack(alignment: .leading, spacing: Spacing.sm) {
                 Text("bakalari.attribution.title")
                     .font(.headline)
@@ -113,7 +113,7 @@ struct CreditsView: View {
     }
 
     private var eduPageAttribution: some View {
-        SettingsModalSurface {
+        SettingsSurface {
             VStack(alignment: .leading, spacing: Spacing.sm) {
                 Text("edupage.attribution.title")
                     .font(.headline)
@@ -138,7 +138,7 @@ private struct CreditPersonRow: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: Spacing.md) {
-            SettingsModalIcon(name: "user")
+            SettingsIcon(name: "user")
 
             VStack(alignment: .leading, spacing: Spacing.sm) {
                 VStack(alignment: .leading, spacing: Spacing.xs) {

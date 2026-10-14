@@ -58,10 +58,7 @@ struct GradeyDebugPanel: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.xl) {
-            DetailSectionHeader(
-                title: "debug.title",
-                message: "debug.message"
-            )
+            DetailSectionHeader(title: "debug.title")
 
             SettingsSurface(padding: 0) {
                 VStack(spacing: 0) {

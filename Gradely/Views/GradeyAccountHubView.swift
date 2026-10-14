@@ -345,11 +345,8 @@ struct GradeyAccountHubView: View {
             Label {
                 Text("settings.detail.select.title")
             } icon: {
-                SettingsHugeIcon(
-                    iconName: "gears",
-                    size: 28,
-                    color: .secondary
-                )
+                GradelyIcon("gears", size: 28)
+                    .foregroundStyle(.secondary)
             }
         } description: {
             Text("settings.detail.select.message")
@@ -410,13 +407,10 @@ struct GradeyAccountHubView: View {
                                 compactPath.removeLast()
                             }
                         } label: {
-                            SettingsHugeIcon(
-                                iconName: "arrow-left-01",
-                                size: 18,
-                                color: .primary
-                            )
-                            .frame(width: 44, height: 44)
-                            .contentShape(Rectangle())
+                            GradelyIcon("arrow-left-01", size: 18)
+                                .foregroundStyle(.primary)
+                                .frame(width: 44, height: 44)
+                                .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
                         .accessibilityLabel(AppL10n.string("settings.back"))
@@ -445,7 +439,7 @@ struct GradeyAccountHubView: View {
         onSelect: @escaping (SettingsDestination) -> Void
     ) -> some View {
         ZStack {
-            SettingsScreenBackground()
+            SettingsBackground()
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 28) {
@@ -520,7 +514,7 @@ struct GradeyAccountHubView: View {
             Button {
                 dismiss()
             } label: {
-                SettingsCloseLabel()
+                GradelyModalCloseLabel(size: 48)
             }
             .buttonStyle(.plain)
             .accessibilityLabel(AppL10n.string("action.done"))
@@ -679,7 +673,7 @@ struct GradeyAccountHubView: View {
 private extension GradeyAccountHubView {
     func detailPage(_ destination: SettingsDestination) -> some View {
         ZStack {
-            SettingsScreenBackground()
+            SettingsBackground()
 
             ScrollView {
                 detailContent(destination)
@@ -713,10 +707,7 @@ private extension GradeyAccountHubView {
 
     var accountDetail: some View {
         VStack(alignment: .leading, spacing: Spacing.xl) {
-            DetailSectionHeader(
-                title: "settings.account.profile.title",
-                message: "settings.account.profile.message"
-            )
+            DetailSectionHeader(title: "settings.account.profile.title")
 
             SettingsSurface {
                 VStack(alignment: .leading, spacing: Spacing.lg) {
@@ -821,7 +812,7 @@ private extension GradeyAccountHubView {
                                         .frame(minHeight: 44)
                                 }
                             }
-                            .buttonStyle(.borderedProminent)
+                            .buttonStyle(.bordered)
                             .tint(Brand.primary)
                             .disabled(!viewModel.canSaveFullName)
                             .accessibilityIdentifier("accountFullNameSaveButton")
@@ -863,10 +854,7 @@ private extension GradeyAccountHubView {
             }
 
             if isGuestMode {
-                DetailSectionHeader(
-                    title: "gradey.guest.accountSection.title",
-                    message: "gradey.guest.accountSection.message"
-                )
+                DetailSectionHeader(title: "gradey.guest.accountSection.title")
 
                 SettingsSurface {
                     VStack(alignment: .leading, spacing: Spacing.md) {
@@ -883,24 +871,18 @@ private extension GradeyAccountHubView {
                             SettingsHugeiconLabel(
                                 "gradey.guest.accountSection.action",
                                 iconName: "user-check-02",
-                                iconColor: Brand.onAccent
+                                iconColor: Brand.primary
                             )
                                 .frame(maxWidth: .infinity)
                         }
-                        .buttonStyle(.borderedProminent)
+                        .buttonStyle(.bordered)
                         .tint(Brand.primary)
-                        .controlSize(.large)
                         .accessibilityIdentifier("leaveGuestModeButton")
                     }
                 }
             }
 
-            DetailSectionHeader(
-                title: "settings.account.session.title",
-                message: isGuestMode
-                    ? "settings.account.session.guestMessage"
-                    : "settings.account.session.message"
-            )
+            DetailSectionHeader(title: "settings.account.session.title")
 
             Button(role: .destructive) {
                 isSignOutConfirmationPresented = true
@@ -919,10 +901,7 @@ private extension GradeyAccountHubView {
             .accessibilityIdentifier("accountSignOutButton")
 
             if !isGuestMode {
-                DetailSectionHeader(
-                    title: "settings.privacy.delete.title",
-                    message: "settings.privacy.delete.message"
-                )
+                DetailSectionHeader(title: "settings.privacy.delete.title")
 
                 deleteGradeyAccountButton
             }
@@ -931,10 +910,7 @@ private extension GradeyAccountHubView {
 
     var connectedServicesDetail: some View {
         VStack(alignment: .leading, spacing: Spacing.xl) {
-            DetailSectionHeader(
-                title: "settings.connected.school.title",
-                message: "settings.connected.school.message"
-            )
+            DetailSectionHeader(title: "settings.connected.school.title")
 
             if isSchoolCloudLinkMissing {
                 cloudLinkWarning(
@@ -960,10 +936,14 @@ private extension GradeyAccountHubView {
                     SettingsHugeiconLabel(
                         "gradey.account.linkSchool.title",
                         iconName: "link-04",
-                        iconColor: Brand.onAccent
+                        iconColor: Brand.primary
                     )
+                    .font(.body.weight(.semibold))
+                    .frame(maxWidth: .infinity)
+                    .frame(minHeight: 44)
                 }
-                .buttonStyle(PrimaryButtonStyle())
+                .buttonStyle(.bordered)
+                .tint(Brand.primary)
                 .disabled(isGuestMode)
                 .accessibilityIdentifier("accountLinkSchoolButton")
             } else {
@@ -988,10 +968,7 @@ private extension GradeyAccountHubView {
                 .accessibilityIdentifier("accountLinkSchoolButton")
             }
 
-            DetailSectionHeader(
-                title: "settings.connected.canteen.title",
-                message: "settings.connected.canteen.message"
-            )
+            DetailSectionHeader(title: "settings.connected.canteen.title")
 
             if isMealsCloudLinkMissing {
                 cloudLinkWarning(
@@ -1017,12 +994,12 @@ private extension GradeyAccountHubView {
                     SettingsHugeiconLabel(
                         "gradey.account.linkStrava.title",
                         iconName: "link-04",
-                        iconColor: Brand.onAccent
+                        iconColor: Brand.primary
                     )
                         .frame(maxWidth: .infinity)
                         .frame(minHeight: 44)
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(.bordered)
                 .tint(Brand.primary)
                 .disabled(isGuestMode)
                 .accessibilityIdentifier("accountLinkStravaCZButton")
@@ -1043,7 +1020,7 @@ private extension GradeyAccountHubView {
             VStack(alignment: .leading, spacing: Spacing.lg) {
                 AdaptiveSettingsStack {
                     SettingsIcon(
-                        iconName: linkedAccount.provider.isSchoolProvider ? "school" : "restaurant-02"
+                        name: linkedAccount.provider.isSchoolProvider ? "school" : "restaurant-02"
                     )
 
                     VStack(alignment: .leading, spacing: Spacing.xs) {
@@ -1071,11 +1048,8 @@ private extension GradeyAccountHubView {
                         Text(actionRequiredReason)
                             .fixedSize(horizontal: false, vertical: true)
                     } icon: {
-                        SettingsHugeIcon(
-                            iconName: "alert-02",
-                            size: 14,
-                            color: .gradelySystemOrange
-                        )
+                        GradelyIcon("alert-02", size: 14)
+                            .foregroundStyle(Color.gradelySystemOrange)
                     }
                     .font(.footnote)
                     .foregroundStyle(Color.gradelySystemOrange)
@@ -1161,12 +1135,12 @@ private extension GradeyAccountHubView {
                 SettingsHugeiconLabel(
                     "settings.connected.activate",
                     iconName: "checkmark-circle-02",
-                    iconColor: Brand.onAccent
+                    iconColor: Brand.primary
                 )
                     .frame(maxWidth: .infinity)
                     .frame(minHeight: 44)
             }
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(.bordered)
             .tint(Brand.primary)
             .accessibilityIdentifier("linkedAccountActivate-\(linkedAccount.id)")
         }
@@ -1207,14 +1181,11 @@ private extension GradeyAccountHubView {
 
     var notificationsDetail: some View {
         VStack(alignment: .leading, spacing: Spacing.xl) {
-            DetailSectionHeader(
-                title: "settings.notifications.device.title",
-                message: "settings.notifications.device.message"
-            )
+            DetailSectionHeader(title: "settings.notifications.device.title")
 
             SettingsSurface {
                 AdaptiveSettingsStack {
-                    SettingsIcon(iconName: notificationPermissionIconName)
+                    SettingsIcon(name: notificationPermissionIconName)
 
                     VStack(alignment: .leading, spacing: Spacing.xs) {
                         Text("settings.notifications.permission.title")
@@ -1253,10 +1224,7 @@ private extension GradeyAccountHubView {
                 }
             }
 
-            DetailSectionHeader(
-                title: "gradey.account.notifications.title",
-                message: "gradey.account.notifications.message"
-            )
+            DetailSectionHeader(title: "gradey.account.notifications.title")
 
             SettingsSurface {
                 VStack(alignment: .leading, spacing: Spacing.lg) {
@@ -1303,10 +1271,7 @@ private extension GradeyAccountHubView {
                 }
             }
 
-            DetailSectionHeader(
-                title: "settings.notifications.quietHours.title",
-                message: "settings.notifications.quietHours.message"
-            )
+            DetailSectionHeader(title: "settings.notifications.quietHours.title")
 
             SettingsSurface {
                 VStack(alignment: .leading, spacing: Spacing.lg) {
@@ -1351,11 +1316,8 @@ private extension GradeyAccountHubView {
                         )
                         .fixedSize(horizontal: false, vertical: true)
                     } icon: {
-                        SettingsHugeIcon(
-                            iconName: "globe-02",
-                            size: 13,
-                            color: .secondary
-                        )
+                        GradelyIcon("globe-02", size: 13)
+                            .foregroundStyle(.secondary)
                     }
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -1372,10 +1334,7 @@ private extension GradeyAccountHubView {
     var privacyDataDetail: some View {
         VStack(alignment: .leading, spacing: Spacing.xl) {
             SettingsSurface { GradeySiriDiscoverySettingsView() }
-            DetailSectionHeader(
-                title: "settings.privacy.documents.title",
-                message: "settings.privacy.documents.message"
-            )
+            DetailSectionHeader(title: "settings.privacy.documents.title")
 
             SettingsSurface(padding: 0) {
                 VStack(spacing: 0) {
@@ -1414,10 +1373,7 @@ private extension GradeyAccountHubView {
                 }
             }
 
-            DetailSectionHeader(
-                title: "settings.privacy.age.title",
-                message: "settings.privacy.age.message"
-            )
+            DetailSectionHeader(title: "settings.privacy.age.title")
 
             SettingsAvailabilityMessage(ageAttestationStatusMessage)
                 .accessibilityIdentifier("settingsPrivacyAgeStatus")
@@ -1427,10 +1383,7 @@ private extension GradeyAccountHubView {
                 .accessibilityIdentifier("settingsPrivacyIntercomNote")
             #endif
 
-            DetailSectionHeader(
-                title: "settings.privacy.export.title",
-                message: "settings.privacy.export.message"
-            )
+            DetailSectionHeader(title: "settings.privacy.export.title")
 
             SettingsSurface {
                 VStack(alignment: .leading, spacing: Spacing.md) {
@@ -1451,13 +1404,13 @@ private extension GradeyAccountHubView {
                             SettingsHugeiconLabel(
                                 "settings.privacy.export.prepare",
                                 iconName: "file-export",
-                                iconColor: Brand.onAccent
+                                iconColor: Brand.primary
                             )
                                 .frame(maxWidth: .infinity)
                                 .frame(minHeight: 44)
                         }
                     }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(.bordered)
                     .tint(Brand.primary)
                     .disabled(isGuestMode || isExporting || viewModel.isExporting)
                     .accessibilityIdentifier("accountExportButton")
@@ -1479,30 +1432,6 @@ private extension GradeyAccountHubView {
                 }
             }
 
-            DetailSectionHeader(
-                title: "settings.privacy.delete.title",
-                message: "settings.privacy.delete.message"
-            )
-
-            SettingsSurface {
-                VStack(alignment: .leading, spacing: Spacing.md) {
-                    Label {
-                        Text("settings.privacy.delete.caption")
-                            .fixedSize(horizontal: false, vertical: true)
-                    } icon: {
-                        SettingsHugeIcon(
-                            iconName: "alert-02",
-                            size: 14,
-                            color: .gradelySystemOrange
-                        )
-                    }
-                    .font(.subheadline)
-                    .foregroundStyle(Color.gradelySystemOrange)
-
-                    deleteGradeyAccountButton
-                }
-            }
-
             if isGuestMode {
                 SettingsAvailabilityMessage("settings.privacy.guest.explanation")
             }
@@ -1511,10 +1440,7 @@ private extension GradeyAccountHubView {
 
     var appPreferencesDetail: some View {
         VStack(alignment: .leading, spacing: Spacing.xl) {
-            DetailSectionHeader(
-                title: "settings.destination.preferences.title",
-                message: "settings.language.message"
-            )
+            DetailSectionHeader(title: "settings.destination.preferences.title")
 
             AppLanguageOptionsList(store: languageStore, usesSettingsChrome: true)
 
@@ -1537,10 +1463,7 @@ private extension GradeyAccountHubView {
 
     var supportAboutDetail: some View {
         VStack(alignment: .leading, spacing: Spacing.xl) {
-            DetailSectionHeader(
-                title: "settings.support.title",
-                message: "settings.support.message"
-            )
+            DetailSectionHeader(title: "settings.support.title")
 
             SettingsSurface(padding: 0) {
                 VStack(spacing: 0) {
@@ -1620,10 +1543,7 @@ private extension GradeyAccountHubView {
                 }
             }
 
-            DetailSectionHeader(
-                title: "settings.about.title",
-                message: "settings.about.message"
-            )
+            DetailSectionHeader(title: "settings.about.title")
 
             SettingsSurface(padding: 0) {
                 VStack(spacing: 0) {
@@ -2348,14 +2268,11 @@ private struct SettingsMacDetailHeader: View {
         HStack(spacing: Spacing.md) {
             if let onBack {
                 Button(action: onBack) {
-                    SettingsHugeIcon(
-                        iconName: "arrow-left-01",
-                        size: 16,
-                        color: .primary
-                    )
-                    .frame(width: 36, height: 36)
-                    .background(Brand.primary.opacity(0.10), in: Circle())
-                    .contentShape(Circle())
+                    GradelyIcon("arrow-left-01", size: 16)
+                        .foregroundStyle(.primary)
+                        .frame(width: 36, height: 36)
+                        .background(Brand.primary.opacity(0.10), in: Circle())
+                        .contentShape(Circle())
                 }
                 .buttonStyle(.plain)
                 .keyboardShortcut("[", modifiers: .command)
@@ -2376,94 +2293,11 @@ private struct SettingsMacDetailHeader: View {
         .padding(.top, Spacing.lg)
         .frame(height: 68)
         .background {
-            SettingsScreenBackground()
+            SettingsBackground()
         }
     }
 }
 #endif
-
-private struct SettingsScreenBackground: View {
-    @Environment(\.colorScheme) private var colorScheme
-
-    var body: some View {
-        (colorScheme == .dark
-            ? Color(.sRGB, red: 0.008, green: 0.045, blue: 0.046, opacity: 1)
-            : Color.gradelyGroupedBackground)
-            .overlay {
-                if colorScheme == .light {
-                    Brand.primary.opacity(0.018)
-                }
-            }
-            .ignoresSafeArea()
-    }
-}
-
-private struct SettingsSurfaceShape: View {
-    @Environment(\.colorScheme) private var colorScheme
-
-    var body: some View {
-        RoundedRectangle(cornerRadius: Radius.xl, style: .continuous)
-            .fill(
-                colorScheme == .dark
-                    ? Color(.sRGB, red: 0.045, green: 0.140, blue: 0.130, opacity: 1)
-                    : Color.gradelySecondaryGroupedBackground
-            )
-            .overlay {
-                if colorScheme == .light {
-                    RoundedRectangle(cornerRadius: Radius.xl, style: .continuous)
-                        .fill(Brand.primary.opacity(0.035))
-                }
-            }
-            .overlay {
-                RoundedRectangle(cornerRadius: Radius.xl, style: .continuous)
-                    .strokeBorder(
-                        colorScheme == .dark
-                            ? Color.white.opacity(0.025)
-                            : Brand.primary.opacity(0.075),
-                        lineWidth: 1
-                    )
-            }
-            .shadow(
-                color: .black.opacity(colorScheme == .dark ? 0.06 : 0.035),
-                radius: 2,
-                x: 0,
-                y: 1
-            )
-    }
-}
-
-struct SettingsSurface<Content: View>: View {
-    var padding: CGFloat = 20
-    @ViewBuilder var content: Content
-
-    var body: some View {
-        content
-            .padding(padding)
-            .background {
-                SettingsSurfaceShape()
-            }
-    }
-}
-
-private struct SettingsCloseLabel: View {
-    var body: some View {
-        SettingsHugeIcon(
-            iconName: "cancel-01",
-            size: 15,
-            color: .primary
-        )
-            .frame(width: 48, height: 48)
-            .background(
-                Brand.primary.opacity(0.10),
-                in: Circle()
-            )
-            .overlay {
-                Circle()
-                    .strokeBorder(Color.primary.opacity(0.09), lineWidth: 1)
-            }
-            .contentShape(Circle())
-    }
-}
 
 private struct SettingsOverviewGroup<Content: View>: View {
     @ViewBuilder var content: Content
@@ -2516,7 +2350,7 @@ private struct SettingsOverviewRow: View {
 
     private var regularLayout: some View {
         HStack(spacing: Spacing.md) {
-            SettingsIcon(iconName: destination.hugeiconName)
+            SettingsIcon(name: destination.hugeiconName)
 
             VStack(alignment: .leading, spacing: Spacing.xs) {
                 Text(destination.title)
@@ -2533,11 +2367,8 @@ private struct SettingsOverviewRow: View {
                     Label {
                         Text(statusAccessibilityLabel)
                     } icon: {
-                        SettingsHugeIcon(
-                            iconName: statusIconName,
-                            size: 13,
-                            color: statusColor
-                        )
+                        GradelyIcon(statusIconName, size: 13)
+                            .foregroundStyle(statusColor)
                     }
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(statusColor)
@@ -2553,7 +2384,7 @@ private struct SettingsOverviewRow: View {
     private var accessibilityLayout: some View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
             HStack(alignment: .center, spacing: Spacing.md) {
-                SettingsIcon(iconName: destination.hugeiconName)
+                SettingsIcon(name: destination.hugeiconName)
 
                 Text(destination.title)
                     .font(.headline)
@@ -2575,11 +2406,8 @@ private struct SettingsOverviewRow: View {
                 Label {
                     Text(statusAccessibilityLabel)
                 } icon: {
-                    SettingsHugeIcon(
-                        iconName: statusIconName,
-                        size: 13,
-                        color: statusColor
-                    )
+                    GradelyIcon(statusIconName, size: 13)
+                        .foregroundStyle(statusColor)
                 }
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(statusColor)
@@ -2587,17 +2415,6 @@ private struct SettingsOverviewRow: View {
                     .padding(.leading, SettingsIcon.frameSize + Spacing.md)
             }
         }
-    }
-}
-
-private struct SettingsHugeIcon: View {
-    let iconName: String
-    let size: CGFloat
-    var color: Color = .primary
-
-    var body: some View {
-        GradelyIcon(iconName, size: size)
-            .foregroundStyle(color)
     }
 }
 
@@ -2630,39 +2447,10 @@ private struct SettingsHugeiconLabel: View {
         Label {
             title
         } icon: {
-            SettingsHugeIcon(
-                iconName: iconName,
-                size: 15,
-                color: iconColor
-            )
-            .frame(width: 18, height: 18)
+            GradelyIcon(iconName, size: 15)
+                .foregroundStyle(iconColor)
+                .frame(width: 18, height: 18)
         }
-    }
-}
-
-private struct SettingsIcon: View {
-    static let frameSize: CGFloat = 32
-
-    let iconName: String
-
-    var body: some View {
-        SettingsHugeIcon(
-            iconName: iconName,
-            size: 17,
-            color: Brand.primary.opacity(0.88)
-        )
-        .frame(width: Self.frameSize, height: Self.frameSize)
-    }
-}
-
-private struct SettingsDisclosureIcon: View {
-    var body: some View {
-        SettingsHugeIcon(
-            iconName: "arrow-right-01",
-            size: 14,
-            color: Color.secondary.opacity(0.58)
-        )
-        .frame(width: 24, height: 24)
     }
 }
 
@@ -2703,11 +2491,8 @@ private struct AccountAvatar: View {
             Brand.gradient
 
             if initials.isEmpty {
-                SettingsHugeIcon(
-                    iconName: "user",
-                    size: size * 0.36,
-                    color: Brand.onAccent
-                )
+                GradelyIcon("user", size: size * 0.36)
+                    .foregroundStyle(Brand.onAccent)
             } else {
                 Text(initials)
                     .font(.system(size: size * 0.30, weight: .bold, design: .rounded))
@@ -2746,21 +2531,13 @@ private struct AdaptiveSettingsStack<Content: View>: View {
 
 struct DetailSectionHeader: View {
     let title: LocalizedStringKey
-    let message: LocalizedStringKey
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Spacing.xs) {
-            Text(title)
-                .font(.headline)
-                .foregroundStyle(.primary)
-                .accessibilityAddTraits(.isHeader)
-
-            Text(message)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .padding(.horizontal, Spacing.xs)
+        Text(title)
+            .font(.headline)
+            .foregroundStyle(.primary)
+            .accessibilityAddTraits(.isHeader)
+            .padding(.horizontal, Spacing.xs)
     }
 }
 
@@ -2771,7 +2548,7 @@ private struct SettingsActionRow: View {
 
     var body: some View {
         HStack(alignment: .center, spacing: Spacing.md) {
-            SettingsIcon(iconName: iconName)
+            SettingsIcon(name: iconName)
 
             VStack(alignment: .leading, spacing: Spacing.xs) {
                 Text(title)
@@ -2801,7 +2578,7 @@ private struct EmptyServiceCard: View {
     var body: some View {
         SettingsSurface {
             HStack(alignment: .top, spacing: Spacing.md) {
-                SettingsIcon(iconName: iconName)
+                SettingsIcon(name: iconName)
 
                 VStack(alignment: .leading, spacing: Spacing.xs) {
                     Text(title)
@@ -2831,11 +2608,8 @@ private struct SettingsAvailabilityMessage: View {
             Text(message)
                 .fixedSize(horizontal: false, vertical: true)
         } icon: {
-            SettingsHugeIcon(
-                iconName: "information-circle",
-                size: 14,
-                color: .secondary
-            )
+            GradelyIcon("information-circle", size: 14)
+                .foregroundStyle(.secondary)
         }
         .font(.footnote)
         .foregroundStyle(.secondary)
@@ -2894,12 +2668,5 @@ struct SettingsValueRow: View {
             }
         }
         .frame(minHeight: 44)
-    }
-}
-
-struct SettingsRowDivider: View {
-    var body: some View {
-        Divider()
-            .padding(.leading, 20 + SettingsIcon.frameSize + Spacing.md)
     }
 }

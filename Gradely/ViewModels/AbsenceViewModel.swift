@@ -93,10 +93,6 @@ final class AbsenceViewModel {
         subjectResolutionTask?.cancel()
     }
 
-    var hasAnyAbsenceData: Bool {
-        !dayRows.isEmpty || !subjectAbsenceState.rows.isEmpty || !subjectAbsenceState.unresolvedPartialDays.isEmpty
-    }
-
     var manualResolutionCandidates: [AbsencePartialDayCandidate] {
         subjectAbsenceState.unresolvedPartialDays
     }

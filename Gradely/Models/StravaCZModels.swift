@@ -363,8 +363,9 @@ enum StravaCZFormatters {
         return displayFormatter().string(from: date)
     }
 
+    /// Matches the balance ("40,00 Kč") so the screen uses one currency style.
     nonisolated static func price(_ value: Double) -> String {
-        value.formatted(.currency(code: "CZK"))
+        balance(value, currency: "Kč")
     }
 
     nonisolated static func balance(_ value: Double, currency: String) -> String {

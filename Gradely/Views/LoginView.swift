@@ -58,7 +58,7 @@ struct LoginView: View {
 
     var body: some View {
         ZStack {
-            SettingsModalBackground()
+            SettingsBackground()
 
             ScrollView {
                 VStack(alignment: .leading, spacing: Spacing.xl) {
@@ -201,7 +201,7 @@ struct LoginView: View {
                 providerChooser
             }
 
-            SettingsModalSurface(padding: Spacing.lg) {
+            SettingsSurface(padding: Spacing.lg) {
                 VStack(alignment: .leading, spacing: Spacing.lg) {
                     if viewModel.provider == .bakalari {
                         schoolSearchPicker
@@ -430,7 +430,7 @@ struct LoginView: View {
         VStack(alignment: .leading, spacing: Spacing.lg) {
             selectedSchoolSummary
 
-            SettingsModalSurface(padding: Spacing.lg) {
+            SettingsSurface(padding: Spacing.lg) {
                 VStack(alignment: .leading, spacing: Spacing.lg) {
                     TextField(AppL10n.string("login.username"), text: $viewModel.username)
                         .textContentType(.username)
@@ -797,7 +797,7 @@ private struct SchoolResultRow: View {
 
                 Spacer(minLength: Spacing.sm)
 
-                SettingsModalDisclosureIcon()
+                SettingsDisclosureIcon()
                     .accessibilityHidden(true)
             }
             .padding(.horizontal, Spacing.md)

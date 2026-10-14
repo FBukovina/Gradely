@@ -127,10 +127,6 @@ final class AppViewModel {
         phase = .signedIn
     }
 
-    func markNeedsSchool() {
-        phase = .signedInNeedsSchool
-    }
-
     func updateGradeyAccount(_ account: GradeyAccount) {
         guard !isGuestMode, gradeyAccount == nil || gradeyAccount?.id == account.id else { return }
         gradeyAccount = account

@@ -132,18 +132,6 @@ public extension GradelyWatchSyncCodec {
         try decode(GradelyWatchAICancel.self, from: envelope, expectedType: GradelyWatchMessageType.aiCancel)
     }
 
-    static func isAIStreamRequest(_ envelope: [String: Any]) -> Bool {
-        envelope[GradelyWatchMessageKey.messageType] as? String == GradelyWatchMessageType.aiStreamRequest
-    }
-
-    static func isAICancel(_ envelope: [String: Any]) -> Bool {
-        envelope[GradelyWatchMessageKey.messageType] as? String == GradelyWatchMessageType.aiCancel
-    }
-
-    static func isAIStreamEvent(_ envelope: [String: Any]) -> Bool {
-        envelope[GradelyWatchMessageKey.messageType] as? String == GradelyWatchMessageType.aiStreamEvent
-    }
-
     private static func envelope<T: Encodable>(messageType: String, payload: T) throws -> [String: Any] {
         [
             GradelyWatchMessageKey.messageType: messageType,

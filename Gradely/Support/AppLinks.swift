@@ -5,12 +5,10 @@ import AppKit
 
 enum AppLinks {
     static let githubRepositoryURL = URL(string: "https://github.com/FBukovina/Gradely")!
-    static let timetableURL = NextLessonWidgetConstants.timetableDeepLink
     static let opensideWebURL = URL(string: "https://openside.tech")!
     static let filipInstagramURL = URL(string: "https://www.instagram.com/bukovinafilip")!
     static let filipEmailURL = URL(string: "mailto:filip@openside.tech")!
     static let tomasEmailURL = URL(string: "mailto:tom@openside.tech")!
-    static let manageSubscriptionsURL = SupportTipCatalog.managementURL
 
     /// Apple's Licensed Application EULA. Guideline 3.1.2 requires a functional
     /// Terms of Use link in App Store metadata; when using the standard EULA,
@@ -22,10 +20,6 @@ enum AppLinks {
     /// Custom help-center domain. Articles currently live on Gleap and will move
     /// to Intercom on the same host.
     static let helpCenterHost = "help.bukovinafilip.com"
-
-    static var helpCenterURL: URL {
-        helpURL(path: nil)
-    }
 
     static var privacyPolicyURL: URL {
         helpURL(path: "articles/10-privacy-policy")

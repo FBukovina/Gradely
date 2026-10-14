@@ -6,47 +6,53 @@ struct AbsencePredictorCard: View {
     let onClear: () -> Void
 
     var body: some View {
-        Card {
-            VStack(alignment: .leading, spacing: Spacing.md) {
-                HStack {
-                    SectionHeader("absence.predictor.title")
-                    Spacer()
+        if result.hasSelection {
+            Card {
+                VStack(alignment: .leading, spacing: Spacing.md) {
+                    HStack {
+                        SectionHeader("absence.predictor.title")
+                        Spacer()
 
-                    if result.hasSelection {
                         Button(action: onClear) {
                             Text("action.clear")
                         }
                         .font(.caption.weight(.bold))
                         .buttonStyle(.bordered)
                         .accessibilityIdentifier("absencePredictorClearButton")
+
+                        Button(action: onOpen) {
+                            Text("absence.predictor.edit")
+                        }
+                        .font(.caption.weight(.bold))
+                        .buttonStyle(.bordered)
+                        .accessibilityIdentifier("absencePredictorOpenButton")
                     }
 
-                    Button(action: onOpen) {
-                        Text(openButtonKey)
-                    }
-                    .font(.caption.weight(.bold))
-                    .buttonStyle(.bordered)
-                    .accessibilityIdentifier("absencePredictorOpenButton")
-                }
-
-                if result.hasSelection {
                     predictionSummary
-                } else {
-                    infoRow(
-                        title: Text("absence.predictor.empty.title"),
-                        subtitle: Text("absence.predictor.empty.message"),
-                        tint: .secondary
-                    )
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .accessibilityElement(children: .contain)
+            .accessibilityIdentifier("absencePredictorCard")
+        } else {
+            Card(padding: Spacing.md) {
+                Button(action: onOpen) {
+                    HStack(spacing: Spacing.md) {
+                        GradelyIcon(systemName: "calendar.badge.clock")
+                            .foregroundStyle(Brand.primary)
+                        Text("absence.predictor.open")
+                            .font(.subheadline.weight(.semibold))
+                        Spacer(minLength: Spacing.sm)
+                        GradelyIcon(systemName: "chevron.right", size: 13)
+                            .foregroundStyle(.tertiary)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("absencePredictorOpenButton")
+            }
         }
-        .accessibilityElement(children: .contain)
-        .accessibilityIdentifier("absencePredictorCard")
-    }
-
-    private var openButtonKey: LocalizedStringKey {
-        result.hasSelection ? "absence.predictor.edit" : "absence.predictor.open"
     }
 
     private var predictionSummary: some View {

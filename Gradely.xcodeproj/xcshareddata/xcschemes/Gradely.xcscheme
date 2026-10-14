@@ -30,26 +30,6 @@
       shouldUseLaunchSchemeArgsEnv = "YES"
       shouldAutocreateTestPlan = "YES">
       <Testables>
-         <TestableReference
-            skipped = "NO">
-            <BuildableReference
-               BuildableIdentifier = "primary"
-               BlueprintIdentifier = "81EE6CAD2FCDDC4B009D28DE"
-               BuildableName = "GradelyTests.xctest"
-               BlueprintName = "GradelyTests"
-               ReferencedContainer = "container:Gradely.xcodeproj">
-            </BuildableReference>
-         </TestableReference>
-         <TestableReference
-            skipped = "NO">
-            <BuildableReference
-               BuildableIdentifier = "primary"
-               BlueprintIdentifier = "81EE6CB72FCDDC4B009D28DE"
-               BuildableName = "GradelyUITests.xctest"
-               BlueprintName = "GradelyUITests"
-               ReferencedContainer = "container:Gradely.xcodeproj">
-            </BuildableReference>
-         </TestableReference>
       </Testables>
    </TestAction>
    <LaunchAction

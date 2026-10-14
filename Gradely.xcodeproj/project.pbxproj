@@ -11,7 +11,6 @@
 		920000012FD0000000000001 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 920000022FD0000000000002 /* Supabase */; };
 		920000032FD0000000000003 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 920000042FD0000000000004 /* Supabase */; };
 		A10000032FCE000000000003 /* GradelyWatchShared in Frameworks */ = {isa = PBXBuildFile; productRef = A10000022FCE000000000002 /* GradelyWatchShared */; };
-		A10000042FCE000000000004 /* GradelyWatchShared in Frameworks */ = {isa = PBXBuildFile; productRef = A10000052FCE000000000005 /* GradelyWatchShared */; };
 		A20000072FCE0000000000A7 /* GradelyWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = A20000042FCE0000000000A4 /* GradelyWatch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		B40000RC2FCEF10000000001 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = B40000RC2FCEF10000000002 /* RevenueCat */; };
 		B50000012FCF000000000001 /* GradelyMacWidgets.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = B50000022FCF000000000002 /* GradelyMacWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -32,20 +31,6 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
-		81EE6CAF2FCDDC4B009D28DE /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 81EE6C992FCDDC4A009D28DE /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 81EE6CA02FCDDC4A009D28DE;
-			remoteInfo = Gradely;
-		};
-		81EE6CB92FCDDC4B009D28DE /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 81EE6C992FCDDC4A009D28DE /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 81EE6CA02FCDDC4A009D28DE;
-			remoteInfo = Gradely;
-		};
 		A20000032FCE0000000000A3 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = A20000012FCE0000000000A1 /* GradelyWatch.xcodeproj */;
@@ -116,8 +101,6 @@
 		23EA86CD939E4E779E620824 /* GradelyWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = GradelyWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		8139974A30164A380078BE59 /* design-qa.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = "design-qa.md"; sourceTree = "<group>"; };
 		81EE6CA12FCDDC4A009D28DE /* Gradey.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Gradey.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		81EE6CAE2FCDDC4B009D28DE /* GradelyTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = GradelyTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		81EE6CB82FCDDC4B009D28DE /* GradelyUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = GradelyUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		920000062FD0000000000006 /* Config/Shared.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config/Shared.xcconfig; sourceTree = "<group>"; };
 		A20000012FCE0000000000A1 /* GradelyWatch.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = GradelyWatch.xcodeproj; path = GradelyWatch/GradelyWatch.xcodeproj; sourceTree = "<group>"; };
 		B40000052FCEF10000000005 /* Gradey.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Gradey.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -134,16 +117,6 @@
 		81EE6CA32FCDDC4A009D28DE /* Gradely */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = Gradely;
-			sourceTree = "<group>";
-		};
-		81EE6CB12FCDDC4B009D28DE /* GradelyTests */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = GradelyTests;
-			sourceTree = "<group>";
-		};
-		81EE6CBB2FCDDC4B009D28DE /* GradelyUITests */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = GradelyUITests;
 			sourceTree = "<group>";
 		};
 		B40000062FCEF10000000006 /* GradelyMac */ = {
@@ -188,21 +161,6 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		81EE6CAB2FCDDC4B009D28DE /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				A10000042FCE000000000004 /* GradelyWatchShared in Frameworks */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		81EE6CB52FCDDC4B009D28DE /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		B40000072FCEF10000000007 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -236,8 +194,6 @@
 				B40000062FCEF10000000006 /* GradelyMac */,
 				B50000052FCF000000000005 /* GradelyMacWidgets */,
 				F8540C70F48A43EC9B9EA8A2 /* GradelyWidgets */,
-				81EE6CB12FCDDC4B009D28DE /* GradelyTests */,
-				81EE6CBB2FCDDC4B009D28DE /* GradelyUITests */,
 				A20000012FCE0000000000A1 /* GradelyWatch.xcodeproj */,
 				920000062FD0000000000006 /* Config/Shared.xcconfig */,
 				B40000SK2FCEF10000000003 /* Config/Gradely.storekit */,
@@ -253,8 +209,6 @@
 				B40000052FCEF10000000005 /* Gradey.app */,
 				23EA86CD939E4E779E620824 /* GradelyWidgets.appex */,
 				B50000022FCF000000000002 /* GradelyMacWidgets.appex */,
-				81EE6CAE2FCDDC4B009D28DE /* GradelyTests.xctest */,
-				81EE6CB82FCDDC4B009D28DE /* GradelyUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -330,53 +284,6 @@
 			productName = Gradey;
 			productReference = 81EE6CA12FCDDC4A009D28DE /* Gradey.app */;
 			productType = "com.apple.product-type.application";
-		};
-		81EE6CAD2FCDDC4B009D28DE /* GradelyTests */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 81EE6CC52FCDDC4B009D28DE /* Build configuration list for PBXNativeTarget "GradelyTests" */;
-			buildPhases = (
-				81EE6CAA2FCDDC4B009D28DE /* Sources */,
-				81EE6CAB2FCDDC4B009D28DE /* Frameworks */,
-				81EE6CAC2FCDDC4B009D28DE /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-				81EE6CB02FCDDC4B009D28DE /* PBXTargetDependency */,
-			);
-			fileSystemSynchronizedGroups = (
-				81EE6CB12FCDDC4B009D28DE /* GradelyTests */,
-			);
-			name = GradelyTests;
-			packageProductDependencies = (
-				A10000052FCE000000000005 /* GradelyWatchShared */,
-			);
-			productName = GradelyTests;
-			productReference = 81EE6CAE2FCDDC4B009D28DE /* GradelyTests.xctest */;
-			productType = "com.apple.product-type.bundle.unit-test";
-		};
-		81EE6CB72FCDDC4B009D28DE /* GradelyUITests */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 81EE6CC82FCDDC4B009D28DE /* Build configuration list for PBXNativeTarget "GradelyUITests" */;
-			buildPhases = (
-				81EE6CB42FCDDC4B009D28DE /* Sources */,
-				81EE6CB52FCDDC4B009D28DE /* Frameworks */,
-				81EE6CB62FCDDC4B009D28DE /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-				81EE6CBA2FCDDC4B009D28DE /* PBXTargetDependency */,
-			);
-			fileSystemSynchronizedGroups = (
-				81EE6CBB2FCDDC4B009D28DE /* GradelyUITests */,
-			);
-			name = GradelyUITests;
-			packageProductDependencies = (
-			);
-			productName = GradelyUITests;
-			productReference = 81EE6CB82FCDDC4B009D28DE /* GradelyUITests.xctest */;
-			productType = "com.apple.product-type.bundle.ui-testing";
 		};
 		B400000A2FCEF1000000000A /* GradelyMac */ = {
 			isa = PBXNativeTarget;
@@ -470,14 +377,6 @@
 							};
 						};
 					};
-					81EE6CAD2FCDDC4B009D28DE = {
-						CreatedOnToolsVersion = 26.5;
-						TestTargetID = 81EE6CA02FCDDC4A009D28DE;
-					};
-					81EE6CB72FCDDC4B009D28DE = {
-						CreatedOnToolsVersion = 26.5;
-						TestTargetID = 81EE6CA02FCDDC4A009D28DE;
-					};
 					B400000A2FCEF1000000000A = {
 						CreatedOnToolsVersion = 26.5;
 						SystemCapabilities = {
@@ -529,8 +428,6 @@
 				B400000A2FCEF1000000000A /* GradelyMac */,
 				B500000A2FCF00000000000A /* GradelyMacWidgets */,
 				3C92596932E94E9D8745B9E6 /* GradelyWidgets */,
-				81EE6CAD2FCDDC4B009D28DE /* GradelyTests */,
-				81EE6CB72FCDDC4B009D28DE /* GradelyUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -547,20 +444,6 @@
 
 /* Begin PBXResourcesBuildPhase section */
 		81EE6C9F2FCDDC4A009D28DE /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		81EE6CAC2FCDDC4B009D28DE /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		81EE6CB62FCDDC4B009D28DE /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -660,20 +543,6 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		81EE6CAA2FCDDC4B009D28DE /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		81EE6CB42FCDDC4B009D28DE /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		B40000082FCEF10000000008 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -691,16 +560,6 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
-		81EE6CB02FCDDC4B009D28DE /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 81EE6CA02FCDDC4A009D28DE /* Gradely */;
-			targetProxy = 81EE6CAF2FCDDC4B009D28DE /* PBXContainerItemProxy */;
-		};
-		81EE6CBA2FCDDC4B009D28DE /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 81EE6CA02FCDDC4A009D28DE /* Gradely */;
-			targetProxy = 81EE6CB92FCDDC4B009D28DE /* PBXContainerItemProxy */;
-		};
 		82B61A8324CB45848EA5AC14 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 3C92596932E94E9D8745B9E6 /* GradelyWidgets */;
@@ -953,90 +812,6 @@
 			};
 			name = Release;
 		};
-		81EE6CC62FCDDC4B009D28DE /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = C2U9S337H8;
-				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 26.5;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.bukovinafilip.GradelyTests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				STRING_CATALOG_GENERATE_SYMBOLS = NO;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Gradey.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Gradey";
-			};
-			name = Debug;
-		};
-		81EE6CC72FCDDC4B009D28DE /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = C2U9S337H8;
-				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 26.5;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.bukovinafilip.GradelyTests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				STRING_CATALOG_GENERATE_SYMBOLS = NO;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Gradey.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Gradey";
-			};
-			name = Release;
-		};
-		81EE6CC92FCDDC4B009D28DE /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = C2U9S337H8;
-				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.bukovinafilip.GradelyUITests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				STRING_CATALOG_GENERATE_SYMBOLS = NO;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_TARGET_NAME = Gradely;
-			};
-			name = Debug;
-		};
-		81EE6CCA2FCDDC4B009D28DE /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = C2U9S337H8;
-				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.bukovinafilip.GradelyUITests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				STRING_CATALOG_GENERATE_SYMBOLS = NO;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_TARGET_NAME = Gradely;
-			};
-			name = Release;
-		};
 		B400000B2FCEF1000000000B /* Debug */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 920000062FD0000000000006 /* Config/Shared.xcconfig */;
@@ -1238,24 +1013,6 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		81EE6CC52FCDDC4B009D28DE /* Build configuration list for PBXNativeTarget "GradelyTests" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				81EE6CC62FCDDC4B009D28DE /* Debug */,
-				81EE6CC72FCDDC4B009D28DE /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		81EE6CC82FCDDC4B009D28DE /* Build configuration list for PBXNativeTarget "GradelyUITests" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				81EE6CC92FCDDC4B009D28DE /* Debug */,
-				81EE6CCA2FCDDC4B009D28DE /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
 		88AF564662E647598A38D268 /* Build configuration list for PBXNativeTarget "GradelyWidgets" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -1348,11 +1105,6 @@
 			productName = Supabase;
 		};
 		A10000022FCE000000000002 /* GradelyWatchShared */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = A10000012FCE000000000001 /* XCLocalSwiftPackageReference "GradelyWatchShared" */;
-			productName = GradelyWatchShared;
-		};
-		A10000052FCE000000000005 /* GradelyWatchShared */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = A10000012FCE000000000001 /* XCLocalSwiftPackageReference "GradelyWatchShared" */;
 			productName = GradelyWatchShared;

@@ -13,7 +13,7 @@ Gradely will be available on the App Store. Source code lives at [FBukovina/Grad
 - Hide and restore absence lessons or whole days locally. Gradey adjusts its statistics, keeps edits on this device, and asks for review if the school's record changes; school records are never edited.
 - Open a subject detail page with individual marks, weights, dates, absence data, and point-based marks.
 - Try a theoretical mark and weight to preview the new subject average.
-- Run UI tests against a built-in mock Bakalari client, no real school account required.
+- Run the app against a built-in mock Bakaláři client, no real school account required.
 
 ## Requirements
 
@@ -35,14 +35,10 @@ For command-line builds, first check available simulator destinations:
 xcodebuild -project Gradely.xcodeproj -scheme Gradely -showdestinations
 ```
 
-Then build or test with one of the listed destinations:
+Then build with one of the listed destinations:
 
 ```sh
 xcodebuild -project Gradely.xcodeproj -scheme Gradely -destination 'platform=iOS Simulator,name=iPhone 17' build
-```
-
-```sh
-xcodebuild -project Gradely.xcodeproj -scheme Gradely -destination 'platform=iOS Simulator,name=iPhone 17' test
 ```
 
 ## School URL Setup
@@ -89,19 +85,15 @@ Gradely/
   Views/          SwiftUI screens and reusable UI components
   Support/        App environment, date formatting, grade math, URL normalization
   Resources/      Localized strings
-GradelyTests/     Unit tests for decoding, grade math, sessions, and caching
-GradelyUITests/   End-to-end UI tests with mock API data
 ```
 
-## Testing
+## Demo data
 
-The app supports mock launch arguments for UI tests:
+The app supports mock launch arguments for running without a school account:
 
 - `-uiTestingMockAPI` uses local preview data instead of live network calls.
 - `-uiTestingLoggedIn` starts with a saved mock session.
 - `-uiTestingCachedMarks` starts with cached mock marks.
-
-The existing UI tests exercise login, the subject dashboard, subject detail, and the theoretical average calculator.
 
 ## Privacy
 

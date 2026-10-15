@@ -47,7 +47,7 @@ struct PlannerView: View {
                     ForEach(groups) { group in
                         VStack(alignment: .leading, spacing: Spacing.sm) {
                             Text(group.title)
-                                .font(.footnote.weight(.bold))
+                                .font(.gradely(.footnote).weight(.bold))
                                 .textCase(.uppercase)
                                 .foregroundStyle(.secondary)
                                 .kerning(0.6)
@@ -62,7 +62,7 @@ struct PlannerView: View {
                 }
 
                 Text("planner.private")
-                    .font(.caption)
+                    .font(.gradely(.caption))
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.horizontal, Spacing.xs)
@@ -129,7 +129,7 @@ struct PlannerView: View {
     private func filterChip(_ title: String, isSelected: Bool, id: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Text(title)
-                .font(.subheadline.weight(.semibold))
+                .font(.gradely(.subheadline).weight(.semibold))
                 .foregroundStyle(isSelected ? AnyShapeStyle(Brand.onAccent) : AnyShapeStyle(Color.primary))
                 .padding(.horizontal, Spacing.lg)
                 .padding(.vertical, Spacing.sm + 2)
@@ -196,14 +196,14 @@ struct PlannerView: View {
                 HStack(alignment: .top, spacing: Spacing.md) {
                     SettingsModalSystemIcon(systemName: systemImage)
                     Text(message)
-                        .font(.subheadline)
+                        .font(.gradely(.subheadline))
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                     Spacer(minLength: 0)
                 }
                 Button(action: onAction) {
                     Text(action)
-                        .font(.subheadline.weight(.semibold))
+                        .font(.gradely(.subheadline).weight(.semibold))
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(Brand.primary)
@@ -219,9 +219,9 @@ struct PlannerView: View {
                 GradelyIcon(systemName: "checklist", size: 22)
                     .foregroundStyle(Brand.primary.opacity(0.7))
                 Text(AppL10n.string(showsCompleted ? "planner.empty.completed.title" : "planner.empty.title"))
-                    .font(.headline)
+                    .font(.gradely(.headline))
                 Text(AppL10n.string(showsCompleted ? "planner.empty.completed.message" : "planner.empty.message"))
-                    .font(.subheadline)
+                    .font(.gradely(.subheadline))
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
@@ -290,7 +290,7 @@ struct PlannerItemSummary: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.xs) {
             Text(item.title)
-                .font(.headline)
+                .font(.gradely(.headline))
                 .strikethrough(item.isCompleted)
                 .foregroundStyle(.primary)
                 .multilineTextAlignment(.leading)
@@ -304,12 +304,12 @@ struct PlannerItemSummary: View {
                     GradelyIcon(systemName: "calendar", size: 12)
                 }
             }
-            .font(.caption)
+            .font(.gradely(.caption))
             .foregroundStyle(.secondary)
 
             if let schedule = item.scheduleSummary {
                 GradelyLabel(schedule, systemImage: "clock", iconSize: 12)
-                    .font(.caption)
+                    .font(.gradely(.caption))
                     .foregroundStyle(.secondary)
             }
         }

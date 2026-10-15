@@ -62,7 +62,7 @@ struct GradeyIDLoginView: View {
                     .minimumScaleFactor(0.7)
                     .accessibilityAddTraits(.isHeader)
                 Text(LocalizedStringKey(subtitleKey))
-                    .font(.callout)
+                    .font(.gradely(.callout))
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -73,7 +73,7 @@ struct GradeyIDLoginView: View {
         Card {
             VStack(alignment: .leading, spacing: Spacing.md) {
                 Text("gradey.auth.signInBody")
-                    .font(.footnote)
+                    .font(.gradely(.footnote))
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
 
@@ -88,7 +88,7 @@ struct GradeyIDLoginView: View {
                         ProgressView()
                             .controlSize(.small)
                         Text("gradey.auth.signingIn")
-                            .font(.footnote)
+                            .font(.gradely(.footnote))
                             .foregroundStyle(.secondary)
                     }
                     .frame(maxWidth: .infinity)
@@ -103,7 +103,7 @@ struct GradeyIDLoginView: View {
                         onContinueWithoutAccount()
                     } label: {
                         GradelyLabel("gradey.auth.continueWithoutAccount", systemImage: "arrow.right.circle")
-                            .font(.footnote.weight(.semibold))
+                            .font(.gradely(.footnote).weight(.semibold))
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.plain)

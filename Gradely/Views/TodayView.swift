@@ -143,7 +143,7 @@ struct TodayView: View {
             ProgressView()
                 .controlSize(.small)
             Text("today.refreshing")
-                .font(.caption)
+                .font(.gradely(.caption))
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, alignment: .center)
@@ -157,14 +157,14 @@ struct TodayView: View {
             VStack(alignment: .leading, spacing: Spacing.md) {
                 HStack(alignment: .top, spacing: Spacing.md) {
                     GradelyIcon(systemName: "exclamationmark.triangle.fill")
-                        .font(.title3.weight(.semibold))
+                        .font(.gradely(.title3).weight(.semibold))
                         .foregroundStyle(Color.gradelySystemOrange)
 
                     VStack(alignment: .leading, spacing: Spacing.xs) {
                         Text("School connection needs attention")
-                            .font(.headline)
+                            .font(.gradely(.headline))
                         Text(account.displayName)
-                            .font(.subheadline)
+                            .font(.gradely(.subheadline))
                             .foregroundStyle(.secondary)
                     }
 
@@ -172,7 +172,7 @@ struct TodayView: View {
                 }
 
                 Text(account.actionRequiredReason ?? AppL10n.string("today.reconnect.fallback"))
-                    .font(.subheadline)
+                    .font(.gradely(.subheadline))
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
 
@@ -180,7 +180,7 @@ struct TodayView: View {
                     reconnectAccount = account
                 } label: {
                     GradelyLabel("settings.connected.reconnect", systemImage: "arrow.clockwise")
-                        .font(.headline)
+                        .font(.gradely(.headline))
                         .frame(maxWidth: .infinity)
                         .frame(minHeight: 44)
                 }
@@ -250,7 +250,7 @@ struct TodayView: View {
                             Text(verbatim: changeSummary(summary))
                                 .fixedSize(horizontal: false, vertical: true)
                         }
-                        .font(.caption.weight(.bold))
+                        .font(.gradely(.caption).weight(.bold))
                         .foregroundStyle(LessonChangeKind.canceled.color)
                         ForEach(summary.changedLessons.prefix(3)) { lesson in
                             TodayInfoRow(
@@ -273,7 +273,7 @@ struct TodayView: View {
 
                 if let snapshotStore, snapshotStore.cachedWeek(containing: now) != nil,
                    snapshotStore.sourceState("timetable-\(TimetableDates.apiDateString(TimetableDates.monday(of: now)))").isStale(at: now, interval: 900) {
-                    Text("today.cached.warning").font(.caption).foregroundStyle(.secondary)
+                    Text("today.cached.warning").font(.gradely(.caption)).foregroundStyle(.secondary)
                 }
             }
         }
@@ -341,7 +341,7 @@ struct TodayView: View {
                     }
                 }
                 if let snapshotStore, snapshotStore.sourceState("marks").error != nil {
-                    Text("today.cached.warning").font(.caption).foregroundStyle(.secondary)
+                    Text("today.cached.warning").font(.gradely(.caption)).foregroundStyle(.secondary)
                 }
             }
         }
@@ -725,10 +725,10 @@ private struct TodayLessonChip: View {
     var body: some View {
         VStack(spacing: 2) {
             Text(verbatim: lesson.hour.caption)
-                .font(.caption2.weight(.bold).monospacedDigit())
+                .font(.gradely(.caption2).weight(.bold).monospacedDigit())
                 .opacity(0.8)
             Text(verbatim: TodayLessonCopy.shortSubject(for: lesson))
-                .font(.subheadline.weight(.bold))
+                .font(.gradely(.subheadline).weight(.bold))
                 .strikethrough(state == .cancelled)
                 .lineLimit(1)
         }
@@ -794,7 +794,7 @@ private struct TodayLessonRow: View {
     var body: some View {
         HStack(alignment: .center, spacing: Spacing.md) {
             Text(verbatim: lesson.hour.caption)
-                .font(.headline.weight(.bold).monospacedDigit())
+                .font(.gradely(.headline).weight(.bold).monospacedDigit())
                 .foregroundStyle(tint)
                 .frame(width: 38, height: 38)
                 .background(tint.opacity(0.14), in: RoundedRectangle(cornerRadius: Radius.sm, style: .continuous))
@@ -802,18 +802,18 @@ private struct TodayLessonRow: View {
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: Spacing.sm) {
                     Text(roleTitle)
-                        .font(.caption2.weight(.bold))
+                        .font(.gradely(.caption2).weight(.bold))
                         .textCase(.uppercase)
                         .kerning(0.4)
                         .foregroundStyle(tint)
                     if let minutesText {
                         Text(verbatim: minutesText)
-                            .font(.caption2.weight(.semibold))
+                            .font(.gradely(.caption2).weight(.semibold))
                             .foregroundStyle(.secondary)
                     }
                 }
                 Text(verbatim: TodayLessonCopy.subject(for: lesson))
-                    .font(.subheadline.weight(.bold))
+                    .font(.gradely(.subheadline).weight(.bold))
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
                 detailRow
@@ -840,7 +840,7 @@ private struct TodayLessonRow: View {
                 detailItem(icon: "teacher", text: teacher)
             }
         }
-        .font(.caption)
+        .font(.gradely(.caption))
         .foregroundStyle(.secondary)
         .lineLimit(1)
     }
@@ -882,7 +882,7 @@ private struct TodayMarkRow: View {
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: Spacing.xs + 2) {
                     Text(verbatim: mark.subjectTitle)
-                        .font(.subheadline.weight(.bold))
+                        .font(.gradely(.subheadline).weight(.bold))
                         .lineLimit(1)
                     if mark.isNew {
                         Circle()
@@ -892,7 +892,7 @@ private struct TodayMarkRow: View {
                     }
                 }
                 Text(verbatim: mark.caption ?? mark.subjectName)
-                    .font(.caption)
+                    .font(.gradely(.caption))
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
             }
@@ -900,7 +900,7 @@ private struct TodayMarkRow: View {
             Spacer(minLength: Spacing.sm)
 
             Text(verbatim: dateText)
-                .font(.caption.monospacedDigit())
+                .font(.gradely(.caption).monospacedDigit())
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
 
@@ -922,9 +922,9 @@ private struct TodayPlannerRow: View {
         HStack(spacing: Spacing.md) {
             VStack(spacing: 0) {
                 Text(verbatim: event.date.formatted(dateStyle.day()))
-                    .font(.title3.weight(.bold).monospacedDigit())
+                    .font(.gradely(.title3).weight(.bold).monospacedDigit())
                 Text(verbatim: event.date.formatted(dateStyle.month(.abbreviated)))
-                    .font(.caption2.weight(.bold))
+                    .font(.gradely(.caption2).weight(.bold))
                     .textCase(.uppercase)
             }
             .foregroundStyle(tint)
@@ -933,11 +933,11 @@ private struct TodayPlannerRow: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(verbatim: event.title)
-                    .font(.subheadline.weight(.bold))
+                    .font(.gradely(.subheadline).weight(.bold))
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
                 Text(verbatim: detail)
-                    .font(.caption)
+                    .font(.gradely(.caption))
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
             }
@@ -989,7 +989,7 @@ private struct TodayLinkLabel: View {
             Text(title)
             GradelyIcon("arrow-right-01", size: 11)
         }
-        .font(.caption.weight(.bold))
+        .font(.gradely(.caption).weight(.bold))
         .foregroundStyle(Brand.primary)
         .padding(.horizontal, Spacing.sm + 2)
         .frame(minHeight: 28)
@@ -1014,11 +1014,11 @@ private struct TodayInfoRow: View {
                 .background(tint.opacity(0.12), in: RoundedRectangle(cornerRadius: Radius.sm, style: .continuous))
             VStack(alignment: .leading, spacing: Spacing.xs) {
                 title
-                    .font(.subheadline.weight(.bold))
+                    .font(.gradely(.subheadline).weight(.bold))
                     .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 2)
                     .fixedSize(horizontal: false, vertical: true)
                 subtitle
-                    .font(.caption)
+                    .font(.gradely(.caption))
                     .foregroundStyle(.secondary)
                     .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 2)
                     .fixedSize(horizontal: false, vertical: true)

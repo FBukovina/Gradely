@@ -204,7 +204,7 @@ private struct AverageHistoryReadout: View {
                     Text(AppL10n.string("detail.average.title"))
                         .foregroundStyle(.secondary)
                     Text(GradeMath.formattedAverage(selected.value))
-                        .font(.subheadline.weight(.bold).monospacedDigit())
+                        .font(.gradely(.subheadline).weight(.bold).monospacedDigit())
                         .foregroundStyle(lineColor)
                 }
             } else {
@@ -221,7 +221,7 @@ private struct AverageHistoryReadout: View {
                 Spacer(minLength: 0)
             }
         }
-        .font(.caption.weight(.semibold))
+        .font(.gradely(.caption).weight(.semibold))
         .foregroundStyle(.secondary)
         .lineLimit(1)
         .frame(minHeight: 20)
@@ -245,7 +245,7 @@ private struct AverageHistoryAxes: ViewModifier {
                 .chartXAxis {
                     AxisMarks(values: .automatic(desiredCount: 4)) { _ in
                         AxisValueLabel(format: .dateTime.day().month(.abbreviated))
-                            .font(.caption2)
+                            .font(.gradely(.caption2))
                             .foregroundStyle(Color.secondary)
                     }
                 }
@@ -254,7 +254,7 @@ private struct AverageHistoryAxes: ViewModifier {
                         AxisGridLine(stroke: StrokeStyle(lineWidth: 1, dash: [2, 4]))
                             .foregroundStyle(Color.primary.opacity(0.12))
                         AxisValueLabel(format: FloatingPointFormatStyle<Double>.number.precision(.fractionLength(0...1)))
-                            .font(.caption2.weight(.semibold))
+                            .font(.gradely(.caption2).weight(.semibold))
                             .foregroundStyle(Color.secondary)
                     }
                 }
@@ -300,7 +300,7 @@ struct AbsenceMonthsChart: View {
         .chartXAxis {
             AxisMarks(values: .stride(by: .month)) { _ in
                 AxisValueLabel(format: .dateTime.month(.narrow))
-                    .font(.caption2)
+                    .font(.gradely(.caption2))
                     .foregroundStyle(Color.secondary)
             }
         }
@@ -309,7 +309,7 @@ struct AbsenceMonthsChart: View {
                 AxisGridLine()
                     .foregroundStyle(Color.primary.opacity(0.06))
                 AxisValueLabel()
-                    .font(.caption2)
+                    .font(.gradely(.caption2))
                     .foregroundStyle(Color.secondary)
             }
         }

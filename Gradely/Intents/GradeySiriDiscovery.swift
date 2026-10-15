@@ -161,8 +161,8 @@ struct GradeySiriDiscoverySettingsView: View {
                 if enabled { confirming = true } else { settings.setEnabled(false) }
             })) { Text("siri.discovery.title") }
                 .accessibilityIdentifier("siriDiscoveryToggle")
-            Text("siri.discovery.description").font(.footnote).foregroundStyle(.secondary)
-            if let error = settings.errorMessage { Text(error).font(.footnote).foregroundStyle(.secondary) }
+            Text("siri.discovery.description").font(.gradely(.footnote)).foregroundStyle(.secondary)
+            if let error = settings.errorMessage { Text(error).font(.gradely(.footnote)).foregroundStyle(.secondary) }
         }
         .alert("siri.discovery.title", isPresented: $confirming) {
             Button("siri.discovery.enable") { settings.setEnabled(true) }

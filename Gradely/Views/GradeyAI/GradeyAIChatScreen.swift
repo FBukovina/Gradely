@@ -194,7 +194,7 @@ struct GradeyAIChatScreen: View {
                     .accessibilityAddTraits(.isHeader)
 
                 Text("gradey.ai.chat.empty.message")
-                    .font(.callout)
+                    .font(.gradely(.callout))
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
@@ -312,7 +312,7 @@ struct GradeyAIChatScreen: View {
                         GradelyIcon("sparkles", size: 15)
                             .foregroundStyle(Brand.gradient)
                         Text(prompt)
-                            .font(.subheadline.weight(.medium))
+                            .font(.gradely(.subheadline).weight(.medium))
                             .foregroundStyle(.primary)
                             .multilineTextAlignment(.leading)
                             .fixedSize(horizontal: false, vertical: true)
@@ -346,10 +346,10 @@ struct GradeyAIChatScreen: View {
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(AppL10n.string(String.LocalizationValue(action.titleKey)))
-                        .font(.headline)
+                        .font(.gradely(.headline))
                     if let name = viewModel.selectedContextName {
                         Text(name)
-                            .font(.subheadline)
+                            .font(.gradely(.subheadline))
                             .foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
@@ -375,10 +375,10 @@ struct GradeyAIChatScreen: View {
             if let summary = viewModel.localTomorrowSummary {
                 VStack(alignment: .leading, spacing: Spacing.xs) {
                     Text("gradey.ai.context.localTomorrow")
-                        .font(.caption.weight(.semibold))
+                        .font(.gradely(.caption).weight(.semibold))
                         .foregroundStyle(Brand.primary)
                     Text(summary)
-                        .font(.footnote.monospacedDigit())
+                        .font(.gradely(.footnote).monospacedDigit())
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -447,7 +447,7 @@ struct GradeyAIChatScreen: View {
                     .foregroundStyle(Brand.primary.opacity(0.85))
                     .accessibilityHidden(true)
                 Text(viewModel.selectedSharingSummary)
-                    .font(.caption)
+                    .font(.gradely(.caption))
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -467,7 +467,7 @@ struct GradeyAIChatScreen: View {
                     .foregroundStyle(Color.gradelySystemOrange)
                     .accessibilityHidden(true)
                 Text(contextError)
-                    .font(.caption)
+                    .font(.gradely(.caption))
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -489,7 +489,7 @@ struct GradeyAIChatScreen: View {
                     }
                 }
             ))
-            .font(.caption)
+            .font(.gradely(.caption))
             .tint(Brand.primary)
             .disabled(isBusy)
             .padding(.horizontal, Spacing.xs)
@@ -497,7 +497,7 @@ struct GradeyAIChatScreen: View {
 
         if !viewModel.isConversationPurposeCompatible {
             Text(AppL10n.string("gradey.ai.context.newPurpose"))
-                .font(.caption)
+                .font(.gradely(.caption))
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.horizontal, Spacing.xs)
@@ -506,14 +506,14 @@ struct GradeyAIChatScreen: View {
         if let pending = viewModel.pendingRecoveryMessage {
             HStack(alignment: .firstTextBaseline, spacing: Spacing.sm) {
                 Text(pending)
-                    .font(.caption)
+                    .font(.gradely(.caption))
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
                 Spacer(minLength: 0)
                 Button(AppL10n.string("gradey.ai.compute.checkRequest")) {
                     Task { await viewModel.recoverPendingRequest() }
                 }
-                .font(.caption.weight(.semibold))
+                .font(.gradely(.caption).weight(.semibold))
                 .tint(Brand.primary)
                 .disabled(viewModel.isRecoveringRequest)
             }
@@ -566,11 +566,11 @@ struct GradeyAIChatScreen: View {
             GradelyIcon(Self.icon(for: action), size: 14)
                 .foregroundStyle(Brand.gradient)
             Text(AppL10n.string(String.LocalizationValue(action.titleKey)))
-                .font(.footnote.weight(.semibold))
+                .font(.gradely(.footnote).weight(.semibold))
                 .foregroundStyle(.primary)
             if let name = viewModel.selectedContextName {
                 Text(name)
-                    .font(.footnote)
+                    .font(.gradely(.footnote))
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
             }
@@ -600,7 +600,7 @@ struct GradeyAIChatScreen: View {
                     viewModel.selectedActionCost
                 )
         )
-        .font(.caption.monospacedDigit())
+        .font(.gradely(.caption).monospacedDigit())
         .foregroundStyle(.secondary)
         .fixedSize(horizontal: false, vertical: true)
     }
@@ -632,7 +632,7 @@ struct GradeyAIChatScreen: View {
         HStack(alignment: .bottom, spacing: Spacing.sm) {
             TextField(AppL10n.string("gradey.ai.composer.placeholder"), text: $viewModel.draft, axis: .vertical)
                 .textFieldStyle(.plain)
-                .font(.body)
+                .font(.gradely(.body))
                 .lineLimit(1...6)
                 .focused($isComposerFocused)
                 .submitLabel(.send)
@@ -693,7 +693,7 @@ struct GradeyAIChatScreen: View {
                         .compactMap { $0 }
                         .joined(separator: " · ")
                 )
-                .font(.caption2.weight(.medium).monospacedDigit())
+                .font(.gradely(.caption2).weight(.medium).monospacedDigit())
                 .foregroundStyle(isEmpty ? GradeBand.poor.foregroundColor : Color.secondary)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
@@ -704,7 +704,7 @@ struct GradeyAIChatScreen: View {
 
             if viewModel.draft.count > 1_800 {
                 Text("\(viewModel.draft.count)/2000")
-                    .font(.caption2.monospacedDigit())
+                    .font(.gradely(.caption2).monospacedDigit())
                     .foregroundStyle(viewModel.draft.count > 2_000 ? GradeBand.poor.foregroundColor : .secondary)
             }
         }
@@ -720,12 +720,12 @@ struct GradeyAIChatScreen: View {
                     .background(Brand.primary.opacity(0.14), in: Circle())
                 VStack(alignment: .leading, spacing: 2) {
                     Text("gradey.ai.compute.upgrade")
-                        .font(.footnote.weight(.semibold))
+                        .font(.gradely(.footnote).weight(.semibold))
                         .foregroundStyle(.primary)
                         .multilineTextAlignment(.leading)
                         .fixedSize(horizontal: false, vertical: true)
                     Text("gradey.ai.limit.upgrade.action")
-                        .font(.caption.weight(.semibold))
+                        .font(.gradely(.caption).weight(.semibold))
                         .foregroundStyle(Brand.primary)
                 }
                 Spacer(minLength: 0)
@@ -780,7 +780,7 @@ private struct GradeyAISuggestionCard: View {
                 .accessibilityHidden(true)
 
             Text(title)
-                .font(.subheadline.weight(.semibold))
+                .font(.gradely(.subheadline).weight(.semibold))
                 .foregroundStyle(.primary)
                 .multilineTextAlignment(.leading)
                 .fixedSize(horizontal: false, vertical: true)

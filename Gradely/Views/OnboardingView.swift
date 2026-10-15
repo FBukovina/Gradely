@@ -203,7 +203,7 @@ struct OnboardingView: View {
                 Spacer(minLength: Spacing.sm)
 
                 Text(progressText)
-                    .font(.footnote.weight(.semibold))
+                    .font(.gradely(.footnote).weight(.semibold))
                     .foregroundStyle(.secondary)
                     .accessibilityIdentifier("onboardingProgressLabel")
             }
@@ -244,7 +244,7 @@ struct OnboardingView: View {
                                 .accessibilityFocused($focusedStep, equals: .welcome)
 
                             Text("onboarding.welcome.body")
-                                .font(.body)
+                                .font(.gradely(.body))
                                 .foregroundStyle(.secondary)
                                 .fixedSize(horizontal: false, vertical: true)
                         }
@@ -270,7 +270,7 @@ struct OnboardingView: View {
 
                     VStack(alignment: .leading, spacing: Spacing.sm) {
                         Text("settings.language.title")
-                            .font(.subheadline.weight(.semibold))
+                            .font(.gradely(.subheadline).weight(.semibold))
                             .foregroundStyle(.secondary)
                         AppLanguageOptionsList(
                             store: languageStore,
@@ -289,7 +289,7 @@ struct OnboardingView: View {
                             viewModel.chooseLogIn()
                         } label: {
                             Text("onboarding.logIn")
-                                .font(.headline)
+                                .font(.gradely(.headline))
                                 .frame(maxWidth: .infinity)
                                 .frame(minHeight: 50)
                         }
@@ -351,7 +351,7 @@ struct OnboardingView: View {
         ) {
             SettingsSurface {
                 GradelyLabel("gradey.account.notifications.message", systemImage: "checkmark.shield.fill")
-                    .font(.subheadline)
+                    .font(.gradely(.subheadline))
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -481,7 +481,7 @@ struct OnboardingView: View {
             HStack(spacing: Spacing.sm) {
                 Text(title)
                 GradelyIcon(systemName: systemImage)
-                    .font(.subheadline.weight(.bold))
+                    .font(.gradely(.subheadline).weight(.bold))
             }
         }
         .buttonStyle(PrimaryButtonStyle())
@@ -493,7 +493,7 @@ struct OnboardingView: View {
     ) -> some View {
         Button(action: action) {
             Text(title)
-                .font(.headline)
+                .font(.gradely(.headline))
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, Spacing.md)
         }
@@ -506,17 +506,17 @@ struct OnboardingView: View {
         SettingsSurface {
             VStack(alignment: .leading, spacing: Spacing.md) {
                 GradelyLabel("onboarding.sync.warning.title", systemImage: "exclamationmark.triangle.fill")
-                    .font(.headline)
+                    .font(.gradely(.headline))
                     .foregroundStyle(Color.gradelySystemOrange)
 
                 Text(warningMessageKey(for: warning.kind))
-                    .font(.subheadline)
+                    .font(.gradely(.subheadline))
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
 
                 if let message = warning.message, !message.isEmpty {
                     Text(message)
-                        .font(.caption)
+                        .font(.gradely(.caption))
                         .foregroundStyle(.secondary)
                         .textSelection(.enabled)
                 }
@@ -824,9 +824,9 @@ private struct OnboardingLandingBenefit: View {
 
             VStack(alignment: .leading, spacing: Spacing.xs) {
                 Text(title)
-                    .font(.subheadline.weight(.semibold))
+                    .font(.gradely(.subheadline).weight(.semibold))
                 Text(message)
-                    .font(.footnote)
+                    .font(.gradely(.footnote))
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -853,7 +853,7 @@ private struct OnboardingSummaryRow: View {
                 .fontWeight(.semibold)
                 .multilineTextAlignment(.trailing)
         }
-        .font(.subheadline)
+        .font(.gradely(.subheadline))
         .padding(.vertical, Spacing.sm)
         .accessibilityElement(children: .combine)
     }

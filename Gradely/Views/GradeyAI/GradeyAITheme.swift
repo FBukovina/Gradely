@@ -345,10 +345,10 @@ struct GradeyAIBanner: View {
             VStack(alignment: .leading, spacing: 2) {
                 if let title {
                     Text(title)
-                        .font(.subheadline.weight(.semibold))
+                        .font(.gradely(.subheadline).weight(.semibold))
                 }
                 Text(message)
-                    .font(title == nil ? .subheadline : .caption)
+                    .font(title == nil ? .gradely(.subheadline) : .gradely(.caption))
                     .foregroundStyle(title == nil ? Color.primary : Color.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -380,7 +380,7 @@ struct GradeyAIBanner: View {
 struct GradeyAIEarlyAccessBadge: View {
     var body: some View {
         Text("gradey.ai.earlyAccess.badge")
-            .font(.caption2.weight(.bold))
+            .font(.gradely(.caption2).weight(.bold))
             .foregroundStyle(Brand.onAccent)
             .padding(.horizontal, 7)
             .padding(.vertical, 2)

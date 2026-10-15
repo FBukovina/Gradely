@@ -155,9 +155,9 @@ struct TimetableView: View {
                         .foregroundStyle(Brand.primary)
                     VStack(alignment: .leading, spacing: 2) {
                         Text("timetable.kind.permanent")
-                            .font(.subheadline.weight(.semibold))
+                            .font(.gradely(.subheadline).weight(.semibold))
                         Text("timetable.permanent.description")
-                            .font(.caption)
+                            .font(.gradely(.caption))
                             .foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
@@ -180,7 +180,7 @@ struct TimetableView: View {
                     HStack(spacing: Spacing.sm) {
                         ProgressView()
                         Text("timetable.refreshing")
-                            .font(.subheadline)
+                            .font(.gradely(.subheadline))
                             .foregroundStyle(.secondary)
                     }
                     .frame(maxWidth: .infinity, alignment: .center)
@@ -245,7 +245,7 @@ private struct WeekNavBar: View {
 
             VStack(spacing: 2) {
                 Text(viewModel.weekTitle)
-                    .font(.headline)
+                    .font(.gradely(.headline))
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
 
@@ -254,7 +254,7 @@ private struct WeekNavBar: View {
                         Task { await viewModel.goToToday() }
                     } label: {
                         Text("timetable.today")
-                            .font(.caption.weight(.semibold))
+                            .font(.gradely(.caption).weight(.semibold))
                     }
                     .buttonStyle(.plain)
                     .foregroundStyle(Brand.primary)
@@ -317,11 +317,11 @@ private struct DayChip: View {
         Button(action: action) {
             VStack(spacing: 3) {
                 Text(weekdaySymbol)
-                    .font(.caption2.weight(.semibold))
+                    .font(.gradely(.caption2).weight(.semibold))
                     .textCase(.uppercase)
                 if day.date != nil {
                     Text(dayNumber)
-                        .font(.headline.weight(.bold))
+                        .font(.gradely(.headline).weight(.bold))
                         .monospacedDigit()
                     Circle()
                         .frame(width: 5, height: 5)
@@ -383,16 +383,16 @@ private struct LessonRow: View {
     private var hourRail: some View {
         VStack(spacing: 2) {
             Text(lesson.hour.caption)
-                .font(.headline.weight(.bold))
+                .font(.gradely(.headline).weight(.bold))
                 .monospacedDigit()
                 .foregroundStyle(lesson.isCanceled ? .secondary : .primary)
             if !lesson.hour.beginTime.isEmpty {
                 Text(lesson.hour.beginTime)
-                    .font(.caption2)
+                    .font(.gradely(.caption2))
                     .foregroundStyle(lesson.isCanceled ? .tertiary : .secondary)
                     .monospacedDigit()
                 Text(lesson.hour.endTime)
-                    .font(.caption2)
+                    .font(.gradely(.caption2))
                     .foregroundStyle(.tertiary)
                     .monospacedDigit()
             }
@@ -414,7 +414,7 @@ private struct LessonCard: View {
             VStack(alignment: .leading, spacing: Spacing.xs) {
                 HStack(alignment: .firstTextBaseline, spacing: Spacing.sm) {
                     Text(LessonText.subject(for: lesson))
-                        .font(.headline)
+                        .font(.gradely(.headline))
                         .lineLimit(1)
                         .strikethrough(lesson.isCanceled, color: LessonChangeKind.canceled.color.opacity(0.8))
                         .foregroundStyle(lesson.isCanceled ? .secondary : .primary)
@@ -438,7 +438,7 @@ private struct LessonCard: View {
                             inlineLabel(teacher, systemImage: "person.fill")
                         }
                     }
-                    .font(.subheadline)
+                    .font(.gradely(.subheadline))
                     .foregroundStyle(.secondary)
                 }
 
@@ -451,18 +451,18 @@ private struct LessonCard: View {
                             .lineLimit(2)
                             .fixedSize(horizontal: false, vertical: true)
                     }
-                    .font(.caption)
+                    .font(.gradely(.caption))
                 }
 
                 if !lesson.isCanceled, !lesson.cycles.isEmpty {
                     Text(lesson.cycles.joined(separator: ", "))
-                        .font(.caption.weight(.semibold))
+                        .font(.gradely(.caption).weight(.semibold))
                         .foregroundStyle(.secondary)
                 }
 
                 if !lesson.isCanceled, let theme = lesson.theme {
                     Text(theme)
-                        .font(.caption)
+                        .font(.gradely(.caption))
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                 }
@@ -472,7 +472,7 @@ private struct LessonCard: View {
                         plannerItems.count == 1 ? first.type.title : String(format: AppL10n.string("planner.indicator.multiple"), first.type.title, plannerItems.count - 1),
                         systemImage: first.type.systemImage, iconSize: 12
                     )
-                    .font(.caption.weight(.semibold))
+                    .font(.gradely(.caption).weight(.semibold))
                     .foregroundStyle(Brand.primary)
                     .lineLimit(1)
                 }
@@ -533,7 +533,7 @@ private struct LessonTile: View {
             .overlay {
                 if let abbreviation = LessonText.abbreviation(for: lesson) {
                     Text(abbreviation)
-                        .font(.subheadline.weight(.bold))
+                        .font(.gradely(.subheadline).weight(.bold))
                         .strikethrough(lesson.isCanceled, color: accent)
                         .foregroundStyle(accent)
                         .lineLimit(1)
@@ -608,10 +608,10 @@ private struct EmptyDayView: View {
             GradelyIcon(systemName: icon, size: 20)
                 .foregroundStyle(Brand.primary.opacity(0.6))
             Text(title)
-                .font(.headline)
+                .font(.gradely(.headline))
             if let message {
                 Text(message)
-                    .font(.subheadline)
+                    .font(.gradely(.subheadline))
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
             }
@@ -795,7 +795,7 @@ private struct LessonDetailSheet: View {
         #if os(macOS)
         HStack(alignment: .firstTextBaseline, spacing: Spacing.md) {
             Text(LessonText.subject(for: lesson))
-                .font(.title2.bold())
+                .font(.gradely(.title2).bold())
                 .strikethrough(lesson.isCanceled)
                 .lineLimit(2)
             Spacer(minLength: Spacing.sm)
@@ -828,13 +828,13 @@ private struct LessonDetailSheet: View {
 
                 VStack(alignment: .leading, spacing: Spacing.xs) {
                     Text(lesson.changeKind.localizedLabel ?? AppL10n.string("timetable.detail.change"))
-                        .font(.headline)
+                        .font(.gradely(.headline))
                         .foregroundStyle(lesson.changeKind.color)
 
                     if let description = change.description?.trimmingCharacters(in: .whitespacesAndNewlines),
                        !description.isEmpty {
                         Text(description)
-                            .font(.subheadline)
+                            .font(.gradely(.subheadline))
                             .foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
@@ -853,15 +853,15 @@ private struct DetailRow: View {
     var body: some View {
         HStack(alignment: .top, spacing: Spacing.md) {
             GradelyIcon(systemName: systemImage)
-                .font(.subheadline)
+                .font(.gradely(.subheadline))
                 .foregroundStyle(Brand.primary)
                 .frame(width: 24)
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
-                    .font(.caption.weight(.semibold))
+                    .font(.gradely(.caption).weight(.semibold))
                     .foregroundStyle(.secondary)
                 Text(value)
-                    .font(.subheadline)
+                    .font(.gradely(.subheadline))
             }
             Spacer(minLength: 0)
         }

@@ -16,7 +16,10 @@ let package = Package(
         )
     ],
     targets: [
-        .target(name: "GradelyWatchShared"),
+        .target(
+            name: "GradelyWatchShared",
+            resources: [.process("Fonts")]
+        ),
         .testTarget(
             name: "GradelyWatchSharedTests",
             dependencies: ["GradelyWatchShared"]

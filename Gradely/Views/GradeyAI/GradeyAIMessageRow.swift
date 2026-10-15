@@ -40,7 +40,7 @@ private struct GradeyAIUserBubble: View {
         HStack(spacing: 0) {
             Spacer(minLength: 48)
             Text(text)
-                .font(.body)
+                .font(.gradely(.body))
                 .foregroundStyle(.primary)
                 .multilineTextAlignment(.leading)
                 .textSelection(.enabled)
@@ -93,7 +93,7 @@ private struct GradeyAIAssistantReply: View {
                     .padding(.top, 3)
             case .failed:
                 Text("gradey.ai.error.couldNotComplete")
-                    .font(.subheadline)
+                    .font(.gradely(.subheadline))
                     .foregroundStyle(.secondary)
                     .padding(.top, 4)
             case .complete, .cancelled:
@@ -101,7 +101,7 @@ private struct GradeyAIAssistantReply: View {
             }
         } else {
             GradeyAIMarkdownText(markdown: message.content)
-                .font(.body)
+                .font(.gradely(.body))
                 .foregroundStyle(.primary)
                 .textSelection(.enabled)
         }
@@ -122,13 +122,13 @@ private struct GradeyAIAssistantReply: View {
                             .foregroundStyle(Brand.gradient)
                         Text("gradey.ai.act.generated")
                     }
-                    .font(.caption2.weight(.semibold))
+                    .font(.gradely(.caption2).weight(.semibold))
                     .foregroundStyle(.secondary)
                 }
 
                 if showsCancelled {
                     Text("gradey.ai.response.cancelled")
-                        .font(.caption)
+                        .font(.gradely(.caption))
                         .foregroundStyle(.secondary)
                 }
 
@@ -137,7 +137,7 @@ private struct GradeyAIAssistantReply: View {
                 if showsRetry {
                     Button(action: onRetry) {
                         GradelyLabel(AppL10n.string("action.retry"), systemImage: "arrow.clockwise", iconSize: 13)
-                            .font(.caption.weight(.semibold))
+                            .font(.gradely(.caption).weight(.semibold))
                             .padding(.horizontal, 10)
                             .padding(.vertical, 6)
                             .glassEffect(

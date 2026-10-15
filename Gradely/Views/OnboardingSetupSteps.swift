@@ -37,7 +37,7 @@ struct OnboardingAccountStep: View {
             SettingsSurface(padding: Spacing.lg) {
                 VStack(alignment: .leading, spacing: Spacing.lg) {
                     Text("gradey.auth.signInBody")
-                        .font(.callout)
+                        .font(.gradely(.callout))
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
 
@@ -52,7 +52,7 @@ struct OnboardingAccountStep: View {
                             ProgressView()
                                 .controlSize(.small)
                             Text("gradey.auth.signingIn")
-                                .font(.footnote)
+                                .font(.gradely(.footnote))
                                 .foregroundStyle(.secondary)
                         }
                         .frame(maxWidth: .infinity)
@@ -64,7 +64,7 @@ struct OnboardingAccountStep: View {
             if let onContinueWithoutAccount {
                 Button(action: onContinueWithoutAccount) {
                     GradelyLabel("onboarding.upgrade.account.continueWithout", systemImage: "arrow.right.circle")
-                        .font(.subheadline.weight(.semibold))
+                        .font(.gradely(.subheadline).weight(.semibold))
                         .frame(maxWidth: .infinity)
                         .frame(minHeight: 50)
                 }

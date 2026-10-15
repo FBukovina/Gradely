@@ -120,7 +120,7 @@ struct SubjectDetailView: View {
                             GradelyIcon(systemName: viewModel.chartSource == .cloud ? "cloud.fill" : "chart.line.uptrend.xyaxis", size: 13)
                                 .foregroundStyle(.secondary)
                             Text(sourceCaption)
-                                .font(.caption)
+                                .font(.gradely(.caption))
                                 .foregroundStyle(.secondary)
                                 .lineLimit(1)
 
@@ -163,11 +163,11 @@ private struct AverageHero: View {
         VStack(spacing: Spacing.md) {
             Text(AppL10n.string(viewModel.preparedCalculation.officialAverage != nil
                 ? "detail.intelligence.schoolAverage" : "detail.intelligence.calculatedAverage"))
-                .font(.subheadline.weight(.semibold))
+                .font(.gradely(.subheadline).weight(.semibold))
                 .foregroundStyle(.white.opacity(0.85))
 
             Text(viewModel.averageFormatted)
-                .font(.system(size: 64, weight: .bold, design: .rounded).monospacedDigit())
+                .font(.gradely(size: 64, weight: .bold).monospacedDigit())
                 .foregroundStyle(.white)
                 .minimumScaleFactor(0.6)
                 .lineLimit(1)
@@ -193,7 +193,7 @@ private struct AverageHero: View {
             }
             if hasLocalAbsenceAdjustment {
                 GradelyLabel("absence.override.adjusted", systemImage: "eye.slash")
-                    .font(.caption)
+                    .font(.gradely(.caption))
                     .foregroundStyle(.white.opacity(0.85))
                     .accessibilityIdentifier("subjectAbsenceAdjusted")
             }
@@ -207,9 +207,9 @@ private struct AverageHero: View {
     private func heroChip(_ text: String, systemImage: String) -> some View {
         HStack(spacing: Spacing.xs) {
             GradelyIcon(systemName: systemImage)
-                .font(.caption2.weight(.bold))
+                .font(.gradely(.caption2).weight(.bold))
             Text(text)
-                .font(.caption.weight(.semibold))
+                .font(.gradely(.caption).weight(.semibold))
         }
         .foregroundStyle(.white)
         .padding(.horizontal, Spacing.md)
@@ -244,7 +244,7 @@ private struct MarkRow: View {
                         isExpanded: isExpanded,
                         isTruncated: $isCaptionTruncated
                     )
-                    .font(.headline)
+                    .font(.gradely(.headline))
 
                     if mark.isNew {
                         Circle()
@@ -262,7 +262,7 @@ private struct MarkRow: View {
                         isExpanded: isExpanded,
                         isTruncated: $isDescriptionTruncated
                     )
-                    .font(.subheadline)
+                    .font(.gradely(.subheadline))
                     .foregroundStyle(.secondary)
                 }
 
@@ -326,7 +326,7 @@ private struct MarkRow: View {
         HStack(spacing: Spacing.xs + 2) {
             if isRecent {
                 Text(MarkDateFormatter.relativeDate(mark.markDate))
-                    .font(.caption.weight(.semibold))
+                    .font(.gradely(.caption).weight(.semibold))
                     .foregroundStyle(Brand.primary)
                 separator
             }
@@ -338,7 +338,7 @@ private struct MarkRow: View {
                     .lineLimit(1)
             }
         }
-        .font(.caption)
+        .font(.gradely(.caption))
         .foregroundStyle(.secondary)
     }
 
@@ -417,7 +417,7 @@ private struct AverageDeltaChip: View {
         HStack(spacing: 3) {
             GradelyIcon(systemName: delta < 0 ? "arrow.down.right" : "arrow.up.right", size: 12)
             Text(String(format: "%+.2f", locale: .current, delta))
-                .font(.caption.weight(.bold).monospacedDigit())
+                .font(.gradely(.caption).weight(.bold).monospacedDigit())
         }
         .foregroundStyle(color)
         .padding(.horizontal, Spacing.sm)
@@ -458,12 +458,12 @@ private struct TheoreticalCalculatorView: View {
                     }
                     if let warning = viewModel.calculationWarningKey {
                         Text(AppL10n.string(String.LocalizationValue(warning)))
-                            .font(.caption)
+                            .font(.gradely(.caption))
                             .foregroundStyle(.secondary)
                     }
                 } else {
                     Text(AppL10n.string("detail.simulator.unavailable"))
-                        .font(.subheadline)
+                        .font(.gradely(.subheadline))
                         .foregroundStyle(.secondary)
                 }
             }
@@ -478,7 +478,7 @@ private struct TheoreticalCalculatorView: View {
             }
 
             Text(String.localizedStringWithFormat(AppL10n.string("detail.weight"), viewModel.theoreticalWeight))
-                .font(.subheadline.weight(.semibold).monospacedDigit())
+                .font(.gradely(.subheadline).weight(.semibold).monospacedDigit())
                 .lineLimit(1)
                 .fixedSize()
 
@@ -499,7 +499,7 @@ private struct TheoreticalCalculatorView: View {
     private func stepButton(systemImage: String, disabled: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             GradelyIcon(systemName: systemImage)
-                .font(.headline.weight(.bold))
+                .font(.gradely(.headline).weight(.bold))
                 .foregroundStyle(disabled ? AnyShapeStyle(.tertiary) : AnyShapeStyle(Brand.primary))
                 .frame(minWidth: 44, minHeight: 44)
                 .background(Color.gradelySecondaryGroupedBackground, in: RoundedRectangle(cornerRadius: Radius.sm - 4, style: .continuous))
@@ -517,10 +517,10 @@ private struct ResultLine: View {
     var body: some View {
         HStack(spacing: Spacing.sm) {
             Text(verbatim: "→ " + GradeMath.formattedAverage(theoreticalAverage))
-                .font(.headline.monospacedDigit())
+                .font(.gradely(.headline).monospacedDigit())
             if let differenceText {
                 Text(differenceText)
-                    .font(.subheadline.weight(.semibold))
+                    .font(.gradely(.subheadline).weight(.semibold))
                     .foregroundStyle(differenceColor)
             }
         }

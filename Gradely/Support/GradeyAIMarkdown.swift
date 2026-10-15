@@ -103,7 +103,7 @@ struct GradeyAIMarkdownText: View {
                     Text(GradeyAIMarkdown.inlineAttributed(text))
                         .font(level <= 2
                             ? .gradelyDisplay(size: 19, relativeTo: .headline)
-                            : .subheadline.weight(.semibold))
+                            : .gradely(.subheadline).weight(.semibold))
                         .padding(.top, 4)
                         .accessibilityAddTraits(.isHeader)
                 case .paragraph(let text):
@@ -115,7 +115,7 @@ struct GradeyAIMarkdownText: View {
                         ForEach(Array(items.enumerated()), id: \.offset) { _, item in
                             HStack(alignment: .firstTextBaseline, spacing: 10) {
                                 Text("●")
-                                    .font(.system(size: 7))
+                                    .font(.gradely(size: 7))
                                     .foregroundStyle(Brand.gradient)
                                     .baselineOffset(2)
                                     .accessibilityHidden(true)

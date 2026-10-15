@@ -537,12 +537,12 @@ struct GradeyAccountHubView: View {
 
                 VStack(alignment: .leading, spacing: Spacing.xs) {
                     Text(profileDisplayName)
-                        .font(.headline)
+                        .font(.gradely(.headline))
                         .foregroundStyle(.primary)
                         .fixedSize(horizontal: false, vertical: true)
 
                     Text(profileSubtitle)
-                        .font(.subheadline)
+                        .font(.gradely(.subheadline))
                         .foregroundStyle(Brand.primary.opacity(0.78))
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -720,11 +720,11 @@ private extension GradeyAccountHubView {
 
                         VStack(alignment: .leading, spacing: Spacing.xs) {
                             Text(profileDisplayName)
-                                .font(.title3.weight(.bold))
+                                .font(.gradely(.title3).weight(.bold))
                                 .fixedSize(horizontal: false, vertical: true)
 
                             Text(profileSubtitle)
-                                .font(.body)
+                                .font(.gradely(.body))
                                 .foregroundStyle(Brand.primary.opacity(0.78))
                                 .fixedSize(horizontal: false, vertical: true)
                         }
@@ -736,7 +736,7 @@ private extension GradeyAccountHubView {
 
                         VStack(alignment: .leading, spacing: Spacing.sm) {
                             Text("settings.account.name.title")
-                                .font(.subheadline.weight(.semibold))
+                                .font(.gradely(.subheadline).weight(.semibold))
                                 .foregroundStyle(.primary)
 
                             TextField(
@@ -777,7 +777,7 @@ private extension GradeyAccountHubView {
                                     iconName: "alert-circle",
                                     iconColor: .red
                                 )
-                                .font(.caption)
+                                .font(.gradely(.caption))
                                 .foregroundStyle(.red)
                                     .fixedSize(horizontal: false, vertical: true)
                                     .accessibilityIdentifier("accountFullNameValidationError")
@@ -787,13 +787,13 @@ private extension GradeyAccountHubView {
                                     iconName: "alert-circle",
                                     iconColor: .red
                                 )
-                                    .font(.caption)
+                                    .font(.gradely(.caption))
                                     .foregroundStyle(.red)
                                     .fixedSize(horizontal: false, vertical: true)
                                     .accessibilityIdentifier("accountFullNameSaveError")
                             } else {
                                 Text("settings.account.name.caption")
-                                    .font(.caption)
+                                    .font(.gradely(.caption))
                                     .foregroundStyle(.secondary)
                                     .fixedSize(horizontal: false, vertical: true)
                             }
@@ -862,7 +862,7 @@ private extension GradeyAccountHubView {
                             "gradey.guest.accountSection.heading",
                             iconName: "user-add-02"
                         )
-                            .font(.headline)
+                            .font(.gradely(.headline))
 
                         Button {
                             dismiss()
@@ -892,7 +892,7 @@ private extension GradeyAccountHubView {
                     iconName: "logout-01",
                     iconColor: .red
                 )
-                .font(.body.weight(.semibold))
+                .font(.gradely(.body).weight(.semibold))
                 .frame(maxWidth: .infinity)
                 .frame(minHeight: 44)
             }
@@ -938,7 +938,7 @@ private extension GradeyAccountHubView {
                         iconName: "link-04",
                         iconColor: Brand.primary
                     )
-                    .font(.body.weight(.semibold))
+                    .font(.gradely(.body).weight(.semibold))
                     .frame(maxWidth: .infinity)
                     .frame(minHeight: 44)
                 }
@@ -1025,12 +1025,12 @@ private extension GradeyAccountHubView {
 
                     VStack(alignment: .leading, spacing: Spacing.xs) {
                         Text(linkedAccount.displayName)
-                            .font(.headline)
+                            .font(.gradely(.headline))
                             .fixedSize(horizontal: false, vertical: true)
                             .accessibilityIdentifier("linkedAccountRow-\(linkedAccount.id)")
 
                         Text(linkedAccount.subtitle)
-                            .font(.subheadline)
+                            .font(.gradely(.subheadline))
                             .foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
@@ -1051,7 +1051,7 @@ private extension GradeyAccountHubView {
                         GradelyIcon("alert-02", size: 14)
                             .foregroundStyle(Color.gradelySystemOrange)
                     }
-                    .font(.footnote)
+                    .font(.gradely(.footnote))
                     .foregroundStyle(Color.gradelySystemOrange)
                 }
 
@@ -1088,7 +1088,7 @@ private extension GradeyAccountHubView {
                         VStack(alignment: .leading, spacing: Spacing.xs) {
                             Text("settings.connected.accountNotifications.title")
                             Text("settings.connected.accountNotifications.message")
-                                .font(.caption)
+                                .font(.gradely(.caption))
                                 .foregroundStyle(.secondary)
                                 .fixedSize(horizontal: false, vertical: true)
                         }
@@ -1189,9 +1189,9 @@ private extension GradeyAccountHubView {
 
                     VStack(alignment: .leading, spacing: Spacing.xs) {
                         Text("settings.notifications.permission.title")
-                            .font(.headline)
+                            .font(.gradely(.headline))
                         Text(notificationPermissionLabel)
-                            .font(.subheadline)
+                            .font(.gradely(.subheadline))
                             .foregroundStyle(notificationPermissionColor)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -1220,7 +1220,7 @@ private extension GradeyAccountHubView {
                         .disabled(isRequestingPlannerPermission)
                         .accessibilityIdentifier("plannerRemindersToggle")
                     Text("planner.reminders.message")
-                        .font(.caption).foregroundStyle(.secondary)
+                        .font(.gradely(.caption)).foregroundStyle(.secondary)
                 }
             }
 
@@ -1264,7 +1264,7 @@ private extension GradeyAccountHubView {
                     .accessibilityIdentifier("lockScreenDetailPicker")
 
                     Text(lockScreenDetailSummary)
-                        .font(.caption)
+                        .font(.gradely(.caption))
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                         .accessibilityIdentifier("lockScreenDetailSummary")
@@ -1319,7 +1319,7 @@ private extension GradeyAccountHubView {
                         GradelyIcon("globe-02", size: 13)
                             .foregroundStyle(.secondary)
                     }
-                    .font(.caption)
+                    .font(.gradely(.caption))
                     .foregroundStyle(.secondary)
                 }
             }
@@ -1448,9 +1448,9 @@ private extension GradeyAccountHubView {
                 Toggle(isOn: $showMealsTab) {
                     VStack(alignment: .leading, spacing: Spacing.xs) {
                         Text("settings.showMealsTab")
-                            .font(.body.weight(.medium))
+                            .font(.gradely(.body).weight(.medium))
                         Text("settings.showMealsTab.message")
-                            .font(.caption)
+                            .font(.gradely(.caption))
                             .foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
@@ -1848,7 +1848,7 @@ private extension GradeyAccountHubView {
                             .fixedSize(horizontal: false, vertical: true)
                         if let className = student.className {
                             Text(className)
-                                .font(.caption)
+                                .font(.gradely(.caption))
                                 .foregroundStyle(.secondary)
                                 .fixedSize(horizontal: false, vertical: true)
                         }
@@ -2130,11 +2130,11 @@ private extension GradeyAccountHubView {
                     iconName: "alert-02",
                     iconColor: .gradelySystemOrange
                 )
-                    .font(.headline)
+                    .font(.gradely(.headline))
                     .foregroundStyle(Color.gradelySystemOrange)
 
                 Text(message)
-                    .font(.subheadline)
+                    .font(.gradely(.subheadline))
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
 
@@ -2354,12 +2354,12 @@ private struct SettingsOverviewRow: View {
 
             VStack(alignment: .leading, spacing: Spacing.xs) {
                 Text(destination.title)
-                    .font(.headline)
+                    .font(.gradely(.headline))
                     .foregroundStyle(.primary)
                     .fixedSize(horizontal: false, vertical: true)
 
                 Text(subtitle)
-                    .font(.footnote)
+                    .font(.gradely(.footnote))
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
 
@@ -2370,7 +2370,7 @@ private struct SettingsOverviewRow: View {
                         GradelyIcon(statusIconName, size: 13)
                             .foregroundStyle(statusColor)
                     }
-                        .font(.caption.weight(.semibold))
+                        .font(.gradely(.caption).weight(.semibold))
                         .foregroundStyle(statusColor)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -2387,7 +2387,7 @@ private struct SettingsOverviewRow: View {
                 SettingsIcon(name: destination.hugeiconName)
 
                 Text(destination.title)
-                    .font(.headline)
+                    .font(.gradely(.headline))
                     .foregroundStyle(.primary)
                     .fixedSize(horizontal: false, vertical: true)
 
@@ -2397,7 +2397,7 @@ private struct SettingsOverviewRow: View {
             }
 
             Text(subtitle)
-                .font(.footnote)
+                .font(.gradely(.footnote))
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.leading, SettingsIcon.frameSize + Spacing.md)
@@ -2409,7 +2409,7 @@ private struct SettingsOverviewRow: View {
                     GradelyIcon(statusIconName, size: 13)
                         .foregroundStyle(statusColor)
                 }
-                    .font(.caption.weight(.semibold))
+                    .font(.gradely(.caption).weight(.semibold))
                     .foregroundStyle(statusColor)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.leading, SettingsIcon.frameSize + Spacing.md)
@@ -2495,7 +2495,7 @@ private struct AccountAvatar: View {
                     .foregroundStyle(Brand.onAccent)
             } else {
                 Text(initials)
-                    .font(.system(size: size * 0.30, weight: .bold, design: .rounded))
+                    .font(.gradely(size: size * 0.30, weight: .bold))
             }
         }
         .foregroundStyle(Brand.onAccent)
@@ -2534,7 +2534,7 @@ struct DetailSectionHeader: View {
 
     var body: some View {
         Text(title)
-            .font(.headline)
+            .font(.gradely(.headline))
             .foregroundStyle(.primary)
             .accessibilityAddTraits(.isHeader)
             .padding(.horizontal, Spacing.xs)
@@ -2552,12 +2552,12 @@ private struct SettingsActionRow: View {
 
             VStack(alignment: .leading, spacing: Spacing.xs) {
                 Text(title)
-                    .font(.body.weight(.medium))
+                    .font(.gradely(.body).weight(.medium))
                     .foregroundStyle(.primary)
                     .fixedSize(horizontal: false, vertical: true)
 
                 Text(message)
-                    .font(.caption)
+                    .font(.gradely(.caption))
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -2582,10 +2582,10 @@ private struct EmptyServiceCard: View {
 
                 VStack(alignment: .leading, spacing: Spacing.xs) {
                     Text(title)
-                        .font(.headline)
+                        .font(.gradely(.headline))
                         .fixedSize(horizontal: false, vertical: true)
                     Text(message)
-                        .font(.subheadline)
+                        .font(.gradely(.subheadline))
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -2611,7 +2611,7 @@ private struct SettingsAvailabilityMessage: View {
             GradelyIcon("information-circle", size: 14)
                 .foregroundStyle(.secondary)
         }
-        .font(.footnote)
+        .font(.gradely(.footnote))
         .foregroundStyle(.secondary)
         .padding(Spacing.md)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -2642,7 +2642,7 @@ private struct SettingsMetadataRow: View {
                 Text(value)
             }
         }
-        .font(.caption)
+        .font(.gradely(.caption))
     }
 }
 

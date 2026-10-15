@@ -23,7 +23,7 @@ struct GradeyAIConsentScreen: View {
                 disclosures
 
                 Text("gradey.ai.disclaimer")
-                    .font(.footnote)
+                    .font(.gradely(.footnote))
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -55,7 +55,7 @@ struct GradeyAIConsentScreen: View {
                 .accessibilityAddTraits(.isHeader)
 
             Text("gradey.ai.consent.subtitle")
-                .font(.callout)
+                .font(.gradely(.callout))
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
@@ -113,9 +113,9 @@ struct GradeyAIConsentScreen: View {
 
             VStack(alignment: .leading, spacing: Spacing.xs) {
                 Text(title)
-                    .font(.headline)
+                    .font(.gradely(.headline))
                 Text(message)
-                    .font(.subheadline)
+                    .font(.gradely(.subheadline))
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -158,7 +158,7 @@ struct GradeyAIProgressState: View {
         VStack(spacing: Spacing.lg) {
             GradeyAIOrb(size: 64, isActive: true)
             Text(message)
-                .font(.subheadline)
+                .font(.gradely(.subheadline))
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
         }
@@ -184,7 +184,7 @@ struct GradeyAIUnavailableState: View {
                         .multilineTextAlignment(.center)
                         .fixedSize(horizontal: false, vertical: true)
                     Text(message)
-                        .font(.subheadline)
+                        .font(.gradely(.subheadline))
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
                         .fixedSize(horizontal: false, vertical: true)

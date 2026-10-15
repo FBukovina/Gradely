@@ -73,6 +73,8 @@
 	<string>$(SUPABASE_URL)</string>
 	<key>UIAppFonts</key>
 	<array>
+		<string>SpaceGrotesk-Regular.ttf</string>
+		<string>SpaceGrotesk-Medium.ttf</string>
 		<string>SpaceGrotesk-Bold.ttf</string>
 	</array>
 	<key>UIApplicationSceneManifest</key>

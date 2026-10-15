@@ -16,14 +16,14 @@ struct AbsencePredictorCard: View {
                         Button(action: onClear) {
                             Text("action.clear")
                         }
-                        .font(.caption.weight(.bold))
+                        .font(.gradely(.caption).weight(.bold))
                         .buttonStyle(.bordered)
                         .accessibilityIdentifier("absencePredictorClearButton")
 
                         Button(action: onOpen) {
                             Text("absence.predictor.edit")
                         }
-                        .font(.caption.weight(.bold))
+                        .font(.gradely(.caption).weight(.bold))
                         .buttonStyle(.bordered)
                         .accessibilityIdentifier("absencePredictorOpenButton")
                     }
@@ -41,7 +41,7 @@ struct AbsencePredictorCard: View {
                         GradelyIcon(systemName: "calendar.badge.clock")
                             .foregroundStyle(Brand.primary)
                         Text("absence.predictor.open")
-                            .font(.subheadline.weight(.semibold))
+                            .font(.gradely(.subheadline).weight(.semibold))
                         Spacer(minLength: Spacing.sm)
                         GradelyIcon(systemName: "chevron.right", size: 13)
                             .foregroundStyle(.tertiary)
@@ -67,7 +67,7 @@ struct AbsencePredictorCard: View {
                 Spacer(minLength: Spacing.sm)
 
                 Text("\(result.currentTotal.total) → \(result.projectedTotal.total)")
-                    .font(.headline.monospacedDigit())
+                    .font(.gradely(.headline).monospacedDigit())
                     .foregroundStyle(Brand.primary)
             }
 
@@ -105,10 +105,10 @@ struct AbsencePredictorCard: View {
 
             VStack(alignment: .leading, spacing: Spacing.xs) {
                 title
-                    .font(.subheadline.weight(.bold))
+                    .font(.gradely(.subheadline).weight(.bold))
                     .lineLimit(2)
                 subtitle
-                    .font(.caption)
+                    .font(.gradely(.caption))
                     .foregroundStyle(.secondary)
                     .lineLimit(2)
             }
@@ -121,11 +121,11 @@ struct AbsencePredictorCard: View {
         HStack(spacing: Spacing.md) {
             VStack(alignment: .leading, spacing: Spacing.xs) {
                 Text(row.subjectName)
-                    .font(.subheadline.weight(.bold))
+                    .font(.gradely(.subheadline).weight(.bold))
                     .lineLimit(1)
 
                 Text(detail(for: row))
-                    .font(.caption.monospacedDigit())
+                    .font(.gradely(.caption).monospacedDigit())
                     .foregroundStyle(row.exceedsThreshold ? GradeBand.poor.foregroundColor : .secondary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
@@ -256,12 +256,12 @@ struct AbsencePredictionSheet: View {
                         HStack(spacing: Spacing.sm) {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(lesson.displayTitle)
-                                    .font(.subheadline.weight(.semibold))
+                                    .font(.gradely(.subheadline).weight(.semibold))
                                     .foregroundStyle(.primary)
 
                                 if !lesson.timeRange.isEmpty {
                                     Text(lesson.timeRange)
-                                        .font(.caption)
+                                        .font(.gradely(.caption))
                                         .foregroundStyle(.secondary)
                                 }
                             }

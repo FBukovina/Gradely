@@ -113,7 +113,7 @@ struct AbsenceView: View {
                 )
                 if viewModel.isLocallyAdjusted {
                     GradelyLabel("absence.override.adjusted", systemImage: "eye.slash")
-                        .font(.caption.weight(.semibold))
+                        .font(.gradely(.caption).weight(.semibold))
                         .foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .accessibilityIdentifier("absenceLocallyAdjusted")
@@ -128,7 +128,7 @@ struct AbsenceView: View {
                 }
                 if let error = viewModel.overrideErrorMessage {
                     GradelyLabel(error, systemImage: "exclamationmark.triangle")
-                        .font(.caption).foregroundStyle(GradeBand.poor.foregroundColor)
+                        .font(.gradely(.caption)).foregroundStyle(GradeBand.poor.foregroundColor)
                 }
                 AbsencePredictorCard(
                     result: viewModel.predictionResult,
@@ -151,7 +151,7 @@ struct AbsenceView: View {
                     HStack(spacing: Spacing.sm) {
                         ProgressView()
                         Text("absence.refreshing")
-                            .font(.subheadline)
+                            .font(.gradely(.subheadline))
                             .foregroundStyle(.secondary)
                     }
                     .frame(maxWidth: .infinity, alignment: .center)
@@ -210,7 +210,7 @@ private struct AbsenceHeader: View {
                 HStack(alignment: .center, spacing: Spacing.md) {
                     if let name = user?.fullName.trimmingCharacters(in: .whitespacesAndNewlines), !name.isEmpty {
                         Text(name)
-                            .font(.headline)
+                            .font(.gradely(.headline))
                             .lineLimit(2)
                     }
 
@@ -218,10 +218,10 @@ private struct AbsenceHeader: View {
 
                     VStack(alignment: .trailing, spacing: 2) {
                         Text("\(totalCounts.total)")
-                            .font(.title2.weight(.bold).monospacedDigit())
+                            .font(.gradely(.title2).weight(.bold).monospacedDigit())
                             .foregroundStyle(Brand.primary)
                         Text("absence.totalHours")
-                            .font(.caption.weight(.semibold))
+                            .font(.gradely(.caption).weight(.semibold))
                             .foregroundStyle(.secondary)
                     }
                 }
@@ -239,7 +239,7 @@ private struct AbsenceHeader: View {
 
                 if let threshold {
                     Text(String(format: AppL10n.string("absence.threshold.caption"), threshold))
-                        .font(.caption2)
+                        .font(.gradely(.caption2))
                         .foregroundStyle(.secondary)
                 }
             }
@@ -308,7 +308,7 @@ private struct AbsenceCountsList: View {
     ) -> some View {
         HStack(alignment: .center, spacing: Spacing.sm) {
             Text(title)
-                .font(isTotal ? .subheadline.weight(.bold) : .subheadline.weight(.semibold))
+                .font(isTotal ? .gradely(.subheadline).weight(.bold) : .gradely(.subheadline).weight(.semibold))
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
 
@@ -317,7 +317,7 @@ private struct AbsenceCountsList: View {
             categoryChips(for: counts)
 
             Text("\(counts.total)")
-                .font(.subheadline.weight(.bold).monospacedDigit())
+                .font(.gradely(.subheadline).weight(.bold).monospacedDigit())
                 .frame(minWidth: 28, alignment: .trailing)
         }
         .padding(.horizontal, Spacing.md)
@@ -457,12 +457,12 @@ private struct SubjectAbsenceTable: View {
         return VStack(alignment: .leading, spacing: Spacing.sm) {
             HStack(alignment: .firstTextBaseline, spacing: Spacing.sm) {
                 Text(row.subjectName)
-                    .font(.subheadline.weight(.semibold))
+                    .font(.gradely(.subheadline).weight(.semibold))
                     .lineLimit(2)
                     .frame(maxWidth: .infinity, alignment: .leading)
 
                 Text(String(format: "%.1f %%", row.absencePercentage))
-                    .font(.headline.monospacedDigit())
+                    .font(.gradely(.headline).monospacedDigit())
                     .foregroundStyle(risk.level.color)
             }
 
@@ -480,16 +480,16 @@ private struct SubjectAbsenceTable: View {
                         risk.totalLessons
                     )
                 )
-                .font(.caption)
+                .font(.gradely(.caption))
                 .foregroundStyle(.secondary)
 
                 if let status = riskStatus(for: risk) {
                     Text(verbatim: "·")
-                        .font(.caption)
+                        .font(.gradely(.caption))
                         .foregroundStyle(.secondary)
 
                     Text(status.text)
-                        .font(.caption.weight(.semibold))
+                        .font(.gradely(.caption).weight(.semibold))
                         .foregroundStyle(status.color)
                 }
             }
@@ -524,7 +524,7 @@ private struct SubjectManualResolutionCallout: View {
         Card {
             VStack(alignment: .leading, spacing: Spacing.sm) {
                 GradelyLabel("absence.manual.callout.title", systemImage: "hand.tap")
-                    .font(.subheadline.weight(.semibold))
+                    .font(.gradely(.subheadline).weight(.semibold))
                     .foregroundStyle(Brand.primary)
 
                 Text(
@@ -533,7 +533,7 @@ private struct SubjectManualResolutionCallout: View {
                         days.count
                     )
                 )
-                .font(.subheadline)
+                .font(.gradely(.subheadline))
                 .foregroundStyle(.secondary)
 
                 Button("absence.manual.callout.button", action: onResolveMissingHours)
@@ -569,12 +569,12 @@ private struct ManualAbsenceLessonSelectionSheet: View {
                                 HStack(spacing: Spacing.sm) {
                                     VStack(alignment: .leading, spacing: 2) {
                                         Text(lesson.displayTitle)
-                                            .font(.subheadline.weight(.semibold))
+                                            .font(.gradely(.subheadline).weight(.semibold))
                                             .foregroundStyle(.primary)
 
                                         if !lesson.timeRange.isEmpty {
                                             Text(lesson.timeRange)
-                                                .font(.caption)
+                                                .font(.gradely(.caption))
                                                 .foregroundStyle(.secondary)
                                         }
                                     }
@@ -642,7 +642,7 @@ private struct SubjectResolutionStatusView: View {
                 ProgressView()
                 VStack(alignment: .leading, spacing: 2) {
                     Text("absence.subjects.calculating")
-                        .font(.subheadline)
+                        .font(.gradely(.subheadline))
                         .foregroundStyle(.secondary)
 
                     if let progress {
@@ -653,7 +653,7 @@ private struct SubjectResolutionStatusView: View {
                                 progress.totalWeeks
                             )
                         )
-                        .font(.caption)
+                        .font(.gradely(.caption))
                         .foregroundStyle(.tertiary)
                         .accessibilityIdentifier("absenceSubjectsProgress")
                     }
@@ -671,7 +671,7 @@ private struct SubjectResolutionWarningView: View {
     var body: some View {
         Card {
             GradelyLabel(message, systemImage: "exclamationmark.triangle")
-                .font(.subheadline)
+                .font(.gradely(.subheadline))
                 .foregroundStyle(GradeBand.average.foregroundColor)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
@@ -687,11 +687,11 @@ private struct SubjectResolutionErrorView: View {
         Card {
             VStack(alignment: .leading, spacing: Spacing.sm) {
                 GradelyLabel(AppL10n.string("absence.subjects.error.title"), systemImage: "exclamationmark.triangle")
-                    .font(.subheadline.weight(.semibold))
+                    .font(.gradely(.subheadline).weight(.semibold))
                     .foregroundStyle(GradeBand.poor.foregroundColor)
 
                 Text(message)
-                    .font(.subheadline)
+                    .font(.gradely(.subheadline))
                     .foregroundStyle(.secondary)
 
                 Button(AppL10n.string("action.retry"), action: onRetry)
@@ -712,7 +712,7 @@ private struct EmptyAbsenceSection: View {
                 GradelyIcon(systemName: "calendar.badge.checkmark")
                     .foregroundStyle(Brand.primary)
                 Text(title)
-                    .font(.subheadline)
+                    .font(.gradely(.subheadline))
                     .foregroundStyle(.secondary)
                 Spacer()
             }

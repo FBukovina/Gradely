@@ -141,7 +141,7 @@ struct StravaCZView: View {
                     HStack(spacing: Spacing.sm) {
                         ProgressView()
                         Text("stravacz.menu.refreshing")
-                            .font(.subheadline)
+                            .font(.gradely(.subheadline))
                             .foregroundStyle(.secondary)
                     }
                     .frame(maxWidth: .infinity, alignment: .center)
@@ -206,11 +206,11 @@ private struct StravaCZHeader: View {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: Spacing.xs) {
                     Text("stravacz.balance")
-                        .font(.subheadline.weight(.semibold))
+                        .font(.gradely(.subheadline).weight(.semibold))
                         .foregroundStyle(Brand.onAccent.opacity(0.75))
 
                     Text(session.formattedBalance)
-                        .font(.system(size: balanceFontSize, weight: .bold, design: .rounded).monospacedDigit())
+                        .font(.gradely(size: balanceFontSize, weight: .bold).monospacedDigit())
                         .foregroundStyle(Brand.onAccent)
                         .minimumScaleFactor(0.65)
                         .lineLimit(1)
@@ -255,14 +255,14 @@ private struct StravaCZDayCard: View {
             VStack(alignment: .leading, spacing: Spacing.xs) {
                 if let weekdayText {
                     Text(weekdayText)
-                        .font(.caption.weight(.bold))
+                        .font(.gradely(.caption).weight(.bold))
                         .foregroundStyle(Brand.primary)
                         .textCase(.uppercase)
                         .tracking(0.8)
                 }
 
                 Text(day.displayDate)
-                    .font(.title3.weight(.bold))
+                    .font(.gradely(.title3).weight(.bold))
                     .foregroundStyle(.primary)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -321,7 +321,7 @@ private struct StravaCZMealRow: View {
         HStack(alignment: .center, spacing: Spacing.md) {
             VStack(alignment: .leading, spacing: Spacing.sm) {
                 Text(meal.type.localizedTitle)
-                    .font(.caption2.weight(.bold))
+                    .font(.gradely(.caption2).weight(.bold))
                     .foregroundStyle(meal.type == .main ? Brand.primary : .secondary)
                     .textCase(.uppercase)
                     .tracking(0.5)
@@ -330,7 +330,7 @@ private struct StravaCZMealRow: View {
                     .background((meal.type == .main ? Brand.primary : Color.secondary).opacity(0.10), in: Capsule())
 
                 Text(meal.name)
-                    .font(meal.type == .main ? .headline.weight(.semibold) : .subheadline.weight(.medium))
+                    .font(meal.type == .main ? .gradely(.headline).weight(.semibold) : .gradely(.subheadline).weight(.medium))
                     .foregroundStyle(.primary)
                     .fixedSize(horizontal: false, vertical: true)
 
@@ -340,7 +340,7 @@ private struct StravaCZMealRow: View {
                         GradelyLabel(meal.allergenText, systemImage: "exclamationmark.triangle.fill")
                     }
                 }
-                .font(.caption)
+                .font(.gradely(.caption))
                 .foregroundStyle(.secondary)
                 .lineLimit(2)
                 .fixedSize(horizontal: false, vertical: true)

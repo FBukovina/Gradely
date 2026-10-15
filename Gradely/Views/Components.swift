@@ -191,7 +191,7 @@ struct SettingsModalFlowHero: View {
                     .accessibilityAddTraits(.isHeader)
 
                 Text(message)
-                    .font(.callout)
+                    .font(.gradely(.callout))
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -222,7 +222,7 @@ struct SettingsModalSectionHeader: View {
 
     var body: some View {
         Text(title)
-            .font(.footnote.weight(.bold))
+            .font(.gradely(.footnote).weight(.bold))
             .textCase(.uppercase)
             .foregroundStyle(.secondary)
             .kerning(0.6)
@@ -275,9 +275,9 @@ struct GradeBadge: View {
 
         var font: Font {
             switch self {
-            case .small: .headline.weight(.bold)
-            case .regular: .title3.weight(.bold)
-            case .large: .system(size: 34, weight: .bold, design: .rounded)
+            case .small: .gradely(.headline).weight(.bold)
+            case .regular: .gradely(.title3).weight(.bold)
+            case .large: .gradely(size: 34, weight: .bold)
             }
         }
 
@@ -323,7 +323,7 @@ struct StatusChip: View {
 
     var body: some View {
         Text(text)
-            .font(.caption.weight(.semibold))
+            .font(.gradely(.caption).weight(.semibold))
             .foregroundStyle(color)
             .padding(.horizontal, Spacing.sm + 2)
             .padding(.vertical, 5)
@@ -465,16 +465,16 @@ struct StatTile: View {
             HStack(spacing: Spacing.xs) {
                 if let systemImage {
                     GradelyIcon(systemName: systemImage)
-                        .font(.caption2.weight(.bold))
+                        .font(.gradely(.caption2).weight(.bold))
                 }
                 Text(title)
-                    .font(.caption2.weight(.semibold))
+                    .font(.gradely(.caption2).weight(.semibold))
                     .textCase(.uppercase)
             }
             .foregroundStyle(Brand.onAccent.opacity(0.7))
 
             Text(value)
-                .font(.subheadline.weight(.bold))
+                .font(.gradely(.subheadline).weight(.bold))
                 .foregroundStyle(Brand.onAccent)
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
@@ -495,7 +495,7 @@ struct SectionHeader: View {
 
     var body: some View {
         Text(title)
-            .font(.footnote.weight(.bold))
+            .font(.gradely(.footnote).weight(.bold))
             .textCase(.uppercase)
             .foregroundStyle(.secondary)
             .kerning(0.6)
@@ -512,7 +512,7 @@ struct PrimaryButtonStyle: ButtonStyle {
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.headline)
+            .font(.gradely(.headline))
             .foregroundStyle(Brand.onAccent)
             .frame(maxWidth: .infinity)
             .padding(.vertical, Spacing.md + 2)
@@ -547,7 +547,7 @@ struct GradelyAppleSignInButton: View {
             if ProcessInfo.processInfo.arguments.contains("-uiTestingMockAPI") {
                 Button(action: onMockSignIn) {
                     GradelyLabel("gradey.auth.signInWithApple", systemImage: "apple.logo")
-                        .font(.headline)
+                        .font(.gradely(.headline))
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
                         .frame(height: 50)

@@ -163,11 +163,11 @@ struct GradeyAIHistorySheet: View {
                 GradeyAIOrb(size: 36)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(GradeyAIQuotaText.remaining(status))
-                        .font(.subheadline.weight(.semibold).monospacedDigit())
+                        .font(.gradely(.subheadline).weight(.semibold).monospacedDigit())
                         .fixedSize(horizontal: false, vertical: true)
                     if let reset = GradeyAIQuotaText.reset(status) {
                         Text(reset)
-                            .font(.caption.monospacedDigit())
+                            .font(.gradely(.caption).monospacedDigit())
                             .foregroundStyle(.secondary)
                     }
                 }
@@ -200,7 +200,7 @@ struct GradeyAIHistorySheet: View {
         VStack(spacing: Spacing.md) {
             GradeyAIOrb(size: 40)
             Text("gradey.ai.empty.title")
-                .font(.headline)
+                .font(.gradely(.headline))
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity)
@@ -223,7 +223,7 @@ struct GradeyAIHistorySheet: View {
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(conversation.title)
-                        .font(.subheadline.weight(.semibold))
+                        .font(.gradely(.subheadline).weight(.semibold))
                         .foregroundStyle(.primary)
                         .lineLimit(2)
                         .multilineTextAlignment(.leading)
@@ -231,7 +231,7 @@ struct GradeyAIHistorySheet: View {
                         conversation.lastMessageAt ?? conversation.updatedAt,
                         format: .relative(presentation: .named)
                     )
-                    .font(.caption)
+                    .font(.gradely(.caption))
                     .foregroundStyle(.secondary)
                 }
 
@@ -289,7 +289,7 @@ struct GradeyAIHistorySheet: View {
                 .foregroundStyle(Brand.primary)
                 .accessibilityHidden(true)
             Text("gradey.ai.privacy.footnote")
-                .font(.footnote)
+                .font(.gradely(.footnote))
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -341,7 +341,7 @@ private struct GradeyAIManageRowLabel: View {
                 .frame(width: 32, height: 32)
                 .background(GradeBand.poor.foregroundColor.opacity(0.12), in: Circle())
             Text(title)
-                .font(.subheadline.weight(.semibold))
+                .font(.gradely(.subheadline).weight(.semibold))
                 .multilineTextAlignment(.leading)
                 .fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: 0)

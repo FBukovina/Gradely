@@ -23,7 +23,10 @@ struct GradelyApp: App {
 
     init() {
         _ = HugeiconsStrokeRounded.load()
-        GradelyDisplayFont.registerIfNeeded()
+        GradelyFont.registerIfNeeded()
+        #if os(iOS)
+        GradelyFont.applyUIKitAppearance()
+        #endif
         GradeyFirebaseConfiguration.configureIfNeeded()
         RevenueCatConfiguration.configureIfNeeded()
         IntercomConfiguration.configureIfNeeded()
@@ -50,9 +53,11 @@ struct GradelyApp: App {
             ContentView(environment: environment, siriService: siriService)
                 .frame(minWidth: 880, minHeight: 600)
                 .appLanguage(languageStore)
+                .font(.gradely(.body))
             #else
             ContentView(environment: environment, siriService: siriService)
                 .appLanguage(languageStore)
+                .font(.gradely(.body))
             #endif
         }
         #if os(macOS)

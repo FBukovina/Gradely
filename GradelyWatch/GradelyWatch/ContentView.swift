@@ -65,7 +65,7 @@ struct ContentView: View {
                         .controlSize(.mini)
                 } else {
                     Image(systemName: "arrow.clockwise")
-                        .font(.caption.weight(.semibold))
+                        .font(.gradely(.caption).weight(.semibold))
                 }
             }
             .frame(width: 26, height: 26)

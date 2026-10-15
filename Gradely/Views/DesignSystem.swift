@@ -179,7 +179,7 @@ extension View {
         self.imageScale(.large)
         #else
         self
-            .font(.footnote.weight(.bold))
+            .font(.gradely(.footnote).weight(.bold))
             .foregroundStyle(Brand.primary)
             .frame(width: 30, height: 30)
         #endif
@@ -262,36 +262,9 @@ enum Radius {
     static let xl: CGFloat = 28
 }
 
-enum GradelyDisplayFont {
-    static let fileName = "SpaceGrotesk-Bold"
-    static let postScriptName = "SpaceGrotesk-Bold"
-
-    /// iOS registers this face through `UIAppFonts`. macOS needs an explicit
-    /// Core Text registration even when `ATSApplicationFontsPath` is set.
-    static func registerIfNeeded(in bundle: Bundle = .main) {
-        #if os(macOS)
-        guard let url = bundle.url(forResource: fileName, withExtension: "ttf") else {
-            return
-        }
-        _ = CTFontManagerRegisterFontsForURL(url as CFURL, .process, nil)
-        #endif
-    }
-}
-
-extension Font {
-    /// Space Grotesk is Gradely's display face. Keep screen titles on one token
-    /// so onboarding and standalone setup surfaces cannot drift apart.
-    static func gradelyDisplay(
-        size: CGFloat = 38,
-        relativeTo textStyle: Font.TextStyle = .largeTitle
-    ) -> Font {
-        .custom(GradelyDisplayFont.postScriptName, size: size, relativeTo: textStyle)
-    }
-}
-
 // MARK: - Iconography
 
-/// Gradely's app-wide icon face. Like `Font.gradelyDisplay`, this is the single
+/// Gradely's app-wide icon face. Like `Font.gradely`, this is the single
 /// design-system entry point for a bundled visual family—in this case
 /// Hugeicons Stroke Rounded.
 struct GradelyIcon: View {

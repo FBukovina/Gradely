@@ -4,6 +4,10 @@ import WidgetKit
 
 @main
 struct GradelyWatchComplicationsBundle: WidgetBundle {
+    init() {
+        GradelyWatchFont.registerIfNeeded()
+    }
+
     var body: some Widget {
         NextLessonComplication()
     }
@@ -64,6 +68,7 @@ struct NextLessonComplication: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: "GradelyWatchNextLesson", provider: NextLessonProvider()) { entry in
             NextLessonComplicationView(entry: entry)
+                .font(.gradely(.body))
                 .containerBackground(.clear, for: .widget)
         }
         .configurationDisplayName("watch.complication.name")
@@ -120,16 +125,16 @@ struct NextLessonComplicationView: View {
                 let accent = displayed.lesson.changeKind.color
                 HStack(spacing: 4) {
                     Text(displayed.label.uppercased())
-                        .font(.caption2.weight(.bold))
+                        .font(.gradely(.caption2).weight(.bold))
                         .foregroundStyle(displayed.lesson.changeKind == .none ? Color.accentColor : accent)
                     if let change = displayed.lesson.changeKind.shortTitle {
                         Text(LocalizedStringKey(change))
-                            .font(.caption2.weight(.semibold))
+                            .font(.gradely(.caption2).weight(.semibold))
                             .foregroundStyle(accent)
                     }
                 }
                 Text(displayed.lesson.detailTitle)
-                    .font(.headline)
+                    .font(.gradely(.headline))
                     .strikethrough(displayed.lesson.isCanceled)
                     .lineLimit(1)
                 HStack(spacing: 4) {
@@ -140,13 +145,13 @@ struct NextLessonComplicationView: View {
                         Text(room)
                     }
                 }
-                .font(.caption2)
+                .font(.gradely(.caption2))
                 .foregroundStyle(.secondary)
             } else {
                 Text("watch.complication.noLessons")
-                    .font(.headline)
+                    .font(.gradely(.headline))
                 Text("watch.complication.freeTime")
-                    .font(.caption2)
+                    .font(.gradely(.caption2))
                     .foregroundStyle(.secondary)
             }
         }
@@ -159,14 +164,14 @@ struct NextLessonComplicationView: View {
             if let displayed {
                 VStack(spacing: 0) {
                     Text(displayed.lesson.title)
-                        .font(.headline.weight(.bold))
+                        .font(.gradely(.headline).weight(.bold))
                         .minimumScaleFactor(0.6)
                         .lineLimit(1)
                         .strikethrough(displayed.lesson.isCanceled)
                         .foregroundStyle(displayed.lesson.changeKind == .none ? .primary : displayed.lesson.changeKind.color)
                     if let start = displayed.lesson.startDate {
                         Text(start, style: .time)
-                            .font(.caption2)
+                            .font(.gradely(.caption2))
                             .minimumScaleFactor(0.6)
                             .lineLimit(1)
                             .foregroundStyle(.secondary)
@@ -175,7 +180,7 @@ struct NextLessonComplicationView: View {
                 .padding(2)
             } else {
                 Image(systemName: "calendar.badge.checkmark")
-                    .font(.title3)
+                    .font(.gradely(.title3))
             }
         }
     }
@@ -184,7 +189,7 @@ struct NextLessonComplicationView: View {
         Group {
             if let displayed {
                 Text(displayed.lesson.title)
-                    .font(.headline.weight(.bold))
+                    .font(.gradely(.headline).weight(.bold))
                     .minimumScaleFactor(0.6)
                     .lineLimit(1)
                     .foregroundStyle(displayed.lesson.changeKind == .none ? .primary : displayed.lesson.changeKind.color)
@@ -197,7 +202,7 @@ struct NextLessonComplicationView: View {
                     }
             } else {
                 Image(systemName: "calendar.badge.checkmark")
-                    .font(.title3)
+                    .font(.gradely(.title3))
                     .widgetLabel("watch.complication.noLessons")
             }
         }

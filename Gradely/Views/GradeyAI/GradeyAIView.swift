@@ -195,7 +195,7 @@ struct GradeyAIView: View {
     private var title: some View {
         if let conversation = viewModel.currentConversation, !viewModel.isDraftChat {
             Text(conversation.title)
-                .font(.headline)
+                .font(.gradely(.headline))
                 .lineLimit(1)
                 .truncationMode(.tail)
                 .accessibilityAddTraits(.isHeader)

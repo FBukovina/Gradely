@@ -50,25 +50,25 @@ private struct UpcomingLessonHero: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("watch.next")
-                .font(.caption2.weight(.bold))
+                .font(.gradely(.caption2).weight(.bold))
                 .foregroundStyle(.secondary)
 
             Text(lesson.title)
-                .font(.largeTitle.weight(.heavy))
+                .font(.gradely(.largeTitle).weight(.heavy))
                 .lineLimit(1)
                 .minimumScaleFactor(0.55)
 
             Text(lesson.detailTitle)
-                .font(.caption.weight(.semibold))
+                .font(.gradely(.caption).weight(.semibold))
                 .foregroundStyle(.secondary)
                 .lineLimit(2)
 
             Text(WatchLessonFormatting.time(lesson.startDate))
-                .font(.title3.weight(.bold))
+                .font(.gradely(.title3).weight(.bold))
 
             if let start = lesson.startDate {
                 Text(WatchLessonFormatting.remaining(until: start, now: now))
-                    .font(.caption.weight(.bold))
+                    .font(.gradely(.caption).weight(.bold))
                     .foregroundStyle(WatchBrand.primary)
             }
 
@@ -81,7 +81,7 @@ private struct UpcomingLessonHero: View {
                 }
                 if let change = lesson.changeKind.shortTitle {
                     Text(LocalizedStringKey(change))
-                        .font(.caption2.weight(.bold))
+                        .font(.gradely(.caption2).weight(.bold))
                         .padding(.horizontal, 6)
                         .padding(.vertical, 3)
                         .foregroundStyle(lesson.changeKind.color)
@@ -99,7 +99,7 @@ private struct UpcomingLessonHero: View {
                     ? String(localized: "watch.remaining.tapDetails")
                     : String(format: String(localized: "watch.remaining.tapCount"), remainingCount)
             )
-                .font(.caption2)
+                .font(.gradely(.caption2))
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -108,7 +108,7 @@ private struct UpcomingLessonHero: View {
 
     private func metaChip(_ systemImage: String, _ text: String) -> some View {
         Label(text, systemImage: systemImage)
-            .font(.caption2.weight(.semibold))
+            .font(.gradely(.caption2).weight(.semibold))
             .padding(.horizontal, 6)
             .padding(.vertical, 3)
             .background(.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 6, style: .continuous))
@@ -123,15 +123,15 @@ struct RemainingDayView: View {
             VStack(alignment: .leading, spacing: 2) {
                 HStack {
                     Text(lesson.title)
-                        .font(.headline.weight(.bold))
+                        .font(.gradely(.headline).weight(.bold))
                     Spacer()
                     Text(WatchLessonFormatting.time(lesson.startDate))
-                        .font(.caption.weight(.semibold))
+                        .font(.gradely(.caption).weight(.semibold))
                         .foregroundStyle(.secondary)
                 }
                 if let room = lesson.room {
                     Text(room)
-                        .font(.caption2)
+                        .font(.gradely(.caption2))
                         .foregroundStyle(.secondary)
                 }
             }

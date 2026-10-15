@@ -130,17 +130,17 @@ struct PlannerItemEditorView: View {
                 }
                 if let teacher = lesson.teacher {
                     GradelyLabel(teacher, systemImage: "person.fill", iconSize: 14)
-                        .font(.subheadline)
+                        .font(.gradely(.subheadline))
                         .foregroundStyle(.secondary)
                 }
                 if let room = lesson.room {
                     GradelyLabel(room, systemImage: "door.left.hand.open", iconSize: 14)
-                        .font(.subheadline)
+                        .font(.gradely(.subheadline))
                         .foregroundStyle(.secondary)
                 }
                 if item.linkedDate == nil {
                     Text("planner.lesson.permanent")
-                        .font(.caption)
+                        .font(.gradely(.caption))
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -224,7 +224,7 @@ struct PlannerItemEditorView: View {
 
             if let nextLessonMessage {
                 Text(nextLessonMessage)
-                    .font(.caption)
+                    .font(.gradely(.caption))
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -242,7 +242,7 @@ struct PlannerItemEditorView: View {
             .accessibilityIdentifier("plannerCalendarToggle")
 
             Text(AppL10n.string(item.hasCalendarDate ? "planner.calendar.explanation" : "planner.calendar.needsDate"))
-                .font(.caption)
+                .font(.gradely(.caption))
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -253,7 +253,7 @@ struct PlannerItemEditorView: View {
             isConfirmingDelete = true
         } label: {
             GradelyLabel(AppL10n.string("planner.delete"), systemImage: "trash")
-                .font(.subheadline.weight(.semibold))
+                .font(.gradely(.subheadline).weight(.semibold))
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, Spacing.md)
         }

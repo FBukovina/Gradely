@@ -1,3 +1,4 @@
+import GradelyWatchShared
 import SwiftUI
 
 struct LessonProgressArc: View {
@@ -25,7 +26,7 @@ struct LessonProgressArc: View {
 
             if isCanceled {
                 Image(systemName: "xmark")
-                    .font(.caption2.weight(.heavy))
+                    .font(.gradely(.caption2).weight(.heavy))
                     .foregroundStyle(.white)
                     .padding(5)
                     .background(WatchBrand.canceled, in: Circle())

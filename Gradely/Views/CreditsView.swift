@@ -40,7 +40,7 @@ struct CreditsView: View {
             SettingsSurface {
                 VStack(alignment: .leading, spacing: Spacing.sm) {
                     Text("credits.madeBy")
-                        .font(.caption.weight(.bold))
+                        .font(.gradely(.caption).weight(.bold))
                         .textCase(.uppercase)
                         .foregroundStyle(.secondary)
                         .kerning(0.4)
@@ -49,7 +49,7 @@ struct CreditsView: View {
 
                     HStack(spacing: Spacing.xs) {
                         Text("openside.tech")
-                            .font(.subheadline.weight(.semibold))
+                            .font(.gradely(.subheadline).weight(.semibold))
                             .foregroundStyle(Brand.primary)
 
                         GradelyIcon("arrow-up-right-01", size: 13)
@@ -70,7 +70,7 @@ struct CreditsView: View {
             Text("Side")
                 .foregroundStyle(Color(red: 0.45, green: 0.18, blue: 0.82))
         }
-        .font(.custom(GradelyDisplayFont.postScriptName, size: 32))
+        .font(.gradelyDisplay(size: 32))
     }
 
     private var team: some View {
@@ -101,9 +101,9 @@ struct CreditsView: View {
         SettingsSurface {
             VStack(alignment: .leading, spacing: Spacing.sm) {
                 Text("bakalari.attribution.title")
-                    .font(.headline)
+                    .font(.gradely(.headline))
                 Text("bakalari.attribution.message")
-                    .font(.footnote)
+                    .font(.gradely(.footnote))
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -116,12 +116,12 @@ struct CreditsView: View {
         SettingsSurface {
             VStack(alignment: .leading, spacing: Spacing.sm) {
                 Text("edupage.attribution.title")
-                    .font(.headline)
+                    .font(.gradely(.headline))
                 Text("edupage.attribution.message")
-                    .font(.footnote)
+                    .font(.gradely(.footnote))
                     .foregroundStyle(.secondary)
                 Link("EdupageAPI/edupage-api", destination: URL(string: "https://github.com/EdupageAPI/edupage-api")!)
-                    .font(.footnote.weight(.semibold))
+                    .font(.gradely(.footnote).weight(.semibold))
                     .foregroundStyle(Brand.primary)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -143,13 +143,13 @@ private struct CreditPersonRow: View {
             VStack(alignment: .leading, spacing: Spacing.sm) {
                 VStack(alignment: .leading, spacing: Spacing.xs) {
                     Text(role)
-                        .font(.caption.weight(.bold))
+                        .font(.gradely(.caption).weight(.bold))
                         .textCase(.uppercase)
                         .foregroundStyle(.secondary)
                         .kerning(0.4)
 
                     Text(name)
-                        .font(.headline)
+                        .font(.gradely(.headline))
                         .foregroundStyle(.primary)
                 }
 
@@ -194,7 +194,7 @@ private struct CreditLinkLabel: View {
 
             GradelyIcon("arrow-up-right-01", size: 11)
         }
-        .font(.footnote.weight(.semibold))
+        .font(.gradely(.footnote).weight(.semibold))
         .foregroundStyle(Brand.primary)
     }
 }

@@ -80,17 +80,17 @@ struct CurrentLessonView: View {
 
                 VStack(spacing: 1) {
                     Text(lesson.title)
-                        .font(.title2.weight(.heavy))
+                        .font(.gradely(.title2).weight(.heavy))
                         .lineLimit(1)
                         .minimumScaleFactor(0.6)
                         .strikethrough(lesson.isCanceled)
                     Text(status)
-                        .font(.caption2.weight(.bold))
+                        .font(.gradely(.caption2).weight(.bold))
                         .foregroundStyle(statusColor)
                         .lineLimit(1)
                     if let subtitle, !subtitle.isEmpty {
                         Text(subtitle)
-                            .font(.caption2)
+                            .font(.gradely(.caption2))
                             .foregroundStyle(.secondary)
                             .lineLimit(1)
                     }
@@ -101,19 +101,19 @@ struct CurrentLessonView: View {
             HStack {
                 VStack(alignment: .leading, spacing: 0) {
                     Text(WatchLessonFormatting.time(lesson.startDate))
-                        .font(.headline.weight(.bold))
+                        .font(.gradely(.headline).weight(.bold))
                         .strikethrough(lesson.isCanceled)
                     Text(String(localized: "watch.start"))
-                        .font(.caption2)
+                        .font(.gradely(.caption2))
                         .foregroundStyle(.secondary)
                 }
                 Spacer()
                 VStack(alignment: .trailing, spacing: 0) {
                     Text(WatchLessonFormatting.time(lesson.endDate))
-                        .font(.headline.weight(.bold))
+                        .font(.gradely(.headline).weight(.bold))
                         .strikethrough(lesson.isCanceled)
                     Text(String(localized: "watch.end"))
-                        .font(.caption2)
+                        .font(.gradely(.caption2))
                         .foregroundStyle(.secondary)
                 }
             }
@@ -139,13 +139,13 @@ struct WatchStatusPage: View {
     var body: some View {
         VStack(spacing: 8) {
             Image(systemName: systemImage)
-                .font(.title2.weight(.semibold))
+                .font(.gradely(.title2).weight(.semibold))
                 .foregroundStyle(WatchBrand.primary)
             Text(title)
-                .font(.headline.weight(.bold))
+                .font(.gradely(.headline).weight(.bold))
                 .multilineTextAlignment(.center)
             Text(detail)
-                .font(.caption2)
+                .font(.gradely(.caption2))
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
         }

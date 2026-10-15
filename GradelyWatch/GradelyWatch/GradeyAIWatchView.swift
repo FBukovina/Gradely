@@ -1,3 +1,4 @@
+import GradelyWatchShared
 import SwiftUI
 
 struct GradeyAIWatchView: View {
@@ -24,12 +25,12 @@ struct GradeyAIWatchView: View {
 
                 if let purchaseRefreshMessage = model.purchaseRefreshMessage {
                     Text(purchaseRefreshMessage)
-                        .font(.caption2)
+                        .font(.gradely(.caption2))
                         .foregroundStyle(WatchBrand.canceled)
                         .multilineTextAlignment(.center)
                 } else if !model.isPhoneReachable {
                     Text("watch.ai.bringIPhone")
-                        .font(.caption2)
+                        .font(.gradely(.caption2))
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
                 }
@@ -47,7 +48,7 @@ struct GradeyAIWatchView: View {
                         }
                         Text("watch.ai.refreshPurchases")
                     }
-                    .font(.caption.weight(.semibold))
+                    .font(.gradely(.caption).weight(.semibold))
                     .foregroundStyle(WatchBrand.onAccent)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 8)
@@ -69,7 +70,7 @@ struct GradeyAIWatchView: View {
                     LazyVStack(alignment: .leading, spacing: 8) {
                         if model.aiMessages.isEmpty {
                             Text("watch.ai.ask")
-                                .font(.caption.weight(.semibold))
+                                .font(.gradely(.caption).weight(.semibold))
                                 .foregroundStyle(.secondary)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .padding(.top, 8)
@@ -94,12 +95,12 @@ struct GradeyAIWatchView: View {
 
             if let error = model.aiErrorMessage {
                 Text(error)
-                    .font(.caption2)
+                    .font(.gradely(.caption2))
                     .foregroundStyle(WatchBrand.canceled)
                     .lineLimit(3)
             } else if !model.isPhoneReachable {
                 Text("watch.ai.bringIPhone")
-                    .font(.caption2)
+                    .font(.gradely(.caption2))
                     .foregroundStyle(.secondary)
             }
 
@@ -124,7 +125,7 @@ struct GradeyAIWatchView: View {
                 model.cancelAI()
             } label: {
                 Image(systemName: "stop.fill")
-                    .font(.system(size: 9, weight: .bold))
+                    .font(.gradely(size: 9, weight: .bold))
                     .foregroundStyle(WatchBrand.onAccent)
                     .frame(width: 28, height: 28)
                     .background(WatchBrand.gradient, in: Circle())
@@ -136,7 +137,7 @@ struct GradeyAIWatchView: View {
                 Task { await model.sendAIMessage() }
             } label: {
                 Image(systemName: "arrow.up")
-                    .font(.system(size: 12, weight: .bold))
+                    .font(.gradely(size: 12, weight: .bold))
                     .foregroundStyle(WatchBrand.onAccent)
                     .frame(width: 28, height: 28)
                     .background(WatchBrand.gradient, in: Circle())
@@ -158,7 +159,7 @@ struct GradeyAIWatchView: View {
                 Spacer(minLength: 16)
             } else {
                 Image(systemName: "sparkles")
-                    .font(.system(size: 8, weight: .bold))
+                    .font(.gradely(size: 8, weight: .bold))
                     .foregroundStyle(WatchBrand.onAccent)
                     .frame(width: 16, height: 16)
                     .background(WatchBrand.gradient, in: Circle())
@@ -187,7 +188,7 @@ struct GradeyAIWatchView: View {
                         .accessibilityLabel("watch.ai.responding")
                 } else {
                     Text(message.text)
-                        .font(.caption)
+                        .font(.gradely(.caption))
                         .padding(.horizontal, 8)
                         .padding(.vertical, 6)
                 }
@@ -200,7 +201,7 @@ struct GradeyAIWatchView: View {
 
             if message.role == .assistant, !message.text.isEmpty {
                 Text("watch.ai.generated")
-                    .font(.caption2)
+                    .font(.gradely(.caption2))
                     .foregroundStyle(.secondary)
             }
         }

@@ -144,7 +144,7 @@ struct LoginView: View {
                 if stage == .credentials {
                     Button(action: returnToSchoolSelection) {
                         GradelyLabel("onboarding.back", systemImage: "chevron.left")
-                            .font(.subheadline.weight(.semibold))
+                            .font(.gradely(.subheadline).weight(.semibold))
                     }
                     .buttonStyle(.plain)
                     .foregroundStyle(Brand.primary)
@@ -153,7 +153,7 @@ struct LoginView: View {
                 } else if let onBackFromSchool {
                     Button(action: onBackFromSchool) {
                         GradelyLabel("onboarding.back", systemImage: "chevron.left")
-                            .font(.subheadline.weight(.semibold))
+                            .font(.gradely(.subheadline).weight(.semibold))
                     }
                     .buttonStyle(.plain)
                     .foregroundStyle(Brand.primary)
@@ -167,7 +167,7 @@ struct LoginView: View {
                 Spacer()
 
                 Text(stage == .school ? "onboarding.school.stage.school" : "onboarding.school.stage.credentials")
-                    .font(.caption.weight(.semibold))
+                    .font(.gradely(.caption).weight(.semibold))
                     .foregroundStyle(.secondary)
             }
 
@@ -222,7 +222,7 @@ struct LoginView: View {
                     moveToCredentials()
                 } label: {
                     GradelyLabel("login.demoAccount", systemImage: "sparkles")
-                        .font(.subheadline.weight(.semibold))
+                        .font(.gradely(.subheadline).weight(.semibold))
                         .frame(maxWidth: .infinity)
                         .frame(minHeight: 50)
                 }
@@ -250,7 +250,7 @@ struct LoginView: View {
                                 size: 15
                             )
                             Text(provider.displayName)
-                                .font(.subheadline.weight(.semibold))
+                                .font(.gradely(.subheadline).weight(.semibold))
                         }
                         .foregroundStyle(viewModel.provider == provider ? Brand.onAccent : Color.primary)
                         .frame(maxWidth: .infinity)
@@ -325,7 +325,7 @@ struct LoginView: View {
                     .foregroundStyle(Brand.primary)
                     .accessibilityIdentifier("schoolDirectoryRetryButton")
                 }
-                .font(.caption.weight(.semibold))
+                .font(.gradely(.caption).weight(.semibold))
             }
 
             let results = viewModel.schoolSearchResults
@@ -361,7 +361,7 @@ struct LoginView: View {
                       viewModel.schoolLookupErrorMessage == nil,
                       !viewModel.directorySchools.isEmpty {
                 Text("schoolDirectory.noResults")
-                    .font(.caption)
+                    .font(.gradely(.caption))
                     .foregroundStyle(.secondary)
                     .accessibilityIdentifier("schoolDirectoryNoResults")
             }
@@ -371,7 +371,7 @@ struct LoginView: View {
     private var manualSchoolAddress: some View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
             Text(viewModel.provider == .bakalari ? "onboarding.school.manual.label" : "edupage.schoolURL")
-                .font(.caption.weight(.semibold))
+                .font(.gradely(.caption).weight(.semibold))
                 .foregroundStyle(.secondary)
 
             HStack(spacing: Spacing.sm) {
@@ -397,7 +397,7 @@ struct LoginView: View {
                 schoolURLManual
             } else {
                 GradelyLabel("edupage.schoolURL.hint", systemImage: "info.circle.fill")
-                    .font(.caption)
+                    .font(.gradely(.caption))
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -413,14 +413,14 @@ struct LoginView: View {
                 ManualStep(number: 4, text: AppL10n.string("schoolURL.manual.step4"))
 
                 Text("schoolURL.manual.example")
-                    .font(.caption.monospaced())
+                    .font(.gradely(.caption).monospaced())
                     .foregroundStyle(Brand.primary)
                     .padding(.top, Spacing.xs)
             }
             .padding(.top, Spacing.sm)
         } label: {
             GradelyLabel("schoolURL.manual.title", systemImage: "questionmark.circle")
-                .font(.footnote.weight(.semibold))
+                .font(.gradely(.footnote).weight(.semibold))
         }
         .tint(Brand.primary)
         .accessibilityIdentifier("schoolURLManual")
@@ -459,14 +459,14 @@ struct LoginView: View {
                     .lineLimit(2)
 
                 Text(viewModel.provider.displayName)
-                    .font(.caption)
+                    .font(.gradely(.caption))
                     .foregroundStyle(.secondary)
             }
 
             Spacer(minLength: Spacing.sm)
 
             Button("onboarding.school.change", action: returnToSchoolSelection)
-                .font(.footnote.weight(.semibold))
+                .font(.gradely(.footnote).weight(.semibold))
                 .buttonStyle(.plain)
                 .foregroundStyle(Brand.primary)
                 .frame(minHeight: 44)
@@ -563,7 +563,7 @@ struct LoginView: View {
             } icon: {
                 GradelyIcon(systemName: "bubble.left.and.bubble.right.fill", size: 16)
             }
-            .font(.footnote.weight(.semibold))
+            .font(.gradely(.footnote).weight(.semibold))
             .foregroundStyle(Brand.primary)
         }
         .buttonStyle(.plain)
@@ -579,7 +579,7 @@ struct LoginView: View {
             } icon: {
                 GitHubIcon(size: 16)
             }
-            .font(.footnote.weight(.semibold))
+            .font(.gradely(.footnote).weight(.semibold))
             .foregroundStyle(Brand.primary)
         }
         .frame(maxWidth: .infinity)
@@ -653,7 +653,7 @@ struct LoginView: View {
                             .foregroundStyle(.primary)
                         if let className = student.className {
                             Text(className)
-                                .font(.caption)
+                                .font(.gradely(.caption))
                                 .foregroundStyle(.secondary)
                         }
                     }
@@ -722,7 +722,7 @@ private struct LoginActionButtonStyle: ButtonStyle {
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.headline.weight(.semibold))
+            .font(.gradely(.headline).weight(.semibold))
             .foregroundStyle(isEnabled ? Brand.onAccent : Color.secondary)
             .frame(maxWidth: .infinity)
             .frame(minHeight: 58)
@@ -760,12 +760,12 @@ private struct ManualStep: View {
     var body: some View {
         HStack(alignment: .top, spacing: Spacing.sm) {
             Text("\(number).")
-                .font(.caption.weight(.bold).monospacedDigit())
+                .font(.gradely(.caption).weight(.bold).monospacedDigit())
                 .foregroundStyle(Brand.primary)
                 .frame(width: 22, alignment: .trailing)
 
             Text(text)
-                .font(.caption)
+                .font(.gradely(.caption))
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -784,12 +784,12 @@ private struct SchoolResultRow: View {
 
                 VStack(alignment: .leading, spacing: Spacing.xs) {
                     Text(school.trimmedName)
-                        .font(.subheadline.weight(.semibold))
+                        .font(.gradely(.subheadline).weight(.semibold))
                         .foregroundStyle(.primary)
                         .lineLimit(2)
 
                     Text("\(school.trimmedTown) · \(school.trimmedSchoolURL)")
-                        .font(.caption)
+                        .font(.gradely(.caption))
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                         .minimumScaleFactor(0.75)

@@ -139,7 +139,7 @@ struct GradeyDebugPanel: View {
                         pendingAction = .restart(.newUser)
                     } label: {
                         Text("debug.restartNewUser")
-                            .font(.body.weight(.semibold))
+                            .font(.gradely(.body).weight(.semibold))
                             .frame(maxWidth: .infinity, minHeight: 44)
                     }
                     .buttonStyle(.borderedProminent)
@@ -150,7 +150,7 @@ struct GradeyDebugPanel: View {
                         pendingAction = .restart(.upgrade)
                     } label: {
                         Text("debug.restartUpgrade")
-                            .font(.body.weight(.semibold))
+                            .font(.gradely(.body).weight(.semibold))
                             .frame(maxWidth: .infinity, minHeight: 44)
                     }
                     .buttonStyle(.bordered)
@@ -161,7 +161,7 @@ struct GradeyDebugPanel: View {
                         pendingAction = .resetAsNewUser
                     } label: {
                         Text("debug.resetAsNewUser")
-                            .font(.body.weight(.semibold))
+                            .font(.gradely(.body).weight(.semibold))
                             .frame(maxWidth: .infinity, minHeight: 44)
                     }
                     .buttonStyle(.bordered)
@@ -199,7 +199,7 @@ struct GradeyDebugPanel: View {
 
             if let copiedField {
                 Text(String(format: AppL10n.string("debug.copied"), copiedField))
-                    .font(.caption)
+                    .font(.gradely(.caption))
                     .foregroundStyle(.secondary)
                     .accessibilityIdentifier("debugCopiedLabel")
             }

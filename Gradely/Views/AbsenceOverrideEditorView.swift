@@ -10,7 +10,7 @@ struct AbsenceOverrideEditorView: View {
                 Section {
                     Text("absence.override.localOnly")
                         .foregroundStyle(.secondary)
-                    Text(viewModel.title).font(.headline)
+                    Text(viewModel.title).font(.gradely(.headline))
                 }
                 if viewModel.isLoading {
                     ProgressView().frame(maxWidth: .infinity)
@@ -64,9 +64,9 @@ struct AbsenceOverrideEditorView: View {
 
     private func originalSelection(_ context: AbsenceOverrideEditorContext) -> some View {
         Section {
-            Text("absence.override.originalMessage").font(.subheadline).foregroundStyle(.secondary)
+            Text("absence.override.originalMessage").font(.gradely(.subheadline)).foregroundStyle(.secondary)
             Text(String(format: AppL10n.string("absence.manual.selectedCount"), viewModel.originalLessonIDs.count, viewModel.originalCount))
-                .font(.subheadline.weight(.semibold))
+                .font(.gradely(.subheadline).weight(.semibold))
             ForEach(context.lessons) { lesson in
                 Button {
                     viewModel.toggleOriginalLesson(lesson.id)
@@ -94,14 +94,14 @@ struct AbsenceOverrideEditorView: View {
 
     private func allocationSection(_ context: AbsenceOverrideEditorContext) -> some View {
         Section {
-            Text("absence.override.allocationMessage").font(.subheadline).foregroundStyle(.secondary)
+            Text("absence.override.allocationMessage").font(.gradely(.subheadline)).foregroundStyle(.secondary)
             if viewModel.availableCategories.count > 1 {
-                Text("absence.override.mixedCategories").font(.caption).foregroundStyle(.secondary)
+                Text("absence.override.mixedCategories").font(.gradely(.caption)).foregroundStyle(.secondary)
             }
             ForEach($viewModel.allocations) { $allocation in
                 VStack(alignment: .leading, spacing: Spacing.sm) {
                     if !allocation.lessonTitle.isEmpty {
-                        Text(allocation.lessonTitle).font(.subheadline.weight(.semibold))
+                        Text(allocation.lessonTitle).font(.gradely(.subheadline).weight(.semibold))
                     }
                     if context.subjects.isEmpty {
                         TextField(AppL10n.string("absence.override.subject"), text: $allocation.subjectName)
@@ -150,7 +150,7 @@ struct AbsenceOverrideEditorView: View {
             LabeledContent("absence.override.schoolCount", value: "\(viewModel.originalCount)")
             LabeledContent("absence.override.hiddenCount", value: "\(viewModel.hiddenCount)")
             LabeledContent("absence.override.resultCount", value: "\(viewModel.resultingCount)")
-                .font(.headline)
+                .font(.gradely(.headline))
                 .accessibilityElement(children: .combine)
                 .accessibilityIdentifier("absenceOverridePreview")
             ForEach(viewModel.availableCategories, id: \.rawValue) { category in
@@ -159,10 +159,10 @@ struct AbsenceOverrideEditorView: View {
             }
             if let message = viewModel.hiddenSubjectMappingError {
                 GradelyLabel(message, systemImage: "exclamationmark.triangle")
-                    .font(.caption).foregroundStyle(GradeBand.poor.foregroundColor)
+                    .font(.gradely(.caption)).foregroundStyle(GradeBand.poor.foregroundColor)
                     .accessibilityIdentifier("absenceOverrideSubjectMappingError")
             } else if !viewModel.canSave && viewModel.hiddenCount > 0 {
-                Text("absence.override.validationMessage").font(.caption).foregroundStyle(.secondary)
+                Text("absence.override.validationMessage").font(.gradely(.caption)).foregroundStyle(.secondary)
             }
         } header: {
             Text("absence.override.previewTitle")
@@ -194,14 +194,14 @@ struct HiddenAbsencesView: View {
                 ForEach(viewModel.allOverrides) { saved in
                     Section {
                         HStack {
-                            Text(saved.dateKey).font(.headline)
+                            Text(saved.dateKey).font(.gradely(.headline))
                             Spacer()
                             Text("\(saved.hiddenAllocationIDs.count)").monospacedDigit()
                         }
                         if viewModel.overrideMetadata.reviewOverrides.contains(where: { $0.id == saved.id }) {
                             GradelyLabel("absence.override.needsReview", systemImage: "exclamationmark.triangle")
                                 .foregroundStyle(GradeBand.average.foregroundColor)
-                            Text("absence.override.reviewMessage").font(.caption).foregroundStyle(.secondary)
+                            Text("absence.override.reviewMessage").font(.gradely(.caption)).foregroundStyle(.secondary)
                         } else {
                             GradelyLabel("absence.override.adjusted", systemImage: "eye.slash")
                                 .foregroundStyle(.secondary)
@@ -211,7 +211,7 @@ struct HiddenAbsencesView: View {
                                 Text(allocation.subjectName)
                                 Spacer()
                                 Text(allocation.category.localizedTitle).foregroundStyle(.secondary)
-                            }.font(.caption)
+                            }.font(.gradely(.caption))
                         }
                         Button("absence.override.editTitle") { viewModel.openOverrideEditor(dateKey: saved.dateKey) }
                             .accessibilityIdentifier("absenceHiddenEdit-\(saved.dateKey)")

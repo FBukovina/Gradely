@@ -47,11 +47,11 @@ struct SupportTipView: View {
 
                 VStack(alignment: .leading, spacing: Spacing.xs) {
                     Text("support.tips.heading")
-                        .font(.headline)
+                        .font(.gradely(.headline))
                         .foregroundStyle(.primary)
 
                     Text("support.tips.message")
-                        .font(.footnote)
+                        .font(.gradely(.footnote))
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -113,7 +113,7 @@ struct SupportTipOptionsContent: View {
                 ProgressView()
                     .tint(Brand.primary)
                 Text("support.tips.loading")
-                    .font(.subheadline)
+                    .font(.gradely(.subheadline))
                     .foregroundStyle(.secondary)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -136,7 +136,7 @@ struct SupportTipOptionsContent: View {
 
             if let purchaseErrorMessage = viewModel.purchaseErrorMessage {
                 Text(purchaseErrorMessage)
-                    .font(.footnote)
+                    .font(.gradely(.footnote))
                     .foregroundStyle(GradeBand.poor.foregroundColor)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .accessibilityIdentifier("supportTipsPurchaseError")
@@ -173,7 +173,7 @@ struct SupportTipOptionsContent: View {
 
                 if viewModel.selectedInterval == .yearly {
                     Text("support.plans.yearlySavings")
-                        .font(.caption)
+                        .font(.gradely(.caption))
                         .foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
@@ -215,11 +215,11 @@ struct SupportTipOptionsContent: View {
 
                     VStack(alignment: .leading, spacing: Spacing.xs) {
                         Text("support.plans.offerCode.title")
-                            .font(.headline)
+                            .font(.gradely(.headline))
                             .foregroundStyle(.primary)
 
                         Text("support.plans.offerCode.message")
-                            .font(.footnote)
+                            .font(.gradely(.footnote))
                             .foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
@@ -253,9 +253,9 @@ struct SupportTipOptionsContent: View {
                 VStack(alignment: .leading, spacing: Spacing.xs) {
                     HStack(spacing: Spacing.xs) {
                         Text(activePlanTitle)
-                            .font(.headline)
+                            .font(.gradely(.headline))
                         Text("support.plans.earlyAccess")
-                            .font(.caption.weight(.semibold))
+                            .font(.gradely(.caption).weight(.semibold))
                             .foregroundStyle(Brand.primary)
                             .padding(.horizontal, 8)
                             .padding(.vertical, 3)
@@ -264,7 +264,7 @@ struct SupportTipOptionsContent: View {
                     }
 
                     Text(activePlanDetail)
-                        .font(.footnote)
+                        .font(.gradely(.footnote))
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
 
@@ -272,7 +272,7 @@ struct SupportTipOptionsContent: View {
                         openURL(viewModel.managementURL)
                     } label: {
                         Text("support.plans.manage")
-                            .font(.subheadline.weight(.semibold))
+                            .font(.gradely(.subheadline).weight(.semibold))
                     }
                     .buttonStyle(.plain)
                     .foregroundStyle(Brand.primary)
@@ -290,7 +290,7 @@ struct SupportTipOptionsContent: View {
             HStack(alignment: .top, spacing: Spacing.md) {
                 SettingsIcon(name: "alert-circle", color: .secondary, size: 15)
                 Text("support.plans.signIn.required")
-                    .font(.subheadline)
+                    .font(.gradely(.subheadline))
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -348,7 +348,7 @@ struct SupportTipOptionsContent: View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
             if !viewModel.plans.isEmpty {
                 Text("support.plans.legal.renewal")
-                    .font(.caption)
+                    .font(.gradely(.caption))
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
                     .accessibilityIdentifier("supportLegalRenewalCopy")
@@ -388,7 +388,7 @@ struct SupportTipOptionsContent: View {
                     )
 
                     Text(message)
-                        .font(.subheadline)
+                        .font(.gradely(.subheadline))
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -420,10 +420,10 @@ struct SupportTipOptionsContent: View {
 
                     VStack(alignment: .leading, spacing: Spacing.xs) {
                         Text("support.tips.thankYou.title")
-                            .font(.headline)
+                            .font(.gradely(.headline))
 
                         Text(viewModel.thankYouMessage)
-                            .font(.footnote)
+                            .font(.gradely(.footnote))
                             .foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
@@ -478,21 +478,21 @@ private struct SupportPlanRow: View {
 
                 VStack(alignment: .leading, spacing: Spacing.xs) {
                     Text(plan.title)
-                        .font(.headline)
+                        .font(.gradely(.headline))
                         .foregroundStyle(.primary)
                         .fixedSize(horizontal: false, vertical: true)
 
                     Text(plan.benefitText)
-                        .font(.footnote)
+                        .font(.gradely(.footnote))
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
 
                     HStack(spacing: Spacing.xs) {
                         Text(plan.localizedPrice)
-                            .font(.footnote.weight(.semibold))
+                            .font(.gradely(.footnote).weight(.semibold))
                             .foregroundStyle(Brand.primary)
                         Text("support.plans.earlyAccess")
-                            .font(.caption.weight(.semibold))
+                            .font(.gradely(.caption).weight(.semibold))
                             .foregroundStyle(.secondary)
                     }
                 }
@@ -504,7 +504,7 @@ private struct SupportPlanRow: View {
                         .accessibilityLabel(AppL10n.string("support.tips.purchase.progress"))
                 } else if isCurrent {
                     Text("support.plans.current")
-                        .font(.caption.weight(.semibold))
+                        .font(.gradely(.caption).weight(.semibold))
                         .foregroundStyle(Brand.primary)
                 } else {
                     SettingsDisclosureIcon()
@@ -545,12 +545,12 @@ private struct SupportTipRow: View {
 
                 VStack(alignment: .leading, spacing: Spacing.xs) {
                     Text(tip.title)
-                        .font(.headline)
+                        .font(.gradely(.headline))
                         .foregroundStyle(.primary)
                         .fixedSize(horizontal: false, vertical: true)
 
                     Text(tip.localizedPrice)
-                        .font(.footnote.weight(.semibold))
+                        .font(.gradely(.footnote).weight(.semibold))
                         .foregroundStyle(Brand.primary)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -590,7 +590,7 @@ private struct AppLegalTextLink: View {
             openURL(url)
         } label: {
             Text(title)
-                .font(.footnote.weight(.semibold))
+                .font(.gradely(.footnote).weight(.semibold))
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier(accessibilityIdentifier)

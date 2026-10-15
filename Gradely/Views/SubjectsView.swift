@@ -115,7 +115,7 @@ struct SubjectsView: View {
                     HStack(spacing: Spacing.sm) {
                         ProgressView()
                         Text("subjects.refreshing")
-                            .font(.subheadline)
+                            .font(.gradely(.subheadline))
                             .foregroundStyle(.secondary)
                     }
                     .frame(maxWidth: .infinity, alignment: .center)
@@ -126,7 +126,7 @@ struct SubjectsView: View {
 
                 if viewModel.hasLocalAbsenceAdjustments {
                     GradelyLabel(AppL10n.string("absence.title") + " · " + AppL10n.string("absence.override.adjusted"), systemImage: "eye.slash")
-                        .font(.caption)
+                        .font(.gradely(.caption))
                         .foregroundStyle(.secondary)
                         .accessibilityIdentifier("subjectsAbsenceAdjusted")
                 }
@@ -215,10 +215,10 @@ private struct MarksHero: View {
         HStack(alignment: .firstTextBaseline) {
             VStack(alignment: .leading, spacing: Spacing.xs) {
                 Text("marks.hero.average")
-                    .font(.caption.weight(.bold))
+                    .font(.gradely(.caption).weight(.bold))
                     .foregroundStyle(Brand.onAccent.opacity(0.7))
                 Text(GradeMath.formattedAverage(viewModel.overallAverage))
-                    .font(.system(size: 48, weight: .bold, design: .rounded).monospacedDigit())
+                    .font(.gradely(size: 48, weight: .bold).monospacedDigit())
                     .foregroundStyle(Brand.onAccent)
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
@@ -230,7 +230,7 @@ private struct MarksHero: View {
                 Text(String.localizedStringWithFormat(AppL10n.string("marks.hero.subjectCount"), viewModel.subjects.count))
                 Text(String.localizedStringWithFormat(AppL10n.string("subject.markCount"), viewModel.totalMarks))
             }
-            .font(.caption.weight(.semibold))
+            .font(.gradely(.caption).weight(.semibold))
             .foregroundStyle(Brand.onAccent.opacity(0.72))
         }
         .padding(Spacing.xl)
@@ -318,14 +318,14 @@ private struct SubjectRow: View {
 
             VStack(alignment: .leading, spacing: Spacing.xs) {
                 Text(subject.trimmedName)
-                    .font(.headline)
+                    .font(.gradely(.headline))
                     .foregroundStyle(.primary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.78)
 
                 HStack(spacing: Spacing.sm) {
                     Text(String.localizedStringWithFormat(AppL10n.string("subject.markCount"), subject.marks.count))
-                        .font(.subheadline)
+                        .font(.gradely(.subheadline))
                         .foregroundStyle(.secondary)
 
                     if let latestMark = subject.marks.first {
@@ -340,14 +340,14 @@ private struct SubjectRow: View {
 
             VStack(alignment: .trailing, spacing: Spacing.xs) {
                 Text(GradeMath.formattedAverage(average))
-                    .font(.title3.weight(.bold).monospacedDigit())
+                    .font(.gradely(.title3).weight(.bold).monospacedDigit())
                     .foregroundStyle(band.foregroundColor)
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
 
                 if let absence {
                     Text(String(format: AppL10n.string("marks.row.absencePercent"), absence.absencePercentage))
-                        .font(.caption.weight(.semibold))
+                        .font(.gradely(.caption).weight(.semibold))
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
@@ -355,7 +355,7 @@ private struct SubjectRow: View {
             }
 
             GradelyIcon(systemName: "chevron.right")
-                .font(.caption.weight(.bold))
+                .font(.gradely(.caption).weight(.bold))
                 .foregroundStyle(.tertiary)
         }
         .padding(.horizontal, Spacing.md)
@@ -375,7 +375,7 @@ private struct SubjectAbbrevBadge: View {
 
     var body: some View {
         Text(text)
-            .font(.subheadline.weight(.bold))
+            .font(.gradely(.subheadline).weight(.bold))
             .foregroundStyle(band.foregroundColor)
             .lineLimit(1)
             .minimumScaleFactor(0.55)
@@ -390,7 +390,7 @@ private struct InlineMark: View {
 
     var body: some View {
         Text(text)
-            .font(.caption.weight(.bold).monospacedDigit())
+            .font(.gradely(.caption).weight(.bold).monospacedDigit())
             .foregroundStyle(band.foregroundColor)
             .lineLimit(1)
             .minimumScaleFactor(0.7)

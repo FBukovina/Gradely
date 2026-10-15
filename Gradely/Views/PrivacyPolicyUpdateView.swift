@@ -106,7 +106,7 @@ struct PrivacyPolicyUpdateView: View {
                     .accessibilityAddTraits(.isHeader)
 
                 Text("privacy.update.subtitle")
-                    .font(.callout)
+                    .font(.gradely(.callout))
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
 
@@ -116,7 +116,7 @@ struct PrivacyPolicyUpdateView: View {
                         PrivacyPolicyRevision.formattedEffectiveDate()
                     )
                 )
-                .font(.footnote)
+                .font(.gradely(.footnote))
                 .foregroundStyle(.secondary)
                 .accessibilityIdentifier("privacyPolicyUpdateEffectiveDate")
             }
@@ -181,12 +181,12 @@ struct PrivacyPolicyUpdateView: View {
 
                     VStack(alignment: .leading, spacing: Spacing.xs) {
                         Text(change.titleKey)
-                            .font(.body.weight(.medium))
+                            .font(.gradely(.body).weight(.medium))
                             .foregroundStyle(.primary)
                             .fixedSize(horizontal: false, vertical: true)
 
                         Text(change.summaryKey)
-                            .font(.caption)
+                            .font(.gradely(.caption))
                             .foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
@@ -204,7 +204,7 @@ struct PrivacyPolicyUpdateView: View {
 
             if isExpanded {
                 Text(change.detailKey)
-                    .font(.footnote)
+                    .font(.gradely(.footnote))
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.leading, SettingsIcon.frameSize + Spacing.md)
@@ -220,14 +220,14 @@ struct PrivacyPolicyUpdateView: View {
     private var footerNote: some View {
         VStack(alignment: .leading, spacing: Spacing.md) {
             Text("privacy.update.footer")
-                .font(.footnote)
+                .font(.gradely(.footnote))
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
 
             Link(destination: AppLinks.privacyPolicyURL) {
                 HStack(spacing: Spacing.xs) {
                     Text("privacy.update.fullPolicy")
-                        .font(.subheadline.weight(.semibold))
+                        .font(.gradely(.subheadline).weight(.semibold))
                     GradelyIcon("arrow-up-right-01", size: 13)
                 }
                 .foregroundStyle(Brand.primary)
@@ -255,7 +255,7 @@ struct PrivacyPolicyUpdateView: View {
 
                 if !isAcceptEnabled {
                     Text("privacy.update.scrollHint")
-                        .font(.caption)
+                        .font(.gradely(.caption))
                         .foregroundStyle(.secondary)
                         .transition(.opacity)
                 }

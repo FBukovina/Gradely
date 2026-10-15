@@ -6,6 +6,10 @@ import AppKit
 
 @main
 struct GradelyWidgets: WidgetBundle {
+    init() {
+        GradelyFont.registerIfNeeded()
+    }
+
     var body: some Widget {
         NextLessonWidget()
     }
@@ -28,6 +32,7 @@ struct NextLessonWidget: Widget {
             provider: NextLessonProvider()
         ) { entry in
             NextLessonWidgetView(entry: entry)
+                .font(.gradely(.body))
                 .containerBackground(for: .widget) {
                     GradelyWidgetBackground()
                 }
@@ -169,18 +174,18 @@ private struct NextLessonWidgetView: View {
         VStack(alignment: .leading, spacing: 2) {
             if let statusLine = statusLine(for: lesson, timing: timing) {
                 Text(statusLine)
-                    .font(.caption2.weight(.bold).monospacedDigit())
+                    .font(.gradely(.caption2).weight(.bold).monospacedDigit())
                     .lineLimit(1)
             }
 
             Text(lesson.title)
-                .font(.headline.weight(.heavy))
+                .font(.gradely(.headline).weight(.heavy))
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
 
             if let room = lesson.room {
                 Label(room, systemImage: "door.left.hand.open")
-                    .font(.caption2.weight(.semibold))
+                    .font(.gradely(.caption2).weight(.semibold))
                     .lineLimit(1)
             }
         }
@@ -191,11 +196,11 @@ private struct NextLessonWidgetView: View {
     private func accessoryEmptyView(title: String, subtitle: String, systemImage: String) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Label(title, systemImage: systemImage)
-                .font(.headline.weight(.bold))
+                .font(.gradely(.headline).weight(.bold))
                 .lineLimit(1)
 
             Text(subtitle)
-                .font(.caption.weight(.semibold))
+                .font(.gradely(.caption).weight(.semibold))
                 .lineLimit(1)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
@@ -209,7 +214,7 @@ private struct NextLessonWidgetView: View {
         VStack(alignment: .leading, spacing: widgetFamily == .systemMedium ? 10 : 8) {
             HStack(alignment: .firstTextBaseline, spacing: 6) {
                 Label(timingText(for: timing), systemImage: timing == .current ? "clock.fill" : "clock")
-                    .font(.caption2.weight(.bold))
+                    .font(.gradely(.caption2).weight(.bold))
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
 
@@ -217,7 +222,7 @@ private struct NextLessonWidgetView: View {
 
                 if let changeText = changeText(for: lesson.changeKind) {
                     Text(changeText)
-                        .font(.caption2.weight(.bold))
+                        .font(.gradely(.caption2).weight(.bold))
                         .lineLimit(1)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 3)
@@ -227,13 +232,13 @@ private struct NextLessonWidgetView: View {
             }
 
             Text(lesson.detailTitle)
-                .font(widgetFamily == .systemMedium ? .title3.weight(.heavy) : .headline.weight(.heavy))
+                .font(widgetFamily == .systemMedium ? .gradely(.title3).weight(.heavy) : .gradely(.headline).weight(.heavy))
                 .lineLimit(widgetFamily == .systemMedium ? 2 : 1)
                 .minimumScaleFactor(0.75)
 
             if widgetFamily == .systemMedium, let teacher = trimmed(lesson.teacher) {
                 Label(teacher, systemImage: "person")
-                    .font(.caption.weight(.semibold))
+                    .font(.gradely(.caption).weight(.semibold))
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
             }
@@ -256,16 +261,16 @@ private struct NextLessonWidgetView: View {
     private func systemEmptyView(title: String, subtitle: String, systemImage: String) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Image(systemName: systemImage)
-                .font(.title2.weight(.semibold))
+                .font(.gradely(.title2).weight(.semibold))
                 .foregroundStyle(.secondary)
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(title)
-                    .font(.headline.weight(.heavy))
+                    .font(.gradely(.headline).weight(.heavy))
                     .lineLimit(1)
 
                 Text(subtitle)
-                    .font(.caption.weight(.semibold))
+                    .font(.gradely(.caption).weight(.semibold))
                     .foregroundStyle(.secondary)
                     .lineLimit(widgetFamily == .systemMedium ? 2 : 1)
             }
@@ -277,7 +282,7 @@ private struct NextLessonWidgetView: View {
 
     private func metadataLabel(_ text: String, systemImage: String) -> some View {
         Label(text, systemImage: systemImage)
-            .font(.caption.weight(.semibold))
+            .font(.gradely(.caption).weight(.semibold))
             .foregroundStyle(.secondary)
             .lineLimit(1)
             .minimumScaleFactor(0.75)

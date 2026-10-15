@@ -46,9 +46,9 @@ struct AppLanguageOptionsList: View {
         Toggle(isOn: $store.isChronicallyOnline) {
             VStack(alignment: .leading, spacing: Spacing.xs) {
                 Text("settings.language.chronicallyOnline.title")
-                    .font(.body.weight(.medium))
+                    .font(.gradely(.body).weight(.medium))
                 Text("settings.language.chronicallyOnline.subtitle")
-                    .font(.caption)
+                    .font(.gradely(.caption))
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -83,7 +83,7 @@ struct AppLanguageOptionsList: View {
     private func languageRow(_ language: AppLanguage) -> some View {
         HStack(alignment: .center, spacing: Spacing.md) {
             Text(language.displayName)
-                .font(.body.weight(.medium))
+                .font(.gradely(.body).weight(.medium))
                 .foregroundStyle(.primary)
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading)

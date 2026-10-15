@@ -49,7 +49,7 @@ struct AgeAttestationView: View {
 
                 Link(destination: AppLinks.privacyPolicyURL) {
                     Text("age.gate.privacyLink")
-                        .font(.footnote.weight(.semibold))
+                        .font(.gradely(.footnote).weight(.semibold))
                         .foregroundStyle(Brand.primary)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
@@ -69,7 +69,7 @@ struct AgeAttestationView: View {
             VStack(alignment: .leading, spacing: Spacing.lg) {
                 Toggle(isOn: $parentConfirmed) {
                     Text("age.gate.teen.toggle")
-                        .font(.subheadline)
+                        .font(.gradely(.subheadline))
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 .accessibilityIdentifier("ageAttestationParentToggle")
@@ -88,7 +88,7 @@ struct AgeAttestationView: View {
                     pendingParentalKind = nil
                     parentConfirmed = false
                 }
-                .font(.subheadline.weight(.semibold))
+                .font(.gradely(.subheadline).weight(.semibold))
                 .foregroundStyle(Brand.primary)
                 .frame(maxWidth: .infinity)
             }
@@ -110,16 +110,16 @@ struct AgeAttestationView: View {
             HStack(alignment: .top, spacing: Spacing.md) {
                 VStack(alignment: .leading, spacing: Spacing.xs) {
                     Text(title)
-                        .font(.headline)
+                        .font(.gradely(.headline))
                         .foregroundStyle(.primary)
                     Text(subtitle)
-                        .font(.subheadline)
+                        .font(.gradely(.subheadline))
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 Spacer(minLength: 0)
                 GradelyIcon(systemName: "chevron.right")
-                    .font(.caption.weight(.bold))
+                    .font(.gradely(.caption).weight(.bold))
                     .foregroundStyle(.secondary)
             }
             .padding(Spacing.lg)

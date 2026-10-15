@@ -95,7 +95,7 @@ struct GradeyAIConsentScreen: View {
                 message: "gradey.ai.consent.selectedRetention"
             )
         }
-        .gradeyAIGlass(cornerRadius: 26, tint: 0.06)
+        .gradeyAISurface(cornerRadius: 26)
     }
 
     private var rowDivider: some View {
@@ -156,7 +156,7 @@ struct GradeyAIProgressState: View {
 
     var body: some View {
         VStack(spacing: Spacing.lg) {
-            GradeyAIOrb(size: 64, isActive: true)
+            GradeyAIOrb(size: 64)
             Text(message)
                 .font(.gradely(.subheadline))
                 .foregroundStyle(.secondary)

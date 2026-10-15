@@ -201,105 +201,12 @@ struct GradeyAIChatScreen: View {
             }
             .frame(maxWidth: .infinity)
 
-            if viewModel.contextSelection.action == .reply {
-                generalSuggestions
-            } else {
+            if viewModel.contextSelection.action != .reply {
                 focusedAction
             }
         }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("gradeyAIWelcome")
-    }
-
-    private var generalSuggestions: some View {
-        VStack(alignment: .leading, spacing: Spacing.xl) {
-            VStack(alignment: .leading, spacing: Spacing.md) {
-                SectionHeader("gradey.ai.suggestions.school")
-                    .padding(.horizontal, Spacing.xs)
-
-                GlassEffectContainer(spacing: 6) {
-                    LazyVGrid(columns: suggestionColumns, spacing: 10) {
-                        actionCard(.tomorrow, icon: "sun-01")
-                        actionCard(.studyPriorities, icon: "target-02")
-                        actionCard(.weekSummary, icon: "calendar-check-in-02")
-                        subjectCard
-                        testCard
-                    }
-                }
-            }
-
-            VStack(alignment: .leading, spacing: Spacing.md) {
-                SectionHeader("gradey.ai.suggestions.general")
-                    .padding(.horizontal, Spacing.xs)
-                starterPrompts
-            }
-        }
-    }
-
-    private var suggestionColumns: [GridItem] {
-        #if os(macOS)
-        // Wider tiles keep the five suggestions at 3 + 2 instead of 4 + 1.
-        let minimumWidth: CGFloat = 190
-        #else
-        let minimumWidth: CGFloat = 150
-        #endif
-        return isAccessibilityLayout
-            ? [GridItem(.flexible())]
-            : [GridItem(.adaptive(minimum: minimumWidth), spacing: 10)]
-    }
-
-    private func actionCard(_ action: GradeyAIAction, icon: String) -> some View {
-        Button {
-            Task { await viewModel.selectAction(action) }
-        } label: {
-            suggestionCardLabel(action: action, icon: icon)
-        }
-        .buttonStyle(.plain)
-        .disabled(isBusy)
-        .accessibilityIdentifier("gradeyAIAction-\(action.rawValue)")
-    }
-
-    private var subjectCard: some View {
-        Menu {
-            ForEach(viewModel.availableSubjects) { subject in
-                Button(subject.name) {
-                    Task { await viewModel.selectAction(.subjectHelp, subjectID: subject.id) }
-                }
-            }
-        } label: {
-            suggestionCardLabel(action: .subjectHelp, icon: "book-02")
-        }
-        .gradeyAIPlainMenu()
-        .disabled(isBusy || viewModel.availableSubjects.isEmpty)
-        .accessibilityIdentifier("gradeyAIAction-\(GradeyAIAction.subjectHelp.rawValue)")
-    }
-
-    private var testCard: some View {
-        Menu {
-            ForEach(viewModel.availableEvents, id: \.id) { event in
-                Button(event.title) {
-                    Task {
-                        await viewModel.selectAction(
-                            .testPreparation,
-                            subjectID: event.subjectID,
-                            eventID: UUID(uuidString: event.id)
-                        )
-                    }
-                }
-            }
-        } label: {
-            suggestionCardLabel(action: .testPreparation, icon: "check-list")
-        }
-        .gradeyAIPlainMenu()
-        .disabled(isBusy || viewModel.availableEvents.isEmpty)
-        .accessibilityIdentifier("gradeyAIAction-\(GradeyAIAction.testPreparation.rawValue)")
-    }
-
-    private func suggestionCardLabel(action: GradeyAIAction, icon: String) -> some View {
-        GradeyAISuggestionCard(
-            title: AppL10n.string(String.LocalizationValue(action.titleKey)),
-            icon: icon
-        )
     }
 
     private var starterPrompts: some View {
@@ -324,7 +231,7 @@ struct GradeyAIChatScreen: View {
                     .padding(.vertical, 14)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .contentShape(Rectangle())
-                    .gradeyAIGlass(cornerRadius: 20, tint: 0.05, interactive: true)
+                    .gradeyAISurface(cornerRadius: 20)
                 }
                 .buttonStyle(.plain)
                 .disabled(isBusy || !viewModel.canAffordSelectedAction)
@@ -392,13 +299,7 @@ struct GradeyAIChatScreen: View {
             starterPrompts
         }
         .padding(Spacing.lg)
-        .gradeyAIGlass(cornerRadius: 26, tint: 0.06)
-        .overlay {
-            RoundedRectangle(cornerRadius: 26, style: .continuous)
-                .strokeBorder(Brand.gradient, lineWidth: 1)
-                .opacity(0.35)
-                .allowsHitTesting(false)
-        }
+        .gradeyAISurface(cornerRadius: 26)
     }
 
     // MARK: - Dock
@@ -441,17 +342,6 @@ struct GradeyAIChatScreen: View {
                     }
                 }
             }
-
-            HStack(alignment: .firstTextBaseline, spacing: 6) {
-                GradelyIcon("shield-01", size: 12)
-                    .foregroundStyle(Brand.primary.opacity(0.85))
-                    .accessibilityHidden(true)
-                Text(viewModel.selectedSharingSummary)
-                    .font(.gradely(.caption))
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .padding(.horizontal, Spacing.xs)
 
             contextNotices
         }
@@ -580,8 +470,8 @@ struct GradeyAIChatScreen: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
         .frame(minHeight: 36)
+        .background(Brand.primary.opacity(0.12), in: Capsule())
         .contentShape(Capsule())
-        .glassEffect(.regular.tint(Brand.primary.opacity(0.12)).interactive(), in: Capsule())
     }
 
     private var contextMenuAccessibilityLabel: String {
@@ -648,12 +538,12 @@ struct GradeyAIChatScreen: View {
         .padding(.leading, 18)
         .padding(.trailing, 6)
         .padding(.vertical, 6)
-        .gradeyAIGlass(cornerRadius: 26, tint: 0.08)
-        .gradeyAIGlowBorder(
-            cornerRadius: 26,
-            isActive: isComposerFocused || viewModel.isStreaming,
-            isAnimating: viewModel.isStreaming
-        )
+        .gradeyAISurface(cornerRadius: 26)
+        .overlay {
+            RoundedRectangle(cornerRadius: 26, style: .continuous)
+                .strokeBorder(Brand.primary.opacity(isComposerFocused ? 0.6 : 0), lineWidth: 1)
+                .allowsHitTesting(false)
+        }
     }
 
     @ViewBuilder
@@ -734,7 +624,7 @@ struct GradeyAIChatScreen: View {
             }
             .padding(Spacing.md)
             .contentShape(Rectangle())
-            .gradeyAIGlass(cornerRadius: 20, tint: 0.14, interactive: true)
+            .gradeyAISurface(cornerRadius: 20)
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier("gradeyAISupportUpgradeButton")
@@ -761,41 +651,6 @@ struct GradeyAIChatScreen: View {
         } else {
             proxy.scrollTo(Self.bottomID, anchor: .bottom)
         }
-    }
-}
-
-/// Glass suggestion tile with a gradient icon and rim.
-private struct GradeyAISuggestionCard: View {
-    let title: String
-    let icon: String
-
-    @Environment(\.isEnabled) private var isEnabled
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: Spacing.md) {
-            GradelyIcon(icon, size: 18)
-                .foregroundStyle(Brand.gradient)
-                .frame(width: 36, height: 36)
-                .background(Brand.primary.opacity(0.14), in: Circle())
-                .accessibilityHidden(true)
-
-            Text(title)
-                .font(.gradely(.subheadline).weight(.semibold))
-                .foregroundStyle(.primary)
-                .multilineTextAlignment(.leading)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .frame(maxWidth: .infinity, minHeight: 92, alignment: .topLeading)
-        .padding(14)
-        .contentShape(Rectangle())
-        .gradeyAIGlass(cornerRadius: 22, tint: 0.06, interactive: isEnabled)
-        .overlay {
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .strokeBorder(Brand.gradient, lineWidth: 1)
-                .opacity(0.3)
-                .allowsHitTesting(false)
-        }
-        .opacity(isEnabled ? 1 : 0.45)
     }
 }
 

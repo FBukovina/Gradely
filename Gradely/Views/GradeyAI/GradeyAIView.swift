@@ -65,8 +65,6 @@ struct GradeyAIView: View {
     private var aiContent: some View {
         ModalNavigationContainer {
             ZStack {
-                GradeyAIBackground(isActive: viewModel.isStreaming || viewModel.isPreparingReply)
-
                 VStack(spacing: 0) {
                     topBar
 
@@ -87,6 +85,7 @@ struct GradeyAIView: View {
                 }
                 .animation(.easeOut(duration: 0.2), value: viewModel.errorMessage)
             }
+            .gradelyScreenBackground()
             .settingsModalNavigationChrome()
         }
         .task {
@@ -113,10 +112,7 @@ struct GradeyAIView: View {
             SupportTipView(viewModel: supportViewModel)
         }
         .sheet(isPresented: $isHistoryPresented) {
-            GradeyAIHistorySheet(
-                viewModel: viewModel,
-                hasEarlyAccess: supportViewModel.entitlement.hasEarlyAccess
-            )
+            GradeyAIHistorySheet(viewModel: viewModel)
         }
         .accessibilityIdentifier("gradeyAIView")
     }
@@ -201,7 +197,7 @@ struct GradeyAIView: View {
                 .accessibilityAddTraits(.isHeader)
         } else {
             HStack(spacing: Spacing.sm) {
-                GradeyAIOrb(size: 22, isActive: viewModel.isStreaming)
+                GradeyAIOrb(size: 22)
                 Text("gradey.ai.title")
                     .font(.gradelyDisplay(size: 19, relativeTo: .headline))
                     .lineLimit(1)

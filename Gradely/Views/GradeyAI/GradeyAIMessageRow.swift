@@ -71,7 +71,7 @@ private struct GradeyAIAssistantReply: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: Spacing.md) {
-            GradeyAIOrb(size: 28, isActive: message.status == .streaming)
+            GradeyAIOrb(size: 28)
                 .padding(.top, 1)
 
             VStack(alignment: .leading, spacing: Spacing.sm) {
@@ -140,10 +140,7 @@ private struct GradeyAIAssistantReply: View {
                             .font(.gradely(.caption).weight(.semibold))
                             .padding(.horizontal, 10)
                             .padding(.vertical, 6)
-                            .glassEffect(
-                                .regular.tint(GradeBand.poor.foregroundColor.opacity(0.14)).interactive(),
-                                in: Capsule()
-                            )
+                            .background(GradeBand.poor.foregroundColor.opacity(0.12), in: Capsule())
                     }
                     .buttonStyle(.plain)
                     .foregroundStyle(GradeBand.poor.foregroundColor)

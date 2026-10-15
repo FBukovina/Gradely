@@ -5,16 +5,14 @@ import SwiftUI
 /// the presenting view can't appear over this sheet.
 struct GradeyAIHistorySheet: View {
     let viewModel: GradeyAIViewModel
-    let hasEarlyAccess: Bool
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
     @State private var pendingDeletion: GradeyAIConversation? = nil
     @State private var dangerousAction: DangerousAction? = nil
 
-    init(viewModel: GradeyAIViewModel, hasEarlyAccess: Bool) {
+    init(viewModel: GradeyAIViewModel) {
         self.viewModel = viewModel
-        self.hasEarlyAccess = hasEarlyAccess
     }
 
     private enum DangerousAction {
@@ -24,14 +22,11 @@ struct GradeyAIHistorySheet: View {
 
     var body: some View {
         ModalNavigationContainer {
-            ZStack {
-                GradeyAIBackground()
-
-                VStack(spacing: 0) {
-                    header
-                    list
-                }
+            VStack(spacing: 0) {
+                header
+                list
             }
+            .gradelyScreenBackground()
             .settingsModalNavigationChrome()
         }
         #if os(iOS)
@@ -105,9 +100,6 @@ struct GradeyAIHistorySheet: View {
 
     private var list: some View {
         List {
-            computeCard
-                .historyRow()
-
             if viewModel.conversations.isEmpty {
                 emptyState
                     .historyRow()
@@ -152,48 +144,6 @@ struct GradeyAIHistorySheet: View {
         .scrollContentBackground(.hidden)
         .environment(\.defaultMinListRowHeight, 1)
         .accessibilityIdentifier("gradeyAIConversationList")
-    }
-
-    private var computeCard: some View {
-        let status = viewModel.status
-        let limit = max(status?.dailyLimit ?? 0, 1)
-        let fraction = min(1, max(0, Double(status?.remaining ?? 0) / Double(limit)))
-        return VStack(alignment: .leading, spacing: Spacing.md) {
-            HStack(alignment: .center, spacing: Spacing.md) {
-                GradeyAIOrb(size: 36)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(GradeyAIQuotaText.remaining(status))
-                        .font(.gradely(.subheadline).weight(.semibold).monospacedDigit())
-                        .fixedSize(horizontal: false, vertical: true)
-                    if let reset = GradeyAIQuotaText.reset(status) {
-                        Text(reset)
-                            .font(.gradely(.caption).monospacedDigit())
-                            .foregroundStyle(.secondary)
-                    }
-                }
-                Spacer(minLength: 0)
-                if hasEarlyAccess {
-                    GradeyAIEarlyAccessBadge()
-                }
-            }
-
-            GeometryReader { geometry in
-                ZStack(alignment: .leading) {
-                    Capsule()
-                        .fill(Color.primary.opacity(0.08))
-                    Capsule()
-                        .fill(Brand.gradient)
-                        .frame(width: max(6, geometry.size.width * fraction))
-                        .shadow(color: Brand.primary.opacity(0.5), radius: 6)
-                }
-            }
-            .frame(height: 6)
-            .accessibilityHidden(true)
-        }
-        .padding(Spacing.lg)
-        .gradeyAIGlass(cornerRadius: 24, tint: 0.08)
-        .accessibilityElement(children: .combine)
-        .accessibilityIdentifier("gradeyAIHistoryCompute")
     }
 
     private var emptyState: some View {

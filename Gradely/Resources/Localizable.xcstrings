@@ -9314,35 +9314,6 @@
         }
       }
     },
-    "gradey.ai.context.none" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sdílí se jen tvoje zprávy a související historie chatu. Školní údaje se automaticky nepřikládají."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "sdílí se jen tvoje zprávy a související historie chatu. školní údaje se automaticky nepřikládají."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Only your messages and relevant chat history are shared. School data is not attached automatically."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "only your messages and relevant chat history are shared. school data is not attached automatically."
-          }
-        }
-      }
-    },
     "gradey.ai.context.partial" : {
       "localizations" : {
         "cs" : {
@@ -9563,35 +9534,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "average history"
-          }
-        }
-      }
-    },
-    "gradey.ai.context.selectionSummary" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Předměty: %d · hodiny: %d · události: %d"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "předměty: %d · hodiny: %d · události: %d"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Subjects: %d · lessons: %d · events: %d"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "subjects: %d · lessons: %d · events: %d"
           }
         }
       }
@@ -10662,64 +10604,6 @@
         }
       }
     },
-    "gradey.ai.prompt.general1" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pomoz mi sestavit realistický plán učení."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "pomoz mi sestavit realistický plán učení."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Help me make a realistic study plan."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "help me make a realistic study plan."
-          }
-        }
-      }
-    },
-    "gradey.ai.prompt.general2" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vysvětli mi, jak se efektivně učit."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "vysvětli mi, jak se efektivně učit."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Explain how to study effectively."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "explain how to study effectively."
-          }
-        }
-      }
-    },
     "gradey.ai.prompt.study_priorities" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -11001,62 +10885,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "stop response"
-          }
-        }
-      }
-    },
-    "gradey.ai.suggestions.general" : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nebo se prostě zeptej"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "nebo se prostě zeptej"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Or just ask"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "or just ask"
-          }
-        }
-      }
-    },
-    "gradey.ai.suggestions.school" : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Použij svoje školní údaje"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "použij svoje školní údaje"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Use your school info"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "use your school info"
           }
         }
       }

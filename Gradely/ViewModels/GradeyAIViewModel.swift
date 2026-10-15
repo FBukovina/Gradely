@@ -46,11 +46,10 @@ final class GradeyAIViewModel {
             && !isStreaming && !isPreparingReply && !isRecoveringRequest
     }
 
+    /// The suggested opener for the selected topic; general chat has none.
     var starterPrompts: [String] {
-        switch contextSelection.action {
-        case .reply: return [AppL10n.string("gradey.ai.prompt.general1"), AppL10n.string("gradey.ai.prompt.general2")]
-        default: return [AppL10n.string(String.LocalizationValue("gradey.ai.prompt." + contextSelection.action.rawValue))]
-        }
+        guard contextSelection.action != .reply else { return [] }
+        return [AppL10n.string(String.LocalizationValue("gradey.ai.prompt." + contextSelection.action.rawValue))]
     }
 
     private let client: any GradeyAIClient
@@ -111,13 +110,6 @@ final class GradeyAIViewModel {
         if contextSelection.action == .testPreparation { return contextSnapshot?.events?.first?.title }
         return nil
     }
-    var selectedSharingSummary: String {
-        let snapshot = contextSnapshot
-        if contextSelection.action == .reply { return AppL10n.string("gradey.ai.context.none") }
-        return String.localizedStringWithFormat(AppL10n.string("gradey.ai.context.selectionSummary"),
-            snapshot?.subjects.count ?? 0, snapshot?.timetable.count ?? 0, snapshot?.events?.count ?? 0)
-    }
-
     var localTomorrowSummary: String? {
         guard contextSelection.action == .tomorrow, let snapshot = contextSnapshot else { return nil }
         let lessons = snapshot.timetable.map { lesson in

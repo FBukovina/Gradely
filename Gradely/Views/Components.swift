@@ -541,6 +541,7 @@ struct PlainSection<Header: View, Content: View>: View {
                     .padding(.top, Spacing.xs)
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, Spacing.xs)
         .accessibilityElement(children: .contain)
     }

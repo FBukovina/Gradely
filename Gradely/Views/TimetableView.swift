@@ -175,7 +175,7 @@ struct TimetableView: View {
 
     private var dayContent: some View {
         ScrollView {
-            LazyVStack(spacing: Spacing.sm) {
+            LazyVStack(spacing: 0) {
                 if viewModel.isRefreshing {
                     HStack(spacing: Spacing.sm) {
                         ProgressView()
@@ -189,6 +189,9 @@ struct TimetableView: View {
 
                 if let day = viewModel.selectedDay, day.hasLessons {
                     ForEach(day.lessons) { lesson in
+                        if lesson.id != day.lessons.first?.id {
+                            Divider()
+                        }
                         LessonRow(lesson: lesson, isToday: day.isToday, plannerItems: attachedItems(lesson, day: day)) {
                             selectedLesson = PlannerLessonSelection(lesson: lesson, day: day)
                         }
@@ -294,20 +297,20 @@ private struct DayStrip: View {
     let viewModel: TimetableViewModel
 
     var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: Spacing.sm) {
-                ForEach(viewModel.days) { day in
-                    DayChip(day: day, isSelected: day.id == viewModel.selectedDay?.id) {
-                        viewModel.select(dayID: day.id)
-                    }
+        HStack(spacing: 0) {
+            ForEach(viewModel.days) { day in
+                DayChip(day: day, isSelected: day.id == viewModel.selectedDay?.id) {
+                    viewModel.select(dayID: day.id)
                 }
             }
-            .padding(.horizontal, Spacing.lg)
-            .padding(.bottom, Spacing.md)
         }
+        .padding(.horizontal, Spacing.lg)
+        .padding(.bottom, Spacing.sm)
     }
 }
 
+/// One day of the week row: plain weekday and date, the selected date in a
+/// solid circle, today in the brand colour, and a dot when lessons changed.
 private struct DayChip: View {
     let day: ScheduledDay
     let isSelected: Bool
@@ -315,33 +318,48 @@ private struct DayChip: View {
 
     var body: some View {
         Button(action: action) {
-            VStack(spacing: 3) {
-                Text(weekdaySymbol)
-                    .font(.gradely(.caption2).weight(.semibold))
-                    .textCase(.uppercase)
+            VStack(spacing: 4) {
                 if day.date != nil {
+                    Text(weekdaySymbol)
+                        .font(.gradely(.caption2).weight(.semibold))
+                        .textCase(.uppercase)
+                        .foregroundStyle(day.isToday ? AnyShapeStyle(Brand.primary) : AnyShapeStyle(.secondary))
                     Text(dayNumber)
                         .font(.gradely(.headline).weight(.bold))
                         .monospacedDigit()
+                        .foregroundStyle(numberStyle)
+                        .frame(width: 38, height: 38)
+                        .background {
+                            if isSelected { Circle().fill(Brand.primary) }
+                        }
                     Circle()
                         .frame(width: 5, height: 5)
-                        .foregroundStyle(isSelected ? Brand.onAccent : LessonChangeKind.canceled.color)
+                        .foregroundStyle(LessonChangeKind.canceled.color)
                         .opacity(day.hasChanges ? 1 : 0)
+                } else {
+                    // Permanent timetable: weekdays only, no dates.
+                    Text(weekdaySymbol)
+                        .font(.gradely(.subheadline).weight(.bold))
+                        .textCase(.uppercase)
+                        .foregroundStyle(numberStyle)
+                        .padding(.horizontal, Spacing.sm + 2)
+                        .frame(height: 34)
+                        .background {
+                            if isSelected { Capsule().fill(Brand.primary) }
+                        }
                 }
             }
-            .foregroundStyle(isSelected ? AnyShapeStyle(Brand.onAccent) : AnyShapeStyle(.primary))
-            .frame(width: 52, height: day.date == nil ? 44 : 66)
-            .background {
-                RoundedRectangle(cornerRadius: Radius.md, style: .continuous)
-                    .fill(isSelected ? AnyShapeStyle(Brand.gradient) : AnyShapeStyle(Color.gradelySecondaryGroupedBackground))
-            }
-            .overlay {
-                RoundedRectangle(cornerRadius: Radius.md, style: .continuous)
-                    .strokeBorder(Brand.primary, lineWidth: day.isToday && !isSelected ? 2 : 0)
-            }
+            .frame(maxWidth: .infinity, minHeight: 44)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
         .accessibilityIdentifier("dayChip-\(day.dayOfWeek)")
+    }
+
+    private var numberStyle: AnyShapeStyle {
+        if isSelected { return AnyShapeStyle(Brand.onAccent) }
+        return day.isToday ? AnyShapeStyle(Brand.primary) : AnyShapeStyle(.primary)
     }
 
     private var weekdaySymbol: String {
@@ -369,15 +387,17 @@ private struct LessonRow: View {
         Button(action: onTap) {
             HStack(alignment: .top, spacing: Spacing.md) {
                 hourRail
-                LessonCard(
-                    lesson: lesson,
-                    // A cancelled hour is not "happening now", so it never takes the live highlight.
-                    isCurrent: !lesson.isCanceled && LessonClock.isCurrent(lesson.hour, isToday: isToday),
-                    plannerItems: plannerItems
-                )
+                LessonCard(lesson: lesson, plannerItems: plannerItems)
             }
+            .padding(.vertical, Spacing.md)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+    }
+
+    /// A cancelled hour is not "happening now", so it never takes the live highlight.
+    private var isCurrent: Bool {
+        !lesson.isCanceled && LessonClock.isCurrent(lesson.hour, isToday: isToday)
     }
 
     private var hourRail: some View {
@@ -385,11 +405,11 @@ private struct LessonRow: View {
             Text(lesson.hour.caption)
                 .font(.gradely(.headline).weight(.bold))
                 .monospacedDigit()
-                .foregroundStyle(lesson.isCanceled ? .secondary : .primary)
+                .foregroundStyle(isCurrent ? AnyShapeStyle(Brand.primary) : lesson.isCanceled ? AnyShapeStyle(.secondary) : AnyShapeStyle(.primary))
             if !lesson.hour.beginTime.isEmpty {
                 Text(lesson.hour.beginTime)
                     .font(.gradely(.caption2))
-                    .foregroundStyle(lesson.isCanceled ? .tertiary : .secondary)
+                    .foregroundStyle(isCurrent ? AnyShapeStyle(Brand.primary) : lesson.isCanceled ? AnyShapeStyle(.tertiary) : AnyShapeStyle(.secondary))
                     .monospacedDigit()
                 Text(lesson.hour.endTime)
                     .font(.gradely(.caption2))
@@ -398,13 +418,11 @@ private struct LessonRow: View {
             }
         }
         .frame(width: 44)
-        .padding(.top, Spacing.sm)
     }
 }
 
 private struct LessonCard: View {
     let lesson: ScheduledLesson
-    let isCurrent: Bool
     let plannerItems: [PlannerItem]
 
     var body: some View {
@@ -478,35 +496,6 @@ private struct LessonCard: View {
                 }
             }
         }
-        .padding(Spacing.md)
-        .background {
-            let shape = RoundedRectangle(cornerRadius: Radius.xl, style: .continuous)
-            if lesson.isCanceled {
-                shape
-                    .fill(Color.gradelySecondaryGroupedBackground)
-                    .overlay(shape.fill(LessonChangeKind.canceled.color.opacity(0.05)))
-            } else {
-                shape.fill(Color.gradelySecondaryGroupedBackground)
-            }
-        }
-        .overlay {
-            let shape = RoundedRectangle(cornerRadius: Radius.xl, style: .continuous)
-            if lesson.isCanceled {
-                // Dashed outline reads as an empty slot rather than a greyed-out lesson.
-                shape.strokeBorder(
-                    LessonChangeKind.canceled.color.opacity(0.45),
-                    style: StrokeStyle(lineWidth: 1.5, dash: [5, 4])
-                )
-            } else {
-                shape.strokeBorder(borderColor, lineWidth: isCurrent ? 2 : 1)
-            }
-        }
-    }
-
-    private var borderColor: Color {
-        if isCurrent { return Brand.primary }
-        if lesson.changeKind != .none { return lesson.changeKind.color.opacity(0.35) }
-        return Color.primary.opacity(0.05)
     }
 
     private var teacher: String? {

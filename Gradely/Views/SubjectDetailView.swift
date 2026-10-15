@@ -74,62 +74,42 @@ struct SubjectDetailView: View {
     }
 
     private var marksSection: some View {
-        VStack(alignment: .leading, spacing: Spacing.md) {
-            SectionHeader("detail.marks.section")
-
-            VStack(spacing: 0) {
-                ForEach(Array(viewModel.sortedMarks.enumerated()), id: \.element.id) { index, mark in
-                    MarkRow(mark: mark, resolvedWeight: viewModel.resolvedWeight(for: mark))
-                        .accessibilityIdentifier("markRow-\(mark.id)")
-
-                    if index < viewModel.sortedMarks.count - 1 {
-                        Divider()
-                            .padding(.leading, Spacing.md)
-                    }
-                }
+        PlainSection {
+            PlainSectionTitle("detail.marks.section")
+        } content: {
+            ForEach(viewModel.sortedMarks) { mark in
+                MarkRow(mark: mark, resolvedWeight: viewModel.resolvedWeight(for: mark))
+                    .accessibilityIdentifier("markRow-\(mark.id)")
             }
-            .background(
-                RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
-                    .fill(Color.gradelySecondaryGroupedBackground)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
-                    .strokeBorder(Color.primary.opacity(0.06), lineWidth: 1)
-            )
         }
     }
 
     @ViewBuilder
     private var chartSection: some View {
         if viewModel.chartSource != .none {
-            VStack(alignment: .leading, spacing: Spacing.md) {
-                SectionHeader("detail.chart.title")
-                Card {
-                    VStack(alignment: .leading, spacing: Spacing.md) {
-                        AverageHistoryChart(
-                            points: viewModel.chartPoints,
-                            band: GradeMath.band(for: viewModel.currentAverage),
-                            style: .detail,
-                            overlayMarks: viewModel.averageTimeline
-                        )
-                        .frame(height: 220)
+            PlainSection {
+                PlainSectionTitle("detail.chart.title")
+            } content: {
+                AverageHistoryChart(
+                    points: viewModel.chartPoints,
+                    band: GradeMath.band(for: viewModel.currentAverage),
+                    style: .detail,
+                    overlayMarks: viewModel.averageTimeline
+                )
+                .frame(height: 220)
 
-                        Divider()
+                HStack(spacing: Spacing.sm) {
+                    GradelyIcon(systemName: viewModel.chartSource == .cloud ? "cloud.fill" : "chart.line.uptrend.xyaxis", size: 13)
+                        .foregroundStyle(.secondary)
+                    Text(sourceCaption)
+                        .font(.gradely(.caption))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
 
-                        HStack(spacing: Spacing.sm) {
-                            GradelyIcon(systemName: viewModel.chartSource == .cloud ? "cloud.fill" : "chart.line.uptrend.xyaxis", size: 13)
-                                .foregroundStyle(.secondary)
-                            Text(sourceCaption)
-                                .font(.gradely(.caption))
-                                .foregroundStyle(.secondary)
-                                .lineLimit(1)
+                    Spacer(minLength: Spacing.sm)
 
-                            Spacer(minLength: Spacing.sm)
-
-                            if let delta = viewModel.chartDelta {
-                                AverageDeltaChip(delta: delta)
-                            }
-                        }
+                    if let delta = viewModel.chartDelta {
+                        AverageDeltaChip(delta: delta)
                     }
                 }
             }
@@ -144,8 +124,9 @@ struct SubjectDetailView: View {
     }
 
     private var calculatorSection: some View {
-        VStack(alignment: .leading, spacing: Spacing.md) {
-            SectionHeader("detail.calculator.section")
+        PlainSection {
+            PlainSectionTitle("detail.calculator.section")
+        } content: {
             TheoreticalCalculatorView(viewModel: viewModel)
         }
     }
@@ -158,63 +139,45 @@ private struct AverageHero: View {
     let hasLocalAbsenceAdjustment: Bool
 
     var body: some View {
-        let band = GradeMath.band(for: viewModel.currentAverage)
-
-        VStack(spacing: Spacing.md) {
+        VStack(alignment: .leading, spacing: 2) {
             Text(AppL10n.string(viewModel.preparedCalculation.officialAverage != nil
                 ? "detail.intelligence.schoolAverage" : "detail.intelligence.calculatedAverage"))
                 .font(.gradely(.subheadline).weight(.semibold))
-                .foregroundStyle(.white.opacity(0.85))
+                .foregroundStyle(.secondary)
 
-            Text(viewModel.averageFormatted)
-                .font(.gradely(size: 64, weight: .bold).monospacedDigit())
-                .foregroundStyle(.white)
-                .minimumScaleFactor(0.6)
-                .lineLimit(1)
+            HStack(alignment: .firstTextBaseline, spacing: Spacing.md) {
+                Text(viewModel.averageFormatted)
+                    .font(.gradely(size: 52, weight: .bold).monospacedDigit())
+                    .foregroundStyle(GradeMath.band(for: viewModel.currentAverage).foregroundColor)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
 
-            HStack(spacing: Spacing.sm) {
-                heroChip(
-                    String.localizedStringWithFormat(
-                        AppL10n.string("subject.markCount"),
-                        viewModel.subject.marks.count
-                    ),
-                    systemImage: "checkmark.seal.fill"
-                )
-
-                if let absence = viewModel.absence {
-                    heroChip(
-                        String.localizedStringWithFormat(
-                            AppL10n.string("detail.absence.percent"),
-                            absence.absencePercentage
-                        ),
-                        systemImage: "calendar"
-                    )
-                }
+                Text(summary)
+                    .font(.gradely(.subheadline))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
             }
+
             if hasLocalAbsenceAdjustment {
                 GradelyLabel("absence.override.adjusted", systemImage: "eye.slash")
                     .font(.gradely(.caption))
-                    .foregroundStyle(.white.opacity(0.85))
+                    .foregroundStyle(.secondary)
                     .accessibilityIdentifier("subjectAbsenceAdjusted")
             }
         }
-        .frame(maxWidth: .infinity)
-        .padding(Spacing.xl)
-        .background(band.gradient, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
-        .shadow(color: band.foregroundColor.opacity(0.22), radius: 10, x: 0, y: 6)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, Spacing.xs)
+        .accessibilityElement(children: .combine)
     }
 
-    private func heroChip(_ text: String, systemImage: String) -> some View {
-        HStack(spacing: Spacing.xs) {
-            GradelyIcon(systemName: systemImage)
-                .font(.gradely(.caption2).weight(.bold))
-            Text(text)
-                .font(.gradely(.caption).weight(.semibold))
+    /// "3 marks · Absence 9.5 %"
+    private var summary: String {
+        var parts = [String.localizedStringWithFormat(AppL10n.string("subject.markCount"), viewModel.subject.marks.count)]
+        if let absence = viewModel.absence {
+            parts.append(String.localizedStringWithFormat(AppL10n.string("detail.absence.percent"), absence.absencePercentage))
         }
-        .foregroundStyle(.white)
-        .padding(.horizontal, Spacing.md)
-        .padding(.vertical, 6)
-        .background(.white.opacity(0.22), in: Capsule())
+        return parts.joined(separator: " · ")
     }
 }
 
@@ -291,7 +254,6 @@ private struct MarkRow: View {
                 }
             }
         }
-        .padding(Spacing.md)
         .contentShape(Rectangle())
         .onTapGesture {
             guard canExpand else { return }
@@ -330,7 +292,7 @@ private struct MarkRow: View {
                     .foregroundStyle(Brand.primary)
                 separator
             }
-            Text(MarkDateFormatter.fullDate(mark.markDate))
+            Text(MarkDateFormatter.shortDate(mark.markDate))
                 .monospacedDigit()
             if let typeLabel {
                 separator
@@ -437,38 +399,36 @@ private struct TheoreticalCalculatorView: View {
     @Bindable var viewModel: SubjectDetailViewModel
 
     var body: some View {
-        Card {
-            VStack(alignment: .leading, spacing: Spacing.md) {
-                if viewModel.preparedCalculation.canSimulate {
-                    HStack(spacing: Spacing.sm) {
-                        TextField(AppL10n.string("detail.calculator.mark.placeholder"), text: Binding(
-                            get: { viewModel.theoreticalMark },
-                            set: { viewModel.updateTheoreticalMark($0) }
-                        ))
-                        .gradelyKeyboardType(.numbersAndPunctuation)
-                        .brandField()
-                        .accessibilityIdentifier("theoreticalMarkField")
+        VStack(alignment: .leading, spacing: Spacing.md) {
+            if viewModel.preparedCalculation.canSimulate {
+                HStack(spacing: Spacing.sm) {
+                    TextField(AppL10n.string("detail.calculator.mark.placeholder"), text: Binding(
+                        get: { viewModel.theoreticalMark },
+                        set: { viewModel.updateTheoreticalMark($0) }
+                    ))
+                    .gradelyKeyboardType(.numbersAndPunctuation)
+                    .brandField()
+                    .accessibilityIdentifier("theoreticalMarkField")
 
-                        weightControl
-                    }
+                    weightControl
+                }
 
-                    if let theoreticalAverage = viewModel.theoreticalAverage {
-                        ResultLine(theoreticalAverage: theoreticalAverage, difference: viewModel.theoreticalDifference)
-                            .accessibilityIdentifier("theoreticalResultPanel")
-                    }
-                    if let warning = viewModel.calculationWarningKey {
-                        Text(AppL10n.string(String.LocalizationValue(warning)))
-                            .font(.gradely(.caption))
-                            .foregroundStyle(.secondary)
-                    }
-                } else {
-                    Text(AppL10n.string("detail.simulator.unavailable"))
-                        .font(.gradely(.subheadline))
+                if let theoreticalAverage = viewModel.theoreticalAverage {
+                    ResultLine(theoreticalAverage: theoreticalAverage, difference: viewModel.theoreticalDifference)
+                        .accessibilityIdentifier("theoreticalResultPanel")
+                }
+                if let warning = viewModel.calculationWarningKey {
+                    Text(AppL10n.string(String.LocalizationValue(warning)))
+                        .font(.gradely(.caption))
                         .foregroundStyle(.secondary)
                 }
+            } else {
+                Text(AppL10n.string("detail.simulator.unavailable"))
+                    .font(.gradely(.subheadline))
+                    .foregroundStyle(.secondary)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var weightControl: some View {

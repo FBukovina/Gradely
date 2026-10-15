@@ -33,17 +33,11 @@ enum MarkDateFormatter {
         return fallbackDate(from: string)
     }
 
-    static func fullDate(_ string: String) -> String {
+    static func shortDate(_ string: String) -> String {
         guard let date = date(from: string) else {
             return String(string.split(separator: "T").first ?? "")
         }
-
-        return date.formatted(
-            Date.FormatStyle(locale: AppLanguageOverride.locale)
-                .day()
-                .month(.defaultDigits)
-                .year()
-        )
+        return SchoolDateFormatting.shortDate(date)
     }
 
     static func relativeDate(_ string: String, relativeTo now: Date = Date()) -> String {
@@ -98,17 +92,13 @@ enum TimetableDates {
         apiFormatter.string(from: date)
     }
 
-    /// Localized Monday–Friday range label, e.g. "8 – 12 Jun" / "8.–12. čvn".
-    static func weekRangeTitle(
-        weekStart monday: Date,
-        locale: Locale = AppLanguageOverride.locale
-    ) -> String {
+    /// Monday–Friday range in the app's short date style, e.g. "12. 10. – 16. 10.".
+    static func weekRangeTitle(weekStart monday: Date) -> String {
         let friday = weekCalendar.date(byAdding: .day, value: 4, to: monday) ?? monday
-        let dayMonth = Date.FormatStyle(locale: locale).day().month(.abbreviated)
         guard monday < friday else {
-            return monday.formatted(dayMonth)
+            return SchoolDateFormatting.shortDate(monday)
         }
-        return (monday..<friday).formatted(.interval.day().month(.abbreviated).locale(locale))
+        return SchoolDateFormatting.shortDate(monday) + " – " + SchoolDateFormatting.shortDate(friday)
     }
 
     static func weekdayAbbreviation(

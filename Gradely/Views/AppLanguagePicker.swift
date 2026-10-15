@@ -74,7 +74,7 @@ struct AppLanguageOptionsList: View {
                 .accessibilityAddTraits(isSelected(language) ? [.isSelected] : [])
 
                 if index < AppLanguage.pickerLanguages.count - 1 {
-                    SettingsRowDivider()
+                    SettingsRowDivider(leadingInset: SettingsRowMetrics.inset)
                 }
             }
         }

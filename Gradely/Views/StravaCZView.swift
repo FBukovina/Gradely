@@ -157,7 +157,7 @@ struct StravaCZView: View {
                     ) { meal in
                         Task { await viewModel.toggleMeal(meal) }
                     }
-                    .listRowInsets(EdgeInsets(top: Spacing.sm, leading: Spacing.lg, bottom: Spacing.sm, trailing: Spacing.lg))
+                    .listRowInsets(EdgeInsets(top: Spacing.md, leading: Spacing.lg, bottom: Spacing.md, trailing: Spacing.lg))
                     .listRowSeparator(.hidden)
                     .listRowBackground(Color.clear)
                 }
@@ -240,48 +240,33 @@ private struct StravaCZDayCard: View {
     let onToggle: (StravaCZMeal) -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Spacing.md) {
-            VStack(alignment: .leading, spacing: Spacing.xs) {
-                if let weekdayText {
-                    Text(weekdayText)
-                        .font(.gradely(.caption).weight(.bold))
-                        .foregroundStyle(Brand.primary)
-                        .textCase(.uppercase)
-                        .tracking(0.8)
-                }
-
-                Text(day.displayDate)
+        PlainSection {
+            HStack(alignment: .firstTextBaseline, spacing: Spacing.sm) {
+                Text(verbatim: weekdayText ?? day.displayDate)
                     .font(.gradely(.title3).weight(.bold))
                     .foregroundStyle(.primary)
-                    .fixedSize(horizontal: false, vertical: true)
+                if let date {
+                    Text(verbatim: SchoolDateFormatting.shortDate(date))
+                        .font(.gradely(.subheadline))
+                        .foregroundStyle(.secondary)
+                }
             }
-
-            VStack(alignment: .leading, spacing: 0) {
-                ForEach(day.meals.indices, id: \.self) { index in
-                    let meal = day.meals[index]
-
-                    if index > day.meals.startIndex {
-                        Divider()
-                            .padding(.leading, Spacing.xs)
-                    }
-
-                    StravaCZMealRow(
-                        meal: meal,
-                        isSubmitting: submittingMealID == meal.id
-                    ) {
-                        onToggle(meal)
-                    }
+            .accessibilityElement(children: .combine)
+            .accessibilityAddTraits(.isHeader)
+        } content: {
+            ForEach(day.meals.indices, id: \.self) { index in
+                let meal = day.meals[index]
+                StravaCZMealRow(
+                    meal: meal,
+                    isSubmitting: submittingMealID == meal.id
+                ) {
+                    onToggle(meal)
                 }
             }
         }
-        .padding(Spacing.lg)
-        .background(Color.gradelySecondaryGroupedBackground, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
-                .stroke(Brand.primary.opacity(0.28), lineWidth: 1.25)
-        )
     }
 
+    /// "Monday" / "Pondělí"
     private var weekdayText: String? {
         guard let date else { return nil }
 
@@ -289,7 +274,8 @@ private struct StravaCZDayCard: View {
         formatter.locale = AppLanguageOverride.locale
         formatter.timeZone = TimeZone(secondsFromGMT: 0)
         formatter.dateFormat = "EEEE"
-        return formatter.string(from: date)
+        let weekday = formatter.string(from: date)
+        return weekday.prefix(1).uppercased() + weekday.dropFirst()
     }
 
     private var date: Date? {
@@ -351,7 +337,6 @@ private struct StravaCZMealRow: View {
                     .accessibilityHidden(true)
             }
         }
-        .padding(.vertical, Spacing.md)
     }
 }
 

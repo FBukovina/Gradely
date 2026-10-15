@@ -49,51 +49,32 @@ struct SettingsBackground: View {
     }
 }
 
-struct SettingsSurfaceShape: View {
-    @Environment(\.colorScheme) private var colorScheme
-
-    var body: some View {
-        RoundedRectangle(cornerRadius: Radius.xl, style: .continuous)
-            .fill(
-                colorScheme == .dark
-                    ? Color(.sRGB, red: 0.045, green: 0.140, blue: 0.130, opacity: 1)
-                    : Color.gradelySecondaryGroupedBackground
-            )
-            .overlay {
-                if colorScheme == .light {
-                    RoundedRectangle(cornerRadius: Radius.xl, style: .continuous)
-                        .fill(Brand.primary.opacity(0.035))
-                }
-            }
-            .overlay {
-                RoundedRectangle(cornerRadius: Radius.xl, style: .continuous)
-                    .strokeBorder(
-                        colorScheme == .dark
-                            ? Color.white.opacity(0.025)
-                            : Brand.primary.opacity(0.075),
-                        lineWidth: 1
-                    )
-            }
-            .shadow(
-                color: .black.opacity(colorScheme == .dark ? 0.06 : 0.035),
-                radius: 2,
-                x: 0,
-                y: 1
-            )
-    }
+/// Horizontal inset that Settings rows carry inside a `SettingsSurface(padding: 0)`.
+enum SettingsRowMetrics {
+    static let inset: CGFloat = 20
 }
 
-/// The flat 28-point surface used by Settings and the sheets launched from it.
+/// A Settings group with no card: content straight on the background under a
+/// hairline, like `PlainSection`. Rows in a `padding: 0` group carry their own
+/// `SettingsRowMetrics.inset`, so the group pulls them out to line up with the
+/// section titles.
 struct SettingsSurface<Content: View>: View {
     var padding: CGFloat = 20
     @ViewBuilder var content: Content
 
     var body: some View {
-        content
-            .padding(padding)
-            .background {
-                SettingsSurfaceShape()
+        VStack(alignment: .leading, spacing: 0) {
+            Divider()
+            if padding == 0 {
+                content
+                    .padding(.horizontal, -SettingsRowMetrics.inset)
+            } else {
+                content
+                    .padding(.vertical, padding)
             }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, Spacing.xs)
     }
 }
 
@@ -209,11 +190,12 @@ struct SettingsDisclosureIcon: View {
 }
 
 struct SettingsRowDivider: View {
-    var leadingInset: CGFloat = 20 + SettingsIcon.frameSize + Spacing.md
+    var leadingInset: CGFloat = SettingsRowMetrics.inset + SettingsIcon.frameSize + Spacing.md
 
     var body: some View {
         Divider()
             .padding(.leading, leadingInset)
+            .padding(.trailing, SettingsRowMetrics.inset)
     }
 }
 

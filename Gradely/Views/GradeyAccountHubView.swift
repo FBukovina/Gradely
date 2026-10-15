@@ -527,44 +527,43 @@ struct GradeyAccountHubView: View {
         isSelected: Bool,
         onSelect: @escaping () -> Void
     ) -> some View {
-        Button(action: onSelect) {
-            AdaptiveSettingsStack {
-                AccountAvatar(
-                    name: profileAvatarName,
-                    avatarURL: viewModel.account?.avatarURL,
-                    size: 60
-                )
+        SettingsSurface(padding: 0) {
+            Button(action: onSelect) {
+                AdaptiveSettingsStack {
+                    AccountAvatar(
+                        name: profileAvatarName,
+                        avatarURL: viewModel.account?.avatarURL,
+                        size: 60
+                    )
 
-                VStack(alignment: .leading, spacing: Spacing.xs) {
-                    Text(profileDisplayName)
-                        .font(.gradely(.headline))
-                        .foregroundStyle(.primary)
-                        .fixedSize(horizontal: false, vertical: true)
+                    VStack(alignment: .leading, spacing: Spacing.xs) {
+                        Text(profileDisplayName)
+                            .font(.gradely(.headline))
+                            .foregroundStyle(.primary)
+                            .fixedSize(horizontal: false, vertical: true)
 
-                    Text(profileSubtitle)
-                        .font(.gradely(.subheadline))
-                        .foregroundStyle(Brand.primary.opacity(0.78))
-                        .fixedSize(horizontal: false, vertical: true)
+                        Text(profileSubtitle)
+                            .font(.gradely(.subheadline))
+                            .foregroundStyle(Brand.primary.opacity(0.78))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                    SettingsDisclosureIcon()
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-                SettingsDisclosureIcon()
-            }
-            .padding(.horizontal, 20)
-            .padding(.vertical, Spacing.md)
-            .frame(maxWidth: .infinity, minHeight: 104, alignment: .leading)
-            .background {
-                if isSelected {
-                    RoundedRectangle(cornerRadius: Radius.xl - 4, style: .continuous)
-                        .fill(Brand.primary.opacity(0.10))
-                        .padding(4)
+                .padding(.horizontal, 20)
+                .padding(.vertical, Spacing.md)
+                .frame(maxWidth: .infinity, minHeight: 104, alignment: .leading)
+                .background {
+                    if isSelected {
+                        RoundedRectangle(cornerRadius: Radius.xl - 4, style: .continuous)
+                            .fill(Brand.primary.opacity(0.10))
+                            .padding(4)
+                    }
                 }
+                .contentShape(Rectangle())
             }
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .background {
-            SettingsSurfaceShape()
+            .buttonStyle(.plain)
         }
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier("settingsDestination-account")
@@ -1440,8 +1439,6 @@ private extension GradeyAccountHubView {
 
     var appPreferencesDetail: some View {
         VStack(alignment: .leading, spacing: Spacing.xl) {
-            DetailSectionHeader(title: "settings.destination.preferences.title")
-
             AppLanguageOptionsList(store: languageStore, usesSettingsChrome: true)
 
             SettingsSurface {
@@ -2613,12 +2610,8 @@ private struct SettingsAvailabilityMessage: View {
         }
         .font(.gradely(.footnote))
         .foregroundStyle(.secondary)
-        .padding(Spacing.md)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            Color.gradelyTertiaryFill,
-            in: RoundedRectangle(cornerRadius: Radius.md, style: .continuous)
-        )
+        .padding(.horizontal, Spacing.xs)
     }
 }
 

@@ -1,6 +1,62 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "today.recentGrades.none" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zatím žádné známky"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "zatím žádné známky"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No marks yet"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "no marks yet"
+          }
+        }
+      }
+    },
+    "today.planner.none" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nic naplánováno"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "nic naplánováno"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nothing planned"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "nothing planned"
+          }
+        }
+      }
+    },
     "absence.header.total" : {
       "localizations" : {
         "cs" : {
@@ -25124,34 +25180,6 @@
         }
       }
     },
-    "timetable.summary.empty.message" : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "V dnešním rozvrhu nejsou žádné hodiny."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "dneska v rozvrhu nic není. éra volna."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "There are no lessons in today's timetable."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "timetable said nah. go touch grass."
-          }
-        }
-      }
-    },
     "timetable.summary.empty.title" : {
       "localizations" : {
         "cs" : {
@@ -25836,34 +25864,6 @@
         }
       }
     },
-    "today.noMeal.subtitle" : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Oběd objednáš nebo zkontroluješ v Jídelně."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "oběd objednáš nebo zkontroluješ v Jídelně."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Open Meals to order or check the menu."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "open Meals to order or check the menu."
-          }
-        }
-      }
-    },
     "today.noMoreLessons" : {
       "localizations" : {
         "cs" : {
@@ -25888,92 +25888,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "no more lessons"
-          }
-        }
-      }
-    },
-    "today.noMoreLessons.subtitle" : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "V dnešním rozvrhu už nejsou žádné další hodiny."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "v dnešním rozvrhu už nejsou žádné další hodiny."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No further lessons are listed for today."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "no further lessons are listed for today."
-          }
-        }
-      }
-    },
-    "today.planner.empty" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Přidej si do Plánovače příští test nebo úkol."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "přidej si do plánovače příští test nebo úkol."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Add your next test or assignment in Planner."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "add your next test or assignment in planner."
-          }
-        }
-      }
-    },
-    "today.recentGrades.empty" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tady se objeví tvoje zapsané známky."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "tady se objeví tvoje zapsané známky."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Your recorded marks will appear here."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "your recorded marks will appear here."
           }
         }
       }
@@ -26116,34 +26030,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "timetable unavailable"
-          }
-        }
-      }
-    },
-    "today.timetableUnavailable.subtitle" : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Obnov data potažením dolů nebo otevři Rozvrh."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "obnov data potažením dolů nebo otevři rozvrh."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pull down to refresh or open Timetable."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "pull down to refresh or open Timetable."
           }
         }
       }

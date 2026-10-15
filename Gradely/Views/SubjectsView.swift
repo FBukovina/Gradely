@@ -110,7 +110,7 @@ struct SubjectsView: View {
 
     private var marksDashboard: some View {
         ScrollView {
-            LazyVStack(alignment: .leading, spacing: Spacing.lg) {
+            LazyVStack(alignment: .leading, spacing: Spacing.xl) {
                 if viewModel.isRefreshing {
                     HStack(spacing: Spacing.sm) {
                         ProgressView()
@@ -253,9 +253,11 @@ private struct SubjectDirectory: View {
     let trend: (Subject) -> SubjectGradeTrend?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Spacing.md) {
+        PlainSection {
             HStack(alignment: .center, spacing: Spacing.md) {
-                SectionHeader("marks.directory.title")
+                PlainSectionTitle("marks.directory.title")
+
+                Spacer(minLength: 0)
 
                 Picker(AppL10n.string("marks.sort.label"), selection: $sortMode) {
                     ForEach(SubjectSortMode.allCases) { mode in
@@ -263,43 +265,31 @@ private struct SubjectDirectory: View {
                     }
                 }
                 .pickerStyle(.segmented)
-                .frame(maxWidth: 260)
+                .frame(maxWidth: 220)
                 .accessibilityIdentifier("subjectsSortPicker")
             }
-
-            VStack(spacing: 0) {
-                ForEach(Array(subjects.enumerated()), id: \.element.id) { index, subject in
-                    NavigationLink {
-                        SubjectDetailView(
-                            viewModel: SubjectDetailViewModel(
-                                subject: subject,
-                                absence: absence(subject),
-                                repository: repository,
-                                trend: trend(subject),
-                                prepared: snapshotStore?.preparedCalculations[subject.id]
-                            ),
-                            snapshotStore: snapshotStore
-                        )
-                    } label: {
-                        SubjectRow(
+        } content: {
+            ForEach(subjects) { subject in
+                NavigationLink {
+                    SubjectDetailView(
+                        viewModel: SubjectDetailViewModel(
                             subject: subject,
                             absence: absence(subject),
+                            repository: repository,
+                            trend: trend(subject),
                             prepared: snapshotStore?.preparedCalculations[subject.id]
-                        )
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityIdentifier("subjectRow-\(subject.id)")
-
-                    if index < subjects.count - 1 {
-                        Divider()
-                            .padding(.leading, Spacing.md + 44 + Spacing.md)
-                    }
+                        ),
+                        snapshotStore: snapshotStore
+                    )
+                } label: {
+                    SubjectRow(
+                        subject: subject,
+                        absence: absence(subject),
+                        prepared: snapshotStore?.preparedCalculations[subject.id]
+                    )
                 }
-            }
-            .background(Color.gradelySecondaryGroupedBackground, in: RoundedRectangle(cornerRadius: Radius.sm, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: Radius.sm, style: .continuous)
-                    .strokeBorder(Color.primary.opacity(0.06), lineWidth: 1)
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("subjectRow-\(subject.id)")
             }
         }
     }
@@ -359,8 +349,6 @@ private struct SubjectRow: View {
                 .font(.gradely(.caption).weight(.bold))
                 .foregroundStyle(.tertiary)
         }
-        .padding(.horizontal, Spacing.md)
-        .padding(.vertical, Spacing.md)
         .contentShape(Rectangle())
     }
 

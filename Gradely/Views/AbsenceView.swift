@@ -258,6 +258,7 @@ private struct AbsenceCountsList: View {
             EmptyAbsenceSection(title: emptyTitle)
         } else {
             LazyVStack(spacing: 0) {
+                Divider()
                 countRow(
                     title: totalTitle,
                     counts: rows.reduce(into: .zero) { total, row in total.add(row.counts) },
@@ -266,13 +267,8 @@ private struct AbsenceCountsList: View {
                 .accessibilityElement(children: .combine)
                 .accessibilityIdentifier("absenceRow-total")
 
-                Divider()
-
-                ForEach(Array(rows.enumerated()), id: \.element.id) { index, row in
-                    if index > 0 {
-                        Divider()
-                            .padding(.leading, Spacing.md)
-                    }
+                ForEach(rows) { row in
+                    Divider()
                     if let onSelect {
                         Button { onSelect(row.id) } label: {
                             countRow(title: row.title, counts: row.counts, isTotal: false)
@@ -288,12 +284,7 @@ private struct AbsenceCountsList: View {
                     }
                 }
             }
-            .background(Color.gradelySecondaryGroupedBackground)
-            .clipShape(RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
-                    .strokeBorder(Color.primary.opacity(0.06), lineWidth: 1)
-            )
+            .padding(.horizontal, Spacing.xs)
         }
     }
 
@@ -316,7 +307,6 @@ private struct AbsenceCountsList: View {
                 .font(.gradely(.subheadline).weight(.bold).monospacedDigit())
                 .frame(minWidth: 28, alignment: .trailing)
         }
-        .padding(.horizontal, Spacing.md)
         .padding(.vertical, Spacing.md)
         .contentShape(Rectangle())
     }
@@ -347,25 +337,23 @@ private struct AbsenceMonthsChartCard: View {
     let months: [AbsenceMonthSummary]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Spacing.sm) {
-            SectionHeader("absence.months.chart")
+        VStack(alignment: .leading, spacing: Spacing.md) {
+            PlainSectionTitle("absence.months.chart")
 
-            Card {
-                VStack(alignment: .leading, spacing: Spacing.md) {
-                    AbsenceMonthsChart(series: series)
+            AbsenceMonthsChart(series: series)
 
-                    LazyVGrid(
-                        columns: [GridItem(.adaptive(minimum: 130), spacing: Spacing.xs, alignment: .leading)],
-                        alignment: .leading,
-                        spacing: Spacing.xs
-                    ) {
-                        ForEach(series) { entry in
-                            StatusChip(text: "\(symbol(for: entry.id)) \(entry.label)", color: entry.color)
-                        }
-                    }
+            LazyVGrid(
+                columns: [GridItem(.adaptive(minimum: 130), spacing: Spacing.xs, alignment: .leading)],
+                alignment: .leading,
+                spacing: Spacing.xs
+            ) {
+                ForEach(series) { entry in
+                    StatusChip(text: "\(symbol(for: entry.id)) \(entry.label)", color: entry.color)
                 }
             }
         }
+        .padding(.horizontal, Spacing.xs)
+        .padding(.bottom, Spacing.md)
     }
 
     private var series: [AbsenceChartSeries] {
@@ -431,20 +419,12 @@ private struct SubjectAbsenceTable: View {
 
     private func riskList(rows: [AbsenceSubjectSummary]) -> some View {
         LazyVStack(spacing: 0) {
-            ForEach(Array(rows.enumerated()), id: \.element.stableID) { index, row in
-                if index > 0 {
-                    Divider()
-                        .padding(.leading, Spacing.md)
-                }
+            ForEach(rows, id: \.stableID) { row in
+                Divider()
                 riskRow(row)
             }
         }
-        .background(Color.gradelySecondaryGroupedBackground)
-        .clipShape(RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
-                .strokeBorder(Color.primary.opacity(0.06), lineWidth: 1)
-        )
+        .padding(.horizontal, Spacing.xs)
     }
 
     private func riskRow(_ row: AbsenceSubjectSummary) -> some View {
@@ -492,7 +472,6 @@ private struct SubjectAbsenceTable: View {
             .lineLimit(1)
             .minimumScaleFactor(0.8)
         }
-        .padding(.horizontal, Spacing.md)
         .padding(.vertical, Spacing.md)
         .accessibilityIdentifier("absenceRow-\(row.stableID)")
     }
@@ -517,27 +496,27 @@ private struct SubjectManualResolutionCallout: View {
     let onResolveMissingHours: () -> Void
 
     var body: some View {
-        Card {
-            VStack(alignment: .leading, spacing: Spacing.sm) {
-                GradelyLabel("absence.manual.callout.title", systemImage: "hand.tap")
-                    .font(.gradely(.subheadline).weight(.semibold))
-                    .foregroundStyle(Brand.primary)
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            GradelyLabel("absence.manual.callout.title", systemImage: "hand.tap")
+                .font(.gradely(.subheadline).weight(.semibold))
+                .foregroundStyle(Brand.primary)
 
-                Text(
-                    String(
-                        format: AppL10n.string("absence.manual.callout.message"),
-                        days.count
-                    )
+            Text(
+                String(
+                    format: AppL10n.string("absence.manual.callout.message"),
+                    days.count
                 )
-                .font(.gradely(.subheadline))
-                .foregroundStyle(.secondary)
+            )
+            .font(.gradely(.subheadline))
+            .foregroundStyle(.secondary)
 
-                Button("absence.manual.callout.button", action: onResolveMissingHours)
-                    .buttonStyle(.borderedProminent)
-                    .accessibilityIdentifier("absenceManualResolveButton")
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            Button("absence.manual.callout.button", action: onResolveMissingHours)
+                .buttonStyle(.borderedProminent)
+                .accessibilityIdentifier("absenceManualResolveButton")
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, Spacing.xs)
+        .padding(.vertical, Spacing.sm)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("absenceManualResolutionCallout")
     }
@@ -633,30 +612,30 @@ private struct SubjectResolutionStatusView: View {
     let progress: AbsenceSubjectResolutionProgress?
 
     var body: some View {
-        Card {
-            HStack(spacing: Spacing.sm) {
-                ProgressView()
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("absence.subjects.calculating")
-                        .font(.gradely(.subheadline))
-                        .foregroundStyle(.secondary)
+        HStack(spacing: Spacing.sm) {
+            ProgressView()
+            VStack(alignment: .leading, spacing: 2) {
+                Text("absence.subjects.calculating")
+                    .font(.gradely(.subheadline))
+                    .foregroundStyle(.secondary)
 
-                    if let progress {
-                        Text(
-                            String(
-                                format: AppL10n.string("absence.subjects.progress"),
-                                progress.completedWeeks,
-                                progress.totalWeeks
-                            )
+                if let progress {
+                    Text(
+                        String(
+                            format: AppL10n.string("absence.subjects.progress"),
+                            progress.completedWeeks,
+                            progress.totalWeeks
                         )
-                        .font(.gradely(.caption))
-                        .foregroundStyle(.tertiary)
-                        .accessibilityIdentifier("absenceSubjectsProgress")
-                    }
+                    )
+                    .font(.gradely(.caption))
+                    .foregroundStyle(.tertiary)
+                    .accessibilityIdentifier("absenceSubjectsProgress")
                 }
-                Spacer()
             }
+            Spacer()
         }
+        .padding(.horizontal, Spacing.xs)
+        .padding(.vertical, Spacing.sm)
         .accessibilityIdentifier("absenceSubjectsCalculating")
     }
 }
@@ -665,13 +644,13 @@ private struct SubjectResolutionWarningView: View {
     let message: String
 
     var body: some View {
-        Card {
-            GradelyLabel(message, systemImage: "exclamationmark.triangle")
-                .font(.gradely(.subheadline))
-                .foregroundStyle(GradeBand.average.foregroundColor)
-                .frame(maxWidth: .infinity, alignment: .leading)
-        }
-        .accessibilityIdentifier("absenceSubjectsWarning")
+        GradelyLabel(message, systemImage: "exclamationmark.triangle")
+            .font(.gradely(.subheadline))
+            .foregroundStyle(GradeBand.average.foregroundColor)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, Spacing.xs)
+            .padding(.vertical, Spacing.sm)
+            .accessibilityIdentifier("absenceSubjectsWarning")
     }
 }
 
@@ -680,21 +659,21 @@ private struct SubjectResolutionErrorView: View {
     let onRetry: () -> Void
 
     var body: some View {
-        Card {
-            VStack(alignment: .leading, spacing: Spacing.sm) {
-                GradelyLabel(AppL10n.string("absence.subjects.error.title"), systemImage: "exclamationmark.triangle")
-                    .font(.gradely(.subheadline).weight(.semibold))
-                    .foregroundStyle(GradeBand.poor.foregroundColor)
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            GradelyLabel(AppL10n.string("absence.subjects.error.title"), systemImage: "exclamationmark.triangle")
+                .font(.gradely(.subheadline).weight(.semibold))
+                .foregroundStyle(GradeBand.poor.foregroundColor)
 
-                Text(message)
-                    .font(.gradely(.subheadline))
-                    .foregroundStyle(.secondary)
+            Text(message)
+                .font(.gradely(.subheadline))
+                .foregroundStyle(.secondary)
 
-                Button(AppL10n.string("action.retry"), action: onRetry)
-                    .buttonStyle(.bordered)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            Button(AppL10n.string("action.retry"), action: onRetry)
+                .buttonStyle(.bordered)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, Spacing.xs)
+        .padding(.vertical, Spacing.sm)
         .accessibilityIdentifier("absenceSubjectsError")
     }
 }
@@ -703,16 +682,16 @@ private struct EmptyAbsenceSection: View {
     let title: LocalizedStringKey
 
     var body: some View {
-        Card {
-            HStack(spacing: Spacing.sm) {
-                GradelyIcon(systemName: "calendar.badge.checkmark")
-                    .foregroundStyle(Brand.primary)
-                Text(title)
-                    .font(.gradely(.subheadline))
-                    .foregroundStyle(.secondary)
-                Spacer()
-            }
+        HStack(spacing: Spacing.sm) {
+            GradelyIcon(systemName: "calendar.badge.checkmark")
+                .foregroundStyle(Brand.primary)
+            Text(title)
+                .font(.gradely(.subheadline))
+                .foregroundStyle(.secondary)
+            Spacer()
         }
+        .padding(.horizontal, Spacing.xs)
+        .padding(.vertical, Spacing.sm)
     }
 }
 

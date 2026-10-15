@@ -7,51 +7,51 @@ struct AbsencePredictorCard: View {
 
     var body: some View {
         if result.hasSelection {
-            Card {
-                VStack(alignment: .leading, spacing: Spacing.md) {
-                    HStack {
-                        SectionHeader("absence.predictor.title")
-                        Spacer()
+            VStack(alignment: .leading, spacing: Spacing.md) {
+                HStack {
+                    PlainSectionTitle("absence.predictor.title")
+                    Spacer()
 
-                        Button(action: onClear) {
-                            Text("action.clear")
-                        }
-                        .font(.gradely(.caption).weight(.bold))
-                        .buttonStyle(.bordered)
-                        .accessibilityIdentifier("absencePredictorClearButton")
-
-                        Button(action: onOpen) {
-                            Text("absence.predictor.edit")
-                        }
-                        .font(.gradely(.caption).weight(.bold))
-                        .buttonStyle(.bordered)
-                        .accessibilityIdentifier("absencePredictorOpenButton")
+                    Button(action: onClear) {
+                        Text("action.clear")
                     }
+                    .font(.gradely(.caption).weight(.bold))
+                    .buttonStyle(.bordered)
+                    .accessibilityIdentifier("absencePredictorClearButton")
 
-                    predictionSummary
+                    Button(action: onOpen) {
+                        Text("absence.predictor.edit")
+                    }
+                    .font(.gradely(.caption).weight(.bold))
+                    .buttonStyle(.bordered)
+                    .accessibilityIdentifier("absencePredictorOpenButton")
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
+
+                predictionSummary
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, Spacing.xs)
+            .padding(.vertical, Spacing.sm)
             .accessibilityElement(children: .contain)
             .accessibilityIdentifier("absencePredictorCard")
         } else {
-            Card(padding: Spacing.md) {
-                Button(action: onOpen) {
-                    HStack(spacing: Spacing.md) {
-                        GradelyIcon(systemName: "calendar.badge.clock")
-                            .foregroundStyle(Brand.primary)
-                        Text("absence.predictor.open")
-                            .font(.gradely(.subheadline).weight(.semibold))
-                        Spacer(minLength: Spacing.sm)
-                        GradelyIcon(systemName: "chevron.right", size: 13)
-                            .foregroundStyle(.tertiary)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .contentShape(Rectangle())
+            Button(action: onOpen) {
+                HStack(spacing: Spacing.md) {
+                    GradelyIcon(systemName: "calendar.badge.clock")
+                        .foregroundStyle(Brand.primary)
+                    Text("absence.predictor.open")
+                        .font(.gradely(.subheadline).weight(.semibold))
+                    Spacer(minLength: Spacing.sm)
+                    GradelyIcon(systemName: "chevron.right", size: 13)
+                        .foregroundStyle(.tertiary)
                 }
-                .buttonStyle(.plain)
-                .accessibilityIdentifier("absencePredictorOpenButton")
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, Spacing.xs)
+                .padding(.vertical, Spacing.sm)
+                .contentShape(Rectangle())
             }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("absencePredictorOpenButton")
         }
     }
 

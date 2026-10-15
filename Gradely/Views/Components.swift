@@ -505,6 +505,78 @@ struct SectionHeader: View {
     }
 }
 
+// MARK: - Plain section
+
+/// A section with no card: an optional header, then rows straight on the
+/// background separated by hairlines. Used on Today, Marks and Absence.
+struct PlainSection<Header: View, Content: View>: View {
+    let footer: LocalizedStringKey?
+    let header: Header
+    let content: Content
+
+    init(
+        footer: LocalizedStringKey? = nil,
+        @ViewBuilder header: () -> Header,
+        @ViewBuilder content: () -> Content
+    ) {
+        self.footer = footer
+        self.header = header()
+        self.content = content()
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            if Header.self != EmptyView.self {
+                header
+                    .padding(.bottom, Spacing.sm)
+            }
+            ForEach(subviews: content) { row in
+                Divider()
+                row.padding(.vertical, Spacing.md)
+            }
+            if let footer {
+                Text(footer)
+                    .font(.gradely(.caption))
+                    .foregroundStyle(.secondary)
+                    .padding(.top, Spacing.xs)
+            }
+        }
+        .padding(.horizontal, Spacing.xs)
+        .accessibilityElement(children: .contain)
+    }
+}
+
+extension PlainSection where Header == EmptyView {
+    init(footer: LocalizedStringKey? = nil, @ViewBuilder content: () -> Content) {
+        self.init(footer: footer, header: { EmptyView() }, content: content)
+    }
+}
+
+/// Title of a `PlainSection`; shows a chevron when the title is a link.
+struct PlainSectionTitle: View {
+    let title: LocalizedStringKey
+    var showsChevron = false
+
+    init(_ title: LocalizedStringKey, showsChevron: Bool = false) {
+        self.title = title
+        self.showsChevron = showsChevron
+    }
+
+    var body: some View {
+        HStack(spacing: Spacing.xs) {
+            Text(title)
+                .font(.gradely(.title3).weight(.bold))
+                .foregroundStyle(.primary)
+            if showsChevron {
+                GradelyIcon("arrow-right-01", size: 15)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .contentShape(Rectangle())
+        .accessibilityAddTraits(.isHeader)
+    }
+}
+
 // MARK: - Primary button
 
 /// Full-width gradient CTA used for the primary action on a screen.

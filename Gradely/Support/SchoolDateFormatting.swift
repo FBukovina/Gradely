@@ -7,6 +7,24 @@ enum SchoolDateFormatting {
                                        locale: locale, timeZone: timeZone))
     }
 
+    /// Day and month only ("31. 5."), with the year when it isn't the current one.
+    /// Numeric, so it follows the device region (like the Absence day list)
+    /// rather than the app language, whose English locale has no region. ICU's
+    /// English-in-Czechia pattern drops the final dot ("31. 5"), so Czech and
+    /// Slovak regions use the native pattern.
+    static func shortDate(_ date: Date, region: Locale.Region? = Locale.current.region, now: Date = Date()) -> String {
+        let locale: Locale = switch region {
+        case .czechia?: Locale(identifier: "cs_CZ")
+        case .slovakia?: Locale(identifier: "sk_SK")
+        default: .current
+        }
+        var style = Date.FormatStyle(locale: locale).day().month(.defaultDigits)
+        if !Calendar.current.isDate(date, equalTo: now, toGranularity: .year) {
+            style = style.year()
+        }
+        return date.formatted(style)
+    }
+
     static func eventDate(_ event: SchoolEvent, locale: Locale = AppLanguageOverride.locale,
                           deviceTimeZone: TimeZone = .current, includeTime: Bool = true) -> String {
         date(event.date, locale: locale, timeZone: event.hasTime ? deviceTimeZone : event.calendar.timeZone,

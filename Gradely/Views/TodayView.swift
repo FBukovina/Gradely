@@ -112,7 +112,7 @@ struct TodayView: View {
 
     private func content(at now: Date) -> some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: Spacing.lg) {
+            VStack(alignment: .leading, spacing: Spacing.xl) {
                 if let account = viewModel.accountRequiringReconnect {
                     schoolConnectionNotice(account)
                 }
@@ -193,91 +193,67 @@ struct TodayView: View {
         .accessibilityIdentifier("todaySchoolConnectionNotice")
     }
 
-    // MARK: - Day card
+    // MARK: - Now and next
 
     private func dayCard(at now: Date) -> some View {
         let snapshot = viewModel.snapshot
-        return Card {
-            VStack(alignment: .leading, spacing: Spacing.md) {
-                HStack(alignment: .firstTextBaseline) {
-                    SectionHeader("Now and next")
-                    if let onOpenTimetable {
-                        Button(action: onOpenTimetable) {
-                            TodayLinkLabel(title: "rozvrh.title")
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityIdentifier("todayOpenTimetableButton")
-                    }
+        return TodaySection(
+            "Now and next",
+            link: onOpenTimetable.map { .action(id: "todayOpenTimetableButton", perform: $0) },
+            footer: isTimetableStale(at: now) ? "today.cached.warning" : nil
+        ) {
+            if let summary = snapshot.timetableSummary {
+                if !snapshot.todayLessons.isEmpty {
+                    TodayLessonStrip(lessons: snapshot.todayLessons, summary: summary, now: now)
                 }
 
-                if let summary = snapshot.timetableSummary {
-                    if !snapshot.todayLessons.isEmpty {
-                        TodayLessonStrip(lessons: snapshot.todayLessons, summary: summary, now: now)
-                    }
-
-                    if let current = summary.currentLesson {
-                        TodayLessonRow(lesson: current, role: .current, minutes: summary.minutesRemainingInCurrent)
-                    }
-                    if let next = summary.nextLesson {
-                        TodayLessonRow(
-                            lesson: next,
-                            role: .next,
-                            minutes: summary.currentLesson == nil ? summary.minutesUntilNext : nil
-                        )
-                    }
-                    if summary.currentLesson == nil, summary.nextLesson == nil {
-                        if summary.state == .empty {
-                            TodayInfoRow(
-                                title: Text("timetable.summary.empty.title"),
-                                subtitle: Text("timetable.summary.empty.message"),
-                                icon: "sun-01",
-                                tint: Brand.primary
-                            )
-                        } else {
-                            TodayInfoRow(
-                                title: Text("today.noMoreLessons"),
-                                subtitle: Text("today.noMoreLessons.subtitle"),
-                                icon: "checkmark-circle-02",
-                                tint: Brand.primary
-                            )
-                        }
-                    }
-
-                    if summary.hasChanges {
-                        Divider()
-                        HStack(spacing: Spacing.sm) {
-                            GradelyIcon("alert-02", size: 14)
-                            Text(verbatim: changeSummary(summary))
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                        .font(.gradely(.caption).weight(.bold))
-                        .foregroundStyle(LessonChangeKind.canceled.color)
-                        ForEach(summary.changedLessons.prefix(3)) { lesson in
-                            TodayInfoRow(
-                                title: Text(verbatim: lesson.changeKind.localizedLabel ?? AppL10n.string("today.timetableChange")),
-                                subtitle: Text(verbatim: changeSubtitle(for: lesson)),
-                                icon: "alert-02",
-                                tint: lesson.changeKind.color
-                            )
-                            .accessibilityIdentifier("todayTimetableChange-\(lesson.id)")
-                        }
-                    }
-                } else {
-                    TodayInfoRow(
-                        title: Text("today.timetableUnavailable"),
-                        subtitle: Text("today.timetableUnavailable.subtitle"),
-                        icon: "calendar-03",
-                        tint: .secondary
+                if let current = summary.currentLesson {
+                    TodayLessonRow(lesson: current, role: .current, minutes: summary.minutesRemainingInCurrent)
+                }
+                if let next = summary.nextLesson {
+                    TodayLessonRow(
+                        lesson: next,
+                        role: .next,
+                        minutes: summary.currentLesson == nil ? summary.minutesUntilNext : nil
                     )
                 }
-
-                if let snapshotStore, snapshotStore.cachedWeek(containing: now) != nil,
-                   snapshotStore.sourceState("timetable-\(TimetableDates.apiDateString(TimetableDates.monday(of: now)))").isStale(at: now, interval: 900) {
-                    Text("today.cached.warning").font(.gradely(.caption)).foregroundStyle(.secondary)
+                if summary.currentLesson == nil, summary.nextLesson == nil {
+                    if summary.state == .empty {
+                        TodayInfoRow(title: Text("timetable.summary.empty.title"), icon: "sun-01", tint: Brand.primary)
+                    } else {
+                        TodayInfoRow(title: Text("today.noMoreLessons"), icon: "checkmark-circle-02", tint: Brand.primary)
+                    }
                 }
+
+                if summary.hasChanges {
+                    HStack(spacing: Spacing.sm) {
+                        GradelyIcon("alert-02", size: 14)
+                        Text(verbatim: changeSummary(summary))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .font(.gradely(.caption).weight(.bold))
+                    .foregroundStyle(LessonChangeKind.canceled.color)
+                    ForEach(summary.changedLessons.prefix(3)) { lesson in
+                        TodayInfoRow(
+                            title: Text(verbatim: lesson.changeKind.localizedLabel ?? AppL10n.string("today.timetableChange")),
+                            subtitle: Text(verbatim: changeSubtitle(for: lesson)),
+                            icon: "alert-02",
+                            tint: lesson.changeKind.color
+                        )
+                        .accessibilityIdentifier("todayTimetableChange-\(lesson.id)")
+                    }
+                }
+            } else {
+                TodayInfoRow(title: Text("today.timetableUnavailable"), icon: "calendar-03", tint: .secondary)
             }
         }
         .accessibilityIdentifier("todayTimetableCard")
+    }
+
+    private func isTimetableStale(at now: Date) -> Bool {
+        guard let snapshotStore, snapshotStore.cachedWeek(containing: now) != nil else { return false }
+        let source = "timetable-\(TimetableDates.apiDateString(TimetableDates.monday(of: now)))"
+        return snapshotStore.sourceState(source).isStale(at: now, interval: 900)
     }
 
     private func changeSummary(_ summary: TimetableTodaySummary) -> String {
@@ -312,36 +288,20 @@ struct TodayView: View {
 
     private var recentMarksCard: some View {
         let marks = viewModel.snapshot.recentMarks(limit: 3)
-        return Card {
-            VStack(alignment: .leading, spacing: Spacing.md) {
-                HStack(alignment: .firstTextBaseline) {
-                    SectionHeader("today.recentGrades.title")
-                    if let onOpenMarks {
-                        Button(action: onOpenMarks) {
-                            TodayLinkLabel(title: "subjects.title")
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityIdentifier("todayOpenMarksButton")
+        return TodaySection(
+            "today.recentGrades.title",
+            link: onOpenMarks.map { .action(id: "todayOpenMarksButton", perform: $0) },
+            footer: snapshotStore?.sourceState("marks").error != nil ? "today.cached.warning" : nil
+        ) {
+            if marks.isEmpty {
+                TodayInfoRow(title: Text("today.recentGrades.none"), icon: "checkmark-badge-02", tint: .secondary)
+            } else {
+                ForEach(marks) { mark in
+                    NavigationLink(value: TodayDestination.subject(mark.subjectID)) {
+                        TodayMarkRow(mark: mark)
                     }
-                }
-                if marks.isEmpty {
-                    TodayInfoRow(
-                        title: Text("today.recentGrades.title"),
-                        subtitle: Text("today.recentGrades.empty"),
-                        icon: "checkmark-badge-02",
-                        tint: .secondary
-                    )
-                } else {
-                    ForEach(marks) { mark in
-                        NavigationLink(value: TodayDestination.subject(mark.subjectID)) {
-                            TodayMarkRow(mark: mark)
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityIdentifier("todayRecentMark-\(mark.id)")
-                    }
-                }
-                if let snapshotStore, snapshotStore.sourceState("marks").error != nil {
-                    Text("today.cached.warning").font(.gradely(.caption)).foregroundStyle(.secondary)
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("todayRecentMark-\(mark.id)")
                 }
             }
         }
@@ -356,31 +316,16 @@ struct TodayView: View {
                 .filter { $0.expiresAt > now }
                 .sorted { $0.date == $1.date ? $0.id.uuidString < $1.id.uuidString : $0.date < $1.date }
                 .prefix(3)
-            Card {
-                VStack(alignment: .leading, spacing: Spacing.md) {
-                    HStack(alignment: .firstTextBaseline) {
-                        SectionHeader("planner.title")
-                        NavigationLink(value: TodayDestination.planner) {
-                            TodayLinkLabel(title: "action.open")
+            TodaySection("planner.title", link: .destination(id: "todayOpenPlannerButton", .planner)) {
+                if events.isEmpty {
+                    TodayInfoRow(title: Text("today.planner.none"), icon: "check-list", tint: .secondary)
+                } else {
+                    ForEach(Array(events)) { event in
+                        NavigationLink(value: TodayDestination.plannerItem(event.id)) {
+                            TodayPlannerRow(event: event)
                         }
                         .buttonStyle(.plain)
-                        .accessibilityIdentifier("todayOpenPlannerButton")
-                    }
-                    if events.isEmpty {
-                        TodayInfoRow(
-                            title: Text("planner.title"),
-                            subtitle: Text("today.planner.empty"),
-                            icon: "check-list",
-                            tint: .secondary
-                        )
-                    } else {
-                        ForEach(Array(events)) { event in
-                            NavigationLink(value: TodayDestination.plannerItem(event.id)) {
-                                TodayPlannerRow(event: event)
-                            }
-                            .buttonStyle(.plain)
-                            .accessibilityIdentifier("todayPlannerEvent-\(event.id.uuidString)")
-                        }
+                        .accessibilityIdentifier("todayPlannerEvent-\(event.id.uuidString)")
                     }
                 }
             }
@@ -391,24 +336,16 @@ struct TodayView: View {
     // MARK: - Lunch
 
     private var lunchCard: some View {
-        Card {
-            VStack(alignment: .leading, spacing: Spacing.md) {
-                SectionHeader("Lunch")
-                if let meal = viewModel.snapshot.orderedMeal {
-                    TodayInfoRow(
-                        title: Text(verbatim: meal.name),
-                        subtitle: Text(verbatim: meal.formattedPrice),
-                        icon: "restaurant-02",
-                        tint: Brand.primary
-                    )
-                } else {
-                    TodayInfoRow(
-                        title: Text("today.noMeal"),
-                        subtitle: Text("today.noMeal.subtitle"),
-                        icon: "restaurant-02",
-                        tint: .secondary
-                    )
-                }
+        TodaySection("Lunch") {
+            if let meal = viewModel.snapshot.orderedMeal {
+                TodayInfoRow(
+                    title: Text(verbatim: meal.name),
+                    subtitle: Text(verbatim: meal.formattedPrice),
+                    icon: "restaurant-02",
+                    tint: Brand.primary
+                )
+            } else {
+                TodayInfoRow(title: Text("today.noMeal"), icon: "restaurant-02", tint: .secondary)
             }
         }
         .accessibilityIdentifier("todayLunchCard")
@@ -913,7 +850,7 @@ private struct TodayMarkRow: View {
     }
 
     private var dateText: String {
-        mark.detectedAt.map { SchoolDateFormatting.date($0) } ?? "–"
+        mark.detectedAt.map { SchoolDateFormatting.shortDate($0) } ?? "–"
     }
 }
 
@@ -983,27 +920,54 @@ private struct TodayDisclosureIcon: View {
     }
 }
 
-private struct TodayLinkLabel: View {
+private enum TodaySectionLink {
+    case action(id: String, perform: () -> Void)
+    case destination(id: String, TodayDestination)
+}
+
+/// A Today section: a `PlainSection` whose title links to the full screen.
+private struct TodaySection<Content: View>: View {
     let title: LocalizedStringKey
+    let link: TodaySectionLink?
+    let footer: LocalizedStringKey?
+    let content: Content
+
+    init(
+        _ title: LocalizedStringKey,
+        link: TodaySectionLink? = nil,
+        footer: LocalizedStringKey? = nil,
+        @ViewBuilder content: () -> Content
+    ) {
+        self.title = title
+        self.link = link
+        self.footer = footer
+        self.content = content()
+    }
 
     var body: some View {
-        HStack(spacing: Spacing.xs) {
-            Text(title)
-            GradelyIcon("arrow-right-01", size: 11)
+        PlainSection(footer: footer) {
+            switch link {
+            case .action(let id, let perform):
+                Button(action: perform) { PlainSectionTitle(title, showsChevron: true) }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier(id)
+            case .destination(let id, let destination):
+                NavigationLink(value: destination) { PlainSectionTitle(title, showsChevron: true) }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier(id)
+            case nil:
+                PlainSectionTitle(title)
+            }
+        } content: {
+            content
         }
-        .font(.gradely(.caption).weight(.bold))
-        .foregroundStyle(Brand.primary)
-        .padding(.horizontal, Spacing.sm + 2)
-        .frame(minHeight: 28)
-        .background(Brand.primary.opacity(0.12), in: Capsule())
-        .contentShape(Capsule())
     }
 }
 
 private struct TodayInfoRow: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     let title: Text
-    let subtitle: Text
+    var subtitle: Text?
     let icon: String
     let tint: Color
 
@@ -1019,11 +983,13 @@ private struct TodayInfoRow: View {
                     .font(.gradely(.subheadline).weight(.bold))
                     .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 2)
                     .fixedSize(horizontal: false, vertical: true)
-                subtitle
-                    .font(.gradely(.caption))
-                    .foregroundStyle(.secondary)
-                    .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 2)
-                    .fixedSize(horizontal: false, vertical: true)
+                if let subtitle {
+                    subtitle
+                        .font(.gradely(.caption))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 2)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
             Spacer(minLength: 0)
         }

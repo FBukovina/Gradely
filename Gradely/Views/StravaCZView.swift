@@ -203,28 +203,18 @@ private struct StravaCZHeader: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.lg) {
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: Spacing.xs) {
-                    Text("stravacz.balance")
-                        .font(.gradely(.subheadline).weight(.semibold))
-                        .foregroundStyle(Brand.onAccent.opacity(0.75))
+            VStack(alignment: .leading, spacing: 2) {
+                Text("stravacz.balance")
+                    .font(.gradely(.subheadline).weight(.semibold))
+                    .foregroundStyle(.secondary)
 
-                    Text(session.formattedBalance)
-                        .font(.gradely(size: balanceFontSize, weight: .bold).monospacedDigit())
-                        .foregroundStyle(Brand.onAccent)
-                        .minimumScaleFactor(0.65)
-                        .lineLimit(1)
-                        .accessibilityIdentifier("stravaCZBalance")
-                }
-
-                Spacer()
-
-                GradelyIcon(systemName: "fork.knife", size: 28)
-                    .foregroundStyle(Brand.onAccent.opacity(0.45))
+                Text(session.formattedBalance)
+                    .font(.gradely(size: balanceFontSize, weight: .bold).monospacedDigit())
+                    .foregroundStyle(.primary)
+                    .minimumScaleFactor(0.65)
+                    .lineLimit(1)
+                    .accessibilityIdentifier("stravaCZBalance")
             }
-
-            Divider()
-                .overlay(Brand.onAccent.opacity(0.2))
 
             HStack(spacing: Spacing.md) {
                 StatTile(
@@ -239,9 +229,8 @@ private struct StravaCZHeader: View {
                 )
             }
         }
-        .padding(Spacing.xl)
-        .background(Brand.gradient, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
-        .shadow(color: Brand.primary.opacity(0.30), radius: 16, x: 0, y: 8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, Spacing.xs)
     }
 }
 

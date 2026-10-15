@@ -454,11 +454,12 @@ struct GradeyAIToolbarButton: View {
 
 // MARK: - Stat tile
 
-/// Compact label/value pair used in the overview hero, rendered on the brand gradient.
+/// Compact label/value pair used in the Today and Meals headers.
 struct StatTile: View {
     let title: String
     let value: String
     var systemImage: String?
+    var valueColor: Color = .primary
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.xs) {
@@ -471,11 +472,11 @@ struct StatTile: View {
                     .font(.gradely(.caption2).weight(.semibold))
                     .textCase(.uppercase)
             }
-            .foregroundStyle(Brand.onAccent.opacity(0.7))
+            .foregroundStyle(.secondary)
 
             Text(value)
                 .font(.gradely(.subheadline).weight(.bold))
-                .foregroundStyle(Brand.onAccent)
+                .foregroundStyle(valueColor)
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
         }

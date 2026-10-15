@@ -107,7 +107,6 @@ struct AbsenceView: View {
         ScrollView {
             LazyVStack(spacing: Spacing.md) {
                 AbsenceHeader(
-                    user: viewModel.user,
                     totalCounts: viewModel.totalCounts,
                     threshold: viewModel.normalizedThreshold
                 )
@@ -200,54 +199,51 @@ struct AbsenceView: View {
 }
 
 private struct AbsenceHeader: View {
-    let user: UserResponse?
     let totalCounts: AbsenceCounts
     let threshold: Double?
 
     var body: some View {
-        Card(padding: Spacing.lg) {
-            VStack(alignment: .leading, spacing: Spacing.md) {
-                HStack(alignment: .center, spacing: Spacing.md) {
-                    if let name = user?.fullName.trimmingCharacters(in: .whitespacesAndNewlines), !name.isEmpty {
-                        Text(name)
-                            .font(.gradely(.headline))
-                            .lineLimit(2)
-                    }
+        VStack(alignment: .leading, spacing: 2) {
+            Text("absence.header.total")
+                .font(.gradely(.subheadline).weight(.semibold))
+                .foregroundStyle(.secondary)
 
-                    Spacer()
+            HStack(alignment: .firstTextBaseline, spacing: Spacing.sm) {
+                Text("\(totalCounts.total)")
+                    .font(.gradely(size: 52, weight: .bold).monospacedDigit())
+                    .foregroundStyle(Brand.primary)
+                    .lineLimit(1)
+                Text("absence.totalHours")
+                    .font(.gradely(.title3).weight(.semibold))
+                    .foregroundStyle(.secondary)
+            }
 
-                    VStack(alignment: .trailing, spacing: 2) {
-                        Text("\(totalCounts.total)")
-                            .font(.gradely(.title2).weight(.bold).monospacedDigit())
-                            .foregroundStyle(Brand.primary)
-                        Text("absence.totalHours")
-                            .font(.gradely(.caption).weight(.semibold))
-                            .foregroundStyle(.secondary)
-                    }
-                }
-
-                if !nonzeroCategories.isEmpty {
-                    VStack(alignment: .leading, spacing: Spacing.xs) {
-                        ForEach(nonzeroCategories) { category in
-                            StatusChip(
-                                text: "\(category.accessibilityLabel) \(category.value(in: totalCounts))",
-                                color: category.color
-                            )
-                        }
-                    }
-                }
-
-                if let threshold {
-                    Text(String(format: AppL10n.string("absence.threshold.caption"), threshold))
-                        .font(.gradely(.caption2))
-                        .foregroundStyle(.secondary)
-                }
+            if !summary.isEmpty {
+                Text(summary)
+                    .font(.gradely(.subheadline))
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, Spacing.xs)
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("absenceHeader")
     }
 
-    private var nonzeroCategories: [AbsenceCategory] {
-        AbsenceCategory.allCases.filter { $0.value(in: totalCounts) > 0 }
+    /// "Unresolved 6 · Excused 15 · Late 1 · Limit 25 %"
+    private var summary: String {
+        var parts = AbsenceCategory.allCases.compactMap { category -> String? in
+            let value = category.value(in: totalCounts)
+            return value > 0 ? "\(category.shortLabel) \(value)" : nil
+        }
+        if let threshold {
+            parts.append(String(format: AppL10n.string("absence.threshold.caption"), threshold))
+        }
+        // Keep each item on one line so wrapping only happens between items.
+        return parts
+            .map { $0.replacingOccurrences(of: " ", with: "\u{00A0}") }
+            .joined(separator: " · ")
     }
 }
 
@@ -756,6 +752,18 @@ private enum AbsenceCategory: CaseIterable, Identifiable {
 
     var accessibilityLabel: String {
         AppL10n.string(String.LocalizationValue(accessibilityKey))
+    }
+
+    var shortLabel: String {
+        switch self {
+        case .unsolved: AppL10n.string("absence.category.short.unsolved")
+        case .ok: AppL10n.string("absence.category.short.ok")
+        case .missed: AppL10n.string("absence.category.short.missed")
+        case .late: AppL10n.string("absence.category.short.late")
+        case .soon: AppL10n.string("absence.category.short.soon")
+        case .school: AppL10n.string("absence.category.short.school")
+        case .distanceTeaching: AppL10n.string("absence.category.short.distanceTeaching")
+        }
     }
 
     private var accessibilityKey: String {

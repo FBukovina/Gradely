@@ -212,30 +212,31 @@ private struct MarksHero: View {
     let viewModel: SubjectsViewModel
 
     var body: some View {
-        HStack(alignment: .firstTextBaseline) {
-            VStack(alignment: .leading, spacing: Spacing.xs) {
-                Text("marks.hero.average")
-                    .font(.gradely(.caption).weight(.bold))
-                    .foregroundStyle(Brand.onAccent.opacity(0.7))
+        VStack(alignment: .leading, spacing: 2) {
+            Text("marks.hero.average")
+                .font(.gradely(.subheadline).weight(.semibold))
+                .foregroundStyle(.secondary)
+
+            HStack(alignment: .firstTextBaseline, spacing: Spacing.md) {
                 Text(GradeMath.formattedAverage(viewModel.overallAverage))
-                    .font(.gradely(size: 48, weight: .bold).monospacedDigit())
-                    .foregroundStyle(Brand.onAccent)
+                    .font(.gradely(size: 52, weight: .bold).monospacedDigit())
+                    .foregroundStyle(GradeMath.band(for: viewModel.overallAverage).foregroundColor)
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
-            }
 
-            Spacer(minLength: Spacing.md)
-
-            VStack(alignment: .trailing, spacing: Spacing.xs) {
-                Text(String.localizedStringWithFormat(AppL10n.string("marks.hero.subjectCount"), viewModel.subjects.count))
-                Text(String.localizedStringWithFormat(AppL10n.string("subject.markCount"), viewModel.totalMarks))
+                Text(
+                    String.localizedStringWithFormat(AppL10n.string("marks.hero.subjectCount"), viewModel.subjects.count)
+                        + " · "
+                        + String.localizedStringWithFormat(AppL10n.string("subject.markCount"), viewModel.totalMarks)
+                )
+                .font(.gradely(.subheadline))
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
             }
-            .font(.gradely(.caption).weight(.semibold))
-            .foregroundStyle(Brand.onAccent.opacity(0.72))
         }
-        .padding(Spacing.xl)
-        .background(Brand.gradient, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
-        .shadow(color: Brand.primary.opacity(0.24), radius: 16, x: 0, y: 8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, Spacing.xs)
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier("marksHeroCard")
     }

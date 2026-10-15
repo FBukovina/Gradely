@@ -594,17 +594,15 @@ private struct TodayHero: View {
         VStack(alignment: .leading, spacing: Spacing.lg) {
             Text(verbatim: greeting)
                 .font(.gradelyDisplay(size: 30, relativeTo: .title))
-                .foregroundStyle(Brand.onAccent)
+                .foregroundStyle(.primary)
                 .lineLimit(3)
                 .minimumScaleFactor(0.7)
                 .fixedSize(horizontal: false, vertical: true)
 
             statTiles
         }
-        .padding(Spacing.xl)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Brand.gradient, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
-        .shadow(color: Brand.primary.opacity(0.24), radius: 16, x: 0, y: 8)
+        .padding(.horizontal, Spacing.xs)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("todayHeroCard")
     }
@@ -631,13 +629,17 @@ private struct TodayHero: View {
 
     private var statDivider: some View {
         Rectangle()
-            .fill(Brand.onAccent.opacity(0.14))
+            .fill(Color.primary.opacity(0.12))
             .frame(width: 1, height: 30)
             .accessibilityHidden(true)
     }
 
     private var averageTile: some View {
-        StatTile(title: AppL10n.string("today.hero.average"), value: GradeMath.formattedAverage(snapshot.overallAverage))
+        StatTile(
+            title: AppL10n.string("today.hero.average"),
+            value: GradeMath.formattedAverage(snapshot.overallAverage),
+            valueColor: GradeMath.band(for: snapshot.overallAverage).foregroundColor
+        )
             .accessibilityElement(children: .combine)
             .accessibilityIdentifier("todayStatAverage")
     }

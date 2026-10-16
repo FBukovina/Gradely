@@ -1078,13 +1078,13 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "udělej si soukromé Gradey ID přes Apple, ať se nastavení syncne a notifikace fungujou. nebo pokračuj bez něj a školu připoj hned."
+            "value" : "synchronizuje nastavení a zapíná notifikace. není povinné."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "create a private Gradey ID with Apple to sync settings and turn on notifications. or skip it and connect school now."
+            "value" : "syncs your settings and turns on notifications. optional."
           }
         }
       }
@@ -1310,23 +1310,6 @@
         }
       }
     },
-    "onboarding.welcome.benefit.extras.body" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "získej pomoc od Gradey AI podle školních údajů, které vybereš, a měj přehled díky oznámením a widgetům."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "get focused help from Gradey AI using the school information you choose, and stay up to date with notifications and widgets."
-          }
-        }
-      }
-    },
     "onboarding.welcome.benefit.extras.title" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -1344,23 +1327,6 @@
         }
       }
     },
-    "onboarding.welcome.benefit.insights.body" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "sleduj průměry, zkoušej si známky, plánuj absenci. ngl je to useful."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "follow averages, try hypothetical marks, plan future absences. ngl it's useful."
-          }
-        }
-      }
-    },
     "onboarding.welcome.benefit.insights.title" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -1374,23 +1340,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "know what's going on"
-          }
-        }
-      }
-    },
-    "onboarding.welcome.benefit.today.body" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "rozvrh, nový známky a absence bez doomscrollu školního webu."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "timetable, new marks, and absences without the school portal spiral."
           }
         }
       }
@@ -1418,13 +1367,13 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "známky, rozvrh, absence i školní lore. všechno na jednom místě."
+            "value" : "známky, rozvrh a absence. všechno na jednom místě."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "marks, timetable, absences, and the school lore. all in one place."
+            "value" : "marks, timetable and absence. all in one place."
           }
         }
       }

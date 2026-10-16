@@ -40,7 +40,6 @@ struct StravaCZConnectView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: Spacing.xl) {
                     SettingsModalFlowHero(
-                        icon: "fork.knife",
                         title: "stravacz.connect.title",
                         message: "stravacz.connect.message"
                     )

@@ -189,7 +189,6 @@ struct LoginView: View {
 
     private var stageHero: some View {
         SettingsModalFlowHero(
-            icon: stage == .school ? "building.columns.fill" : "lock.shield.fill",
             title: stage == .school ? "onboarding.school.choose.title" : "onboarding.school.credentials.title",
             message: stage == .school ? "onboarding.school.choose.body" : "onboarding.school.credentials.body"
         )
@@ -221,14 +220,9 @@ struct LoginView: View {
                     viewModel.fillDemoAccount()
                     moveToCredentials()
                 } label: {
-                    GradelyLabel("login.demoAccount", systemImage: "sparkles")
-                        .font(.gradely(.subheadline).weight(.semibold))
-                        .frame(maxWidth: .infinity)
-                        .frame(minHeight: 50)
+                    PlainLinkLabel("login.demoAccount")
                 }
                 .buttonStyle(.plain)
-                .foregroundStyle(Brand.primary)
-                .background(Color.gradelyTertiaryFill, in: RoundedRectangle(cornerRadius: Radius.md, style: .continuous))
                 .accessibilityIdentifier("demoAccountButton")
             }
         }
@@ -239,40 +233,16 @@ struct LoginView: View {
             Text("login.provider")
                 .font(.gradelyDisplay(size: 20, relativeTo: .title3))
 
-            HStack(spacing: Spacing.sm) {
+            Picker(AppL10n.string("login.provider"), selection: Binding(
+                get: { viewModel.provider },
+                set: { viewModel.changeProvider($0) }
+            )) {
                 ForEach(SchoolProvider.offeredForNewSignIn) { provider in
-                    Button {
-                        viewModel.changeProvider(provider)
-                    } label: {
-                        HStack(spacing: Spacing.sm) {
-                            GradelyIcon(
-                                systemName: provider == .bakalari ? "building.2.fill" : "person.2.fill",
-                                size: 15
-                            )
-                            Text(provider.displayName)
-                                .font(.gradely(.subheadline).weight(.semibold))
-                        }
-                        .foregroundStyle(viewModel.provider == provider ? Brand.onAccent : Color.primary)
-                        .frame(maxWidth: .infinity)
-                        .frame(minHeight: 52)
-                        .background(
-                            RoundedRectangle(cornerRadius: Radius.md, style: .continuous)
-                                .fill(
-                                    viewModel.provider == provider
-                                        ? AnyShapeStyle(Brand.gradient)
-                                        : AnyShapeStyle(Color.gradelyTertiaryFill)
-                                )
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: Radius.md, style: .continuous)
-                                .strokeBorder(Color.primary.opacity(viewModel.provider == provider ? 0 : 0.08), lineWidth: 1)
-                        )
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityIdentifier("provider-\(provider.rawValue)")
-                    .accessibilityAddTraits(viewModel.provider == provider ? .isSelected : [])
+                    Text(provider.displayName).tag(provider)
                 }
             }
+            .pickerStyle(.segmented)
+            .accessibilityIdentifier("providerPicker")
         }
     }
 
@@ -349,11 +319,6 @@ struct LoginView: View {
                 }
                 .frame(maxHeight: 420)
                 .scrollIndicators(.visible)
-                .background(Color.gradelyTertiaryFill, in: RoundedRectangle(cornerRadius: Radius.md, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: Radius.md, style: .continuous)
-                        .strokeBorder(Color.primary.opacity(0.06), lineWidth: 1)
-                )
                 .accessibilityIdentifier("schoolSearchResults")
             } else if viewModel.isSchoolSearchActive,
                       !viewModel.schoolSearchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
@@ -472,8 +437,7 @@ struct LoginView: View {
                 .frame(minHeight: 44)
                 .accessibilityIdentifier("changeSchoolButton")
         }
-        .padding(20)
-        .background(Color.gradelyTertiaryFill, in: RoundedRectangle(cornerRadius: Radius.xl, style: .continuous))
+        .padding(.horizontal, Spacing.xs)
         .accessibilityIdentifier("selectedSchoolSummary")
     }
 

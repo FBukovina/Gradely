@@ -251,21 +251,9 @@ struct OnboardingView: View {
                     }
 
                     VStack(spacing: Spacing.md) {
-                        OnboardingLandingBenefit(
-                            systemImage: "sun.max.fill",
-                            title: "onboarding.welcome.benefit.today.title",
-                            message: "onboarding.welcome.benefit.today.body"
-                        )
-                        OnboardingLandingBenefit(
-                            systemImage: "chart.line.uptrend.xyaxis",
-                            title: "onboarding.welcome.benefit.insights.title",
-                            message: "onboarding.welcome.benefit.insights.body"
-                        )
-                        OnboardingLandingBenefit(
-                            systemImage: "sparkles",
-                            title: "onboarding.welcome.benefit.extras.title",
-                            message: "onboarding.welcome.benefit.extras.body"
-                        )
+                        OnboardingLandingBenefit(systemImage: "sun.max.fill", title: "onboarding.welcome.benefit.today.title")
+                        OnboardingLandingBenefit(systemImage: "chart.line.uptrend.xyaxis", title: "onboarding.welcome.benefit.insights.title")
+                        OnboardingLandingBenefit(systemImage: "sparkles", title: "onboarding.welcome.benefit.extras.title")
                     }
 
                     VStack(alignment: .leading, spacing: Spacing.sm) {
@@ -288,17 +276,9 @@ struct OnboardingView: View {
                         Button {
                             viewModel.chooseLogIn()
                         } label: {
-                            Text("onboarding.logIn")
-                                .font(.gradely(.headline))
-                                .frame(maxWidth: .infinity)
-                                .frame(minHeight: 50)
+                            PlainLinkLabel("onboarding.logIn")
                         }
                         .buttonStyle(.plain)
-                        .foregroundStyle(Brand.primary)
-                        .background(
-                            Color.gradelyTertiaryFill,
-                            in: RoundedRectangle(cornerRadius: Radius.md, style: .continuous)
-                        )
                         .accessibilityIdentifier("onboardingLoginButton")
                     }
                     .padding(.top, Spacing.xs)
@@ -345,7 +325,6 @@ struct OnboardingView: View {
     private var notificationsStep: some View {
         brandedScreen(
             step: .notifications,
-            icon: "bell.badge.fill",
             title: "onboarding.notifications.title",
             message: "onboarding.notifications.body"
         ) {
@@ -371,7 +350,6 @@ struct OnboardingView: View {
     private var readyStep: some View {
         brandedScreen(
             step: .ready,
-            icon: "checkmark.seal.fill",
             title: "onboarding.ready.title",
             message: "onboarding.ready.body"
         ) {
@@ -421,7 +399,6 @@ struct OnboardingView: View {
     private var supportStep: some View {
         brandedScreen(
             step: .support,
-            icon: "heart.fill",
             title: "onboarding.upgrade.support.title",
             message: "onboarding.upgrade.support.body"
         ) {
@@ -447,7 +424,6 @@ struct OnboardingView: View {
 
     private func brandedScreen<Content: View>(
         step: OnboardingStep,
-        icon: String,
         title: LocalizedStringKey,
         message: LocalizedStringKey,
         @ViewBuilder content: () -> Content
@@ -457,7 +433,7 @@ struct OnboardingView: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: Spacing.xl) {
-                    OnboardingStepHero(icon: icon, title: title, message: message)
+                    OnboardingStepHero(title: title, message: message)
                         .accessibilityFocused($focusedStep, equals: step)
 
                     content()
@@ -492,14 +468,9 @@ struct OnboardingView: View {
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
-            Text(title)
-                .font(.gradely(.headline))
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, Spacing.md)
+            PlainLinkLabel(title)
         }
         .buttonStyle(.plain)
-        .foregroundStyle(Brand.primary)
-        .background(Color.gradelyTertiaryFill, in: RoundedRectangle(cornerRadius: Radius.md, style: .continuous))
     }
 
     private func warningCard(_ warning: OnboardingWarning) -> some View {
@@ -809,10 +780,9 @@ struct OnboardingView: View {
 private struct OnboardingLandingBenefit: View {
     let systemImage: String
     let title: LocalizedStringKey
-    let message: LocalizedStringKey
 
     var body: some View {
-        HStack(alignment: .top, spacing: Spacing.md) {
+        HStack(alignment: .center, spacing: Spacing.md) {
             GradelyIcon(systemName: systemImage)
                 .foregroundStyle(Brand.primary)
                 .frame(width: 36, height: 36)
@@ -822,15 +792,9 @@ private struct OnboardingLandingBenefit: View {
                 )
                 .accessibilityHidden(true)
 
-            VStack(alignment: .leading, spacing: Spacing.xs) {
-                Text(title)
-                    .font(.gradely(.subheadline).weight(.semibold))
-                Text(message)
-                    .font(.gradely(.footnote))
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            Text(title)
+                .font(.gradely(.subheadline).weight(.semibold))
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
         .accessibilityElement(children: .combine)
     }

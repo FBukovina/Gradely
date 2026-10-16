@@ -70,49 +70,34 @@ struct GradeyIDLoginView: View {
     }
 
     private var signInCard: some View {
-        Card {
-            VStack(alignment: .leading, spacing: Spacing.md) {
-                Text("gradey.auth.signInBody")
-                    .font(.gradely(.footnote))
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
+        VStack(alignment: .leading, spacing: Spacing.md) {
+            GradelyAppleSignInButton(
+                isLoading: viewModel.isLoading,
+                onCompletion: handleAppleResult,
+                onMockSignIn: signInForUITesting
+            )
 
-                GradelyAppleSignInButton(
-                    isLoading: viewModel.isLoading,
-                    onCompletion: handleAppleResult,
-                    onMockSignIn: signInForUITesting
-                )
-
-                if viewModel.isLoading {
-                    HStack(spacing: Spacing.sm) {
-                        ProgressView()
-                            .controlSize(.small)
-                        Text("gradey.auth.signingIn")
-                            .font(.gradely(.footnote))
-                            .foregroundStyle(.secondary)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .accessibilityIdentifier("gradeyIDSigningIn")
+            if viewModel.isLoading {
+                HStack(spacing: Spacing.sm) {
+                    ProgressView()
+                        .controlSize(.small)
+                    Text("gradey.auth.signingIn")
+                        .font(.gradely(.footnote))
+                        .foregroundStyle(.secondary)
                 }
+                .frame(maxWidth: .infinity)
+                .accessibilityIdentifier("gradeyIDSigningIn")
+            }
 
-                if let onContinueWithoutAccount {
-                    Divider()
-                        .padding(.vertical, Spacing.xs)
-
-                    Button {
-                        onContinueWithoutAccount()
-                    } label: {
-                        GradelyLabel("gradey.auth.continueWithoutAccount", systemImage: "arrow.right.circle")
-                            .font(.gradely(.footnote).weight(.semibold))
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(.secondary)
-                    .padding(.vertical, Spacing.sm)
-                    .background(Color.gradelyTertiaryFill, in: RoundedRectangle(cornerRadius: Radius.sm, style: .continuous))
-                    .disabled(viewModel.isLoading)
-                    .accessibilityIdentifier("gradeyIDBypassButton")
+            if let onContinueWithoutAccount {
+                Button {
+                    onContinueWithoutAccount()
+                } label: {
+                    PlainLinkLabel("gradey.auth.continueWithoutAccount")
                 }
+                .buttonStyle(.plain)
+                .disabled(viewModel.isLoading)
+                .accessibilityIdentifier("gradeyIDBypassButton")
             }
         }
     }

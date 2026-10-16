@@ -3452,25 +3452,25 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Gradey zpracovává školní údaje a nabízí volitelné AI funkce a chat podpory. Pokud ti ještě není 16, potřebuješ souhlas rodiče nebo zákonného zástupce (GDPR)."
+            "value" : "Pokud ti ještě není 16, potřebuješ souhlas rodiče nebo zákonného zástupce (GDPR)."
           }
         },
         "cs-US" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Gradey zpracovává školní údaje a nabízí volitelné AI funkce a chat podpory. pokud ti ještě není 16, potřebuješ souhlas rodiče nebo zákonného zástupce (GDPR)."
+            "value" : "pokud ti ještě není 16, potřebuješ souhlas rodiče nebo zákonného zástupce (GDPR)."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Gradey handles school records, optional AI, and support chat. If you are under 16, a parent or guardian must agree (GDPR)."
+            "value" : "If you are under 16, a parent or guardian must agree (GDPR)."
           }
         },
         "en-CO" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "gradey handles school records, optional AI, and support chat. if you are under 16, a parent or guardian must agree (GDPR)."
+            "value" : "if you are under 16, a parent or guardian must agree (GDPR)."
           }
         }
       }
@@ -11337,34 +11337,6 @@
         }
       }
     },
-    "gradey.auth.signInBody" : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Apple udržuje přihlášení soukromé a Gradey díky němu bezpečně synchronizuje tvoje zařízení."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "apple udržuje přihlášení soukromé a Gradey díky němu bezpečně synchronizuje tvoje zařízení."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Apple keeps sign-in private and lets Gradey sync safely across your devices."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "apple keeps sign-in private and lets Gradey sync safely across your devices."
-          }
-        }
-      }
-    },
     "gradey.auth.signingIn" : {
       "localizations" : {
         "cs" : {
@@ -12916,25 +12888,25 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vytvoř si soukromé Gradey ID přes Apple, synchronizuj nastavení mezi zařízeními a zapni oznámení. Můžeš také pokračovat bez něj a školu připojit hned."
+            "value" : "Synchronizuje nastavení a zapíná oznámení. Není povinné."
           }
         },
         "cs-US" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "udělej si soukromé Gradey ID přes Apple, ať se nastavení syncne a notifikace fungujou. nebo pokračuj bez něj a školu připoj hned."
+            "value" : "synchronizuje nastavení a zapíná notifikace. není povinné."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Create your private Gradey ID with Apple to sync settings across devices and enable notifications. You can also continue without it and connect school now."
+            "value" : "Syncs your settings and turns on notifications. Optional."
           }
         },
         "en-CO" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "create a private Gradey ID with Apple to sync settings and turn on notifications. or skip it and connect school now."
+            "value" : "syncs your settings and turns on notifications. optional."
           }
         }
       }
@@ -12944,25 +12916,25 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Přihlas se stejným Apple ID jako při vytváření Gradey ID. Žádné další heslo nepotřebuješ."
+            "value" : "Přihlas se stejným Apple ID jako minule. Heslo není potřeba."
           }
         },
         "cs-US" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "přihlas se stejným Apple ID jako při vytváření Gradey ID. žádné další heslo nepotřebuješ."
+            "value" : "přihlas se stejným Apple ID jako minule. heslo není potřeba."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sign in with the same Apple ID you used to create Gradey ID. There is no separate password."
+            "value" : "Use the same Apple ID as before. No password needed."
           }
         },
         "en-CO" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "sign in with the same Apple ID you used to create Gradey ID. there is no separate password."
+            "value" : "use the same Apple ID as before. no password needed."
           }
         }
       }
@@ -13112,25 +13084,25 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "S Gradey ID můžeš dostat upozornění, když přijde nová známka. Nastavení lze kdykoli změnit v Účtu a nastavení."
+            "value" : "S Gradey ID ti přijde upozornění na každou novou známku."
           }
         },
         "cs-US" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "s Gradey ID můžeš dostat upozornění, když přijde nová známka. nastavení lze kdykoli změnit v účtu a nastavení."
+            "value" : "s Gradey ID ti přijde upozornění na každou novou známku."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "With Gradey ID, you can get an alert when a new mark arrives. Change this anytime in Account & Settings."
+            "value" : "With Gradey ID, get an alert for every new mark."
           }
         },
         "en-CO" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "with Gradey ID, you can get an alert when a new mark arrives. change this anytime in account & settings."
+            "value" : "with Gradey ID, get an alert for every new mark."
           }
         }
       }
@@ -13616,25 +13588,25 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vyhledej svou školu. Pokud ji nenajdeš, můžeš zadat adresu ručně."
+            "value" : "Najdi svou školu nebo zadej její adresu."
           }
         },
         "cs-US" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "vyhledej svou školu. pokud ji nenajdeš, můžeš zadat adresu ručně."
+            "value" : "najdi svou školu nebo zadej její adresu."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Find your school. If it is not listed, enter its address manually."
+            "value" : "Find your school or enter its address."
           }
         },
         "en-CO" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "find your school. if it is not listed, enter its address manually."
+            "value" : "find your school or enter its address."
           }
         }
       }
@@ -13700,25 +13672,25 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Použij stejné uživatelské jméno a heslo jako ve škole. Heslo zůstane v Klíčence tohoto zařízení."
+            "value" : "Použij školní přihlášení. Heslo zůstane v tomto zařízení."
           }
         },
         "cs-US" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "použij stejné uživatelské jméno a heslo jako ve škole. heslo zůstane v klíčence tohoto zařízení."
+            "value" : "použij školní přihlášení. heslo zůstane v tomto zařízení."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Use the same username and password as at school. Your password stays in this device’s Keychain."
+            "value" : "Use your school login. Your password stays on this device."
           }
         },
         "en-CO" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "use the same username and password as at school. your password stays in this device’s Keychain."
+            "value" : "use your school login. your password stays on this device."
           }
         }
       }
@@ -14036,25 +14008,25 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Děkujeme, že Gradey používáš. Vývoj i provoz něco stojí; jen cloudové a API služby nás dosud vyšly na více než 700 dolarů. Podpora je dobrovolná: můžeš poslat jednorázový příspěvek nebo zvolit pravidelnou podporu s vyšším denním přídělem Compute a přednostním přístupem k novinkám. Gradey můžeš dál používat bez ohledu na své rozhodnutí."
+            "value" : "Dobrovolné. Příspěvky a předplatné pomáhají platit provoz Gradey."
           }
         },
         "cs-US" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "děkujeme, že Gradey používáš. vývoj i provoz něco stojí; jen cloudové a API služby nás dosud vyšly na více než 700 dolarů. podpora je dobrovolná: můžeš poslat jednorázový příspěvek nebo zvolit pravidelnou podporu s vyšším denním přídělem Compute a přednostním přístupem k novinkám. Gradey můžeš dál používat bez ohledu na své rozhodnutí."
+            "value" : "dobrovolné. příspěvky a předplatné pomáhají platit provoz Gradey."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Thank you for using Gradey. Development and running costs add up; cloud and API services alone have already cost more than $700. Support is optional: leave a one-time tip or choose recurring support for a higher daily Compute allowance and early access to new features. You can keep using Gradey either way."
+            "value" : "Optional. Tips and subscriptions help pay for running Gradey."
           }
         },
         "en-CO" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "thank you for using Gradey. development and running costs add up; cloud and API services alone have already cost more than $700. support is optional: leave a one-time tip or choose recurring support for a higher daily Compute allowance and early access to new features. you can keep using Gradey either way."
+            "value" : "optional. tips and subscriptions help pay for running Gradey."
           }
         }
       }
@@ -14115,34 +14087,6 @@
         }
       }
     },
-    "onboarding.welcome.benefit.extras.body" : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Získej pomoc od Gradey AI podle školních údajů, které vybereš, a měj přehled díky oznámením a widgetům."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "získej pomoc od Gradey AI podle školních údajů, které vybereš, a měj přehled díky oznámením a widgetům."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Get focused help from Gradey AI using the school information you choose, and stay up to date with notifications and widgets."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "get focused help from Gradey AI using the school information you choose, and stay up to date with notifications and widgets."
-          }
-        }
-      }
-    },
     "onboarding.welcome.benefit.extras.title" : {
       "localizations" : {
         "cs" : {
@@ -14171,34 +14115,6 @@
         }
       }
     },
-    "onboarding.welcome.benefit.insights.body" : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sleduj průměry a vývoj, zkoušej si hypotetické známky a plánuj absenci."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "sleduj průměry, zkoušej si známky, plánuj absenci. ngl je to useful."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Follow averages and trends, try hypothetical marks, and plan future absences."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "follow averages, try hypothetical marks, plan future absences. ngl it's useful."
-          }
-        }
-      }
-    },
     "onboarding.welcome.benefit.insights.title" : {
       "localizations" : {
         "cs" : {
@@ -14223,34 +14139,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "know what's going on"
-          }
-        }
-      }
-    },
-    "onboarding.welcome.benefit.today.body" : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Měj rozvrh, nové známky a absenci na jednom místě."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "rozvrh, nový známky a absence bez doomscrollu školního webu."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "See your timetable, new marks, and absences in one place."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "timetable, new marks, and absences without the school portal spiral."
           }
         }
       }
@@ -14288,25 +14176,25 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Známky, rozvrh, absence i chytřejší školní přehledy na jednom místě."
+            "value" : "Známky, rozvrh a absence na jednom místě."
           }
         },
         "cs-US" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "známky, rozvrh, absence i školní lore. všechno na jednom místě."
+            "value" : "známky, rozvrh a absence. všechno na jednom místě."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Marks, timetable, absences, and smarter school insights in one place."
+            "value" : "Marks, timetable and absence in one place."
           }
         },
         "en-CO" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "marks, timetable, absences, and the school lore. all in one place."
+            "value" : "marks, timetable and absence. all in one place."
           }
         }
       }

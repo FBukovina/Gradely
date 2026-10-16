@@ -26,7 +26,6 @@ struct OnboardingAccountStep: View {
 
     var body: some View {
         OnboardingStepScaffold(
-            icon: "person.crop.circle.badge.checkmark",
             title: accountIntent == .logIn
                 ? "onboarding.account.login.title"
                 : "onboarding.account.title",
@@ -34,43 +33,29 @@ struct OnboardingAccountStep: View {
                 ? "onboarding.account.login.body"
                 : "onboarding.account.body"
         ) {
-            SettingsSurface(padding: Spacing.lg) {
-                VStack(alignment: .leading, spacing: Spacing.lg) {
-                    Text("gradey.auth.signInBody")
-                        .font(.gradely(.callout))
+            GradelyAppleSignInButton(
+                isLoading: viewModel.isLoading,
+                onCompletion: handleAppleResult,
+                onMockSignIn: signInForUITesting
+            )
+
+            if viewModel.isLoading {
+                HStack(spacing: Spacing.sm) {
+                    ProgressView()
+                        .controlSize(.small)
+                    Text("gradey.auth.signingIn")
+                        .font(.gradely(.footnote))
                         .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-
-                    GradelyAppleSignInButton(
-                        isLoading: viewModel.isLoading,
-                        onCompletion: handleAppleResult,
-                        onMockSignIn: signInForUITesting
-                    )
-
-                    if viewModel.isLoading {
-                        HStack(spacing: Spacing.sm) {
-                            ProgressView()
-                                .controlSize(.small)
-                            Text("gradey.auth.signingIn")
-                                .font(.gradely(.footnote))
-                                .foregroundStyle(.secondary)
-                        }
-                        .frame(maxWidth: .infinity)
-                        .accessibilityIdentifier("gradeyIDSigningIn")
-                    }
                 }
+                .frame(maxWidth: .infinity)
+                .accessibilityIdentifier("gradeyIDSigningIn")
             }
 
             if let onContinueWithoutAccount {
                 Button(action: onContinueWithoutAccount) {
-                    GradelyLabel("onboarding.upgrade.account.continueWithout", systemImage: "arrow.right.circle")
-                        .font(.gradely(.subheadline).weight(.semibold))
-                        .frame(maxWidth: .infinity)
-                        .frame(minHeight: 50)
+                    PlainLinkLabel("onboarding.upgrade.account.continueWithout")
                 }
                 .buttonStyle(.plain)
-                .foregroundStyle(Brand.primary)
-                .background(Color.gradelyTertiaryFill, in: RoundedRectangle(cornerRadius: Radius.md, style: .continuous))
                 .disabled(viewModel.isLoading)
                 .accessibilityIdentifier("gradeyIDBypassButton")
             }
@@ -132,7 +117,6 @@ struct OnboardingAccountStep: View {
 // MARK: - Shared onboarding language
 
 struct OnboardingStepScaffold<Content: View>: View {
-    let icon: String
     let title: LocalizedStringKey
     let message: LocalizedStringKey
     let titleSize: CGFloat
@@ -141,7 +125,6 @@ struct OnboardingStepScaffold<Content: View>: View {
     @ViewBuilder let content: Content
 
     init(
-        icon: String,
         title: LocalizedStringKey,
         message: LocalizedStringKey,
         titleSize: CGFloat = 38,
@@ -149,7 +132,6 @@ struct OnboardingStepScaffold<Content: View>: View {
         verticalPadding: CGFloat = Spacing.xxl,
         @ViewBuilder content: () -> Content
     ) {
-        self.icon = icon
         self.title = title
         self.message = message
         self.titleSize = titleSize
@@ -164,7 +146,7 @@ struct OnboardingStepScaffold<Content: View>: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: contentSpacing) {
-                    OnboardingStepHero(icon: icon, title: title, message: message, titleSize: titleSize)
+                    OnboardingStepHero(title: title, message: message, titleSize: titleSize)
                     content
                 }
                 .padding(.horizontal, 20)
@@ -178,14 +160,12 @@ struct OnboardingStepScaffold<Content: View>: View {
 }
 
 struct OnboardingStepHero: View {
-    let icon: String
     let title: LocalizedStringKey
     let message: LocalizedStringKey
     var titleSize: CGFloat = 38
 
     var body: some View {
         SettingsModalFlowHero(
-            icon: icon,
             title: title,
             message: message,
             titleSize: min(titleSize, 36)

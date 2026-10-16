@@ -18,11 +18,10 @@ struct AgeAttestationView: View {
 
     private var chooser: some View {
         OnboardingStepScaffold(
-            icon: "person.crop.circle.badge.questionmark",
             title: "age.gate.title",
             message: "age.gate.body"
         ) {
-            VStack(spacing: Spacing.md) {
+            PlainSection {
                 ageChoiceButton(
                     title: "age.gate.sixteen.title",
                     subtitle: "age.gate.sixteen.subtitle",
@@ -46,21 +45,20 @@ struct AgeAttestationView: View {
                 ) {
                     beginParentalConfirmation(for: .underThirteen)
                 }
-
-                Link(destination: AppLinks.privacyPolicyURL) {
-                    Text("age.gate.privacyLink")
-                        .font(.gradely(.footnote).weight(.semibold))
-                        .foregroundStyle(Brand.primary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
-                .accessibilityIdentifier("ageAttestationPrivacyLink")
             }
+
+            Link(destination: AppLinks.privacyPolicyURL) {
+                Text("age.gate.privacyLink")
+                    .font(.gradely(.footnote).weight(.semibold))
+                    .foregroundStyle(Brand.primary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .accessibilityIdentifier("ageAttestationPrivacyLink")
         }
     }
 
     private var parentalConfirmation: some View {
         OnboardingStepScaffold(
-            icon: "checkmark.shield",
             title: pendingParentalKind == .underThirteen
                 ? "age.gate.underThirteen.title"
                 : "age.gate.teen.title",
@@ -122,12 +120,8 @@ struct AgeAttestationView: View {
                     .font(.gradely(.caption).weight(.bold))
                     .foregroundStyle(.secondary)
             }
-            .padding(Spacing.lg)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(
-                Color.gradelySecondaryGroupedBackground,
-                in: RoundedRectangle(cornerRadius: Radius.md, style: .continuous)
-            )
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier(identifier)

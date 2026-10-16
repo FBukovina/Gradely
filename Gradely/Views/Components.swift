@@ -154,30 +154,45 @@ struct SettingsModalSystemIcon: View {
 
 /// Settings-style heading used by authentication and onboarding flows.
 struct SettingsModalFlowHero: View {
-    let icon: String
     let title: LocalizedStringKey
     let message: LocalizedStringKey
     var titleSize: CGFloat = 36
 
     var body: some View {
-        HStack(alignment: .top, spacing: Spacing.md) {
-            SettingsModalSystemIcon(systemName: icon)
-                .accessibilityHidden(true)
+        VStack(alignment: .leading, spacing: Spacing.xs) {
+            Text(title)
+                .font(.gradelyDisplay(size: titleSize))
+                .lineLimit(3)
+                .minimumScaleFactor(0.72)
+                .accessibilityAddTraits(.isHeader)
 
-            VStack(alignment: .leading, spacing: Spacing.xs) {
-                Text(title)
-                    .font(.gradelyDisplay(size: titleSize))
-                    .lineLimit(3)
-                    .minimumScaleFactor(0.72)
-                    .accessibilityAddTraits(.isHeader)
-
-                Text(message)
-                    .font(.gradely(.callout))
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
+            Text(message)
+                .font(.gradely(.callout))
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+/// A secondary action as green text with a chevron, so the one filled button
+/// on a screen stays the obvious next step.
+struct PlainLinkLabel: View {
+    let title: LocalizedStringKey
+
+    init(_ title: LocalizedStringKey) {
+        self.title = title
+    }
+
+    var body: some View {
+        HStack(spacing: Spacing.xs) {
+            Text(title)
+            GradelyIcon("arrow-right-01", size: 13)
+        }
+        .font(.gradely(.subheadline).weight(.semibold))
+        .foregroundStyle(Brand.primary)
+        .frame(maxWidth: .infinity, minHeight: 44)
+        .contentShape(Rectangle())
     }
 }
 

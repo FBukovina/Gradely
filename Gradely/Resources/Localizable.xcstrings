@@ -16081,35 +16081,6 @@
         }
       }
     },
-    "planner.private" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Plánovač se ukládá v tomto zařízení. Položky se zapnutou synchronizací se posílají do Kalendáře. Do školního systému se nic nezapisuje."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Plánovač se ukládá v tomto zařízení. Položky se zapnutou synchronizací se posílají do Kalendáře. Do školního systému se nic nezapisuje."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Your planner is saved on this device. Items with sync enabled are sent to Calendar. Nothing is written to your school system."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Your planner is saved on this device. Items with sync enabled are sent to Calendar. Nothing is written to your school system."
-          }
-        }
-      }
-    },
     "planner.reminder.count" : {
       "extractionState" : "manual",
       "localizations" : {

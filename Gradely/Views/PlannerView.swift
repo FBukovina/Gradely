@@ -45,27 +45,16 @@ struct PlannerView: View {
                     }
                 } else {
                     ForEach(groups) { group in
-                        VStack(alignment: .leading, spacing: Spacing.sm) {
-                            Text(group.title)
-                                .font(.gradely(.footnote).weight(.bold))
-                                .textCase(.uppercase)
-                                .foregroundStyle(.secondary)
-                                .kerning(0.6)
-                                .padding(.horizontal, Spacing.xs)
-                                .accessibilityAddTraits(.isHeader)
-
+                        PlainSection {
+                            PlainSectionTitle(verbatim: group.title)
+                        } content: {
                             ForEach(group.items) { item in
                                 row(item)
-                                    .gradeySiriContext(.planner(item))                            }
+                                    .gradeySiriContext(.planner(item))
+                            }
                         }
                     }
                 }
-
-                Text("planner.private")
-                    .font(.gradely(.caption))
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.horizontal, Spacing.xs)
             }
             .frame(maxWidth: 640, alignment: .leading)
             .frame(maxWidth: .infinity)
@@ -114,67 +103,41 @@ struct PlannerView: View {
     // MARK: - Filter
 
     private var filter: some View {
-        HStack(spacing: Spacing.sm) {
-            filterChip(AppL10n.string("planner.upcoming"), isSelected: !showsCompleted, id: "plannerFilterUpcoming") {
-                showsCompleted = false
-            }
-            filterChip(AppL10n.string("planner.completed"), isSelected: showsCompleted, id: "plannerFilterCompleted") {
-                showsCompleted = true
-            }
-            Spacer(minLength: 0)
+        Picker(AppL10n.string("planner.filter"), selection: $showsCompleted) {
+            Text(AppL10n.string("planner.upcoming")).tag(false)
+            Text(AppL10n.string("planner.completed")).tag(true)
         }
-        .accessibilityLabel(AppL10n.string("planner.filter"))
-    }
-
-    private func filterChip(_ title: String, isSelected: Bool, id: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(title)
-                .font(.gradely(.subheadline).weight(.semibold))
-                .foregroundStyle(isSelected ? AnyShapeStyle(Brand.onAccent) : AnyShapeStyle(Color.primary))
-                .padding(.horizontal, Spacing.lg)
-                .padding(.vertical, Spacing.sm + 2)
-                .background {
-                    Capsule(style: .continuous)
-                        .fill(isSelected ? AnyShapeStyle(Brand.gradient) : AnyShapeStyle(Color.gradelySecondaryGroupedBackground))
-                }
-                .overlay {
-                    Capsule(style: .continuous)
-                        .strokeBorder(Color.primary.opacity(isSelected ? 0 : 0.06), lineWidth: 1)
-                }
-        }
-        .buttonStyle(.plain)
-        .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
-        .accessibilityIdentifier(id)
+        .pickerStyle(.segmented)
+        .accessibilityIdentifier("plannerFilter")
     }
 
     // MARK: - Rows
 
     private func row(_ item: PlannerItem) -> some View {
-        SettingsSurface(padding: Spacing.md) {
-            HStack(alignment: .top, spacing: Spacing.sm) {
-                Button {
-                    perform { try await store.setCompleted(!item.isCompleted, id: item.id) }
-                } label: {
-                    GradelyIcon(systemName: item.isCompleted ? "checkmark.circle.fill" : "circle", size: 22)
-                        .foregroundStyle(Brand.primary)
-                        .frame(width: 44, height: 44)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(AppL10n.string(item.isCompleted ? "planner.markIncomplete" : "planner.markComplete"))
-                .accessibilityIdentifier("plannerComplete-\(item.id)")
-
-                Button { editorItem = item } label: {
-                    HStack(spacing: Spacing.sm) {
-                        PlannerItemSummary(item: item)
-                        Spacer(minLength: 0)
-                        SettingsDisclosureIcon()
-                    }
+        HStack(alignment: .top, spacing: Spacing.xs) {
+            Button {
+                perform { try await store.setCompleted(!item.isCompleted, id: item.id) }
+            } label: {
+                // Leading-aligned so the circle lines up with the section title.
+                GradelyIcon(systemName: item.isCompleted ? "checkmark.circle.fill" : "circle", size: 22)
+                    .foregroundStyle(Brand.primary)
+                    .frame(width: 40, height: 44, alignment: .leading)
                     .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityIdentifier("plannerItem-\(item.id)")
             }
+            .buttonStyle(.plain)
+            .accessibilityLabel(AppL10n.string(item.isCompleted ? "planner.markIncomplete" : "planner.markComplete"))
+            .accessibilityIdentifier("plannerComplete-\(item.id)")
+
+            Button { editorItem = item } label: {
+                HStack(spacing: Spacing.sm) {
+                    PlannerItemSummary(item: item)
+                    Spacer(minLength: 0)
+                    SettingsDisclosureIcon()
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("plannerItem-\(item.id)")
         }
         .contextMenu {
             Button(AppL10n.string("planner.edit")) { editorItem = item }
@@ -214,21 +177,19 @@ struct PlannerView: View {
     }
 
     private var emptyState: some View {
-        SettingsSurface {
-            VStack(spacing: Spacing.md) {
-                GradelyIcon(systemName: "checklist", size: 22)
-                    .foregroundStyle(Brand.primary.opacity(0.7))
-                Text(AppL10n.string(showsCompleted ? "planner.empty.completed.title" : "planner.empty.title"))
-                    .font(.gradely(.headline))
-                Text(AppL10n.string(showsCompleted ? "planner.empty.completed.message" : "planner.empty.message"))
-                    .font(.gradely(.subheadline))
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, Spacing.md)
+        VStack(spacing: Spacing.md) {
+            GradelyIcon(systemName: "checklist", size: 22)
+                .foregroundStyle(Brand.primary.opacity(0.7))
+            Text(AppL10n.string(showsCompleted ? "planner.empty.completed.title" : "planner.empty.title"))
+                .font(.gradely(.headline))
+            Text(AppL10n.string(showsCompleted ? "planner.empty.completed.message" : "planner.empty.message"))
+                .font(.gradely(.subheadline))
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
         }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, Spacing.xl)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("plannerEmptyState")
     }
@@ -264,7 +225,10 @@ struct PlannerView: View {
             if let date {
                 if date == today { title = AppL10n.string("timetable.today") }
                 else if date == tomorrow { title = AppL10n.string("planner.tomorrow") }
-                else { title = date.formatted(Date.FormatStyle(locale: AppLanguageOverride.locale).weekday(.wide).day().month(.abbreviated).year()) }
+                else {
+                    let weekday = date.formatted(Date.FormatStyle(locale: AppLanguageOverride.locale).weekday(.wide))
+                    title = weekday.prefix(1).uppercased() + weekday.dropFirst() + " " + SchoolDateFormatting.shortDate(date)
+                }
             } else {
                 title = AppL10n.string("planner.undated")
             }
@@ -318,13 +282,13 @@ struct PlannerItemSummary: View {
 }
 
 extension PlannerItem {
-    /// One-line day (and time, when the item has one) in the app's language.
+    /// Short day ("19. 10.") plus the time when the item has one.
     var scheduleSummary: String? {
         guard let date = orderingDate else { return nil }
-        let style = Date.FormatStyle(locale: AppLanguageOverride.locale, timeZone: calendar.timeZone)
         if let due = dueDate, dueHasTime {
-            return due.formatted(style.day().month(.abbreviated).year().hour().minute())
+            let time = due.formatted(Date.FormatStyle(date: .omitted, time: .shortened, locale: AppLanguageOverride.locale, timeZone: calendar.timeZone))
+            return SchoolDateFormatting.shortDate(due, timeZone: calendar.timeZone) + " " + time
         }
-        return date.formatted(style.day().month(.abbreviated).year())
+        return SchoolDateFormatting.shortDate(date, timeZone: calendar.timeZone)
     }
 }

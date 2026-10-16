@@ -12,13 +12,18 @@ enum SchoolDateFormatting {
     /// rather than the app language, whose English locale has no region. ICU's
     /// English-in-Czechia pattern drops the final dot ("31. 5"), so Czech and
     /// Slovak regions use the native pattern.
-    static func shortDate(_ date: Date, region: Locale.Region? = Locale.current.region, now: Date = Date()) -> String {
+    static func shortDate(
+        _ date: Date,
+        timeZone: TimeZone = .current,
+        region: Locale.Region? = Locale.current.region,
+        now: Date = Date()
+    ) -> String {
         let locale: Locale = switch region {
         case .czechia?: Locale(identifier: "cs_CZ")
         case .slovakia?: Locale(identifier: "sk_SK")
         default: .current
         }
-        var style = Date.FormatStyle(locale: locale).day().month(.defaultDigits)
+        var style = Date.FormatStyle(locale: locale, timeZone: timeZone).day().month(.defaultDigits)
         if !Calendar.current.isDate(date, equalTo: now, toGranularity: .year) {
             style = style.year()
         }

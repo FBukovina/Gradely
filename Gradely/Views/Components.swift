@@ -537,17 +537,21 @@ extension PlainSection where Header == EmptyView {
 
 /// Title of a `PlainSection`; shows a chevron when the title is a link.
 struct PlainSectionTitle: View {
-    let title: LocalizedStringKey
+    let title: Text
     var showsChevron = false
 
     init(_ title: LocalizedStringKey, showsChevron: Bool = false) {
-        self.title = title
+        self.title = Text(title)
         self.showsChevron = showsChevron
+    }
+
+    init(verbatim title: String) {
+        self.title = Text(verbatim: title)
     }
 
     var body: some View {
         HStack(spacing: Spacing.xs) {
-            Text(title)
+            title
                 .font(.gradely(.title3).weight(.bold))
                 .foregroundStyle(.primary)
             if showsChevron {

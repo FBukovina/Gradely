@@ -1,5 +1,5 @@
 {
-  "originHash" : "69ce94272f3170e2843f83ba59ed44d1035f3dde018486564ce2513635248bc0",
+  "originHash" : "53027abb17d0d3fe7c4ea1fae24213824a0c912fe8c7964b8305cbd9be523970",
   "pins" : [
     {
       "identity" : "abseil-cpp-binary",
@@ -188,6 +188,15 @@
       "state" : {
         "revision" : "db774a277f60063a32d854f2980299caf06da041",
         "version" : "1.6.0"
+      }
+    },
+    {
+      "identity" : "swift-issue-reporting",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/pointfreeco/swift-issue-reporting",
+      "state" : {
+        "revision" : "75b000cea2ca6d7527a57e1b9cc0bdf21a9abe9f",
+        "version" : "2.1.1"
       }
     },
     {

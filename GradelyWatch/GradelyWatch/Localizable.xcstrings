@@ -309,22 +309,6 @@
         }
       }
     },
-    "watch.done.detail" : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Dnes už žádné hodiny nejsou."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No more lessons left."
-          }
-        }
-      }
-    },
     "watch.done.title" : {
       "localizations" : {
         "cs" : {
@@ -369,22 +353,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Next"
-          }
-        }
-      }
-    },
-    "watch.noMoreLessons.detail" : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "V dnešním rozvrhu už nic nezbývá."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nothing left on today’s timetable."
           }
         }
       }

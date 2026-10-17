@@ -34,8 +34,7 @@ struct UpcomingLessonView: View {
         } else {
             WatchStatusPage(
                 systemImage: "calendar.badge.checkmark",
-                title: String(localized: "watch.noMoreLessons.title"),
-                detail: String(localized: "watch.noMoreLessons.detail")
+                title: String(localized: "watch.noMoreLessons.title")
             )
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
@@ -109,9 +108,8 @@ private struct UpcomingLessonHero: View {
     private func metaChip(_ systemImage: String, _ text: String) -> some View {
         Label(text, systemImage: systemImage)
             .font(.gradely(.caption2).weight(.semibold))
-            .padding(.horizontal, 6)
-            .padding(.vertical, 3)
-            .background(.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+            .foregroundStyle(.secondary)
+            .lineLimit(1)
     }
 }
 
@@ -135,7 +133,7 @@ struct RemainingDayView: View {
                         .foregroundStyle(.secondary)
                 }
             }
-            .listRowBackground(Color.white.opacity(0.06))
+            .listRowBackground(Color.clear)
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)

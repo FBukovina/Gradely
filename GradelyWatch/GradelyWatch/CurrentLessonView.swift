@@ -30,8 +30,7 @@ struct CurrentLessonView: View {
         case .doneForToday:
             WatchStatusPage(
                 systemImage: "checkmark.circle.fill",
-                title: String(localized: "watch.done.title"),
-                detail: String(localized: "watch.done.detail")
+                title: String(localized: "watch.done.title")
             )
         case .inLesson(let lesson, let progress):
             lessonHero(
@@ -134,7 +133,7 @@ struct CurrentLessonView: View {
 struct WatchStatusPage: View {
     let systemImage: String
     let title: String
-    let detail: String
+    var detail: String?
 
     var body: some View {
         VStack(spacing: 8) {
@@ -144,10 +143,12 @@ struct WatchStatusPage: View {
             Text(title)
                 .font(.gradely(.headline).weight(.bold))
                 .multilineTextAlignment(.center)
-            Text(detail)
-                .font(.gradely(.caption2))
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
+            if let detail {
+                Text(detail)
+                    .font(.gradely(.caption2))
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            }
         }
         .padding(.horizontal, 6)
     }

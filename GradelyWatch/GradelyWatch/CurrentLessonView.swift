@@ -19,13 +19,15 @@ struct CurrentLessonView: View {
             WatchStatusPage(
                 systemImage: "calendar",
                 title: String(localized: "watch.noTimetable.title"),
-                detail: String(localized: "watch.noTimetable.detail")
+                detail: String(localized: "watch.noTimetable.detail"),
+                refresh: refreshAction
             )
         case .stale:
             WatchStatusPage(
                 systemImage: "arrow.clockwise",
                 title: String(localized: "watch.stale.title"),
-                detail: String(localized: "watch.stale.detail")
+                detail: String(localized: "watch.stale.detail"),
+                refresh: refreshAction
             )
         case .doneForToday:
             WatchStatusPage(
@@ -39,9 +41,7 @@ struct CurrentLessonView: View {
                     ? String(localized: "watch.status.canceled")
                     : String(localized: "watch.status.now"),
                 statusColor: lesson.isCanceled ? WatchBrand.canceled : WatchBrand.primary,
-                progress: progress,
-                now: now,
-                subtitle: metaLine(for: lesson)
+                progress: progress
             )
         case .betweenLessons(let next, let progress, _):
             lessonHero(
@@ -50,74 +50,68 @@ struct CurrentLessonView: View {
                     String(format: String(localized: "watch.status.in"), WatchLessonFormatting.remaining(until: $0, now: now))
                 } ?? String(localized: "watch.status.upNext"),
                 statusColor: WatchBrand.primary,
-                progress: progress,
-                now: now,
-                subtitle: [
-                    Optional(String(localized: "watch.break")),
-                    metaLine(for: next)
-                ]
-                    .compactMap { $0 }
-                    .joined(separator: " · ")
+                progress: progress
             )
         }
     }
 
+    /// Full subject name, status with room and teacher, a thin progress bar and
+    /// the lesson's start and end.
     private func lessonHero(
         lesson: GradelyWatchTimetableLesson,
         status: String,
         statusColor: Color,
-        progress: Double,
-        now _: Date,
-        subtitle: String?
+        progress: Double
     ) -> some View {
-        VStack(spacing: 2) {
+        VStack(alignment: .leading, spacing: 6) {
             Spacer(minLength: 0)
 
-            ZStack {
-                LessonProgressArc(progress: progress, isCanceled: lesson.isCanceled)
-                    .frame(width: 118, height: 118)
+            Text(lesson.detailTitle)
+                .font(.gradely(.title2).weight(.bold))
+                .lineLimit(2)
+                .minimumScaleFactor(0.6)
+                .strikethrough(lesson.isCanceled)
 
-                VStack(spacing: 1) {
-                    Text(lesson.title)
-                        .font(.gradely(.title2).weight(.heavy))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.6)
-                        .strikethrough(lesson.isCanceled)
-                    Text(status)
-                        .font(.gradely(.caption2).weight(.bold))
-                        .foregroundStyle(statusColor)
-                        .lineLimit(1)
-                    if let subtitle, !subtitle.isEmpty {
-                        Text(subtitle)
-                            .font(.gradely(.caption2))
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                    }
+            HStack(spacing: 4) {
+                Text(status)
+                    .foregroundStyle(statusColor)
+                    .fontWeight(.bold)
+                if let meta = metaLine(for: lesson) {
+                    Text(verbatim: "· " + meta)
+                        .foregroundStyle(.secondary)
                 }
-                .padding(.bottom, 8)
             }
+            .font(.gradely(.caption))
+            .lineLimit(1)
+            .minimumScaleFactor(0.8)
+
+            WatchProgressBar(
+                progress: progress,
+                color: lesson.isCanceled ? WatchBrand.canceled : WatchBrand.primary
+            )
+            .padding(.top, 4)
 
             HStack {
-                VStack(alignment: .leading, spacing: 0) {
-                    Text(WatchLessonFormatting.time(lesson.startDate))
-                        .font(.gradely(.headline).weight(.bold))
-                        .strikethrough(lesson.isCanceled)
-                    Text(String(localized: "watch.start"))
-                        .font(.gradely(.caption2))
-                        .foregroundStyle(.secondary)
-                }
+                Text(WatchLessonFormatting.time(lesson.startDate))
+                    .strikethrough(lesson.isCanceled)
                 Spacer()
-                VStack(alignment: .trailing, spacing: 0) {
-                    Text(WatchLessonFormatting.time(lesson.endDate))
-                        .font(.gradely(.headline).weight(.bold))
-                        .strikethrough(lesson.isCanceled)
-                    Text(String(localized: "watch.end"))
-                        .font(.gradely(.caption2))
-                        .foregroundStyle(.secondary)
-                }
+                Text(WatchLessonFormatting.time(lesson.endDate))
+                    .strikethrough(lesson.isCanceled)
             }
-            .padding(.horizontal, 4)
-            .padding(.top, 4)
+            .font(.gradely(.caption).weight(.semibold).monospacedDigit())
+            .foregroundStyle(.secondary)
+
+            Spacer(minLength: 0)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 4)
+    }
+
+    /// Manual refresh where it matters: the app already refreshes on launch and
+    /// whenever the iPhone syncs, so lesson pages don't carry a button.
+    private var refreshAction: WatchStatusPage.Refresh {
+        WatchStatusPage.Refresh(isRunning: model.isSyncing) {
+            Task { await model.refreshTimetable() }
         }
     }
 
@@ -130,10 +124,35 @@ struct CurrentLessonView: View {
     }
 }
 
+struct WatchProgressBar: View {
+    let progress: Double
+    let color: Color
+
+    var body: some View {
+        GeometryReader { proxy in
+            ZStack(alignment: .leading) {
+                Capsule()
+                    .fill(.white.opacity(0.16))
+                Capsule()
+                    .fill(color)
+                    .frame(width: proxy.size.width * min(max(progress, 0), 1))
+            }
+        }
+        .frame(height: 5)
+        .accessibilityHidden(true)
+    }
+}
+
 struct WatchStatusPage: View {
+    struct Refresh {
+        let isRunning: Bool
+        let perform: () -> Void
+    }
+
     let systemImage: String
     let title: String
     var detail: String?
+    var refresh: Refresh?
 
     var body: some View {
         VStack(spacing: 8) {
@@ -148,6 +167,21 @@ struct WatchStatusPage: View {
                     .font(.gradely(.caption2))
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
+            }
+            if let refresh {
+                Button(action: refresh.perform) {
+                    if refresh.isRunning {
+                        ProgressView()
+                            .controlSize(.mini)
+                    } else {
+                        Label("watch.refresh", systemImage: "arrow.clockwise")
+                            .font(.gradely(.caption).weight(.semibold))
+                    }
+                }
+                .buttonStyle(.bordered)
+                .tint(WatchBrand.primary)
+                .disabled(refresh.isRunning)
+                .padding(.top, 4)
             }
         }
         .padding(.horizontal, 6)

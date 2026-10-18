@@ -4,63 +4,9 @@ import SwiftUI
 struct GradeyAIWatchView: View {
     @ObservedObject var model: WatchAppModel
 
+    /// Only shown to supporters; the page is hidden for everyone else.
     var body: some View {
-        Group {
-            if model.isRecurringSupporter {
-                chat
-            } else {
-                lock
-            }
-        }
-    }
-
-    private var lock: some View {
-        ScrollView {
-            VStack(spacing: 10) {
-                WatchStatusPage(
-                    systemImage: "lock.fill",
-                    title: "Gradey AI",
-                    detail: String(localized: "watch.ai.lock.detail")
-                )
-
-                if let purchaseRefreshMessage = model.purchaseRefreshMessage {
-                    Text(purchaseRefreshMessage)
-                        .font(.gradely(.caption2))
-                        .foregroundStyle(WatchBrand.canceled)
-                        .multilineTextAlignment(.center)
-                } else if !model.isPhoneReachable {
-                    Text("watch.ai.bringIPhone")
-                        .font(.gradely(.caption2))
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                }
-
-                Button {
-                    Task { await model.refreshPurchases() }
-                } label: {
-                    HStack(spacing: 6) {
-                        if model.isRefreshingPurchases {
-                            ProgressView()
-                                .controlSize(.mini)
-                                .tint(WatchBrand.onAccent)
-                        } else {
-                            Image(systemName: "arrow.clockwise")
-                        }
-                        Text("watch.ai.refreshPurchases")
-                    }
-                    .font(.gradely(.caption).weight(.semibold))
-                    .foregroundStyle(WatchBrand.onAccent)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 8)
-                    .background(WatchBrand.gradient, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-                }
-                .buttonStyle(.plain)
-                .disabled(model.isRefreshingPurchases)
-                .accessibilityLabel("watch.ai.refreshPurchases")
-            }
-            .padding(.horizontal, 2)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        chat
     }
 
     private var chat: some View {

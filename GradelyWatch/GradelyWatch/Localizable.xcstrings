@@ -1,6 +1,22 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "watch.refresh" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Obnovit rozvrh"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Refresh timetable"
+          }
+        }
+      }
+    },
     "watch.ai.ask" : {
       "localizations" : {
         "cs" : {
@@ -161,22 +177,6 @@
         }
       }
     },
-    "watch.ai.refreshPurchases" : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Obnovit nákupy"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Restore purchases"
-          }
-        }
-      }
-    },
     "watch.ai.responding" : {
       "localizations" : {
         "cs" : {
@@ -221,22 +221,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Stop"
-          }
-        }
-      }
-    },
-    "watch.break" : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Přestávka"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Break"
           }
         }
       }
@@ -325,38 +309,6 @@
         }
       }
     },
-    "watch.end" : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Konec"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "End"
-          }
-        }
-      }
-    },
-    "watch.next" : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Další"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Next"
-          }
-        }
-      }
-    },
     "watch.noMoreLessons.title" : {
       "localizations" : {
         "cs" : {
@@ -405,54 +357,6 @@
         }
       }
     },
-    "watch.purchase.error.invalidReply" : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nákupy se neobnovily. Otevři Gradey na iPhonu a zkus to znovu."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Could not restore purchases. Open Gradey on iPhone and try again."
-          }
-        }
-      }
-    },
-    "watch.purchase.error.iphoneNearby" : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pro obnovení nákupů měj iPhone nablízku."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bring iPhone nearby to refresh purchases."
-          }
-        }
-      }
-    },
-    "watch.purchase.noPlan" : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nenašlo se aktivní předplatné. Aktivuješ ho v Gradey na iPhonu."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No active subscription found. Subscribe in Gradey on iPhone."
-          }
-        }
-      }
-    },
     "watch.remaining.hoursMinutes" : {
       "localizations" : {
         "cs" : {
@@ -497,38 +401,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%d s"
-          }
-        }
-      }
-    },
-    "watch.remaining.tapCount" : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Zbývající hodiny: %d"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Remaining lessons: %d"
-          }
-        }
-      }
-    },
-    "watch.remaining.tapDetails" : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Klepni pro detail"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tap for details"
           }
         }
       }
@@ -593,22 +465,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Timetable is stale"
-          }
-        }
-      }
-    },
-    "watch.start" : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Začátek"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Start"
           }
         }
       }

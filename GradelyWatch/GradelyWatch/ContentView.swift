@@ -2,31 +2,25 @@ import GradelyWatchShared
 import SwiftUI
 
 struct ContentView: View {
-    private enum RootTab: Hashable {
-        case now
-        case upcoming
-        case ai
-    }
-
     @ObservedObject var model: WatchAppModel
-    @State private var selectedTab: RootTab = .now
 
     var body: some View {
         Group {
             if model.isSignedIn {
-                TabView(selection: $selectedTab) {
+                TabView {
                     NavigationStack {
                         CurrentLessonView(model: model)
                     }
-                    .tag(RootTab.now)
-
-                    UpcomingLessonView(model: model)
-                        .tag(RootTab.upcoming)
 
                     NavigationStack {
-                        GradeyAIWatchView(model: model)
+                        TodayLessonsView(model: model)
                     }
-                    .tag(RootTab.ai)
+
+                    if model.isRecurringSupporter {
+                        NavigationStack {
+                            GradeyAIWatchView(model: model)
+                        }
+                    }
                 }
                 .tabViewStyle(.verticalPage)
                 .containerBackground(for: .tabView) {
@@ -39,11 +33,6 @@ struct ContentView: View {
                     }
             }
         }
-        .overlay(alignment: .topLeading) {
-            if model.isSignedIn, selectedTab != .ai {
-                refreshButton
-            }
-        }
     }
 
     private var signedOutView: some View {
@@ -53,27 +42,5 @@ struct ContentView: View {
             detail: String(localized: "watch.signedOut.detail")
         )
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-
-    private var refreshButton: some View {
-        Button {
-            Task { await model.refreshTimetable() }
-        } label: {
-            Group {
-                if model.isSyncing {
-                    ProgressView()
-                        .controlSize(.mini)
-                } else {
-                    Image(systemName: "arrow.clockwise")
-                        .font(.gradely(.caption).weight(.semibold))
-                }
-            }
-            .frame(width: 26, height: 26)
-            .background(.white.opacity(0.14), in: Circle())
-        }
-        .buttonStyle(.plain)
-        .disabled(!model.isSignedIn || model.isSyncing)
-        .padding(.leading, 2)
-        .padding(.top, 1)
     }
 }

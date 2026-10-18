@@ -17,21 +17,6 @@ enum WatchAITransportError: LocalizedError {
     }
 }
 
-enum WatchPurchaseRefreshError: LocalizedError {
-    case notActivated
-    case phoneUnreachable
-    case invalidReply
-
-    var errorDescription: String? {
-        switch self {
-        case .notActivated, .phoneUnreachable:
-            return String(localized: "watch.purchase.error.iphoneNearby")
-        case .invalidReply:
-            return String(localized: "watch.purchase.error.invalidReply")
-        }
-    }
-}
-
 final class WatchConnectivityClient: NSObject {
     @MainActor var onPayload: ((GradelyWatchSyncPayload) -> Void)?
     @MainActor var onAIEvent: ((GradelyWatchAIStreamEvent) -> Void)?
@@ -61,42 +46,6 @@ final class WatchConnectivityClient: NSObject {
         session.sendMessage(request) { [weak self] reply in
             self?.handle(envelope: reply)
         } errorHandler: { _ in }
-    }
-
-    func requestPurchaseRefresh() async throws -> GradelyWatchSyncPayload {
-        guard let session, session.activationState == .activated else {
-            throw WatchPurchaseRefreshError.notActivated
-        }
-        guard session.isReachable else {
-            throw WatchPurchaseRefreshError.phoneUnreachable
-        }
-
-        let envelope = GradelyWatchSyncCodec.requestPurchaseRefreshEnvelope()
-        return try await withCheckedThrowingContinuation { continuation in
-            let lock = NSLock()
-            var resumed = false
-            func resume(_ result: Result<GradelyWatchSyncPayload, Error>) {
-                lock.lock()
-                defer { lock.unlock() }
-                guard !resumed else { return }
-                resumed = true
-                continuation.resume(with: result)
-            }
-
-            session.sendMessage(envelope, replyHandler: { reply in
-                do {
-                    guard let payload = try GradelyWatchSyncCodec.payload(from: reply) else {
-                        resume(.failure(WatchPurchaseRefreshError.invalidReply))
-                        return
-                    }
-                    resume(.success(payload))
-                } catch {
-                    resume(.failure(error))
-                }
-            }, errorHandler: { error in
-                resume(.failure(error))
-            })
-        }
     }
 
     func sendAIRequest(_ request: GradelyWatchAIStreamRequest) async throws -> GradelyWatchAIStreamAck {

@@ -7,13 +7,13 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Škola neposkytuje jednoznačný součet pro předměty: %@. Tyto hodiny ponechte viditelné, nebo opravte předmět, pokud byl přiřazen nesprávně."
+            "value" : "škola nemá jasnej součet pro předměty: %@. nech tyhle hodiny viditelný, nebo oprav předmět, jestli nesedí."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "The school has no unique subject total for: %@. Keep these lessons visible, or correct their subject if it was assigned incorrectly."
+            "value" : "school has no clear subject total for: %@. keep these lessons visible, or fix their subject if it's wrong."
           }
         }
       }
@@ -24,13 +24,13 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Místní úpravy absence se nepodařilo uložit. Zkuste to znovu."
+            "value" : "úpravy se nepovedlo uložit. zkusíš to znova?"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Your local absence edits could not be saved. Try again."
+            "value" : "couldn't save your edits. try again?"
           }
         }
       }
@@ -41,13 +41,13 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tyto úpravy absence uložila novější verze Gradey. Pro jejich správu aktualizujte aplikaci."
+            "value" : "tyhle úpravy uložila novější verze Gradey. aktualizuj appku, ať je můžeš spravovat."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "These absence edits were saved by a newer version of Gradey. Update the app to manage them."
+            "value" : "a newer Gradey saved these edits. update the app to manage them."
           }
         }
       }
@@ -58,13 +58,13 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Uložené úpravy absence se nepodařilo bezpečně přečíst. Zůstaly beze změny."
+            "value" : "uložený úpravy nejdou bezpečně přečíst. nic se nezměnilo."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Your saved absence edits could not be read safely. They have not been changed."
+            "value" : "your saved edits couldn't be read safely. nothing was changed."
           }
         }
       }
@@ -75,13 +75,13 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Uloženo na tomto zařízení. Záznamy školy se nemění."
+            "value" : "uloženo v tomhle zařízení. záznamy školy se nemění."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Saved on this device. School records stay unchanged."
+            "value" : "saved on this device. school records don't change."
           }
         }
       }
@@ -92,13 +92,13 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Upravit absenci"
+            "value" : "upravit absenci"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Edit absence"
+            "value" : "edit absence"
           }
         }
       }
@@ -109,13 +109,13 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Skryté absence"
+            "value" : "skrytý absence"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Hidden absences"
+            "value" : "hidden absences"
           }
         }
       }
@@ -126,13 +126,13 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Místně upraveno"
+            "value" : "upraveno v zařízení"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Locally adjusted"
+            "value" : "edited on this device"
           }
         }
       }
@@ -143,13 +143,13 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vyžaduje kontrolu"
+            "value" : "chce to kontrolu"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Needs review"
+            "value" : "needs a look"
           }
         }
       }
@@ -160,13 +160,13 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Údaje školy se změnily nebo přiřazení nelze ověřit. Úprava je pozastavena, dokud ji nezkontrolujete a znovu neuložíte."
+            "value" : "data školy se změnily nebo něco nesedí. úprava stojí, dokud ji nečekneš a znova neuložíš."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "School data changed or an allocation could not be matched. This edit is paused until you review and save it again."
+            "value" : "school data changed or something didn't match. this edit is paused until you check it and save again."
           }
         }
       }
@@ -177,13 +177,13 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Původní zameškané hodiny"
+            "value" : "původní zameškaný hodiny"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Original missed lessons"
+            "value" : "original missed lessons"
           }
         }
       }
@@ -194,13 +194,13 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nejdříve určete všechny hodiny, které škola zaznamenala jako absenci. Pak vyberte, které chcete skrýt."
+            "value" : "nejdřív označ všechny hodiny, který škola zapsala jako absenci. pak vyber, který skrýt."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "First identify every lesson the school recorded as absent. Then choose which of them to hide."
+            "value" : "first mark every lesson the school logged as absent. then pick which ones to hide."
           }
         }
       }
@@ -211,13 +211,13 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Potvrdit zameškané hodiny"
+            "value" : "potvrdit zameškaný hodiny"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Confirm missed lessons"
+            "value" : "confirm missed lessons"
           }
         }
       }
@@ -228,13 +228,13 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Přiřadit předměty a kategorie ručně"
+            "value" : "přiřadit předměty a kategorie ručně"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Assign subjects and categories manually"
+            "value" : "assign subjects and categories yourself"
           }
         }
       }
@@ -245,13 +245,13 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Každé zaznamenané hodině přiřaďte předmět a kategorii. Zapněte Skrýt tuto hodinu jen u hodin, které se nemají počítat."
+            "value" : "každý zapsaný hodině dej předmět a kategorii. skrýt tuhle hodinu zapni jen u hodin, co se nemaj počítat."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Assign each recorded hour to its subject and category. Turn on Hide this lesson only for hours that should not count."
+            "value" : "give each recorded hour a subject and category. turn on hide this lesson only for hours that shouldn't count."
           }
         }
       }
@@ -262,13 +262,13 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tento den obsahuje více kategorií. Počty přiřazených kategorií musí odpovídat záznamu školy."
+            "value" : "tenhle den má víc kategorií. počty musí sedět se záznamem školy."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "This day contains more than one category. The assigned category counts must match the school record."
+            "value" : "this day has more than one category. your counts have to match the school record."
           }
         }
       }
@@ -279,13 +279,13 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Předmět"
+            "value" : "předmět"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Subject"
+            "value" : "subject"
           }
         }
       }
@@ -296,13 +296,13 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vyberte předmět"
+            "value" : "vyber předmět"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Choose subject"
+            "value" : "pick a subject"
           }
         }
       }
@@ -313,13 +313,13 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Kategorie"
+            "value" : "kategorie"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Category"
+            "value" : "category"
           }
         }
       }
@@ -330,13 +330,13 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vyberte kategorii"
+            "value" : "vyber kategorii"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Choose category"
+            "value" : "pick a category"
           }
         }
       }
@@ -347,13 +347,13 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Skrýt tuto hodinu"
+            "value" : "skrýt tuhle hodinu"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Hide this lesson"
+            "value" : "hide this lesson"
           }
         }
       }
@@ -364,13 +364,13 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Skrýt celý den"
+            "value" : "skrýt celej den"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Hide entire day"
+            "value" : "hide the whole day"
           }
         }
       }
@@ -381,13 +381,13 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Skrýt vybrané hodiny"
+            "value" : "skrýt vybraný hodiny"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Hide selected lessons"
+            "value" : "hide picked lessons"
           }
         }
       }
@@ -398,13 +398,13 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Zrušit výběr skrytých hodin"
+            "value" : "zrušit výběr skrytejch hodin"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Clear hidden selection"
+            "value" : "clear hidden picks"
           }
         }
       }
@@ -415,13 +415,13 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Změnit původní zameškané hodiny"
+            "value" : "změnit původní zameškaný hodiny"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Change original missed lessons"
+            "value" : "change original missed lessons"
           }
         }
       }
@@ -432,13 +432,13 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Celkem podle školy"
+            "value" : "celkem podle školy"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "School total"
+            "value" : "school total"
           }
         }
       }
@@ -449,13 +449,13 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Skryté hodiny"
+            "value" : "skrytý hodiny"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Hidden lessons"
+            "value" : "hidden lessons"
           }
         }
       }
@@ -466,13 +466,13 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Celkem v Gradey"
+            "value" : "celkem v Gradey"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Total in Gradey"
+            "value" : "total in Gradey"
           }
         }
       }
@@ -483,13 +483,13 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Po uložení"
+            "value" : "po uložení"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "After saving"
+            "value" : "after saving"
           }
         }
       }
@@ -500,13 +500,13 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vyberte předmět a kategorii pro každou zaznamenanou hodinu tak, aby odpovídaly původní počty jednotlivých kategorií."
+            "value" : "vyber předmět a kategorii ke každý zapsaný hodině, ať sedí počty kategorií"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Choose a subject and category for every recorded hour, matching each original category total."
+            "value" : "pick a subject and category for every recorded hour so each category total matches"
           }
         }
       }
@@ -517,13 +517,13 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Žádné skryté absence"
+            "value" : "žádný skrytý absence"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "No hidden absences"
+            "value" : "no hidden absences"
           }
         }
       }
@@ -534,13 +534,13 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Obnovit absenci"
+            "value" : "vrátit absenci"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Restore absence"
+            "value" : "bring absence back"
           }
         }
       }
@@ -551,13 +551,13 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Obnovit všechny absence"
+            "value" : "vrátit všechny absence"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Restore all absences"
+            "value" : "bring all absences back"
           }
         }
       }
@@ -568,13 +568,13 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Odstranit všechny místní úpravy absence tohoto účtu a použít nejnovější záznamy školy."
+            "value" : "smazat všechny úpravy tohohle účtu a vzít nejnovější záznamy školy"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Remove all local absence edits for this account and use the latest school records."
+            "value" : "remove every edit for this account and use the latest school records"
           }
         }
       }
@@ -585,13 +585,13 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Upravit, které zameškané hodiny se počítají v Gradey"
+            "value" : "uprav, který zameškaný hodiny se v Gradey počítaj"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Edit which missed lessons count in Gradey"
+            "value" : "edit which missed lessons count in Gradey"
           }
         }
       }
@@ -602,13 +602,13 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Údaje školy nebo účet se změnily. Znovu otevřete tento den a zkontrolujte jej."
+            "value" : "data školy nebo účet se změnily. otevři ten den znova a čekni ho."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "School data or account changed. Reopen this day and review it."
+            "value" : "school data or your account changed. open this day again and check it."
           }
         }
       }
@@ -619,13 +619,13 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Před uložením místních úprav absence se znovu přihlaste."
+            "value" : "před uložením úprav se znova přihlas"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sign in again before saving local absence edits."
+            "value" : "sign in again before saving edits"
           }
         }
       }
@@ -636,13 +636,13 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Původní absence není dostupná. Obnovte údaje školy a zkuste to znovu."
+            "value" : "původní absence není k mání. obnov data školy a zkus to znova."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "The original absence is unavailable. Refresh school data and try again."
+            "value" : "the original absence isn't available. refresh school data and try again."
           }
         }
       }
@@ -789,7 +789,7 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "zkus to znovu"
+            "value" : "zkusit znova"
           }
         },
         "en" : {
@@ -840,7 +840,7 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "zkusit známku"
+            "value" : "zkus si známku"
           }
         },
         "en" : {
@@ -857,7 +857,7 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "nejsi přihlášený"
+            "value" : "nejsi přihlášenej"
           }
         },
         "en" : {
@@ -891,13 +891,13 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "zeptej se na cokoli. pro pomoc se známkami, rozvrhem nebo testem nejdřív vyber školní údaje ke sdílení."
+            "value" : "zeptej se na cokoli. na pomoc se známkami, rozvrhem nebo testem nejdřív vyber školní údaje ke sdílení."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ask a question. for help with your marks, timetable or a test, choose the school information to share first."
+            "value" : "ask anything. for help with marks, timetable or a test, pick the school info to share first."
           }
         }
       }
@@ -931,7 +931,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "write your message…"
+            "value" : "type something…"
           }
         }
       }
@@ -942,7 +942,7 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "zatím žádné chaty"
+            "value" : "zatím žádný chaty"
           }
         },
         "en" : {
@@ -959,7 +959,7 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "nový chat"
+            "value" : "novej chat"
           }
         },
         "en" : {
@@ -993,13 +993,13 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "tvůj soukromý účet na známky, obědy, notifikace, widgety a další zařízení."
+            "value" : "tvůj soukromej účet na známky, obědy, notifikace a widgety na všech zařízeních"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "your private account for marks, meals, notifications, and widgets across your devices."
+            "value" : "your private account for marks, meals, notifications and widgets across your devices"
           }
         }
       }
@@ -1078,13 +1078,13 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "synchronizuje nastavení a zapíná notifikace. není povinné."
+            "value" : "synchronizuje nastavení a zapíná notifikace. není to povinný."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "syncs your settings and turns on notifications. optional."
+            "value" : "syncs your settings and turns on notifications. optional, no pressure."
           }
         }
       }
@@ -1186,7 +1186,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "enable notifications"
+            "value" : "turn on notifications"
           }
         }
       }
@@ -1231,13 +1231,13 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "koukni na připojení a otevři Gradey."
+            "value" : "koukni na připojení a otevři Gradey"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "check your connections, then open Gradey."
+            "value" : "check your connections, then open Gradey"
           }
         }
       }
@@ -1333,13 +1333,13 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "chápeš, co se děje"
+            "value" : "víš, jak na tom seš"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "know what's going on"
+            "value" : "know where you stand"
           }
         }
       }
@@ -1350,13 +1350,13 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "dnešek na jeden screenshot"
+            "value" : "dnešek na jeden pohled"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "your day, at a glance"
+            "value" : "your day at a glance"
           }
         }
       }
@@ -1475,7 +1475,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "school and canteen connections"
+            "value" : "school and canteen"
           }
         }
       }
@@ -1486,7 +1486,7 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "propojené služby"
+            "value" : "propojený služby"
           }
         },
         "en" : {
@@ -1520,7 +1520,7 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "upozornění"
+            "value" : "notifikace"
           }
         },
         "en" : {
@@ -1537,13 +1537,13 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "jazyk a preference"
+            "value" : "jazyk a předvolby"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "language and app preferences"
+            "value" : "language and vibes"
           }
         }
       }
@@ -1554,7 +1554,7 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "jazyk a preference"
+            "value" : "jazyk a předvolby"
           }
         },
         "en" : {
@@ -1571,7 +1571,7 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "tvoje data v bezpečí"
+            "value" : "tvoje data"
           }
         },
         "en" : {
@@ -1639,7 +1639,7 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "malá písmena, slang, prostě online"
+            "value" : "malý písmena, slang, prostě online"
           }
         },
         "en" : {
@@ -1690,7 +1690,7 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "zobrazit záložku jídelna"
+            "value" : "ukazovat záložku jídelna"
           }
         },
         "en" : {
@@ -1707,13 +1707,13 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "skryj záložku jídelna, pokud neobjednáváš jídlo."
+            "value" : "skryj záložku jídelna, jestli si jídlo neobjednáváš"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "hide the meals tab if you don’t order meals."
+            "value" : "hide the meals tab if you don't order food"
           }
         }
       }
@@ -1741,13 +1741,13 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "po obnovení se tu objeví jídla z jídelny."
+            "value" : "obnov a jídla z jídelny se tu objeví"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "after a refresh, canteen meals show up here."
+            "value" : "refresh and the canteen menu shows up here"
           }
         }
       }
@@ -1758,13 +1758,13 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "žádný jídelníček"
+            "value" : "zatím žádnej jídelníček"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "no menu"
+            "value" : "no menu rn"
           }
         }
       }
@@ -1792,13 +1792,13 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "obnov a mrkni, jestli už jsou předměty a známky ze školy."
+            "value" : "obnov a čekni, jestli škola už hodila předměty a známky"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "refresh to check for subjects and marks from school."
+            "value" : "refresh to see if school dropped your subjects and marks"
           }
         }
       }
@@ -1809,7 +1809,7 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "zatím žádné známky"
+            "value" : "zatím žádný známky"
           }
         },
         "en" : {
@@ -1911,13 +1911,13 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "na tenhle den nic není. éra volna."
+            "value" : "na tenhle den nic není. éra volna"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "nothing scheduled for this day. free period era."
+            "value" : "nothing on this day. free day era"
           }
         }
       }
@@ -1928,7 +1928,7 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "žádné hodiny"
+            "value" : "žádný hodiny"
           }
         },
         "en" : {

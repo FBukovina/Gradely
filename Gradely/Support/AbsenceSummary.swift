@@ -201,12 +201,7 @@ enum AbsenceSummary {
             return String(fallback.split(separator: "T").first ?? "")
         }
 
-        return date.formatted(
-            .dateTime
-                .weekday(.abbreviated)
-                .day()
-                .month(.defaultDigits)
-        )
+        return SchoolDateFormatting.weekdayShortDate(date)
     }
 
     private static func subjectStableID(

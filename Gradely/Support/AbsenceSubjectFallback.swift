@@ -284,12 +284,7 @@ enum AbsenceSubjectFallback {
     }
 
     private static func dayTitle(for date: Date) -> String {
-        date.formatted(
-            .dateTime
-                .weekday(.abbreviated)
-                .day()
-                .month(.defaultDigits)
-        )
+        SchoolDateFormatting.weekdayShortDate(date)
     }
 
     private static func completeAllocation(_ allocations: [AbsenceOverrideAllocation], for day: AbsenceDay) -> Bool {

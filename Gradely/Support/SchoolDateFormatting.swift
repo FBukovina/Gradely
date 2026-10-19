@@ -30,6 +30,12 @@ enum SchoolDateFormatting {
         return date.formatted(style)
     }
 
+    /// Weekday in the app's language plus the short date, e.g. "út 10. 2." or "Tue 10. 2.".
+    static func weekdayShortDate(_ date: Date) -> String {
+        let weekday = date.formatted(Date.FormatStyle(locale: AppLanguageOverride.locale).weekday(.abbreviated))
+        return weekday + " " + shortDate(date)
+    }
+
     static func eventDate(_ event: SchoolEvent, locale: Locale = AppLanguageOverride.locale,
                           deviceTimeZone: TimeZone = .current, includeTime: Bool = true) -> String {
         date(event.date, locale: locale, timeZone: event.hasTime ? deviceTimeZone : event.calendar.timeZone,

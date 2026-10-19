@@ -22,6 +22,7 @@ struct ContentView: View {
     private let siriService: GradeyIntentService
     private let schoolSnapshotStore: SchoolSnapshotStore
     private let stravaCZRepository: StravaCZRepository
+    private let vavruska: VavruskaViewModel
     private let schoolDirectoryProvider: any SchoolDirectoryProviding
     private let supportTipProvider: any SupportTipProviding
     private let watchSyncService: (any WatchSyncing)?
@@ -45,6 +46,7 @@ struct ContentView: View {
     @State private var gradeyAIViewModel: GradeyAIViewModel
     @State private var onboardingJourney: OnboardingJourney?
     @State private var plannerTarget: PlannerNavigationTarget?
+    @State private var isVavruskaPresented = false
     @State private var siriSubjectID: String?
     @State private var siriSubjectRequestID: UUID?
     @State private var schoolRouteRequestID = UUID()
@@ -97,6 +99,7 @@ struct ContentView: View {
         schoolSnapshotStore = environment.schoolSnapshotStore
         _plannerStore = State(initialValue: environment.makePlannerStore())
         stravaCZRepository = environment.stravaCZRepository
+        vavruska = environment.vavruskaViewModel
         schoolDirectoryProvider = environment.schoolDirectoryProvider
         supportTipProvider = environment.supportTipProvider
         watchSyncService = environment.watchSyncService
@@ -120,6 +123,7 @@ struct ContentView: View {
         } else {
             self.notificationAuthorizer = PushRegistrationService.shared
         }
+        environment.vavruskaViewModel.notificationAuthorizer = self.notificationAuthorizer
         self.skipsOnboarding = skipsOnboarding
         let hasLegacySchoolSession = (try? environment.repository.bootstrapSession()) != nil
         let resolvedJourney = skipsOnboarding
@@ -134,6 +138,7 @@ struct ContentView: View {
         _appViewModel = State(initialValue: AppViewModel(
             repository: environment.repository,
             stravaCZRepository: environment.stravaCZRepository,
+            vavruska: environment.vavruskaViewModel,
             gradeyAuthClient: environment.gradeyAuthClient,
             linkedAccountRepository: environment.linkedAccountRepository,
             accountSettingsClient: environment.devicePushTokenClient,
@@ -198,6 +203,7 @@ struct ContentView: View {
                                 accountSettingsClient: devicePushTokenClient,
                                 gradeyAuthClient: gradeyAuthClient,
                                 snapshotStore: schoolSnapshotStore,
+                                vavruska: vavruska,
                                 accountHub: AnyView(accountHub()),
                                 onOpenGradeyAI: presentGradeyAI,
                                 onOpenTimetable: {
@@ -237,6 +243,7 @@ struct ContentView: View {
                             TimetableView(
                                 repository: repository,
                                 plannerStore: plannerStore,
+                                vavruska: vavruska,
                                 accountHub: AnyView(accountHub()),
                                 onOpenGradeyAI: presentGradeyAI,
                                 siriTarget: siriLessonTarget
@@ -300,6 +307,8 @@ struct ContentView: View {
             await appViewModel.bootstrap()
             await consumeNotificationRoute()
             await reconcilePlannerReminders()
+            vavruska.reloadFromStorage()
+            await vavruska.reconcileNotifications()
             resumeOnboardingIfSessionIsIncomplete()
             await PushRegistrationService.shared.refreshRegistrationIfAuthorized()
             await preloadGradeyAIIfNeeded()
@@ -311,6 +320,7 @@ struct ContentView: View {
                     await plannerStore.activate()
                     await schoolSnapshotStore.refresh()
                     await reconcilePlannerReminders()
+                    await vavruska.refreshIfNeeded()
                 }
             }
             #if !os(macOS)
@@ -326,13 +336,19 @@ struct ContentView: View {
                 Task {
                     await consumeNotificationRoute()
                     await reconcilePlannerReminders()
+                    vavruska.reloadFromStorage()
+                    await vavruska.reconcileNotifications()
                     await preloadGradeyAIIfNeeded()
                 }
             } else {
                 schoolSnapshotStore.invalidateSession()
-                Task { await plannerNotificationScheduler.cancelAll() }
+                Task {
+                    await plannerNotificationScheduler.cancelAll()
+                    await vavruska.cancelNotifications()
+                }
                 isGradeyAIPresented = false
                 plannerTarget = nil
+                isVavruskaPresented = false
                 siriSubjectID = nil
                 siriLessonTarget = nil
                 gradeyAIViewModel.reset()
@@ -396,6 +412,13 @@ struct ContentView: View {
                             focusedDay: target.day, initialItemID: target.itemID)
             }
             .gradelyMacSheetSize(minWidth: 520, idealWidth: 600, minHeight: 520, idealHeight: 640)
+        }
+        .sheet(isPresented: $isVavruskaPresented) {
+            NavigationStack {
+                VavruskaView(viewModel: vavruska)
+                    .gradelyModalDismissButton { isVavruskaPresented = false }
+            }
+            .gradelyMacSheetSize(minWidth: 520, idealWidth: 600, minHeight: 560, idealHeight: 720)
         }
         .privacyPolicyUpdate(isPresented: shouldShowPrivacyPolicyUpdate, onDismiss: {
             waitingForPolicyDismissal = false
@@ -468,6 +491,7 @@ struct ContentView: View {
             isGuestMode: appViewModel.isGuestMode,
             repository: repository,
             stravaCZRepository: stravaCZRepository,
+            vavruska: vavruska,
             schoolDirectoryProvider: schoolDirectoryProvider,
             linkedAccountRepository: linkedAccountRepository,
             notificationClient: devicePushTokenClient,
@@ -561,6 +585,9 @@ struct ContentView: View {
             selectedTab = .subjects
         } else if url.host == "timetable" || url.path == "/timetable" {
             selectedTab = .timetable
+        } else if url.host == "vavruska" || url.path == "/vavruska" {
+            selectedTab = .today
+            isVavruskaPresented = vavruska.isEnabled
         }
     }
 

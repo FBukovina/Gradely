@@ -9,10 +9,13 @@ struct TimetableView: View {
     @Environment(\.gradeySiriService) private var siriService
     private let accountHub: AnyView?
     private let onOpenGradeyAI: () -> Void
+    private let vavruska: VavruskaViewModel?
+    @State private var isDancePresented = false
 
     init(
         repository: SchoolRepository,
         plannerStore: PlannerStore? = nil,
+        vavruska: VavruskaViewModel? = nil,
         accountHub: AnyView? = nil,
         onOpenGradeyAI: @escaping () -> Void = {},
         siriTarget: GradeySiriDestination? = nil
@@ -25,6 +28,7 @@ struct TimetableView: View {
         self.siriTarget = siriTarget
         self.accountHub = accountHub
         self.onOpenGradeyAI = onOpenGradeyAI
+        self.vavruska = vavruska
     }
 
     var body: some View {
@@ -85,6 +89,11 @@ struct TimetableView: View {
                     guard target.scope == viewModel.schoolScope, let siriService else { return }
                     do { try siriService.validateDestination(target) } catch { return }
                     selectedLesson = PlannerLessonSelection(lesson: lesson, day: day)
+                }
+                .navigationDestination(isPresented: $isDancePresented) {
+                    if let vavruska {
+                        VavruskaView(viewModel: vavruska)
+                    }
                 }
                 .sheet(item: $selectedLesson) { selection in
                     LessonDetailSheet(
@@ -172,7 +181,12 @@ struct TimetableView: View {
             }
             #if os(macOS)
             Divider()
-            WeekGrid(viewModel: viewModel, plannerItems: attachedItems) { lesson, day in
+            WeekGrid(
+                viewModel: viewModel,
+                plannerItems: attachedItems,
+                afterSchool: afterSchool,
+                onSelectDance: { isDancePresented = true }
+            ) { lesson, day in
                 selectedLesson = PlannerLessonSelection(lesson: lesson, day: day)
             }
             #else
@@ -197,6 +211,7 @@ struct TimetableView: View {
                     .padding(.bottom, Spacing.xs)
                 }
 
+                let dance = viewModel.selectedDay.map(afterSchool) ?? []
                 if let day = viewModel.selectedDay, day.hasLessons {
                     ForEach(day.lessons) { lesson in
                         if lesson.id != day.lessons.first?.id {
@@ -208,9 +223,14 @@ struct TimetableView: View {
                         .accessibilityIdentifier("lessonRow-\(lesson.id)")
                         .gradeySiriContext(.lesson(lesson, day, viewModel.schoolScope))
                     }
-                } else {
+                } else if dance.isEmpty {
                     EmptyDayView(day: viewModel.selectedDay)
                         .padding(.top, Spacing.xxl)
+                }
+
+                if let vavruska, !dance.isEmpty {
+                    VavruskaAfterSchoolBlock(events: dance, viewModel: vavruska)
+                        .padding(.top, viewModel.selectedDay?.hasLessons == true ? Spacing.lg : 0)
                 }
             }
             .padding(.horizontal, Spacing.lg)
@@ -218,8 +238,15 @@ struct TimetableView: View {
         }
         .refreshable {
             await viewModel.refresh()
+            await vavruska?.refreshIfNeeded(force: true)
         }
         .accessibilityIdentifier("timetableList")
+    }
+
+    /// Dance lessons on a school day of the weekly timetable (weekends never show here).
+    private func afterSchool(_ day: ScheduledDay) -> [VavruskaEvent] {
+        guard let vavruska, viewModel.kind == .weekly, let date = day.date else { return [] }
+        return vavruska.events(on: date)
     }
 
     private func attachedItems(_ lesson: ScheduledLesson, day: ScheduledDay) -> [PlannerItem] {
@@ -316,6 +343,8 @@ private struct WeekNavBar: View {
 private struct WeekGrid: View {
     let viewModel: TimetableViewModel
     let plannerItems: (ScheduledLesson, ScheduledDay) -> [PlannerItem]
+    let afterSchool: (ScheduledDay) -> [VavruskaEvent]
+    let onSelectDance: () -> Void
     let onSelect: (ScheduledLesson, ScheduledDay) -> Void
 
     var body: some View {
@@ -339,6 +368,22 @@ private struct WeekGrid: View {
                         })
                         ForEach(viewModel.days) { day in
                             cell(day: day, hour: hour)
+                        }
+                    }
+                }
+
+                if viewModel.days.contains(where: { !afterSchool($0).isEmpty }) {
+                    Divider()
+                    GridRow {
+                        VavruskaWeekGridLabel()
+                        ForEach(viewModel.days) { day in
+                            VStack(alignment: .leading, spacing: Spacing.sm) {
+                                ForEach(afterSchool(day)) { event in
+                                    VavruskaWeekGridEvent(event: event, onSelect: onSelectDance)
+                                }
+                            }
+                            .frame(maxWidth: .infinity, alignment: .topLeading)
+                            .padding(.vertical, Spacing.sm)
                         }
                     }
                 }

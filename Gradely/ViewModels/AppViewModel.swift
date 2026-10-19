@@ -13,6 +13,7 @@ final class AppViewModel {
 
     private let repository: SchoolRepository
     private let stravaCZRepository: StravaCZRepository
+    private let vavruska: VavruskaViewModel?
     private let gradeyAuthClient: any GradeyAuthClient
     private let linkedAccountRepository: LinkedAccountRepository
     private let accountSettingsClient: (any GradeyAccountSettingsClient)?
@@ -31,6 +32,7 @@ final class AppViewModel {
     init(
         repository: SchoolRepository,
         stravaCZRepository: StravaCZRepository,
+        vavruska: VavruskaViewModel? = nil,
         gradeyAuthClient: any GradeyAuthClient,
         linkedAccountRepository: LinkedAccountRepository,
         accountSettingsClient: (any GradeyAccountSettingsClient)? = nil,
@@ -40,6 +42,7 @@ final class AppViewModel {
     ) {
         self.repository = repository
         self.stravaCZRepository = stravaCZRepository
+        self.vavruska = vavruska
         self.gradeyAuthClient = gradeyAuthClient
         self.linkedAccountRepository = linkedAccountRepository
         self.accountSettingsClient = accountSettingsClient
@@ -135,6 +138,7 @@ final class AppViewModel {
 
     func signOut() async {
         await stravaCZRepository.logout()
+        await vavruska?.disconnect()
         await RevenueCatIdentity.reset()
         IntercomIdentity.reset()
         await gradeyAuthClient.signOut()
@@ -149,6 +153,7 @@ final class AppViewModel {
 
     func signOutOfSchool() async {
         await stravaCZRepository.logout()
+        await vavruska?.disconnect()
         try? repository.logout()
         phase = .signedInNeedsSchool
     }
@@ -156,6 +161,7 @@ final class AppViewModel {
     func clearLocalCaches() {
         try? repository.clearLocalCaches()
         stravaCZRepository.clearCachedMenu()
+        vavruska?.clearCache()
     }
 
     func resetAsNewUser() async {

@@ -208,6 +208,7 @@ final class TodayViewModel {
     private let accountSettingsClient: (any GradeyAccountSettingsClient)?
     private let gradeyAuthClient: (any GradeyAuthClient)?
     private let snapshotStore: SchoolSnapshotStore?
+    private let vavruska: VavruskaViewModel?
     private var hasLoaded = false
     private var timetableWeek: TimetableWeek?
 
@@ -218,7 +219,8 @@ final class TodayViewModel {
         historyRepository: GradeyHistoryRepository,
         accountSettingsClient: (any GradeyAccountSettingsClient)? = nil,
         gradeyAuthClient: (any GradeyAuthClient)? = nil,
-        snapshotStore: SchoolSnapshotStore? = nil
+        snapshotStore: SchoolSnapshotStore? = nil,
+        vavruska: VavruskaViewModel? = nil
     ) {
         self.repository = repository
         self.stravaCZRepository = stravaCZRepository
@@ -227,6 +229,7 @@ final class TodayViewModel {
         self.accountSettingsClient = accountSettingsClient
         self.gradeyAuthClient = gradeyAuthClient
         self.snapshotStore = snapshotStore
+        self.vavruska = vavruska
     }
 
     var accountRequiringReconnect: LinkedAccount? {
@@ -272,7 +275,8 @@ final class TodayViewModel {
             applySharedSnapshot()
             async let school: Void = snapshotStore.refresh(requirements: .today, force: forceRefresh)
             async let meals: Void = refreshStrava()
-            _ = await (school, meals)
+            async let dance: Void = refreshVavruska(force: forceRefresh)
+            _ = await (school, meals, dance)
             applySharedSnapshot()
             return
         }
@@ -290,6 +294,7 @@ final class TodayViewModel {
         await refreshTimetable()
         await refreshAbsenceRisk(forceRefresh: forceRefresh)
         await refreshStrava()
+        await refreshVavruska(force: forceRefresh)
         await refreshHistory()
         snapshot.refreshedAt = Date()
     }
@@ -428,6 +433,11 @@ final class TodayViewModel {
                 snapshot.absenceRisk = nil
             }
         }
+    }
+
+    /// The dance course lives in its own shared view model; Today only nudges it.
+    private func refreshVavruska(force: Bool) async {
+        await vavruska?.refreshIfNeeded(force: force)
     }
 
     private func refreshStrava() async {

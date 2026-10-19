@@ -4,6 +4,7 @@ import Foundation
     let repository: SchoolRepository
     let schoolSnapshotStore: SchoolSnapshotStore
     let stravaCZRepository: StravaCZRepository
+    let vavruskaViewModel: VavruskaViewModel
     let schoolDirectoryProvider: any SchoolDirectoryProviding
     let supportTipProvider: any SupportTipProviding
     let watchSyncService: (any WatchSyncing)?
@@ -21,6 +22,7 @@ import Foundation
     init(
         repository: SchoolRepository,
         stravaCZRepository: StravaCZRepository? = nil,
+        vavruskaRepository: VavruskaRepository? = nil,
         schoolDirectoryProvider: any SchoolDirectoryProviding,
         supportTipProvider: any SupportTipProviding = MockSupportTipService(),
         watchSyncService: (any WatchSyncing)? = nil,
@@ -39,6 +41,7 @@ import Foundation
     ) {
         self.repository = repository
         self.stravaCZRepository = stravaCZRepository ?? AppEnvironment.makeMockStravaCZRepository()
+        self.vavruskaViewModel = VavruskaViewModel(repository: vavruskaRepository ?? AppEnvironment.makeMockVavruskaRepository())
         self.schoolDirectoryProvider = schoolDirectoryProvider
         self.supportTipProvider = supportTipProvider
         self.watchSyncService = watchSyncService
@@ -123,6 +126,11 @@ import Foundation
                 client: URLSessionStravaCZClient(),
                 sessionStore: StravaCZSessionStore(),
                 menuCache: (try? StravaCZMenuCache()) ?? InMemoryStravaCZMenuCache()
+            ),
+            vavruskaRepository: VavruskaRepository(
+                client: URLSessionVavruskaClient(),
+                courseStore: VavruskaCourseStore(),
+                cache: (try? VavruskaCache()) ?? InMemoryVavruskaCache()
             ),
             schoolDirectoryProvider: schoolDirectoryProvider,
             supportTipProvider: supportTipProvider,
@@ -263,6 +271,11 @@ import Foundation
             timetable: []
         )
 
+        if arguments.contains("-uiTestingVavruskaConnected") {
+            // Before the view model below reads it.
+            UserDefaults.standard.set(true, forKey: VavruskaSettings.enabledKey)
+        }
+
         return AppEnvironment(
             repository: SchoolRepository(
                 client: MockBakalariClient(
@@ -294,6 +307,10 @@ import Foundation
             ),
             stravaCZRepository: makeMockStravaCZRepository(
                 session: arguments.contains("-uiTestingStravaCZLoggedIn") ? PreviewData.stravaCZSession : nil
+            ),
+            vavruskaRepository: makeMockVavruskaRepository(
+                connected: arguments.contains("-uiTestingVavruskaConnected"),
+                calendarUnavailable: arguments.contains("-uiTestingVavruskaCalendarGone")
             ),
             schoolDirectoryProvider: schoolDirectoryProvider,
             supportTipProvider: MockSupportTipService(),
@@ -334,6 +351,14 @@ import Foundation
             client: MockStravaCZClient(),
             sessionStore: InMemoryStravaCZSessionStore(session: session),
             menuCache: InMemoryStravaCZMenuCache(cachedMenu: menu)
+        )
+    }
+
+    static func makeMockVavruskaRepository(connected: Bool = false, calendarUnavailable: Bool = false) -> VavruskaRepository {
+        VavruskaRepository(
+            client: MockVavruskaClient(calendarUnavailable: calendarUnavailable),
+            courseStore: InMemoryVavruskaCourseStore(course: connected ? PreviewData.vavruskaCourse : nil),
+            cache: InMemoryVavruskaCache()
         )
     }
 }

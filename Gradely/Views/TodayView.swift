@@ -11,6 +11,7 @@ struct TodayView: View {
     private let onOpenTimetable: (() -> Void)?
     private let onOpenMarks: (() -> Void)?
     private let snapshotStore: SchoolSnapshotStore?
+    private let vavruska: VavruskaViewModel?
     @AppStorage("settings.showMealsTab") private var showMealsTab = true
 
     init(
@@ -22,6 +23,7 @@ struct TodayView: View {
         accountSettingsClient: (any GradeyAccountSettingsClient)? = nil,
         gradeyAuthClient: (any GradeyAuthClient)? = nil,
         snapshotStore: SchoolSnapshotStore? = nil,
+        vavruska: VavruskaViewModel? = nil,
         accountHub: AnyView? = nil,
         onOpenGradeyAI: @escaping () -> Void = {},
         onOpenTimetable: (() -> Void)? = nil,
@@ -34,6 +36,7 @@ struct TodayView: View {
         self.onOpenTimetable = onOpenTimetable
         self.onOpenMarks = onOpenMarks
         self.snapshotStore = snapshotStore
+        self.vavruska = vavruska
         _viewModel = State(initialValue: TodayViewModel(
             repository: repository,
             stravaCZRepository: stravaCZRepository,
@@ -41,7 +44,8 @@ struct TodayView: View {
             historyRepository: historyRepository,
             accountSettingsClient: accountSettingsClient,
             gradeyAuthClient: gradeyAuthClient,
-            snapshotStore: snapshotStore
+            snapshotStore: snapshotStore,
+            vavruska: vavruska
         ))
     }
 
@@ -124,10 +128,16 @@ struct TodayView: View {
                     loadingRow
                 }
                 dayCard(at: now)
+                if let vavruska, let rows = danceRows(vavruska, at: now), rows.isDanceDay {
+                    danceCard(rows, at: now)
+                }
                 recentMarksCard
                 plannerCard(at: now)
                 if showMealsTab, viewModel.snapshot.stravaSession != nil {
                     lunchCard
+                }
+                if let vavruska, let rows = danceRows(vavruska, at: now), !rows.isDanceDay {
+                    danceCard(rows, at: now)
                 }
             }
             .padding(Spacing.lg)
@@ -354,6 +364,87 @@ struct TodayView: View {
         .accessibilityIdentifier("todayLunchCard")
     }
 
+    // MARK: - Dance
+
+    private struct DanceRows {
+        var needsReconnect = false
+        var nextEvent: VavruskaEvent?
+        var sale: VavruskaTicketSale?
+        var hasUnreadNotices = false
+        var isDanceDay = false
+    }
+
+    /// Nil hides the section: integration off, no course, or nothing worth a row.
+    private func danceRows(_ vavruska: VavruskaViewModel, at now: Date) -> DanceRows? {
+        guard vavruska.isActive else { return nil }
+        var rows = DanceRows()
+        rows.needsReconnect = vavruska.phase == .needsReconnect
+        rows.nextEvent = vavruska.upcomingEvents(after: now)
+            .first { $0.start < now.addingTimeInterval(14 * 24 * 60 * 60) }
+        rows.sale = vavruska.relevantTicketSales(now: now).first
+        rows.hasUnreadNotices = vavruska.hasUnreadNotices
+        rows.isDanceDay = rows.nextEvent.map { Calendar.current.isDate($0.start, inSameDayAs: now) } ?? false
+        guard rows.needsReconnect || rows.nextEvent != nil || rows.sale != nil || rows.hasUnreadNotices else { return nil }
+        return rows
+    }
+
+    private func danceCard(_ rows: DanceRows, at now: Date) -> some View {
+        TodaySection(
+            "vavruska.today.title",
+            link: .destination(id: "todayOpenVavruskaButton", .vavruska),
+            footer: vavruska?.lastRefreshFailed == true ? "today.cached.warning" : nil
+        ) {
+            if rows.needsReconnect {
+                NavigationLink(value: TodayDestination.vavruskaReconnect) {
+                    HStack(spacing: Spacing.sm) {
+                        TodayInfoRow(title: Text("vavruska.today.reconnect"), icon: "alert-01", tint: .gradelySystemOrange)
+                        TodayDisclosureIcon()
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("todayDanceReconnect")
+            }
+            if let event = rows.nextEvent {
+                TodayInfoRow(
+                    title: Text(verbatim: event.title),
+                    subtitle: Text(verbatim: danceSubtitle(event, now: now)),
+                    icon: event.kind.iconName,
+                    tint: event.kind.tint
+                )
+                .accessibilityIdentifier("todayDanceNextEvent")
+            }
+            if let sale = rows.sale {
+                TodayInfoRow(
+                    title: Text(verbatim: sale.eventTitle),
+                    subtitle: Text(verbatim: VavruskaFormatting.saleLine(sale, now: now)),
+                    icon: "ticket-01",
+                    tint: .gradelySystemPurple
+                )
+                .accessibilityIdentifier("todayDanceTicketSale")
+            }
+            if rows.hasUnreadNotices {
+                TodayInfoRow(title: Text("vavruska.today.notices"), icon: "news", tint: Brand.primary)
+                    .accessibilityIdentifier("todayDanceNotices")
+            }
+        }
+        .accessibilityIdentifier("todayDanceCard")
+    }
+
+    /// "Dnes · 16:30–18:10 · Obecní dům", "Zítra · …" or "ne 25. 10. · …".
+    private func danceSubtitle(_ event: VavruskaEvent, now: Date) -> String {
+        let calendar = Calendar.current
+        let day: String
+        if calendar.isDate(event.start, inSameDayAs: now) {
+            day = AppL10n.string("timetable.today")
+        } else if let tomorrow = calendar.date(byAdding: .day, value: 1, to: now), calendar.isDate(event.start, inSameDayAs: tomorrow) {
+            day = AppL10n.string("planner.tomorrow")
+        } else {
+            day = SchoolDateFormatting.weekdayShortDate(event.start)
+        }
+        return ([day, VavruskaFormatting.timeRange(event)] + [event.venue].compactMap { $0 }).joined(separator: " · ")
+    }
+
     // MARK: - Navigation
 
     @ViewBuilder private func insightDestination(_ destination: TodayDestination) -> some View {
@@ -373,6 +464,14 @@ struct TodayView: View {
                 PlannerView(store: snapshotStore.plannerStore, resolver: PlannerLessonResolver(repository: repository),
                     displayedWeek: snapshotStore.cachedWeek(containing: Date()), subjects: plannerSubjects)
             } else { ContentUnavailableView("today.destination.unavailable", systemImage: "checklist") }
+        case .vavruska:
+            if let vavruska {
+                VavruskaView(viewModel: vavruska)
+            } else { ContentUnavailableView("today.destination.unavailable", systemImage: "music.note") }
+        case .vavruskaReconnect:
+            if let vavruska {
+                VavruskaConnectView(viewModel: vavruska, dismissesOnConnect: true)
+            } else { ContentUnavailableView("today.destination.unavailable", systemImage: "music.note") }
         }
     }
 

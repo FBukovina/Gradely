@@ -67,4 +67,6 @@ enum TodayDestination: Hashable, Sendable {
     case subject(String)
     case plannerItem(UUID)
     case planner
+    case vavruska
+    case vavruskaReconnect
 }

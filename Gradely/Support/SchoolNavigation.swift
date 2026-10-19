@@ -50,8 +50,8 @@ enum SchoolNotificationRouting {
     static func isSupported(_ url: URL) -> Bool {
         guard ["gradey", "gradely"].contains(url.scheme ?? "") else { return false }
         if PlannerNavigationTarget(url: url) != nil || GradeySiriID.from(url: url) != nil { return true }
-        return ["marks", "subjects", "timetable"].contains(url.host ?? "")
-            || ["/marks", "/subjects", "/timetable"].contains(url.path)
+        return ["marks", "subjects", "timetable", "vavruska"].contains(url.host ?? "")
+            || ["/marks", "/subjects", "/timetable", "/vavruska"].contains(url.path)
     }
 }
 

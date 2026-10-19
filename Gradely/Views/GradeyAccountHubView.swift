@@ -59,11 +59,13 @@ private enum SettingsRoute: Hashable {
     case detail(SettingsDestination)
     case schoolLink(reconnectAccountID: String?)
     case stravaCZLink
+    case vavruskaLink
 }
 
 private enum SettingsConnectionRoute: Hashable {
     case schoolLink(reconnectAccountID: String?)
     case stravaCZLink
+    case vavruskaLink
 }
 
 struct GradeyAccountHubView: View {
@@ -71,6 +73,7 @@ struct GradeyAccountHubView: View {
     let isGuestMode: Bool
     let repository: SchoolRepository
     let stravaCZRepository: StravaCZRepository
+    let vavruska: VavruskaViewModel?
     let schoolDirectoryProvider: any SchoolDirectoryProviding
     let supportTipProvider: any SupportTipProviding
     let notificationAuthorizer: any NotificationAuthorizing
@@ -97,6 +100,7 @@ struct GradeyAccountHubView: View {
     @State private var detailPath: [SettingsConnectionRoute] = []
     @State private var selectedDestination: SettingsDestination?
     @State private var pendingUnlinkAccount: LinkedAccount?
+    @State private var isVavruskaDisconnectPresented = false
     @State private var isSupportSheetPresented = false
     @State private var isCreditsPresented = false
     @State private var isPrivacyChangesPresented = false
@@ -121,6 +125,7 @@ struct GradeyAccountHubView: View {
         isGuestMode: Bool = false,
         repository: SchoolRepository,
         stravaCZRepository: StravaCZRepository,
+        vavruska: VavruskaViewModel? = nil,
         schoolDirectoryProvider: any SchoolDirectoryProviding,
         linkedAccountRepository: LinkedAccountRepository,
         notificationClient: any DevicePushTokenClient,
@@ -141,6 +146,7 @@ struct GradeyAccountHubView: View {
         self.isGuestMode = isGuestMode
         self.repository = repository
         self.stravaCZRepository = stravaCZRepository
+        self.vavruska = vavruska
         self.schoolDirectoryProvider = schoolDirectoryProvider
         self.supportTipProvider = supportTipProvider
         self.notificationAuthorizer = notificationAuthorizer
@@ -191,6 +197,19 @@ struct GradeyAccountHubView: View {
                 .accessibilityIdentifier("accountUnlinkCancelButton")
             } message: {
                 Text(unlinkMessage)
+            }
+            .confirmationDialog(
+                "settings.connected.dance.disconnect.title",
+                isPresented: $isVavruskaDisconnectPresented,
+                titleVisibility: .visible
+            ) {
+                Button("settings.connected.dance.disconnect.confirm", role: .destructive) {
+                    Task { await vavruska?.disconnect() }
+                }
+                .accessibilityIdentifier("vavruskaDisconnectConfirmButton")
+                Button("action.cancel", role: .cancel) {}
+            } message: {
+                Text("settings.connected.dance.disconnect.message")
             }
             .alert(
                 isGuestMode
@@ -272,6 +291,7 @@ struct GradeyAccountHubView: View {
                 Text(studentSwitchError ?? "")
             }
             .task {
+                vavruska?.reloadFromStorage()
                 if let refreshedAccount = await viewModel.refresh() {
                     onAccountUpdated(refreshedAccount)
                 }
@@ -474,6 +494,8 @@ struct GradeyAccountHubView: View {
             schoolConnectionView(reconnectAccountID: reconnectAccountID)
         case .stravaCZLink:
             stravaConnectionView
+        case .vavruskaLink:
+            vavruskaConnectionView
         }
     }
 
@@ -484,6 +506,8 @@ struct GradeyAccountHubView: View {
             schoolConnectionView(reconnectAccountID: reconnectAccountID)
         case .stravaCZLink:
             stravaConnectionView
+        case .vavruskaLink:
+            vavruskaConnectionView
         }
     }
 
@@ -673,7 +697,16 @@ struct GradeyAccountHubView: View {
             } else {
                 meals = AppL10n.string("settings.overview.canteen.connected")
             }
-            return "\(school) · \(meals)"
+            var parts = [school, meals]
+            if let vavruska, let course = vavruska.course {
+                if vavruska.phase == .needsReconnect {
+                    parts.append("\(AppL10n.string("settings.connected.dance.title")): \(AppL10n.string("gradey.account.status.actionRequired"))")
+                } else {
+                    parts.append(course.courseCode.map { String(format: AppL10n.string("settings.overview.dance.connected"), $0) }
+                        ?? AppL10n.string("settings.connected.dance.title"))
+                }
+            }
+            return parts.joined(separator: " · ")
         case .notifications:
             guard notificationsAreAvailable else {
                 return AppL10n.string("settings.overview.notifications.unavailable")
@@ -1059,6 +1092,11 @@ private extension GradeyAccountHubView {
                 ForEach(canteenAccounts) { linkedAccount in
                     connectedAccountCard(linkedAccount)
                 }
+            }
+
+            if let vavruska, vavruska.isEnabled || vavruska.course != nil {
+                DetailSectionHeader(title: "settings.connected.dance.title")
+                vavruskaSection(vavruska)
             }
 
             if isGuestMode {
@@ -1507,6 +1545,38 @@ private extension GradeyAccountHubView {
                 }
                 .tint(Brand.primary)
                 .accessibilityIdentifier("showMealsTabToggle")
+            }
+
+            if let vavruska {
+                SettingsSurface {
+                    VStack(alignment: .leading, spacing: Spacing.lg) {
+                        Toggle(isOn: Binding(
+                            get: { vavruska.isEnabled },
+                            set: { vavruska.isEnabled = $0 }
+                        )) {
+                            VStack(alignment: .leading, spacing: Spacing.xs) {
+                                Text("settings.showVavruska")
+                                    .font(.gradely(.body).weight(.medium))
+                                Text("settings.showVavruska.message")
+                                    .font(.gradely(.caption))
+                                    .foregroundStyle(.secondary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                        }
+                        .tint(Brand.primary)
+                        .accessibilityIdentifier("showVavruskaToggle")
+
+                        if vavruska.isEnabled, vavruska.course == nil {
+                            Button {
+                                openVavruskaConnection()
+                            } label: {
+                                PlainLinkLabel("settings.connected.dance.connect")
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityIdentifier("preferencesConnectVavruskaButton")
+                        }
+                    }
+                }
             }
         }
     }
@@ -2047,6 +2117,154 @@ private extension GradeyAccountHubView {
             compactPath.append(.schoolLink(reconnectAccountID: reconnectAccountID))
         }
         #endif
+    }
+
+    func openVavruskaConnection() {
+        #if os(macOS)
+        detailPath.append(.vavruskaLink)
+        #else
+        if horizontalSizeClass == .regular {
+            detailPath.append(.vavruskaLink)
+        } else {
+            compactPath.append(.vavruskaLink)
+        }
+        #endif
+    }
+
+    @ViewBuilder
+    var vavruskaConnectionView: some View {
+        if let vavruska {
+            VavruskaConnectView(viewModel: vavruska) {
+                detailPath = []
+                compactPath = []
+            }
+        }
+    }
+
+    @ViewBuilder
+    func vavruskaSection(_ vavruska: VavruskaViewModel) -> some View {
+        if let course = vavruska.course {
+            let ended = vavruska.isCourseEnded(at: Date())
+            SettingsSurface {
+                VStack(alignment: .leading, spacing: Spacing.lg) {
+                    AdaptiveSettingsStack {
+                        SettingsIcon(name: "music-note-03")
+
+                        VStack(alignment: .leading, spacing: Spacing.xs) {
+                            Text(verbatim: course.courseCode.map { String(format: AppL10n.string("vavruska.course.title"), $0) }
+                                ?? AppL10n.string("vavruska.title"))
+                                .font(.gradely(.headline))
+                                .accessibilityIdentifier("vavruskaCourseRow")
+                            Text(verbatim: [AppL10n.string("settings.connected.dance.school"), course.scheduleSummary]
+                                .compactMap { $0 }.joined(separator: " · "))
+                                .font(.gradely(.subheadline))
+                                .foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+
+                        StatusChip(
+                            text: AppL10n.string(
+                                vavruska.phase == .needsReconnect ? "settings.connected.dance.status.reconnect"
+                                    : ended ? "settings.connected.dance.status.ended" : "settings.connected.dance.status.active"
+                            ),
+                            color: vavruska.phase == .needsReconnect ? .gradelySystemOrange : ended ? .secondary : Brand.primary
+                        )
+                    }
+
+                    if let fetchedAt = vavruska.snapshot.lastFetchedAt {
+                        SettingsMetadataRow(
+                            title: "settings.connected.lastSync",
+                            value: fetchedAt.formatted(date: .abbreviated, time: .shortened)
+                        )
+                    }
+
+                    Divider()
+
+                    Toggle(isOn: Binding(
+                        get: { vavruska.ticketAlertsEnabled },
+                        set: { enabled in Task { await vavruska.setTicketAlertsEnabled(enabled) } }
+                    )) {
+                        VStack(alignment: .leading, spacing: Spacing.xs) {
+                            Text("vavruska.alerts.toggle")
+                            Text("vavruska.alerts.message")
+                                .font(.gradely(.caption))
+                                .foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                    .tint(Brand.primary)
+                    .accessibilityIdentifier("settingsVavruskaTicketAlertsToggle")
+
+                    Divider()
+
+                    ViewThatFits(in: .horizontal) {
+                        HStack(spacing: Spacing.sm) {
+                            vavruskaActions(vavruska, ended: ended)
+                        }
+                        VStack(alignment: .leading, spacing: Spacing.sm) {
+                            vavruskaActions(vavruska, ended: ended)
+                        }
+                    }
+                }
+            }
+        } else {
+            EmptyServiceCard(
+                title: "settings.connected.dance.empty.title",
+                message: "settings.connected.dance.empty.message",
+                iconName: "music-note-03"
+            )
+
+            Button {
+                openVavruskaConnection()
+            } label: {
+                SettingsHugeiconLabel(
+                    "settings.connected.dance.connect",
+                    iconName: "link-04",
+                    iconColor: Brand.primary
+                )
+                    .frame(maxWidth: .infinity)
+                    .frame(minHeight: ControlMetrics.minHeight)
+            }
+            .buttonStyle(.bordered)
+            .tint(Brand.primary)
+            .accessibilityIdentifier("accountLinkVavruskaButton")
+        }
+    }
+
+    @ViewBuilder
+    func vavruskaActions(_ vavruska: VavruskaViewModel, ended: Bool) -> some View {
+        if vavruska.phase == .needsReconnect || ended {
+            Button {
+                openVavruskaConnection()
+            } label: {
+                SettingsHugeiconLabel(
+                    ended ? "vavruska.ended.button" : "settings.connected.reconnect",
+                    iconName: "refresh-04",
+                    iconColor: Brand.primary
+                )
+                    .frame(maxWidth: .infinity)
+                    .frame(minHeight: ControlMetrics.minHeight)
+            }
+            .buttonStyle(.bordered)
+            .tint(Brand.primary)
+            .accessibilityIdentifier("vavruskaReconnectSettingsButton")
+        }
+
+        Button(role: .destructive) {
+            isVavruskaDisconnectPresented = true
+        } label: {
+            SettingsHugeiconLabel(
+                "gradey.account.unlink.action",
+                iconName: "delete-02",
+                iconColor: .red
+            )
+                .frame(maxWidth: .infinity)
+                .frame(minHeight: ControlMetrics.minHeight)
+        }
+        .buttonStyle(.bordered)
+        .tint(.red)
+        .accessibilityIdentifier("vavruskaDisconnectButton")
     }
 
     func openStravaConnection() {

@@ -1,12 +1,20 @@
 import SwiftUI
 import CoreSpotlight
 
-private enum AppTab: Hashable {
+enum AppTab: Hashable, CaseIterable, Identifiable {
     case today
     case subjects
     case absence
     case timetable
     case stravaCZ
+
+    var id: Self { self }
+}
+
+/// A menu-bar refresh aimed at one tab (Mac ⌘R).
+private struct RefreshCommand {
+    let tab: AppTab
+    let id = UUID()
 }
 
 struct ContentView: View {
@@ -51,6 +59,8 @@ struct ContentView: View {
     @State private var selectedTab: AppTab = .today
     @State private var schoolAccountRevision = UUID()
     @State private var isOnboardingForced = false
+    @State private var refreshCommand: RefreshCommand?
+    @State private var isNewPlannerItemPresented = false
     @Environment(\.scenePhase) private var scenePhase
 
     init(
@@ -197,6 +207,7 @@ struct ContentView: View {
                                     selectedTab = .subjects
                                 }
                             )
+                            .environment(\.gradelyRefreshCommand, refreshID(for: .today))
                         }
 
                         Tab("subjects.title", image: "TabSubjects", value: AppTab.subjects) {
@@ -209,6 +220,7 @@ struct ContentView: View {
                                 siriSubjectID: siriSubjectID,
                                 siriRequestID: siriSubjectRequestID
                             )
+                            .environment(\.gradelyRefreshCommand, refreshID(for: .subjects))
                         }
 
                         Tab("absence.title", image: "TabAbsence", value: AppTab.absence) {
@@ -218,6 +230,7 @@ struct ContentView: View {
                                 accountHub: AnyView(accountHub()),
                                 onOpenGradeyAI: presentGradeyAI
                             )
+                            .environment(\.gradelyRefreshCommand, refreshID(for: .absence))
                         }
 
                         Tab("rozvrh.title", image: "TabTimetable", value: AppTab.timetable) {
@@ -228,6 +241,7 @@ struct ContentView: View {
                                 onOpenGradeyAI: presentGradeyAI,
                                 siriTarget: siriLessonTarget
                             )
+                            .environment(\.gradelyRefreshCommand, refreshID(for: .timetable))
                         }
 
                         if showMealsTab {
@@ -238,12 +252,33 @@ struct ContentView: View {
                                     accountHub: AnyView(accountHub()),
                                     onOpenGradeyAI: presentGradeyAI
                                 )
+                                .environment(\.gradelyRefreshCommand, refreshID(for: .stravaCZ))
                             }
                         }
                     }
                     .id(schoolAccountRevision)
                     .tint(Brand.primary)
                     .gradelySidebarAdaptable()
+                    #if os(macOS)
+                    // No hard-edged band under the toolbar: content fades out
+                    // under it the way it does on iOS.
+                    .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
+                    .scrollEdgeEffectStyle(.soft, for: .top)
+                    .focusedSceneValue(\.macWindowActions, macWindowActions)
+                    .onAppear {
+                        MacSettingsBridge.shared.makeContent = { AnyView(accountHub()) }
+                    }
+                    .onDisappear {
+                        MacSettingsBridge.shared.makeContent = nil
+                    }
+                    .sheet(isPresented: $isNewPlannerItemPresented) {
+                        PlannerItemEditorView(
+                            item: PlannerItem(),
+                            store: plannerStore,
+                            resolver: PlannerLessonResolver(repository: repository)
+                        )
+                    }
+                    #endif
                 }
             }
         }
@@ -550,6 +585,23 @@ struct ContentView: View {
     private func presentGradeyAI() {
         isGradeyAIPresented = true
     }
+
+    private func refreshID(for tab: AppTab) -> UUID? {
+        refreshCommand?.tab == tab ? refreshCommand?.id : nil
+    }
+
+    #if os(macOS)
+    private var macWindowActions: MacWindowActions {
+        MacWindowActions(
+            selectedTab: selectedTab,
+            showsMeals: showMealsTab,
+            selectTab: { selectedTab = $0 },
+            refresh: { refreshCommand = RefreshCommand(tab: selectedTab) },
+            newPlannerItem: { isNewPlannerItemPresented = true },
+            openGradeyAI: presentGradeyAI
+        )
+    }
+    #endif
 
     private func preloadGradeyAIIfNeeded() async {
         guard appViewModel.phase == .signedIn, !appViewModel.isGuestMode else { return }

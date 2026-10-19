@@ -66,7 +66,7 @@ struct AppLanguageOptionsList: View {
                     languageRow(language)
                         .padding(.horizontal, 20)
                         .padding(.vertical, compact ? Spacing.sm : Spacing.md)
-                        .frame(maxWidth: .infinity, minHeight: compact ? 58 : 72, alignment: .leading)
+                        .frame(maxWidth: .infinity, minHeight: rowMinHeight, alignment: .leading)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
@@ -94,7 +94,15 @@ struct AppLanguageOptionsList: View {
                     .frame(width: 24, height: 24)
             }
         }
-        .frame(minHeight: 44)
+        .frame(minHeight: ControlMetrics.minHeight)
+    }
+
+    private var rowMinHeight: CGFloat {
+        #if os(macOS)
+        36
+        #else
+        compact ? 58 : 72
+        #endif
     }
 
     private func isSelected(_ language: AppLanguage) -> Bool {

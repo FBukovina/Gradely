@@ -108,6 +108,7 @@ struct PlannerView: View {
             Text(AppL10n.string("planner.completed")).tag(true)
         }
         .pickerStyle(.segmented)
+        .labelsHidden()
         .accessibilityIdentifier("plannerFilter")
     }
 

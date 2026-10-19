@@ -28,6 +28,32 @@ enum GradelyNavigationTitleDisplayMode {
 }
 
 extension Color {
+    /// Solid text colour for the Mac. AppKit's `labelColor` is 85 % white (or
+    /// black), which over the green background reads as greyed out; iOS text
+    /// is fully opaque, so the Mac roots use this as their foreground style.
+    static var gradelyLabel: Color {
+        #if os(macOS)
+        Color(nsColor: NSColor(name: "gradelyLabel") { appearance in
+            appearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua ? .white : .black
+        })
+        #else
+        Color(.label)
+        #endif
+    }
+
+    /// A colour with separate light- and dark-mode values.
+    static func gradelyAdaptive(light: Color, dark: Color) -> Color {
+        #if os(macOS)
+        Color(nsColor: NSColor(name: nil) { appearance in
+            appearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua ? NSColor(dark) : NSColor(light)
+        })
+        #else
+        Color(uiColor: UIColor { traits in
+            traits.userInterfaceStyle == .dark ? UIColor(dark) : UIColor(light)
+        })
+        #endif
+    }
+
     static var gradelyGroupedBackground: Color {
         #if os(macOS)
         Color(nsColor: .windowBackgroundColor)
@@ -172,6 +198,12 @@ extension View {
         #endif
     }
 
+    /// Runs `action` when the Mac's View ▸ Refresh (⌘R) targets this screen.
+    /// iOS has no such command, so the environment value never changes there.
+    func gradelyOnRefreshCommand(_ action: @escaping () async -> Void) -> some View {
+        modifier(RefreshCommandModifier(action: action))
+    }
+
     /// Brand-tinted toolbar icons with a consistent visual size on every platform.
     @ViewBuilder
     func gradelyToolbarIconButton() -> some View {
@@ -183,6 +215,24 @@ extension View {
             .foregroundStyle(Brand.primary)
             .frame(width: 30, height: 30)
         #endif
+    }
+}
+
+extension EnvironmentValues {
+    /// A new id each time the menu bar asks the selected screen to refresh;
+    /// screens that aren't selected see `nil`.
+    @Entry var gradelyRefreshCommand: UUID?
+}
+
+private struct RefreshCommandModifier: ViewModifier {
+    let action: () async -> Void
+    @Environment(\.gradelyRefreshCommand) private var command
+
+    func body(content: Content) -> some View {
+        content.onChange(of: command) { _, newValue in
+            guard newValue != nil else { return }
+            Task { await action() }
+        }
     }
 }
 
@@ -217,6 +267,27 @@ private extension GradelyNavigationTitleDisplayMode {
     }
 }
 #endif
+
+// MARK: - Control metrics
+
+enum ControlMetrics {
+    /// Minimum height of tappable rows and button labels: Apple's 44-point
+    /// touch target on iOS, a regular control height on the Mac where a
+    /// pointer does the clicking.
+    #if os(macOS)
+    static let minHeight: CGFloat = 24
+    /// Height of a filled text field container.
+    static let fieldHeight: CGFloat = 30
+    static let fieldVerticalPadding: CGFloat = 7
+    /// Sign in with Apple and similar full-width buttons.
+    static let prominentButtonHeight: CGFloat = 32
+    #else
+    static let minHeight: CGFloat = 44
+    static let fieldHeight: CGFloat = 48
+    static let fieldVerticalPadding: CGFloat = Spacing.md
+    static let prominentButtonHeight: CGFloat = 50
+    #endif
+}
 
 // MARK: - Brand palette
 
@@ -438,7 +509,12 @@ extension GradeBand {
     var foregroundColor: Color {
         switch self {
         case .excellent: Color(.sRGB, red: 0.118, green: 0.624, blue: 0.412) // emerald
-        case .good: Color(.sRGB, red: 0.063, green: 0.541, blue: 0.580)       // teal
+        // Teal. The deep light-mode value read as grey on the dark
+        // background, so dark mode gets a brighter one.
+        case .good: Color.gradelyAdaptive(
+            light: Color(.sRGB, red: 0.063, green: 0.541, blue: 0.580),
+            dark: Color(.sRGB, red: 0.200, green: 0.776, blue: 0.835)
+        )
         case .average: Color(.sRGB, red: 0.851, green: 0.561, blue: 0.063)    // amber
         case .poor: Color(.sRGB, red: 0.847, green: 0.243, blue: 0.310)       // rose
         case .neutral: .secondary

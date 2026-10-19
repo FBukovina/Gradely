@@ -289,7 +289,7 @@ struct GradeyAccountHubView: View {
     private var adaptiveLayout: some View {
         #if os(macOS)
         macLayout
-            .gradelyMacSheetSize(minWidth: 760, idealWidth: 860, minHeight: 520, idealHeight: 660)
+            .frame(minWidth: 720, idealWidth: 820, minHeight: 480, idealHeight: 600)
         #else
         if horizontalSizeClass == .regular {
             splitLayout
@@ -355,40 +355,93 @@ struct GradeyAccountHubView: View {
     }
 
     #if os(macOS)
-    /// In a macOS sheet, NavigationSplitView and NavigationStack draw an opaque
-    /// grey title strip, and hiding that toolbar from the sheet also strips the
-    /// main window's title bar. A plain two-column layout avoids both; the
-    /// connection pages are pushed through `detailPath` by hand.
+    /// The Mac Settings window: a native source-list sidebar like System
+    /// Settings, with the selected page in the detail column.
     private var macLayout: some View {
-        HStack(spacing: 0) {
-            overview(selectedDestination: selectedDestination) { destination in
+        NavigationSplitView {
+            List(selection: macSelection) {
+                Section {
+                    macSidebarAccountRow
+                        .tag(SettingsDestination.account)
+                }
+                Section {
+                    macSidebarRow(.connectedServices)
+                    macSidebarRow(.notifications)
+                    macSidebarRow(.privacyData)
+                }
+                Section("settings.group.app") {
+                    macSidebarRow(.appPreferences)
+                    macSidebarRow(.supportAbout)
+                }
+            }
+            .navigationSplitViewColumnWidth(min: 240, ideal: 250, max: 300)
+            .toolbar(removing: .sidebarToggle)
+            .accessibilityIdentifier("accountHubScroll")
+        } detail: {
+            NavigationStack(path: $detailPath) {
+                if let selectedDestination {
+                    detailPage(selectedDestination)
+                        .navigationTitle(selectedDestination.title)
+                        .navigationDestination(for: SettingsConnectionRoute.self) { route in
+                            splitConnectionRoute(route)
+                        }
+                } else {
+                    noDestinationSelected
+                }
+            }
+            .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
+        }
+    }
+
+    private var macSelection: Binding<SettingsDestination?> {
+        Binding(
+            get: { selectedDestination },
+            set: { destination in
+                guard let destination else { return }
                 select(destination) {
                     selectedDestination = destination
                     detailPath = []
                 }
             }
-            .frame(width: 340)
-
-            Divider()
-
-            macDetail
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-        }
+        )
     }
 
-    @ViewBuilder
-    private var macDetail: some View {
-        if let route = detailPath.last {
-            splitConnectionRoute(route)
-                .settingsMacDetailHeader(title: nil) {
-                    detailPath.removeLast()
-                }
-        } else if let selectedDestination {
-            detailPage(selectedDestination)
-                .settingsMacDetailHeader(title: selectedDestination.title)
-        } else {
-            noDestinationSelected
+    private var macSidebarAccountRow: some View {
+        HStack(spacing: Spacing.sm) {
+            AccountAvatar(name: profileAvatarName, avatarURL: viewModel.account?.avatarURL, size: 30)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(profileDisplayName)
+                    .font(.gradely(.body).weight(.semibold))
+                    .lineLimit(1)
+                Text(profileSubtitle)
+                    .font(.gradely(.caption))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
         }
+        .padding(.vertical, 3)
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("settingsDestination-account")
+    }
+
+    private func macSidebarRow(_ destination: SettingsDestination) -> some View {
+        let status = overviewStatus(for: destination)
+        return Label {
+            HStack {
+                Text(destination.title)
+                Spacer(minLength: 0)
+                if let status {
+                    GradelyIcon(status.iconName, size: 13)
+                        .foregroundStyle(status.color)
+                        .accessibilityLabel(status.accessibilityLabel)
+                }
+            }
+        } icon: {
+            GradelyIcon(destination.hugeiconName, size: 15)
+                .foregroundStyle(Brand.primary)
+        }
+        .tag(destination)
+        .accessibilityIdentifier("settingsDestination-\(destination.rawValue)")
     }
     #endif
 
@@ -750,7 +803,7 @@ private extension GradeyAccountHubView {
                             .submitLabel(.done)
                             .gradelyBorderlessTextFields()
                             .padding(.horizontal, Spacing.md)
-                            .frame(minHeight: 48)
+                            .frame(minHeight: ControlMetrics.fieldHeight)
                             .background(
                                 Color.gradelyTertiaryFill,
                                 in: RoundedRectangle(cornerRadius: Radius.sm, style: .continuous)
@@ -803,12 +856,12 @@ private extension GradeyAccountHubView {
                                 if viewModel.isUpdatingFullName {
                                     ProgressView()
                                         .frame(maxWidth: .infinity)
-                                        .frame(minHeight: 44)
+                                        .frame(minHeight: ControlMetrics.minHeight)
                                 } else {
                                     Text("settings.account.name.save")
                                         .fontWeight(.semibold)
                                         .frame(maxWidth: .infinity)
-                                        .frame(minHeight: 44)
+                                        .frame(minHeight: ControlMetrics.minHeight)
                                 }
                             }
                             .buttonStyle(.bordered)
@@ -893,7 +946,7 @@ private extension GradeyAccountHubView {
                 )
                 .font(.gradely(.body).weight(.semibold))
                 .frame(maxWidth: .infinity)
-                .frame(minHeight: 44)
+                .frame(minHeight: ControlMetrics.minHeight)
             }
             .buttonStyle(.bordered)
             .tint(.red)
@@ -939,7 +992,7 @@ private extension GradeyAccountHubView {
                     )
                     .font(.gradely(.body).weight(.semibold))
                     .frame(maxWidth: .infinity)
-                    .frame(minHeight: 44)
+                    .frame(minHeight: ControlMetrics.minHeight)
                 }
                 .buttonStyle(.bordered)
                 .tint(Brand.primary)
@@ -959,7 +1012,7 @@ private extension GradeyAccountHubView {
                         iconColor: Brand.primary
                     )
                         .frame(maxWidth: .infinity)
-                        .frame(minHeight: 44)
+                        .frame(minHeight: ControlMetrics.minHeight)
                 }
                 .buttonStyle(.bordered)
                 .tint(Brand.primary)
@@ -996,7 +1049,7 @@ private extension GradeyAccountHubView {
                         iconColor: Brand.primary
                     )
                         .frame(maxWidth: .infinity)
-                        .frame(minHeight: 44)
+                        .frame(minHeight: ControlMetrics.minHeight)
                 }
                 .buttonStyle(.bordered)
                 .tint(Brand.primary)
@@ -1137,7 +1190,7 @@ private extension GradeyAccountHubView {
                     iconColor: Brand.primary
                 )
                     .frame(maxWidth: .infinity)
-                    .frame(minHeight: 44)
+                    .frame(minHeight: ControlMetrics.minHeight)
             }
             .buttonStyle(.bordered)
             .tint(Brand.primary)
@@ -1155,7 +1208,7 @@ private extension GradeyAccountHubView {
                     iconColor: Brand.primary
                 )
                     .frame(maxWidth: .infinity)
-                    .frame(minHeight: 44)
+                    .frame(minHeight: ControlMetrics.minHeight)
             }
             .buttonStyle(.bordered)
             .tint(Brand.primary)
@@ -1171,7 +1224,7 @@ private extension GradeyAccountHubView {
                 iconColor: .red
             )
                 .frame(maxWidth: .infinity)
-                .frame(minHeight: 44)
+                .frame(minHeight: ControlMetrics.minHeight)
         }
         .buttonStyle(.bordered)
         .tint(.red)
@@ -1203,7 +1256,7 @@ private extension GradeyAccountHubView {
                         }
                         .buttonStyle(.bordered)
                         .tint(Brand.primary)
-                        .frame(minHeight: 44)
+                        .frame(minHeight: ControlMetrics.minHeight)
                         .accessibilityIdentifier("notificationPermissionAction")
                     }
                 }
@@ -1398,7 +1451,7 @@ private extension GradeyAccountHubView {
                         if isExporting || viewModel.isExporting {
                             ProgressView()
                                 .frame(maxWidth: .infinity)
-                                .frame(minHeight: 44)
+                                .frame(minHeight: ControlMetrics.minHeight)
                         } else {
                             SettingsHugeiconLabel(
                                 "settings.privacy.export.prepare",
@@ -1406,7 +1459,7 @@ private extension GradeyAccountHubView {
                                 iconColor: Brand.primary
                             )
                                 .frame(maxWidth: .infinity)
-                                .frame(minHeight: 44)
+                                .frame(minHeight: ControlMetrics.minHeight)
                         }
                     }
                     .buttonStyle(.bordered)
@@ -1422,7 +1475,7 @@ private extension GradeyAccountHubView {
                                 iconColor: Brand.primary
                             )
                                 .frame(maxWidth: .infinity)
-                                .frame(minHeight: 44)
+                                .frame(minHeight: ControlMetrics.minHeight)
                         }
                         .buttonStyle(.bordered)
                         .tint(Brand.primary)
@@ -1646,7 +1699,7 @@ private extension GradeyAccountHubView {
             if isDeletingAccount || viewModel.isDeletingAccount {
                 ProgressView()
                     .frame(maxWidth: .infinity)
-                    .frame(minHeight: 44)
+                    .frame(minHeight: ControlMetrics.minHeight)
             } else {
                 SettingsHugeiconLabel(
                     "settings.privacy.delete.action",
@@ -1654,7 +1707,7 @@ private extension GradeyAccountHubView {
                     iconColor: .red
                 )
                 .frame(maxWidth: .infinity)
-                .frame(minHeight: 44)
+                .frame(minHeight: ControlMetrics.minHeight)
             }
         }
         .buttonStyle(.bordered)
@@ -1850,7 +1903,7 @@ private extension GradeyAccountHubView {
                                 .fixedSize(horizontal: false, vertical: true)
                         }
                     }
-                    .frame(minHeight: 44, alignment: .leading)
+                    .frame(minHeight: ControlMetrics.minHeight, alignment: .leading)
                 }
             }
             .navigationTitle("edupage.children.title")
@@ -2145,7 +2198,7 @@ private extension GradeyAccountHubView {
                     if retryingCloudLink == kind {
                         ProgressView()
                             .frame(maxWidth: .infinity)
-                            .frame(minHeight: 44)
+                            .frame(minHeight: ControlMetrics.minHeight)
                     } else {
                         SettingsHugeiconLabel(
                             "onboarding.sync.warning.retry",
@@ -2153,7 +2206,7 @@ private extension GradeyAccountHubView {
                             iconColor: Brand.primary
                         )
                             .frame(maxWidth: .infinity)
-                            .frame(minHeight: 44)
+                            .frame(minHeight: ControlMetrics.minHeight)
                     }
                 }
                 .buttonStyle(.bordered)
@@ -2230,19 +2283,6 @@ private extension GradeyAccountHubView {
 // MARK: - Shared settings components
 
 private extension View {
-    #if os(macOS)
-    /// The macOS settings layout has no navigation bar, so each detail page
-    /// carries its own title and, once pushed, a back button.
-    func settingsMacDetailHeader(
-        title: LocalizedStringKey?,
-        onBack: (() -> Void)? = nil
-    ) -> some View {
-        safeAreaInset(edge: .top, spacing: 0) {
-            SettingsMacDetailHeader(title: title, onBack: onBack)
-        }
-    }
-    #endif
-
     @ViewBuilder
     func settingsRootNavigationChrome() -> some View {
         #if os(iOS)
@@ -2255,46 +2295,6 @@ private extension View {
         #endif
     }
 }
-
-#if os(macOS)
-private struct SettingsMacDetailHeader: View {
-    let title: LocalizedStringKey?
-    let onBack: (() -> Void)?
-
-    var body: some View {
-        HStack(spacing: Spacing.md) {
-            if let onBack {
-                Button(action: onBack) {
-                    GradelyIcon("arrow-left-01", size: 16)
-                        .foregroundStyle(.primary)
-                        .frame(width: 36, height: 36)
-                        .background(Brand.primary.opacity(0.10), in: Circle())
-                        .contentShape(Circle())
-                }
-                .buttonStyle(.plain)
-                .keyboardShortcut("[", modifiers: .command)
-                .accessibilityLabel(AppL10n.string("settings.back"))
-                .accessibilityIdentifier("settingsBackButton")
-            }
-
-            if let title {
-                Text(title)
-                    .font(.gradelyDisplay(size: 24, relativeTo: .title2))
-                    .lineLimit(1)
-                    .accessibilityAddTraits(.isHeader)
-            }
-
-            Spacer(minLength: 0)
-        }
-        .padding(.horizontal, 20)
-        .padding(.top, Spacing.lg)
-        .frame(height: 68)
-        .background {
-            SettingsBackground()
-        }
-    }
-}
-#endif
 
 private struct SettingsOverviewGroup<Content: View>: View {
     @ViewBuilder var content: Content
@@ -2562,7 +2562,7 @@ private struct SettingsActionRow: View {
 
             SettingsDisclosureIcon()
         }
-        .frame(minHeight: 44)
+        .frame(minHeight: ControlMetrics.minHeight)
         .contentShape(Rectangle())
     }
 }
@@ -2660,6 +2660,6 @@ struct SettingsValueRow: View {
                     .textSelection(.enabled)
             }
         }
-        .frame(minHeight: 44)
+        .frame(minHeight: ControlMetrics.minHeight)
     }
 }

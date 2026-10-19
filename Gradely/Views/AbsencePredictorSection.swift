@@ -170,32 +170,34 @@ struct AbsencePredictionSheet: View {
     @Bindable var viewModel: AbsenceViewModel
 
     var body: some View {
-        NavigationStack {
-            List {
-                Section {
+        ModalNavigationContainer {
+            AbsenceSheetPage(title: "absence.predictor.sheet.title") {
+                HStack(spacing: Spacing.md) {
+                    Text("absence.predictor.date")
+                        .font(.gradely(.subheadline).weight(.semibold))
+                    Spacer(minLength: Spacing.sm)
                     DatePicker(
                         "absence.predictor.date",
                         selection: $viewModel.predictionSelectedDate,
                         in: viewModel.predictionMinimumDate...,
                         displayedComponents: .date
                     )
+                    .labelsHidden()
                     .accessibilityIdentifier("absencePredictorDatePicker")
                 }
 
                 predictionLessonSection
 
-                Section {
-                    Button(role: .destructive) {
-                        viewModel.clearPredictionDraftSelections()
-                    } label: {
-                        Text("action.clear")
-                    }
-                    .disabled(viewModel.predictionDraftSelectedCount == 0)
-                    .accessibilityIdentifier("absencePredictorSheetClearButton")
+                Button(role: .destructive) {
+                    viewModel.clearPredictionDraftSelections()
+                } label: {
+                    Text("action.clear")
                 }
+                .buttonStyle(.bordered)
+                .tint(.red)
+                .disabled(viewModel.predictionDraftSelectedCount == 0)
+                .accessibilityIdentifier("absencePredictorSheetClearButton")
             }
-            .navigationTitle("absence.predictor.sheet.title")
-            .gradelyNavigationTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("action.cancel") {
@@ -225,69 +227,50 @@ struct AbsencePredictionSheet: View {
     @ViewBuilder
     private var predictionLessonSection: some View {
         if viewModel.isLoadingPredictionLessons {
-            Section {
-                HStack(spacing: Spacing.sm) {
-                    ProgressView()
-                    Text("absence.predictor.loading")
-                        .foregroundStyle(.secondary)
-                }
+            HStack(spacing: Spacing.sm) {
+                ProgressView()
+                    .controlSize(.small)
+                Text("absence.predictor.loading")
+                    .font(.gradely(.subheadline))
+                    .foregroundStyle(.secondary)
             }
         } else if let message = viewModel.predictionErrorMessage {
-            Section {
+            VStack(alignment: .leading, spacing: Spacing.sm) {
                 GradelyLabel(message, systemImage: "exclamationmark.triangle")
+                    .font(.gradely(.subheadline))
                     .foregroundStyle(GradeBand.poor.foregroundColor)
 
                 Button("action.retry") {
                     Task { await viewModel.loadPredictionLessonsForSelectedDate() }
                 }
+                .buttonStyle(.bordered)
+                .tint(Brand.primary)
             }
         } else if viewModel.predictionLessons.isEmpty {
-            Section {
-                GradelyLabel("absence.predictor.noLessons", systemImage: "calendar.badge.checkmark")
-                    .foregroundStyle(.secondary)
-                    .accessibilityIdentifier("absencePredictorNoLessons")
-            }
+            GradelyLabel("absence.predictor.noLessons", systemImage: "calendar.badge.checkmark")
+                .font(.gradely(.subheadline))
+                .foregroundStyle(.secondary)
+                .accessibilityIdentifier("absencePredictorNoLessons")
         } else {
-            Section {
-                ForEach(viewModel.predictionLessons) { lesson in
-                    Button {
-                        viewModel.togglePredictionLesson(lesson)
-                    } label: {
-                        HStack(spacing: Spacing.sm) {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(lesson.displayTitle)
-                                    .font(.gradely(.subheadline).weight(.semibold))
-                                    .foregroundStyle(.primary)
-
-                                if !lesson.timeRange.isEmpty {
-                                    Text(lesson.timeRange)
-                                        .font(.gradely(.caption))
-                                        .foregroundStyle(.secondary)
-                                }
-                            }
-
-                            Spacer()
-
-                            if viewModel.isPredictionLessonSelected(lesson.id) {
-                                GradelyIcon(systemName: "checkmark.circle.fill")
-                                    .foregroundStyle(Brand.primary)
-                            } else {
-                                GradelyIcon(systemName: "circle")
-                                    .foregroundStyle(.tertiary)
-                            }
-                        }
-                        .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityIdentifier("absencePredictorLesson-\(lesson.id)")
-                }
-            } header: {
+            PlainSection {
                 Text(
                     String.localizedStringWithFormat(
                         AppL10n.string("absence.predictor.selectedCount"),
                         viewModel.predictionDraftSelectedCount
                     )
                 )
+                .font(.gradely(.subheadline))
+                .foregroundStyle(.secondary)
+            } content: {
+                ForEach(viewModel.predictionLessons) { lesson in
+                    AbsenceLessonToggleRow(
+                        lesson: lesson,
+                        isSelected: viewModel.isPredictionLessonSelected(lesson.id)
+                    ) {
+                        viewModel.togglePredictionLesson(lesson)
+                    }
+                    .accessibilityIdentifier("absencePredictorLesson-\(lesson.id)")
+                }
             }
         }
     }

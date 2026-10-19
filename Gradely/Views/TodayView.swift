@@ -70,13 +70,16 @@ struct TodayView: View {
                     .accessibilityLabel(AppL10n.string("action.refresh"))
                     .accessibilityIdentifier("todayRefreshButton")
                 }
+                #if !os(macOS)
                 ToolbarItem(placement: .gradelyTopBarTrailing) {
                     AccountSettingsButton(accountHub: accountHub)
                 }
+                #endif
             }
             .task {
                 await viewModel.loadIfNeeded()
             }
+            .gradelyOnRefreshCommand { await viewModel.refresh(forceRefresh: true) }
             .onChange(of: snapshotStore?.revision) { _, _ in viewModel.applySharedSnapshot() }
             .onChange(of: scenePhase) { _, phase in
                 if phase == .active {
@@ -182,7 +185,7 @@ struct TodayView: View {
                     GradelyLabel("settings.connected.reconnect", systemImage: "arrow.clockwise")
                         .font(.gradely(.headline))
                         .frame(maxWidth: .infinity)
-                        .frame(minHeight: 44)
+                        .frame(minHeight: ControlMetrics.minHeight)
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(Color.gradelySystemOrange)
@@ -574,8 +577,7 @@ private struct TodayHero: View {
     private var averageTile: some View {
         StatTile(
             title: AppL10n.string("today.hero.average"),
-            value: GradeMath.formattedAverage(snapshot.overallAverage),
-            valueColor: GradeMath.band(for: snapshot.overallAverage).foregroundColor
+            value: GradeMath.formattedAverage(snapshot.overallAverage)
         )
             .accessibilityElement(children: .combine)
             .accessibilityIdentifier("todayStatAverage")
@@ -673,7 +675,7 @@ private struct TodayLessonChip: View {
         }
         .padding(.horizontal, Spacing.sm + 2)
         .padding(.vertical, Spacing.sm)
-        .frame(minWidth: 54, minHeight: 44)
+        .frame(minWidth: 54, minHeight: ControlMetrics.minHeight)
         .foregroundStyle(foreground)
         .background(background, in: RoundedRectangle(cornerRadius: Radius.sm, style: .continuous))
         .overlay(alignment: .topTrailing) {

@@ -50,13 +50,16 @@ struct AbsenceView: View {
                         .accessibilityIdentifier("absenceHiddenButton")
                     }
 
+                    #if !os(macOS)
                     ToolbarItem(placement: .gradelyTopBarTrailing) {
                         AccountSettingsButton(accountHub: accountHub)
                     }
+                    #endif
                 }
                 .task {
                     await viewModel.loadIfNeeded()
                 }
+                .gradelyOnRefreshCommand { await viewModel.refresh(forceRefresh: true) }
                 .onChange(of: snapshotStore?.revision) { _, _ in viewModel.applySharedSnapshot() }
                 .sheet(isPresented: $viewModel.isHiddenAbsencesSheetPresented) {
                     HiddenAbsencesView(viewModel: viewModel)
@@ -144,6 +147,7 @@ struct AbsenceView: View {
                     }
                 }
                 .pickerStyle(.segmented)
+                .labelsHidden()
                 .accessibilityIdentifier("absenceSegmentedControl")
 
                 if viewModel.isRefreshing {
@@ -189,6 +193,8 @@ struct AbsenceView: View {
             }
             .padding(.horizontal, Spacing.lg)
             .padding(.vertical, Spacing.md)
+            .frame(maxWidth: 760)
+            .frame(maxWidth: .infinity)
         }
         .refreshable {
             await viewModel.refresh(forceRefresh: true)
@@ -526,52 +532,18 @@ private struct ManualAbsenceLessonSelectionSheet: View {
     @Bindable var viewModel: AbsenceViewModel
 
     var body: some View {
-        NavigationStack {
-            List {
+        ModalNavigationContainer {
+            AbsenceSheetPage(title: "absence.manual.title") {
                 if let message = viewModel.manualSelectionErrorMessage {
-                    Section {
-                        GradelyLabel(message, systemImage: "exclamationmark.triangle")
-                            .foregroundStyle(GradeBand.poor.foregroundColor)
-                    }
+                    GradelyLabel(message, systemImage: "exclamationmark.triangle")
+                        .font(.gradely(.subheadline))
+                        .foregroundStyle(GradeBand.poor.foregroundColor)
                 }
 
                 ForEach(viewModel.manualResolutionCandidates) { day in
-                    Section {
-                        ForEach(day.lessons) { lesson in
-                            Button {
-                                viewModel.toggleManualLesson(lesson.id, dateKey: day.dateKey)
-                            } label: {
-                                HStack(spacing: Spacing.sm) {
-                                    VStack(alignment: .leading, spacing: 2) {
-                                        Text(lesson.displayTitle)
-                                            .font(.gradely(.subheadline).weight(.semibold))
-                                            .foregroundStyle(.primary)
-
-                                        if !lesson.timeRange.isEmpty {
-                                            Text(lesson.timeRange)
-                                                .font(.gradely(.caption))
-                                                .foregroundStyle(.secondary)
-                                        }
-                                    }
-
-                                    Spacer()
-
-                                    if viewModel.isManualLessonSelected(lesson.id, dateKey: day.dateKey) {
-                                        GradelyIcon(systemName: "checkmark.circle.fill")
-                                            .foregroundStyle(Brand.primary)
-                                    } else {
-                                        GradelyIcon(systemName: "circle")
-                                            .foregroundStyle(.tertiary)
-                                    }
-                                }
-                                .contentShape(Rectangle())
-                            }
-                            .buttonStyle(.plain)
-                            .accessibilityIdentifier("absenceManualLesson-\(lesson.id)")
-                        }
-                    } header: {
+                    PlainSection {
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(day.title)
+                            PlainSectionTitle(verbatim: day.title)
                             Text(
                                 String(
                                     format: AppL10n.string("absence.manual.selectedCount"),
@@ -579,13 +551,24 @@ private struct ManualAbsenceLessonSelectionSheet: View {
                                     day.requiredSelectionCount
                                 )
                             )
+                            .font(.gradely(.subheadline))
+                            .foregroundStyle(.secondary)
                         }
+                        .accessibilityElement(children: .combine)
                         .accessibilityIdentifier("absenceManualDay-\(day.dateKey)")
+                    } content: {
+                        ForEach(day.lessons) { lesson in
+                            AbsenceLessonToggleRow(
+                                lesson: lesson,
+                                isSelected: viewModel.isManualLessonSelected(lesson.id, dateKey: day.dateKey)
+                            ) {
+                                viewModel.toggleManualLesson(lesson.id, dateKey: day.dateKey)
+                            }
+                            .accessibilityIdentifier("absenceManualLesson-\(lesson.id)")
+                        }
                     }
                 }
             }
-            .navigationTitle("absence.manual.title")
-            .gradelyNavigationTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("action.cancel") {
@@ -605,6 +588,74 @@ private struct ManualAbsenceLessonSelectionSheet: View {
         .gradelyMacSheetSize(minWidth: 480, idealWidth: 560, minHeight: 480, idealHeight: 600)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("absenceManualSelectionSheet")
+    }
+}
+
+/// Page of the absence sheets: plain sections straight on the background
+/// instead of a grouped list. The Mac draws the title in the page because a
+/// NavigationStack in a Mac sheet adds a grey title strip.
+struct AbsenceSheetPage<Content: View>: View {
+    let title: LocalizedStringKey
+    @ViewBuilder var content: Content
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: Spacing.xl) {
+                #if os(macOS)
+                Text(title)
+                    .font(.gradely(.title2).weight(.bold))
+                    .accessibilityAddTraits(.isHeader)
+                #endif
+                content
+            }
+            .frame(maxWidth: 640, alignment: .leading)
+            .frame(maxWidth: .infinity)
+            .padding(.horizontal, Spacing.lg)
+            .padding(.vertical, Spacing.lg)
+        }
+        .background { SettingsBackground() }
+        .navigationTitle(title)
+        .gradelyNavigationTitleDisplayMode(.inline)
+    }
+}
+
+/// One lesson to tick in the absence sheets: period, subject and time once.
+struct AbsenceLessonToggleRow: View {
+    let lesson: AbsenceLessonCandidate
+    let isSelected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: Spacing.md) {
+                Text(lesson.hourCaption)
+                    .font(.gradely(.headline).weight(.bold))
+                    .monospacedDigit()
+                    .foregroundStyle(isSelected ? AnyShapeStyle(Brand.primary) : AnyShapeStyle(.secondary))
+                    .frame(width: 24, alignment: .leading)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(lesson.subjectName)
+                        .font(.gradely(.subheadline).weight(.semibold))
+                    if !lesson.timeRange.isEmpty {
+                        Text(lesson.timeRange)
+                            .font(.gradely(.caption))
+                            .foregroundStyle(.secondary)
+                            .monospacedDigit()
+                    }
+                }
+
+                Spacer(minLength: Spacing.sm)
+
+                GradelyIcon(systemName: isSelected ? "checkmark.circle.fill" : "circle", size: 20)
+                    .foregroundStyle(isSelected ? AnyShapeStyle(Brand.primary) : AnyShapeStyle(.tertiary))
+            }
+            .frame(minHeight: ControlMetrics.minHeight)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }
 

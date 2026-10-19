@@ -140,7 +140,7 @@ struct GradeyDebugPanel: View {
                     } label: {
                         Text("debug.restartNewUser")
                             .font(.gradely(.body).weight(.semibold))
-                            .frame(maxWidth: .infinity, minHeight: 44)
+                            .frame(maxWidth: .infinity, minHeight: ControlMetrics.minHeight)
                     }
                     .buttonStyle(.borderedProminent)
                     .tint(Brand.primary)
@@ -151,7 +151,7 @@ struct GradeyDebugPanel: View {
                     } label: {
                         Text("debug.restartUpgrade")
                             .font(.gradely(.body).weight(.semibold))
-                            .frame(maxWidth: .infinity, minHeight: 44)
+                            .frame(maxWidth: .infinity, minHeight: ControlMetrics.minHeight)
                     }
                     .buttonStyle(.bordered)
                     .tint(Brand.primary)
@@ -162,7 +162,7 @@ struct GradeyDebugPanel: View {
                     } label: {
                         Text("debug.resetAsNewUser")
                             .font(.gradely(.body).weight(.semibold))
-                            .frame(maxWidth: .infinity, minHeight: 44)
+                            .frame(maxWidth: .infinity, minHeight: ControlMetrics.minHeight)
                     }
                     .buttonStyle(.bordered)
                     .tint(Brand.primary)
@@ -172,7 +172,7 @@ struct GradeyDebugPanel: View {
                         pendingAction = .signOut
                     } label: {
                         Text("debug.signOut")
-                            .frame(maxWidth: .infinity, minHeight: 44)
+                            .frame(maxWidth: .infinity, minHeight: ControlMetrics.minHeight)
                     }
                     .buttonStyle(.bordered)
                     .accessibilityIdentifier("debugSignOutButton")
@@ -181,7 +181,7 @@ struct GradeyDebugPanel: View {
                         pendingAction = .clearCache
                     } label: {
                         Text("debug.clearCache")
-                            .frame(maxWidth: .infinity, minHeight: 44)
+                            .frame(maxWidth: .infinity, minHeight: ControlMetrics.minHeight)
                     }
                     .buttonStyle(.bordered)
                     .accessibilityIdentifier("debugClearCacheButton")
@@ -190,7 +190,7 @@ struct GradeyDebugPanel: View {
                         onDisable()
                     } label: {
                         Text("debug.disable")
-                            .frame(maxWidth: .infinity, minHeight: 44)
+                            .frame(maxWidth: .infinity, minHeight: ControlMetrics.minHeight)
                     }
                     .buttonStyle(.bordered)
                     .accessibilityIdentifier("debugDisableButton")

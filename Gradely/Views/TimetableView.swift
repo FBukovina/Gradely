@@ -67,14 +67,17 @@ struct TimetableView: View {
                         .accessibilityIdentifier("timetablePlannerButton")
                     }
 
+                    #if !os(macOS)
                     ToolbarItem(placement: .gradelyTopBarTrailing) {
                         AccountSettingsButton(accountHub: accountHub)
                     }
+                    #endif
                 }
                 .task {
                     plannerStore.loadIfNeeded()
                     await viewModel.loadIfNeeded()
                 }
+                .gradelyOnRefreshCommand { await viewModel.refresh() }
                 .task(id: siriTarget?.requestID) {
                     guard let target = siriTarget, let day = target.day, let date = day.date, let lesson = target.lesson,
                           target.scope == viewModel.schoolScope else { return }
@@ -167,9 +170,16 @@ struct TimetableView: View {
                 .padding(.top, Spacing.md)
                 .padding(.bottom, Spacing.md)
             }
+            #if os(macOS)
+            Divider()
+            WeekGrid(viewModel: viewModel, plannerItems: attachedItems) { lesson, day in
+                selectedLesson = PlannerLessonSelection(lesson: lesson, day: day)
+            }
+            #else
             DayStrip(viewModel: viewModel)
             Divider()
             dayContent
+            #endif
         }
     }
 
@@ -287,11 +297,226 @@ private struct WeekNavBar: View {
             GradelyIcon(systemName: systemImage, size: 14)
                 .foregroundStyle(Brand.primary)
                 .frame(width: 44, height: 44)
+                .contentShape(Rectangle())
         }
+        .buttonStyle(.borderless)
+        #if os(macOS)
+        .keyboardShortcut(systemImage == "chevron.left" ? .leftArrow : .rightArrow, modifiers: .command)
+        #endif
         .accessibilityLabel(AppL10n.string(label))
         .accessibilityIdentifier(id)
     }
 }
+
+#if os(macOS)
+// MARK: - Week grid
+
+/// The whole week at once on the Mac: a column per day, a row per lesson
+/// period. Clicking a lesson opens the same detail sheet as on iOS.
+private struct WeekGrid: View {
+    let viewModel: TimetableViewModel
+    let plannerItems: (ScheduledLesson, ScheduledDay) -> [PlannerItem]
+    let onSelect: (ScheduledLesson, ScheduledDay) -> Void
+
+    var body: some View {
+        ScrollView {
+            Grid(alignment: .topLeading, horizontalSpacing: Spacing.md, verticalSpacing: 0) {
+                GridRow {
+                    Color.clear
+                        .frame(width: 52, height: 1)
+                    ForEach(viewModel.days) { day in
+                        WeekGridDayHeader(day: day)
+                    }
+                }
+                .padding(.bottom, Spacing.sm)
+
+                ForEach(hours) { hour in
+                    Divider()
+                    GridRow {
+                        WeekGridHour(hour: hour, isNow: viewModel.days.contains { day in
+                            day.lessons.contains { $0.hour.id == hour.id && !$0.isCanceled }
+                                && LessonClock.isCurrent(hour, isToday: day.isToday)
+                        })
+                        ForEach(viewModel.days) { day in
+                            cell(day: day, hour: hour)
+                        }
+                    }
+                }
+            }
+            .padding(.horizontal, Spacing.lg)
+            .padding(.vertical, Spacing.md)
+        }
+        .accessibilityIdentifier("timetableList")
+    }
+
+    /// Periods that have a lesson on any day, in the school's order.
+    private var hours: [TimetableHour] {
+        let lessonHours = viewModel.days.flatMap { $0.lessons.map(\.hour) }
+        let used = Set(lessonHours.map(\.id))
+        var ordered = (viewModel.week?.hours ?? []).filter { used.contains($0.id) }
+        let known = Set(ordered.map(\.id))
+        for hour in lessonHours where !known.contains(hour.id) && !ordered.contains(where: { $0.id == hour.id }) {
+            ordered.append(hour)
+        }
+        return ordered
+    }
+
+    private func cell(day: ScheduledDay, hour: TimetableHour) -> some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            ForEach(day.lessons.filter { $0.hour.id == hour.id }) { lesson in
+                WeekGridLesson(
+                    lesson: lesson,
+                    isNow: !lesson.isCanceled && LessonClock.isCurrent(hour, isToday: day.isToday),
+                    plannerItems: plannerItems(lesson, day)
+                ) {
+                    onSelect(lesson, day)
+                }
+                .accessibilityIdentifier("lessonRow-\(lesson.id)")
+                .gradeySiriContext(.lesson(lesson, day, viewModel.schoolScope))
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .topLeading)
+        .padding(.vertical, Spacing.sm)
+    }
+}
+
+private struct WeekGridDayHeader: View {
+    let day: ScheduledDay
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(alignment: .firstTextBaseline, spacing: Spacing.sm) {
+                dayLabel
+            }
+            if !day.hasLessons {
+                Text(EmptyDayView.title(for: day))
+                    .font(.gradely(.caption))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("dayChip-\(day.dayOfWeek)")
+    }
+
+    @ViewBuilder
+    private var dayLabel: some View {
+        if let date = day.date {
+            Text(TimetableDates.weekdayAbbreviation(date))
+                .font(.gradely(.caption).weight(.semibold))
+                .textCase(.uppercase)
+                .foregroundStyle(day.isToday ? AnyShapeStyle(Brand.primary) : AnyShapeStyle(.secondary))
+            Text(TimetableDates.dayNumber(date))
+                .font(.gradely(.title3).weight(.bold))
+                .monospacedDigit()
+                .foregroundStyle(day.isToday ? AnyShapeStyle(Brand.primary) : AnyShapeStyle(.primary))
+        } else {
+            Text(TimetableDates.weekdayAbbreviation(dayOfWeek: day.dayOfWeek))
+                .font(.gradely(.subheadline).weight(.bold))
+                .textCase(.uppercase)
+        }
+    }
+}
+
+private struct WeekGridHour: View {
+    let hour: TimetableHour
+    let isNow: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 1) {
+            Text(hour.caption)
+                .font(.gradely(.headline).weight(.bold))
+                .monospacedDigit()
+                .foregroundStyle(isNow ? AnyShapeStyle(Brand.primary) : AnyShapeStyle(.primary))
+            if !hour.beginTime.isEmpty {
+                Text(hour.beginTime)
+                    .font(.gradely(.caption2))
+                    .monospacedDigit()
+                    .foregroundStyle(isNow ? AnyShapeStyle(Brand.primary) : AnyShapeStyle(.secondary))
+                Text(hour.endTime)
+                    .font(.gradely(.caption2))
+                    .monospacedDigit()
+                    .foregroundStyle(.tertiary)
+            }
+        }
+        .frame(width: 52, alignment: .leading)
+        .padding(.vertical, Spacing.sm)
+    }
+}
+
+private struct WeekGridLesson: View {
+    let lesson: ScheduledLesson
+    let isNow: Bool
+    let plannerItems: [PlannerItem]
+    let action: () -> Void
+    @State private var isHovering = false
+
+    var body: some View {
+        Button(action: action) {
+            HStack(alignment: .top, spacing: Spacing.sm) {
+                Capsule()
+                    .fill(accent.opacity(lesson.isCanceled ? 0.45 : 1))
+                    .frame(width: 3)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(LessonText.subject(for: lesson))
+                        .font(.gradely(.subheadline).weight(.semibold))
+                        .foregroundStyle(lesson.isCanceled ? AnyShapeStyle(.secondary) : isNow ? AnyShapeStyle(Brand.primary) : AnyShapeStyle(.primary))
+                        .strikethrough(lesson.isCanceled, color: LessonChangeKind.canceled.color.opacity(0.8))
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    if !detail.isEmpty {
+                        Text(detail)
+                            .font(.gradely(.caption))
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
+
+                    if let label = lesson.changeKind.localizedLabel {
+                        Text(label)
+                            .font(.gradely(.caption).weight(.semibold))
+                            .foregroundStyle(lesson.changeKind.color)
+                            .lineLimit(1)
+                    }
+
+                    if let first = plannerItems.first {
+                        GradelyLabel(first.type.title, systemImage: first.type.systemImage, iconSize: 11)
+                            .font(.gradely(.caption).weight(.semibold))
+                            .foregroundStyle(Brand.primary)
+                            .lineLimit(1)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .padding(.vertical, 2)
+            .contentShape(Rectangle())
+            .background {
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .fill(Brand.primary.opacity(isHovering ? 0.08 : 0))
+                    .padding(-Spacing.xs)
+            }
+        }
+        .buttonStyle(.plain)
+        .onHover { isHovering = $0 }
+        .help(LessonText.subject(for: lesson))
+    }
+
+    /// "12 · Novák": room, then the teacher's abbreviation or name.
+    private var detail: String {
+        guard !lesson.isCanceled else { return "" }
+        return [lesson.roomAbbrev, lesson.teacherAbbrev ?? lesson.teacherName]
+            .compactMap { $0 }
+            .filter { !$0.isEmpty }
+            .joined(separator: " · ")
+    }
+
+    private var accent: Color {
+        lesson.changeKind == .none ? Brand.primary : lesson.changeKind.color
+    }
+}
+#endif
 
 private struct DayStrip: View {
     let viewModel: TimetableViewModel
@@ -349,7 +574,7 @@ private struct DayChip: View {
                         }
                 }
             }
-            .frame(maxWidth: .infinity, minHeight: 44)
+            .frame(maxWidth: .infinity, minHeight: ControlMetrics.minHeight)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -618,7 +843,9 @@ private struct EmptyDayView: View {
         }
     }
 
-    private var title: String {
+    private var title: String { Self.title(for: day) }
+
+    static func title(for day: ScheduledDay?) -> String {
         switch day?.dayType {
         case .holiday, .celebration, .directorDay: AppL10n.string("timetable.holiday")
         case .weekend: AppL10n.string("timetable.weekend")

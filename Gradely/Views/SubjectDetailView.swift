@@ -5,11 +5,15 @@ struct SubjectDetailView: View {
     @Environment(\.requestGradeyAIAction) private var requestAI
     private let snapshotStore: SchoolSnapshotStore?
     private let navigationScope: SchoolDataScope?
+    /// Shown next to the subject list (Mac) instead of pushed over it: the
+    /// page names the subject itself and the list owns the window title.
+    private let isEmbedded: Bool
 
-    init(viewModel: SubjectDetailViewModel, snapshotStore: SchoolSnapshotStore? = nil) {
+    init(viewModel: SubjectDetailViewModel, snapshotStore: SchoolSnapshotStore? = nil, isEmbedded: Bool = false) {
         _viewModel = State(initialValue: viewModel)
         self.snapshotStore = snapshotStore
         self.navigationScope = snapshotStore?.scope
+        self.isEmbedded = isEmbedded
     }
 
     private var subjectUnavailable: Bool {
@@ -24,6 +28,14 @@ struct SubjectDetailView: View {
         } else {
         ScrollView {
             VStack(spacing: Spacing.xl) {
+                if isEmbedded {
+                    Text(viewModel.subject.trimmedName)
+                        .font(.gradely(.title).weight(.bold))
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, Spacing.xs)
+                        .padding(.bottom, -Spacing.md)
+                        .accessibilityAddTraits(.isHeader)
+                }
                 AverageHero(viewModel: viewModel, hasLocalAbsenceAdjustment: hasLocalAbsenceAdjustment)
                 marksSection
                 calculatorSection
@@ -36,10 +48,10 @@ struct SubjectDetailView: View {
         }
         }
         }
-        .gradelyScreenBackground()
+        .background { if !isEmbedded { AuroraBackground() } }
         .scrollDismissesKeyboard(.interactively)
         .gradeySiriContext(.subject(viewModel.subject.id, navigationScope))
-        .navigationTitle(subjectUnavailable ? AppL10n.string("detail.intelligence.subjectUnavailable") : viewModel.subject.trimmedName)
+        .navigationTitle(navigationTitle)
         .gradelyNavigationTitleDisplayMode(.large)
         .toolbar {
             if !subjectUnavailable {
@@ -51,6 +63,11 @@ struct SubjectDetailView: View {
         .onChange(of: snapshotStore?.revision, initial: true) { _, _ in
             if !subjectUnavailable { refreshSubjectSnapshot() }
         }
+    }
+
+    private var navigationTitle: String {
+        if isEmbedded { return AppL10n.string("subjects.title") }
+        return subjectUnavailable ? AppL10n.string("detail.intelligence.subjectUnavailable") : viewModel.subject.trimmedName
     }
 
     private var hasLocalAbsenceAdjustment: Bool {
@@ -431,7 +448,21 @@ private struct TheoreticalCalculatorView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
+    @ViewBuilder
     private var weightControl: some View {
+        #if os(macOS)
+        Stepper {
+            Text(String.localizedStringWithFormat(AppL10n.string("detail.weight"), viewModel.theoreticalWeight))
+                .font(.gradely(.subheadline).weight(.semibold).monospacedDigit())
+                .lineLimit(1)
+        } onIncrement: {
+            viewModel.incrementWeight()
+        } onDecrement: {
+            viewModel.decrementWeight()
+        }
+        .fixedSize()
+        .accessibilityIdentifier("theoreticalWeightStepper")
+        #else
         HStack(spacing: Spacing.sm) {
             stepButton(systemImage: "minus", disabled: viewModel.theoreticalWeight <= 1) {
                 viewModel.decrementWeight()
@@ -454,6 +485,7 @@ private struct TheoreticalCalculatorView: View {
         )
         .fixedSize()
         .accessibilityIdentifier("theoreticalWeightStepper")
+        #endif
     }
 
     private func stepButton(systemImage: String, disabled: Bool, action: @escaping () -> Void) -> some View {
@@ -461,7 +493,7 @@ private struct TheoreticalCalculatorView: View {
             GradelyIcon(systemName: systemImage)
                 .font(.gradely(.headline).weight(.bold))
                 .foregroundStyle(disabled ? AnyShapeStyle(.tertiary) : AnyShapeStyle(Brand.primary))
-                .frame(minWidth: 44, minHeight: 44)
+                .frame(minWidth: 44, minHeight: ControlMetrics.minHeight)
                 .background(Color.gradelySecondaryGroupedBackground, in: RoundedRectangle(cornerRadius: Radius.sm - 4, style: .continuous))
         }
         .buttonStyle(.plain)

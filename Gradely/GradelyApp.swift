@@ -48,22 +48,22 @@ struct GradelyApp: App {
     }
 
     var body: some Scene {
-        WindowGroup {
-            #if os(macOS)
+        #if os(macOS)
+        // One unique window: the Window menu can always bring it back, and
+        // ⌘N is free for a new planner item.
+        Window(Text(verbatim: "Gradey"), id: "main") {
             ContentView(environment: environment, siriService: siriService)
                 .frame(minWidth: 880, minHeight: 600)
                 .appLanguage(languageStore)
                 .font(.gradely(.body))
-            #else
-            ContentView(environment: environment, siriService: siriService)
-                .appLanguage(languageStore)
-                .font(.gradely(.body))
-            #endif
+                .foregroundStyle(Color.gradelyLabel)
         }
-        #if os(macOS)
         .defaultSize(width: 1040, height: 720)
         .windowResizability(.contentMinSize)
+        // Also open it when macOS launches Gradey without bringing it forward.
+        .defaultLaunchBehavior(.presented)
         .commands {
+            GradeyMacCommands()
             CommandGroup(replacing: .help) {
                 Button("legal.privacyPolicy") {
                     AppLinks.open(AppLinks.privacyPolicyURL)
@@ -72,6 +72,20 @@ struct GradelyApp: App {
                     AppLinks.open(AppLinks.termsOfUseURL)
                 }
             }
+        }
+
+        Settings {
+            MacSettingsWindow()
+                .appLanguage(languageStore)
+                .font(.gradely(.body))
+                .foregroundStyle(Color.gradelyLabel)
+                .environment(\.gradeySiriService, siriService)
+        }
+        #else
+        WindowGroup {
+            ContentView(environment: environment, siriService: siriService)
+                .appLanguage(languageStore)
+                .font(.gradely(.body))
         }
         #endif
     }

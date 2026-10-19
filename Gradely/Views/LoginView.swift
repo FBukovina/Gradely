@@ -148,7 +148,7 @@ struct LoginView: View {
                     }
                     .buttonStyle(.plain)
                     .foregroundStyle(Brand.primary)
-                    .frame(minHeight: 44)
+                    .frame(minHeight: ControlMetrics.minHeight)
                     .accessibilityIdentifier(backButtonIdentifier)
                 } else if let onBackFromSchool {
                     Button(action: onBackFromSchool) {
@@ -157,7 +157,7 @@ struct LoginView: View {
                     }
                     .buttonStyle(.plain)
                     .foregroundStyle(Brand.primary)
-                    .frame(minHeight: 44)
+                    .frame(minHeight: ControlMetrics.minHeight)
                     .accessibilityIdentifier("onboardingBackButton")
                 } else {
                     Color.clear
@@ -242,6 +242,7 @@ struct LoginView: View {
                 }
             }
             .pickerStyle(.segmented)
+            .labelsHidden()
             .accessibilityIdentifier("providerPicker")
         }
     }
@@ -434,7 +435,7 @@ struct LoginView: View {
                 .font(.gradely(.footnote).weight(.semibold))
                 .buttonStyle(.plain)
                 .foregroundStyle(Brand.primary)
-                .frame(minHeight: 44)
+                .frame(minHeight: ControlMetrics.minHeight)
                 .accessibilityIdentifier("changeSchoolButton")
         }
         .padding(.horizontal, Spacing.xs)
@@ -684,14 +685,22 @@ struct LoginView: View {
 private struct LoginActionButtonStyle: ButtonStyle {
     @Environment(\.isEnabled) private var isEnabled
 
+    #if os(macOS)
+    private let height: CGFloat = 32
+    private let cornerRadius: CGFloat = 8
+    #else
+    private let height: CGFloat = 58
+    private let cornerRadius: CGFloat = 22
+    #endif
+
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.gradely(.headline).weight(.semibold))
             .foregroundStyle(isEnabled ? Brand.onAccent : Color.secondary)
             .frame(maxWidth: .infinity)
-            .frame(minHeight: 58)
+            .frame(minHeight: height)
             .background {
-                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                     .fill(
                         isEnabled
                             ? AnyShapeStyle(Brand.gradient)
@@ -699,7 +708,7 @@ private struct LoginActionButtonStyle: ButtonStyle {
                     )
             }
             .overlay {
-                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                     .strokeBorder(
                         isEnabled ? Brand.primary.opacity(0.16) : Color.primary.opacity(0.06),
                         lineWidth: 1

@@ -4,6 +4,8 @@ struct SubjectsView: View {
     @State private var viewModel: SubjectsViewModel
     @State private var sortMode: SubjectSortMode = .focus
     @State private var siriPath: [String] = []
+    /// Mac only: the subject shown next to the list.
+    @State private var selectedSubjectID: String?
     private let siriSubjectID: String?
     private let siriRequestID: UUID?
     private let repository: SchoolRepository
@@ -71,9 +73,13 @@ struct SubjectsView: View {
             .navigationTitle(AppL10n.string("subjects.title"))
             .gradelyNavigationTitleDisplayMode(.inline)
             .toolbar {
+                // On the Mac the selected subject's page brings its own
+                // Gradey AI button; general chat stays on ⌘K.
+                #if !os(macOS)
                 ToolbarItem(placement: .gradelyTopBarLeading) {
                     GradeyAIToolbarButton(onOpen: onOpenGradeyAI)
                 }
+                #endif
 
                 ToolbarItem(placement: .gradelyTopBarTrailing) {
                     Button {
@@ -87,9 +93,11 @@ struct SubjectsView: View {
                     .accessibilityIdentifier("refreshButton")
                 }
 
+                #if !os(macOS)
                 ToolbarItem(placement: .gradelyTopBarTrailing) {
                     AccountSettingsButton(accountHub: accountHub)
                 }
+                #endif
             }
             .navigationDestination(for: String.self) { subjectID in
                 if let subject = viewModel.subjects.first(where: { $0.id == subjectID }) {
@@ -99,16 +107,38 @@ struct SubjectsView: View {
                 } else { ContentUnavailableView("detail.intelligence.subjectUnavailable", systemImage: "book.closed") }
             }
             .onChange(of: siriSubjectID) { _, id in if id == nil { siriPath = [] } }
-            .onChange(of: siriRequestID) { siriPath = siriSubjectID.map { [$0] } ?? [] }
+            .onChange(of: siriRequestID) { showSiriSubject() }
             .onChange(of: viewModel.snapshotStore?.revision) { viewModel.applySharedSnapshot() }
             .task {
                 await viewModel.loadIfNeeded()
-                if let siriSubjectID { siriPath = [siriSubjectID] }
+                if siriSubjectID != nil { showSiriSubject() }
             }
+            .gradelyOnRefreshCommand { await viewModel.refresh(forceRefresh: true) }
         }
     }
 
+    @ViewBuilder
     private var marksDashboard: some View {
+        #if os(macOS)
+        HStack(spacing: 0) {
+            marksList(selection: $selectedSubjectID)
+                .frame(width: 380)
+
+            Divider()
+
+            selectedSubjectDetail
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+        .gradelyScreenBackground()
+        .onAppear(perform: selectFirstSubjectIfNeeded)
+        .onChange(of: viewModel.subjects.map(\.id)) { selectFirstSubjectIfNeeded() }
+        #else
+        marksList(selection: nil)
+            .gradelyScreenBackground()
+        #endif
+    }
+
+    private func marksList(selection: Binding<String?>?) -> some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: Spacing.xl) {
                 if viewModel.isRefreshing {
@@ -134,6 +164,7 @@ struct SubjectsView: View {
                 SubjectDirectory(
                     subjects: displayedSubjects,
                     sortMode: $sortMode,
+                    selection: selection,
                     repository: repository,
                     snapshotStore: viewModel.snapshotStore,
                     absence: { viewModel.absence(for: $0) },
@@ -144,11 +175,43 @@ struct SubjectsView: View {
             .frame(maxWidth: 760)
             .frame(maxWidth: .infinity)
         }
-        .gradelyScreenBackground()
         .refreshable {
             await viewModel.refresh(forceRefresh: true)
         }
         .accessibilityIdentifier("subjectsList")
+    }
+
+    #if os(macOS)
+    @ViewBuilder
+    private var selectedSubjectDetail: some View {
+        if let subject = viewModel.subjects.first(where: { $0.id == selectedSubjectID }) {
+            SubjectDetailView(
+                viewModel: SubjectDetailViewModel(
+                    subject: subject,
+                    absence: viewModel.absence(for: subject),
+                    repository: repository,
+                    trend: trend(for: subject),
+                    prepared: viewModel.snapshotStore?.preparedCalculations[subject.id]
+                ),
+                snapshotStore: viewModel.snapshotStore,
+                isEmbedded: true
+            )
+            .id(subject.id)
+        }
+    }
+
+    private func selectFirstSubjectIfNeeded() {
+        guard !viewModel.subjects.contains(where: { $0.id == selectedSubjectID }) else { return }
+        selectedSubjectID = displayedSubjects.first?.id
+    }
+    #endif
+
+    private func showSiriSubject() {
+        #if os(macOS)
+        if let siriSubjectID { selectedSubjectID = siriSubjectID }
+        #else
+        siriPath = siriSubjectID.map { [$0] } ?? []
+        #endif
     }
 
     private var displayedSubjects: [Subject] {
@@ -247,6 +310,9 @@ private struct MarksHero: View {
 private struct SubjectDirectory: View {
     let subjects: [Subject]
     @Binding var sortMode: SubjectSortMode
+    /// When set, rows select a subject shown beside the list (Mac) instead of
+    /// pushing its page.
+    let selection: Binding<String?>?
     let repository: SchoolRepository
     let snapshotStore: SchoolSnapshotStore?
     let absence: (Subject) -> AbsencePerSubject?
@@ -265,28 +331,53 @@ private struct SubjectDirectory: View {
                     }
                 }
                 .pickerStyle(.segmented)
+                .labelsHidden()
                 .frame(maxWidth: 220)
                 .accessibilityIdentifier("subjectsSortPicker")
             }
         } content: {
             ForEach(subjects) { subject in
-                NavigationLink {
-                    SubjectDetailView(
-                        viewModel: SubjectDetailViewModel(
-                            subject: subject,
-                            absence: absence(subject),
-                            repository: repository,
-                            trend: trend(subject),
-                            prepared: snapshotStore?.preparedCalculations[subject.id]
-                        ),
-                        snapshotStore: snapshotStore
-                    )
-                } label: {
-                    SubjectRow(
-                        subject: subject,
-                        absence: absence(subject),
-                        prepared: snapshotStore?.preparedCalculations[subject.id]
-                    )
+                Group {
+                    if let selection {
+                        Button {
+                            selection.wrappedValue = subject.id
+                        } label: {
+                            SubjectRow(
+                                subject: subject,
+                                absence: absence(subject),
+                                prepared: snapshotStore?.preparedCalculations[subject.id],
+                                showsChevron: false
+                            )
+                            .background {
+                                if selection.wrappedValue == subject.id {
+                                    RoundedRectangle(cornerRadius: Radius.sm, style: .continuous)
+                                        .fill(Brand.primary.opacity(0.12))
+                                        .padding(.horizontal, -Spacing.sm)
+                                        .padding(.vertical, -Spacing.sm)
+                                }
+                            }
+                        }
+                        .accessibilityAddTraits(selection.wrappedValue == subject.id ? .isSelected : [])
+                    } else {
+                        NavigationLink {
+                            SubjectDetailView(
+                                viewModel: SubjectDetailViewModel(
+                                    subject: subject,
+                                    absence: absence(subject),
+                                    repository: repository,
+                                    trend: trend(subject),
+                                    prepared: snapshotStore?.preparedCalculations[subject.id]
+                                ),
+                                snapshotStore: snapshotStore
+                            )
+                        } label: {
+                            SubjectRow(
+                                subject: subject,
+                                absence: absence(subject),
+                                prepared: snapshotStore?.preparedCalculations[subject.id]
+                            )
+                        }
+                    }
                 }
                 .buttonStyle(.plain)
                 .accessibilityIdentifier("subjectRow-\(subject.id)")
@@ -299,6 +390,7 @@ private struct SubjectRow: View {
     let subject: Subject
     let absence: AbsencePerSubject?
     var prepared: PreparedGradeCalculation? = nil
+    var showsChevron = true
 
     var body: some View {
         let average = prepared == nil ? GradeMath.subjectAverage(subject) : prepared?.displayAverage
@@ -345,9 +437,11 @@ private struct SubjectRow: View {
                 }
             }
 
-            GradelyIcon(systemName: "chevron.right")
-                .font(.gradely(.caption).weight(.bold))
-                .foregroundStyle(.tertiary)
+            if showsChevron {
+                GradelyIcon(systemName: "chevron.right")
+                    .font(.gradely(.caption).weight(.bold))
+                    .foregroundStyle(.tertiary)
+            }
         }
         .contentShape(Rectangle())
     }

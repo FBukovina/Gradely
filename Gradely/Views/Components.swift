@@ -191,7 +191,7 @@ struct PlainLinkLabel: View {
         }
         .font(.gradely(.subheadline).weight(.semibold))
         .foregroundStyle(Brand.primary)
-        .frame(maxWidth: .infinity, minHeight: 44)
+        .frame(maxWidth: .infinity, minHeight: ControlMetrics.minHeight)
         .contentShape(Rectangle())
     }
 }
@@ -382,8 +382,10 @@ struct GitHubIcon: View {
 
 // MARK: - Account & Settings entry
 
+#if os(iOS)
 /// Toolbar button that opens the unified Account & Settings sheet.
-/// Shared by every primary tab, including Meals.
+/// Shared by every primary tab, including Meals. The Mac opens Settings as
+/// its own window from the menu bar (⌘,) instead.
 struct AccountSettingsButton: View {
     var accountHub: AnyView?
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
@@ -391,12 +393,6 @@ struct AccountSettingsButton: View {
 
     @ViewBuilder
     var body: some View {
-        #if os(macOS)
-        trigger
-            .sheet(isPresented: $isAccountHubPresented) {
-                presentedAccountHub
-            }
-        #else
         if horizontalSizeClass == .regular {
             trigger
                 .fullScreenCover(isPresented: $isAccountHubPresented) {
@@ -408,7 +404,6 @@ struct AccountSettingsButton: View {
                     presentedAccountHub
                 }
         }
-        #endif
     }
 
     private var trigger: some View {
@@ -432,6 +427,7 @@ struct AccountSettingsButton: View {
         }
     }
 }
+#endif
 
 // MARK: - Gradey AI entry
 
@@ -585,15 +581,26 @@ struct PlainSectionTitle: View {
 struct PrimaryButtonStyle: ButtonStyle {
     @Environment(\.isEnabled) private var isEnabled
 
+    #if os(macOS)
+    // A Mac push button's height, without the glow the phone CTA carries.
+    private let verticalPadding: CGFloat = Spacing.sm
+    private let cornerRadius: CGFloat = 8
+    private let glowOpacity = 0.0
+    #else
+    private let verticalPadding: CGFloat = Spacing.md + 2
+    private let cornerRadius: CGFloat = Radius.md
+    private let glowOpacity = 0.45
+    #endif
+
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.gradely(.headline))
             .foregroundStyle(Brand.onAccent)
             .frame(maxWidth: .infinity)
-            .padding(.vertical, Spacing.md + 2)
-            .background(Brand.gradient, in: RoundedRectangle(cornerRadius: Radius.md, style: .continuous))
+            .padding(.vertical, verticalPadding)
+            .background(Brand.gradient, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
             .shadow(
-                color: Brand.primary.opacity(isEnabled ? 0.45 : 0),
+                color: Brand.primary.opacity(isEnabled ? glowOpacity : 0),
                 radius: 16,
                 x: 0,
                 y: 8
@@ -625,7 +632,7 @@ struct GradelyAppleSignInButton: View {
                         .font(.gradely(.headline))
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
-                        .frame(height: 50)
+                        .frame(height: ControlMetrics.prominentButtonHeight)
                         .background(.black, in: RoundedRectangle(cornerRadius: Radius.sm, style: .continuous))
                 }
                 .buttonStyle(.plain)
@@ -647,7 +654,7 @@ struct GradelyAppleSignInButton: View {
             onCompletion(result)
         }
         .signInWithAppleButtonStyle(.black)
-        .frame(height: 50)
+        .frame(height: ControlMetrics.prominentButtonHeight)
         .clipShape(RoundedRectangle(cornerRadius: Radius.sm, style: .continuous))
     }
 }
@@ -660,7 +667,7 @@ struct BrandFieldStyle: ViewModifier {
         content
             .gradelyBorderlessTextFields()
             .padding(.horizontal, Spacing.md)
-            .padding(.vertical, Spacing.md)
+            .padding(.vertical, ControlMetrics.fieldVerticalPadding)
             .background(
                 RoundedRectangle(cornerRadius: Radius.sm, style: .continuous)
                     .fill(Color.gradelyTertiaryFill)

@@ -472,9 +472,20 @@ final class GradeyAppDelegate: NSObject, UIApplicationDelegate {
 }
 #elseif os(macOS)
 final class GradeyMacAppDelegate: NSObject, NSApplicationDelegate {
+    func applicationWillFinishLaunching(_ notification: Notification) {
+        // One window is the whole app; drop View ▸ Show Tab Bar and friends.
+        NSWindow.allowsAutomaticWindowTabbing = false
+    }
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         SchoolNotificationRouter.shared.install()
     }
+
+    /// Closing the window keeps Gradey in the Dock, like Mail or Music.
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        false
+    }
+
     func application(
         _ application: NSApplication,
         didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data

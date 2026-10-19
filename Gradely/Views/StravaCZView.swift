@@ -31,9 +31,11 @@ struct StravaCZView: View {
                         GradeyAIToolbarButton(onOpen: onOpenGradeyAI)
                     }
 
+                    #if !os(macOS)
                     ToolbarItem(placement: .gradelyTopBarTrailing) {
                         AccountSettingsButton(accountHub: accountHub)
                     }
+                    #endif
 
                     if viewModel.phase == .signedIn {
                         ToolbarItem(placement: .gradelyTopBarTrailing) {
@@ -53,6 +55,7 @@ struct StravaCZView: View {
         .task {
             await viewModel.bootstrap()
         }
+        .gradelyOnRefreshCommand { await viewModel.refresh(forceRefresh: true) }
         .alert(AppL10n.string("error.title"), isPresented: errorBinding) {
             Button(AppL10n.string("action.ok"), role: .cancel) {
                 viewModel.clearError()
@@ -132,6 +135,8 @@ struct StravaCZView: View {
             List {
                 if let session = viewModel.session {
                     StravaCZHeader(session: session, orderedCount: viewModel.menu?.orderedMeals.count ?? 0)
+                        .frame(maxWidth: 760)
+                        .frame(maxWidth: .infinity)
                         .listRowInsets(EdgeInsets(top: Spacing.md, leading: Spacing.lg, bottom: Spacing.sm, trailing: Spacing.lg))
                         .listRowSeparator(.hidden)
                         .listRowBackground(Color.clear)
@@ -157,6 +162,8 @@ struct StravaCZView: View {
                     ) { meal in
                         Task { await viewModel.toggleMeal(meal) }
                     }
+                    .frame(maxWidth: 760)
+                    .frame(maxWidth: .infinity)
                     .listRowInsets(EdgeInsets(top: Spacing.md, leading: Spacing.lg, bottom: Spacing.md, trailing: Spacing.lg))
                     .listRowSeparator(.hidden)
                     .listRowBackground(Color.clear)
@@ -345,14 +352,25 @@ private struct StravaCZMealSelectionButton: View {
     let isSubmitting: Bool
     let onToggle: () -> Void
 
+    #if os(macOS)
+    // Checkbox-sized for a pointer.
+    private let boxSize: CGFloat = 20
+    private let tapSize: CGFloat = 28
+    private let cornerRadius: CGFloat = 5
+    #else
+    private let boxSize: CGFloat = 36
+    private let tapSize: CGFloat = 44
+    private let cornerRadius: CGFloat = 8
+    #endif
+
     var body: some View {
         Button(action: onToggle) {
             ZStack {
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                     .fill(meal.ordered ? Brand.primary : Color.clear)
                     .overlay(
-                        RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .stroke(meal.ordered ? Brand.primary : Color.secondary.opacity(0.55), lineWidth: 2)
+                        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                            .stroke(meal.ordered ? Brand.primary : Color.secondary.opacity(0.55), lineWidth: boxSize < 30 ? 1.5 : 2)
                     )
 
                 if isSubmitting {
@@ -360,12 +378,12 @@ private struct StravaCZMealSelectionButton: View {
                         .controlSize(.small)
                         .tint(meal.ordered ? Brand.onAccent : Brand.primary)
                 } else if meal.ordered {
-                    GradelyIcon(systemName: "checkmark", size: 15)
+                    GradelyIcon(systemName: "checkmark", size: boxSize * 0.42)
                         .foregroundStyle(Brand.onAccent)
                 }
             }
-            .frame(width: 36, height: 36)
-            .frame(width: 44, height: 44)
+            .frame(width: boxSize, height: boxSize)
+            .frame(width: tapSize, height: tapSize)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

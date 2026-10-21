@@ -1094,7 +1094,8 @@ private extension GradeyAccountHubView {
                 }
             }
 
-            if let vavruska, vavruska.isEnabled || vavruska.course != nil {
+            // Always listed next to school and canteen: this is where people look for it.
+            if let vavruska {
                 DetailSectionHeader(title: "settings.connected.dance.title")
                 vavruskaSection(vavruska)
             }

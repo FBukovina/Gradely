@@ -1,6 +1,26 @@
 import Foundation
 import Observation
 
+/// Where a timetable comes from: your school account, or a friend's.
+struct TimetableSource {
+    var supportsPermanentTimetable: @MainActor () -> Bool
+    /// Your school's scope; nil for a friend, which turns off Planner links.
+    var schoolScope: @MainActor () -> SchoolDataScope?
+    var cachedWeek: @MainActor (Date, TimetableKind) -> TimetableWeek?
+    var loadWeek: @MainActor (Date, TimetableKind) async throws -> TimetableWeek
+    var loadUser: @MainActor () async -> UserResponse?
+
+    static func school(_ repository: SchoolRepository) -> TimetableSource {
+        TimetableSource(
+            supportsPermanentTimetable: { repository.supportsPermanentTimetable },
+            schoolScope: { (try? repository.currentStoredSession()).map(SchoolDataScope.init(session:)) },
+            cachedWeek: { date, kind in repository.loadCachedTimetable(weekContaining: date, kind: kind) },
+            loadWeek: { date, kind in try await repository.loadTimetable(weekContaining: date, kind: kind) },
+            loadUser: { await repository.loadUser() }
+        )
+    }
+}
+
 @MainActor
 @Observable
 final class TimetableViewModel {
@@ -16,24 +36,26 @@ final class TimetableViewModel {
     /// Any date inside the week currently on screen.
     private(set) var weekAnchor: Date
 
-    private let repository: SchoolRepository
+    private let source: TimetableSource
     private let today: Date
     private var hasLoaded = false
     private var activeRequestID = UUID()
 
-    init(repository: SchoolRepository, today: Date = Date()) {
-        self.repository = repository
+    convenience init(repository: SchoolRepository, today: Date = Date()) {
+        self.init(source: .school(repository), today: today)
+    }
+
+    init(source: TimetableSource, today: Date = Date()) {
+        self.source = source
         self.today = today
         weekAnchor = today
     }
 
     // MARK: - Derived state
 
-    var supportsPermanentTimetable: Bool { repository.supportsPermanentTimetable }
+    var supportsPermanentTimetable: Bool { source.supportsPermanentTimetable() }
 
-    var schoolScope: SchoolDataScope? {
-        (try? repository.currentStoredSession()).map(SchoolDataScope.init(session:))
-    }
+    var schoolScope: SchoolDataScope? { source.schoolScope() }
 
     var days: [ScheduledDay] { week?.days ?? [] }
 
@@ -61,14 +83,14 @@ final class TimetableViewModel {
         guard !hasLoaded else { return }
         hasLoaded = true
 
-        if let cached = repository.loadCachedTimetable(weekContaining: weekAnchor, kind: kind) {
+        if let cached = source.cachedWeek(weekAnchor, kind) {
             apply(cached, preserveSelection: false)
         }
 
         await refresh()
 
         if user == nil {
-            user = await repository.loadUser()
+            user = await source.loadUser()
         }
     }
 
@@ -91,7 +113,7 @@ final class TimetableViewModel {
         }
 
         do {
-            let loaded = try await repository.loadTimetable(weekContaining: requestedAnchor, kind: requestedKind)
+            let loaded = try await source.loadWeek(requestedAnchor, requestedKind)
             guard activeRequestID == requestID else { return }
             apply(loaded, preserveSelection: true)
         } catch {
@@ -163,7 +185,7 @@ final class TimetableViewModel {
         isRefreshing = false
         errorMessage = nil
         selectedDayID = nil
-        if let cached = repository.loadCachedTimetable(weekContaining: weekAnchor, kind: kind) {
+        if let cached = source.cachedWeek(weekAnchor, kind) {
             apply(cached, preserveSelection: false)
         } else {
             week = nil

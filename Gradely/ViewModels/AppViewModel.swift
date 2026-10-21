@@ -14,6 +14,7 @@ final class AppViewModel {
     private let repository: SchoolRepository
     private let stravaCZRepository: StravaCZRepository
     private let vavruska: VavruskaViewModel?
+    private let friends: FriendsViewModel?
     private let gradeyAuthClient: any GradeyAuthClient
     private let linkedAccountRepository: LinkedAccountRepository
     private let accountSettingsClient: (any GradeyAccountSettingsClient)?
@@ -33,6 +34,7 @@ final class AppViewModel {
         repository: SchoolRepository,
         stravaCZRepository: StravaCZRepository,
         vavruska: VavruskaViewModel? = nil,
+        friends: FriendsViewModel? = nil,
         gradeyAuthClient: any GradeyAuthClient,
         linkedAccountRepository: LinkedAccountRepository,
         accountSettingsClient: (any GradeyAccountSettingsClient)? = nil,
@@ -43,6 +45,7 @@ final class AppViewModel {
         self.repository = repository
         self.stravaCZRepository = stravaCZRepository
         self.vavruska = vavruska
+        self.friends = friends
         self.gradeyAuthClient = gradeyAuthClient
         self.linkedAccountRepository = linkedAccountRepository
         self.accountSettingsClient = accountSettingsClient
@@ -139,6 +142,7 @@ final class AppViewModel {
     func signOut() async {
         await stravaCZRepository.logout()
         await vavruska?.disconnect()
+        friends?.removeAll()
         await RevenueCatIdentity.reset()
         IntercomIdentity.reset()
         await gradeyAuthClient.signOut()
@@ -162,6 +166,7 @@ final class AppViewModel {
         try? repository.clearLocalCaches()
         stravaCZRepository.clearCachedMenu()
         vavruska?.clearCache()
+        friends?.clearCaches()
     }
 
     func resetAsNewUser() async {

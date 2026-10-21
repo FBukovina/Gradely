@@ -10,12 +10,17 @@ struct TimetableView: View {
     private let accountHub: AnyView?
     private let onOpenGradeyAI: () -> Void
     private let vavruska: VavruskaViewModel?
+    private let friends: FriendsViewModel?
     @State private var isDancePresented = false
+    @State private var selectedFriendID: UUID?
+    @State private var friendViewModels: [UUID: TimetableViewModel] = [:]
+    @State private var isAddFriendPresented = false
 
     init(
         repository: SchoolRepository,
         plannerStore: PlannerStore? = nil,
         vavruska: VavruskaViewModel? = nil,
+        friends: FriendsViewModel? = nil,
         accountHub: AnyView? = nil,
         onOpenGradeyAI: @escaping () -> Void = {},
         siriTarget: GradeySiriDestination? = nil
@@ -29,6 +34,23 @@ struct TimetableView: View {
         self.accountHub = accountHub
         self.onOpenGradeyAI = onOpenGradeyAI
         self.vavruska = vavruska
+        self.friends = friends
+    }
+
+    /// The friend on screen, or nil for your own timetable.
+    private var selectedFriend: Friend? {
+        friends?.friend(id: selectedFriendID)
+    }
+
+    private var activeViewModel: TimetableViewModel {
+        selectedFriend.flatMap { friendViewModels[$0.id] } ?? viewModel
+    }
+
+    private func select(friendID: UUID?) {
+        if let friendID, friendViewModels[friendID] == nil, let friends, let friend = friends.friend(id: friendID) {
+            friendViewModels[friendID] = TimetableViewModel(source: friends.timetableSource(for: friend))
+        }
+        selectedFriendID = friendID
     }
 
     var body: some View {
@@ -36,39 +58,65 @@ struct TimetableView: View {
             content
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .gradelyScreenBackground()
-                .navigationTitle(AppL10n.string("rozvrh.title"))
+                .navigationTitle(selectedFriend?.name ?? AppL10n.string("rozvrh.title"))
                 .gradelyNavigationTitleDisplayMode(.inline)
+                #if os(iOS)
+                .toolbarTitleMenu {
+                    if friends != nil { personMenuContent }
+                    if activeViewModel.supportsPermanentTimetable { timetableKindPicker }
+                }
+                #endif
                 .toolbar {
                     ToolbarItem(placement: .gradelyTopBarLeading) {
                         GradeyAIToolbarButton(onOpen: onOpenGradeyAI)
                     }
 
-                    if viewModel.supportsPermanentTimetable {
+                    #if os(macOS)
+                    if activeViewModel.supportsPermanentTimetable {
                         ToolbarItem(placement: .gradelyTopBarTrailing) {
                             timetableKindMenu
                         }
                     }
+                    #endif
 
                     ToolbarItem(placement: .gradelyTopBarTrailing) {
                         Button {
-                            Task { await viewModel.refresh() }
+                            Task { await activeViewModel.refresh() }
                         } label: {
                             GradelyIcon(systemName: "arrow.clockwise")
-                                .symbolEffect(.rotate, options: .repeating, isActive: viewModel.isRefreshing)
+                                .symbolEffect(.rotate, options: .repeating, isActive: activeViewModel.isRefreshing)
                         }
-                        .disabled(viewModel.isLoading || viewModel.isRefreshing)
+                        .disabled(activeViewModel.isLoading || activeViewModel.isRefreshing)
                         .accessibilityLabel(AppL10n.string("action.refresh"))
                         .accessibilityIdentifier("timetableRefreshButton")
                     }
 
-                    ToolbarItem(placement: .gradelyTopBarTrailing) {
-                        NavigationLink {
-                            PlannerView(store: plannerStore, resolver: plannerResolver, displayedWeek: viewModel.week, subjects: plannerSubjects)
-                        } label: {
-                            GradelyIcon(systemName: "checklist")
+                    #if os(macOS)
+                    if friends != nil {
+                        ToolbarItem(placement: .gradelyTopBarTrailing) {
+                            Menu {
+                                personMenuContent
+                            } label: {
+                                GradelyIcon("user-group")
+                                    .gradelyToolbarIconButton()
+                            }
+                            .accessibilityLabel(AppL10n.string("friends.menu.label"))
+                            .accessibilityIdentifier("timetablePersonMenu")
                         }
-                        .accessibilityLabel(AppL10n.string("planner.title"))
-                        .accessibilityIdentifier("timetablePlannerButton")
+                    }
+                    #endif
+
+                    // The Planner is yours; it isn't offered on a friend's timetable.
+                    if selectedFriend == nil {
+                        ToolbarItem(placement: .gradelyTopBarTrailing) {
+                            NavigationLink {
+                                PlannerView(store: plannerStore, resolver: plannerResolver, displayedWeek: viewModel.week, subjects: plannerSubjects)
+                            } label: {
+                                GradelyIcon(systemName: "checklist")
+                            }
+                            .accessibilityLabel(AppL10n.string("planner.title"))
+                            .accessibilityIdentifier("timetablePlannerButton")
+                        }
                     }
 
                     #if !os(macOS)
@@ -81,10 +129,19 @@ struct TimetableView: View {
                     plannerStore.loadIfNeeded()
                     await viewModel.loadIfNeeded()
                 }
-                .gradelyOnRefreshCommand { await viewModel.refresh() }
+                .task(id: selectedFriendID) {
+                    await activeViewModel.loadIfNeeded()
+                }
+                .onChange(of: friends?.friends) {
+                    // A friend removed in Settings: back to your own timetable.
+                    if selectedFriendID != nil, selectedFriend == nil { selectedFriendID = nil }
+                    friendViewModels = friendViewModels.filter { id, _ in friends?.friend(id: id) != nil }
+                }
+                .gradelyOnRefreshCommand { await activeViewModel.refresh() }
                 .task(id: siriTarget?.requestID) {
                     guard let target = siriTarget, let day = target.day, let date = day.date, let lesson = target.lesson,
                           target.scope == viewModel.schoolScope else { return }
+                    selectedFriendID = nil
                     await viewModel.showSiriDay(date)
                     guard target.scope == viewModel.schoolScope, let siriService else { return }
                     do { try siriService.validateDestination(target) } catch { return }
@@ -95,35 +152,72 @@ struct TimetableView: View {
                         VavruskaView(viewModel: vavruska)
                     }
                 }
+                .sheet(isPresented: $isAddFriendPresented) {
+                    if let friends {
+                        AddFriendView(friends: friends) { friend in
+                            select(friendID: friend.id)
+                        }
+                    }
+                }
                 .sheet(item: $selectedLesson) { selection in
                     LessonDetailSheet(
-                        lesson: selection.lesson, day: selection.day, scope: viewModel.schoolScope,
+                        lesson: selection.lesson, day: selection.day, scope: activeViewModel.schoolScope,
                         plannerStore: plannerStore, resolver: plannerResolver,
-                        displayedWeek: viewModel.week, subjects: plannerSubjects
+                        displayedWeek: activeViewModel.week, subjects: plannerSubjects
                     )
                 }
         }
     }
 
-    /// The weekly/permanent switch lives in the trailing toolbar so the timetable
-    /// itself stays a single uninterrupted column.
-    private var timetableKindMenu: some View {
-        Menu {
-            Picker(AppL10n.string("timetable.kind"), selection: Binding(
-                get: { viewModel.kind },
-                set: { kind in
-                    if viewModel.setKind(kind) {
-                        Task { await viewModel.refresh() }
-                    }
-                }
+    /// You, then each friend, then Add friend.
+    @ViewBuilder
+    private var personMenuContent: some View {
+        if let friends {
+            Picker(AppL10n.string("friends.menu.label"), selection: Binding(
+                get: { selectedFriendID },
+                set: { select(friendID: $0) }
             )) {
-                Text("timetable.kind.weekly").tag(TimetableKind.weekly)
-                Text("timetable.kind.permanent").tag(TimetableKind.permanent)
+                Text("friends.menu.me").tag(UUID?.none)
+                ForEach(friends.friends) { friend in
+                    Text(verbatim: friend.name).tag(UUID?.some(friend.id))
+                }
             }
             .pickerStyle(.inline)
-            .accessibilityIdentifier("timetableKindPicker")
+
+            Button {
+                isAddFriendPresented = true
+            } label: {
+                GradelyLabel("friends.menu.add", systemImage: "plus")
+            }
+            .accessibilityIdentifier("timetableAddFriendButton")
+        }
+    }
+
+    private var timetableKindPicker: some View {
+        Picker(AppL10n.string("timetable.kind"), selection: Binding(
+            get: { activeViewModel.kind },
+            set: { kind in
+                if activeViewModel.setKind(kind) {
+                    Task { await activeViewModel.refresh() }
+                }
+            }
+        )) {
+            Text("timetable.kind.weekly").tag(TimetableKind.weekly)
+            Text("timetable.kind.permanent").tag(TimetableKind.permanent)
+        }
+        .pickerStyle(.inline)
+        .accessibilityIdentifier("timetableKindPicker")
+    }
+
+    /// On the Mac the weekly/permanent switch lives in the trailing toolbar so the
+    /// timetable itself stays a single uninterrupted column. On iPhone it sits in
+    /// the title menu next to whose timetable it is, because a fourth toolbar
+    /// button next to the title menu pushes Planner and Settings into an overflow.
+    private var timetableKindMenu: some View {
+        Menu {
+            timetableKindPicker
         } label: {
-            GradelyIcon(systemName: viewModel.kind == .permanent ? "calendar.badge.clock" : "calendar")
+            GradelyIcon(systemName: activeViewModel.kind == .permanent ? "calendar.badge.clock" : "calendar")
                 .gradelyToolbarIconButton()
         }
         .accessibilityLabel(AppL10n.string("timetable.kind"))
@@ -132,7 +226,7 @@ struct TimetableView: View {
 
     @ViewBuilder
     private var content: some View {
-        if viewModel.isLoading && viewModel.week == nil {
+        if activeViewModel.isLoading && activeViewModel.week == nil {
             ContentUnavailableView {
                 ProgressView()
                     .controlSize(.large)
@@ -140,14 +234,14 @@ struct TimetableView: View {
                 Text("timetable.loading")
             }
             .accessibilityIdentifier("timetableLoadingView")
-        } else if let errorMessage = viewModel.errorMessage, viewModel.week == nil {
+        } else if let errorMessage = activeViewModel.errorMessage, activeViewModel.week == nil {
             ContentUnavailableView {
                 GradelyLabel(AppL10n.string("error.title"), systemImage: "exclamationmark.triangle")
             } description: {
                 Text(errorMessage)
             } actions: {
                 Button(AppL10n.string("action.retry")) {
-                    Task { await viewModel.refresh() }
+                    Task { await activeViewModel.refresh() }
                 }
                 .buttonStyle(.borderedProminent)
             }
@@ -159,8 +253,8 @@ struct TimetableView: View {
 
     private var timetable: some View {
         VStack(spacing: 0) {
-            if viewModel.kind == .weekly {
-                WeekNavBar(viewModel: viewModel)
+            if activeViewModel.kind == .weekly {
+                WeekNavBar(viewModel: activeViewModel)
             } else {
                 HStack(alignment: .top, spacing: Spacing.sm) {
                     GradelyIcon(systemName: "calendar.badge.clock", size: 15)
@@ -182,7 +276,7 @@ struct TimetableView: View {
             #if os(macOS)
             Divider()
             WeekGrid(
-                viewModel: viewModel,
+                viewModel: activeViewModel,
                 plannerItems: attachedItems,
                 afterSchool: afterSchool,
                 onSelectDance: { isDancePresented = true }
@@ -190,7 +284,7 @@ struct TimetableView: View {
                 selectedLesson = PlannerLessonSelection(lesson: lesson, day: day)
             }
             #else
-            DayStrip(viewModel: viewModel)
+            DayStrip(viewModel: activeViewModel)
             Divider()
             dayContent
             #endif
@@ -200,7 +294,7 @@ struct TimetableView: View {
     private var dayContent: some View {
         ScrollView {
             LazyVStack(spacing: 0) {
-                if viewModel.isRefreshing {
+                if activeViewModel.isRefreshing {
                     HStack(spacing: Spacing.sm) {
                         ProgressView()
                         Text("timetable.refreshing")
@@ -211,8 +305,8 @@ struct TimetableView: View {
                     .padding(.bottom, Spacing.xs)
                 }
 
-                let dance = viewModel.selectedDay.map(afterSchool) ?? []
-                if let day = viewModel.selectedDay, day.hasLessons {
+                let dance = activeViewModel.selectedDay.map(afterSchool) ?? []
+                if let day = activeViewModel.selectedDay, day.hasLessons {
                     ForEach(day.lessons) { lesson in
                         if lesson.id != day.lessons.first?.id {
                             Divider()
@@ -221,23 +315,23 @@ struct TimetableView: View {
                             selectedLesson = PlannerLessonSelection(lesson: lesson, day: day)
                         }
                         .accessibilityIdentifier("lessonRow-\(lesson.id)")
-                        .gradeySiriContext(.lesson(lesson, day, viewModel.schoolScope))
+                        .gradeySiriContext(.lesson(lesson, day, activeViewModel.schoolScope))
                     }
                 } else if dance.isEmpty {
-                    EmptyDayView(day: viewModel.selectedDay)
+                    EmptyDayView(day: activeViewModel.selectedDay)
                         .padding(.top, Spacing.xxl)
                 }
 
                 if let vavruska, !dance.isEmpty {
                     VavruskaAfterSchoolBlock(events: dance, viewModel: vavruska)
-                        .padding(.top, viewModel.selectedDay?.hasLessons == true ? Spacing.lg : 0)
+                        .padding(.top, activeViewModel.selectedDay?.hasLessons == true ? Spacing.lg : 0)
                 }
             }
             .padding(.horizontal, Spacing.lg)
             .padding(.vertical, Spacing.md)
         }
         .refreshable {
-            await viewModel.refresh()
+            await activeViewModel.refresh()
             await vavruska?.refreshIfNeeded(force: true)
         }
         .accessibilityIdentifier("timetableList")
@@ -245,12 +339,12 @@ struct TimetableView: View {
 
     /// Dance lessons on a school day of the weekly timetable (weekends never show here).
     private func afterSchool(_ day: ScheduledDay) -> [VavruskaEvent] {
-        guard let vavruska, viewModel.kind == .weekly, let date = day.date else { return [] }
+        guard let vavruska, selectedFriend == nil, activeViewModel.kind == .weekly, let date = day.date else { return [] }
         return vavruska.events(on: date)
     }
 
     private func attachedItems(_ lesson: ScheduledLesson, day: ScheduledDay) -> [PlannerItem] {
-        guard let scope = viewModel.schoolScope else { return [] }
+        guard let scope = activeViewModel.schoolScope else { return [] }
         return plannerStore.attachedItems(to: lesson, on: day, scope: scope)
     }
 

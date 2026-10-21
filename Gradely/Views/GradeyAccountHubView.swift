@@ -74,6 +74,7 @@ struct GradeyAccountHubView: View {
     let repository: SchoolRepository
     let stravaCZRepository: StravaCZRepository
     let vavruska: VavruskaViewModel?
+    let friends: FriendsViewModel?
     let schoolDirectoryProvider: any SchoolDirectoryProviding
     let supportTipProvider: any SupportTipProviding
     let notificationAuthorizer: any NotificationAuthorizing
@@ -126,6 +127,7 @@ struct GradeyAccountHubView: View {
         repository: SchoolRepository,
         stravaCZRepository: StravaCZRepository,
         vavruska: VavruskaViewModel? = nil,
+        friends: FriendsViewModel? = nil,
         schoolDirectoryProvider: any SchoolDirectoryProviding,
         linkedAccountRepository: LinkedAccountRepository,
         notificationClient: any DevicePushTokenClient,
@@ -147,6 +149,7 @@ struct GradeyAccountHubView: View {
         self.repository = repository
         self.stravaCZRepository = stravaCZRepository
         self.vavruska = vavruska
+        self.friends = friends
         self.schoolDirectoryProvider = schoolDirectoryProvider
         self.supportTipProvider = supportTipProvider
         self.notificationAuthorizer = notificationAuthorizer
@@ -1098,6 +1101,11 @@ private extension GradeyAccountHubView {
             if let vavruska {
                 DetailSectionHeader(title: "settings.connected.dance.title")
                 vavruskaSection(vavruska)
+            }
+
+            if let friends {
+                DetailSectionHeader(title: "friends.settings.title")
+                FriendsSettingsSection(friends: friends)
             }
 
             if isGuestMode {

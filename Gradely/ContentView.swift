@@ -23,6 +23,7 @@ struct ContentView: View {
     private let schoolSnapshotStore: SchoolSnapshotStore
     private let stravaCZRepository: StravaCZRepository
     private let vavruska: VavruskaViewModel
+    private let friends: FriendsViewModel
     private let schoolDirectoryProvider: any SchoolDirectoryProviding
     private let supportTipProvider: any SupportTipProviding
     private let watchSyncService: (any WatchSyncing)?
@@ -100,6 +101,7 @@ struct ContentView: View {
         _plannerStore = State(initialValue: environment.makePlannerStore())
         stravaCZRepository = environment.stravaCZRepository
         vavruska = environment.vavruskaViewModel
+        friends = environment.friendsViewModel
         schoolDirectoryProvider = environment.schoolDirectoryProvider
         supportTipProvider = environment.supportTipProvider
         watchSyncService = environment.watchSyncService
@@ -139,6 +141,7 @@ struct ContentView: View {
             repository: environment.repository,
             stravaCZRepository: environment.stravaCZRepository,
             vavruska: environment.vavruskaViewModel,
+            friends: environment.friendsViewModel,
             gradeyAuthClient: environment.gradeyAuthClient,
             linkedAccountRepository: environment.linkedAccountRepository,
             accountSettingsClient: environment.devicePushTokenClient,
@@ -244,6 +247,7 @@ struct ContentView: View {
                                 repository: repository,
                                 plannerStore: plannerStore,
                                 vavruska: vavruska,
+                                friends: friends,
                                 accountHub: AnyView(accountHub()),
                                 onOpenGradeyAI: presentGradeyAI,
                                 siriTarget: siriLessonTarget
@@ -492,6 +496,7 @@ struct ContentView: View {
             repository: repository,
             stravaCZRepository: stravaCZRepository,
             vavruska: vavruska,
+            friends: friends,
             schoolDirectoryProvider: schoolDirectoryProvider,
             linkedAccountRepository: linkedAccountRepository,
             notificationClient: devicePushTokenClient,

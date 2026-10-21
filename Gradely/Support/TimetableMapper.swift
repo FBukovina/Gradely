@@ -83,3 +83,26 @@ enum TimetableMapper {
         return trimmed.isEmpty ? nil : trimmed
     }
 }
+
+extension TimetableResponse {
+    /// Puts weekday-only days (a permanent or imported timetable) onto the dates
+    /// of the week containing `date`.
+    func rebased(toWeekContaining date: Date) -> TimetableResponse {
+        let monday = TimetableDates.monday(of: date)
+        let shiftedDays = days.map { day -> TimetableDayDTO in
+            let offset = max(0, day.dayOfWeek - 1)
+            let shifted = TimetableDates.weekCalendar.date(byAdding: .day, value: offset, to: monday) ?? monday
+            return TimetableDayDTO(
+                atoms: day.atoms,
+                dayOfWeek: day.dayOfWeek,
+                date: TimetableDates.apiDateString(shifted),
+                dayDescription: day.dayDescription,
+                dayType: day.dayType
+            )
+        }
+        return TimetableResponse(
+            hours: hours, days: shiftedDays, classes: classes, groups: groups,
+            subjects: subjects, teachers: teachers, rooms: rooms, cycles: cycles
+        )
+    }
+}

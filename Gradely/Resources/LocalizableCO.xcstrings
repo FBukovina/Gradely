@@ -1469,13 +1469,13 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "škola a jídelna"
+            "value" : "škola, jídelna a kámoši"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "school and canteen"
+            "value" : "school, canteen and friends"
           }
         }
       }

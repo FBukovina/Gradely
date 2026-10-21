@@ -450,28 +450,7 @@ struct MockBakalariClient: BakalariClient {
 
     /// Shifts the fixture's day dates onto the requested week so demo week navigation shows lessons.
     static func rebased(_ response: TimetableResponse, toWeekContaining date: Date) -> TimetableResponse {
-        let monday = TimetableDates.monday(of: date)
-        let days = response.days.map { day -> TimetableDayDTO in
-            let offset = max(0, day.dayOfWeek - 1)
-            let shifted = TimetableDates.weekCalendar.date(byAdding: .day, value: offset, to: monday) ?? monday
-            return TimetableDayDTO(
-                atoms: day.atoms,
-                dayOfWeek: day.dayOfWeek,
-                date: TimetableDates.apiDateString(shifted),
-                dayDescription: day.dayDescription,
-                dayType: day.dayType
-            )
-        }
-        return TimetableResponse(
-            hours: response.hours,
-            days: days,
-            classes: response.classes,
-            groups: response.groups,
-            subjects: response.subjects,
-            teachers: response.teachers,
-            rooms: response.rooms,
-            cycles: response.cycles
-        )
+        response.rebased(toWeekContaining: date)
     }
 }
 

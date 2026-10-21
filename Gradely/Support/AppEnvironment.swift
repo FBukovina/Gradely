@@ -5,6 +5,7 @@ import Foundation
     let schoolSnapshotStore: SchoolSnapshotStore
     let stravaCZRepository: StravaCZRepository
     let vavruskaViewModel: VavruskaViewModel
+    let friendsViewModel: FriendsViewModel
     let schoolDirectoryProvider: any SchoolDirectoryProviding
     let supportTipProvider: any SupportTipProviding
     let watchSyncService: (any WatchSyncing)?
@@ -23,6 +24,7 @@ import Foundation
         repository: SchoolRepository,
         stravaCZRepository: StravaCZRepository? = nil,
         vavruskaRepository: VavruskaRepository? = nil,
+        friendRepository: FriendRepository? = nil,
         schoolDirectoryProvider: any SchoolDirectoryProviding,
         supportTipProvider: any SupportTipProviding = MockSupportTipService(),
         watchSyncService: (any WatchSyncing)? = nil,
@@ -42,6 +44,13 @@ import Foundation
         self.repository = repository
         self.stravaCZRepository = stravaCZRepository ?? AppEnvironment.makeMockStravaCZRepository()
         self.vavruskaViewModel = VavruskaViewModel(repository: vavruskaRepository ?? AppEnvironment.makeMockVavruskaRepository())
+        self.friendsViewModel = FriendsViewModel(
+            repository: friendRepository ?? AppEnvironment.makeMockFriendRepository(),
+            schoolDirectoryProvider: schoolDirectoryProvider,
+            ownSchoolURL: { [repository] in
+                (try? repository.currentStoredSession()).flatMap { $0.provider == .bakalari ? $0.baseURL : nil }
+            }
+        )
         self.schoolDirectoryProvider = schoolDirectoryProvider
         self.supportTipProvider = supportTipProvider
         self.watchSyncService = watchSyncService
@@ -131,6 +140,12 @@ import Foundation
                 client: URLSessionVavruskaClient(),
                 courseStore: VavruskaCourseStore(),
                 cache: (try? VavruskaCache()) ?? InMemoryVavruskaCache()
+            ),
+            friendRepository: FriendRepository(
+                store: (try? FriendStore()) ?? InMemoryFriendStore(),
+                client: DemoAwareBakalariClient(liveClient: URLSessionBakalariClient()),
+                publicClient: URLSessionBakalariPublicTimetableClient(),
+                cache: timetableCache
             ),
             schoolDirectoryProvider: schoolDirectoryProvider,
             supportTipProvider: supportTipProvider,
@@ -312,6 +327,7 @@ import Foundation
                 connected: arguments.contains("-uiTestingVavruskaConnected"),
                 calendarUnavailable: arguments.contains("-uiTestingVavruskaCalendarGone")
             ),
+            friendRepository: makeMockFriendRepository(seeded: arguments.contains("-uiTestingFriends")),
             schoolDirectoryProvider: schoolDirectoryProvider,
             supportTipProvider: MockSupportTipService(),
             gradeyAuthClient: gradeyAuthClient,
@@ -352,6 +368,13 @@ import Foundation
             sessionStore: InMemoryStravaCZSessionStore(session: session),
             menuCache: InMemoryStravaCZMenuCache(cachedMenu: menu)
         )
+    }
+
+    static func makeMockFriendRepository(seeded: Bool = false) -> FriendRepository {
+        let store = seeded
+            ? InMemoryFriendStore(friends: PreviewData.friends, imported: [PreviewData.friendAnnaID: PreviewData.friendDraft.makeResponse()])
+            : InMemoryFriendStore()
+        return FriendRepository(store: store, client: MockBakalariClient(), publicClient: MockBakalariPublicTimetableClient())
     }
 
     static func makeMockVavruskaRepository(connected: Bool = false, calendarUnavailable: Bool = false) -> VavruskaRepository {

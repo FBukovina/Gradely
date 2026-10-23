@@ -29,38 +29,38 @@ struct PrivacyPolicyChange: Identifiable, Hashable, Sendable {
 /// release that does not touch the policy must not re-prompt. Bump it only when
 /// the published policy materially changes, and refresh `changes` when you do.
 enum PrivacyPolicyRevision {
-    /// Revision 2 — the September 2026 rewrite that removed Bakaláři password
-    /// upload and documented the Planner, Gradey AI and Apple Watch surfaces.
-    static let current = 2
+    /// Revision 3 adds friends' timetables, TŠ Vavruška dance classes and
+    /// school homework. Revision 2 (effective 15 September 2026) removed
+    /// Bakaláři password upload and documented the Planner, Gradey AI and
+    /// Apple Watch.
+    static let current = 3
 
-    // TODO: Confirm before release. `Docs/PrivacyPolicy.en.md` still carries
-    // "Effective date: [insert publication date]", and the coordinated app and
-    // Edge Function release has not shipped yet. This date must match the
-    // published policy on help.bukovinafilip.com.
+    // Revision 3 is drafted in `Docs/PrivacyPolicy.en.md` and
+    // `Docs/PrivacyPolicy-revision3.cs.md` but not published yet. Publish both
+    // on help.bukovinafilip.com, set `effectiveDate` to the date they show,
+    // then delete this block.
+    #if !DEBUG
+    #error("Publish privacy policy revision 3 and set PrivacyPolicyRevision.effectiveDate to its date")
+    #endif
+
     static let effectiveDate: Date = {
         var components = DateComponents()
         components.year = 2026
-        components.month = 9
-        components.day = 15
+        components.month = 10
+        components.day = 26
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(identifier: "Europe/Prague") ?? .gmt
-        return calendar.date(from: components) ?? Date(timeIntervalSince1970: 1_789_776_000)
+        return calendar.date(from: components) ?? Date(timeIntervalSince1970: 1_792_969_200)
     }()
 
     /// Ordered most-important first; the sheet renders them in this order.
     static let changes: [PrivacyPolicyChange] = [
-        // Policy section 3.2
-        PrivacyPolicyChange(id: "password", iconName: "security-lock"),
-        // Policy section 7
-        PrivacyPolicyChange(id: "cleanup", iconName: "delete-02"),
-        // Policy section 3.2
-        PrivacyPolicyChange(id: "tokens", iconName: "key-01"),
-        // Policy section 3.10
-        PrivacyPolicyChange(id: "planner", iconName: "calendar-03"),
-        // Policy section 3.5
-        PrivacyPolicyChange(id: "ai", iconName: "sparkles"),
-        // Policy section 3.4
-        PrivacyPolicyChange(id: "watch", iconName: "smart-watch-01"),
+        // Policy section 3.11
+        PrivacyPolicyChange(id: "friends", iconName: "user-group"),
+        // Policy section 3.12
+        PrivacyPolicyChange(id: "dance", iconName: "music-note-01"),
+        // Policy section 3.3
+        PrivacyPolicyChange(id: "homework", iconName: "book-open-01"),
     ]
 
     /// Effective date in the in-app language, not the device language.

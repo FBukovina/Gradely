@@ -20133,528 +20133,6 @@
         }
       }
     },
-    "privacy.update.change.ai.detail" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Google Firebase a Microsoft Azure OpenAI zpracovávají tvoje zprávy, související historii chatu a vybrané školní údaje pro vytváření odpovědí. Obecný chat školní údaje automaticky nepřikládá. Poznámky z Plánovače se zahrnou jen tehdy, když je zapneš pro vybraný test. Uložené chaty můžeš smazat nebo v nastavení odvolat souhlas s AI. Odpovědi můžou být chybné; důležité informace si ověř."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Google Firebase a Microsoft Azure OpenAI zpracovávají tvoje zprávy, související historii chatu a vybrané školní údaje pro vytváření odpovědí. obecný chat školní údaje automaticky nepřikládá. poznámky z plánovače se zahrnou jen tehdy, když je zapneš pro vybraný test. uložené chaty můžeš smazat nebo v nastavení odvolat souhlas s AI. odpovědi můžou být chybné; důležité informace si ověř."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Google Firebase and Microsoft Azure OpenAI process your messages, relevant chat history and selected school information to generate replies. General chat does not automatically attach school data. Planner notes are included only when you enable them for a selected test. You can delete saved chats or withdraw AI consent in settings. Replies can be wrong; verify important information."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Google Firebase and Microsoft Azure OpenAI process your messages, relevant chat history and selected school information to generate replies. general chat does not automatically attach school data. planner notes are included only when you enable them for a selected test. you can delete saved chats or withdraw AI consent in settings. replies can be wrong; verify important information."
-          }
-        }
-      }
-    },
-    "privacy.update.change.ai.summary" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gradey AI je volitelná a vyžaduje samostatný souhlas. Sám vybíráš, které školní údaje chceš sdílet."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gradey AI je volitelná a vyžaduje samostatný souhlas. sám vybíráš, které školní údaje chceš sdílet."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gradey AI is optional and requires separate consent. You choose which school information to share."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gradey AI is optional and requires separate consent. you choose which school information to share."
-          }
-        }
-      }
-    },
-    "privacy.update.change.ai.title" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gradey AI je popsáno podrobně"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gradey AI je popsáno podrobně"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gradey AI is described in full"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gradey AI is described in full"
-          }
-        }
-      }
-    },
-    "privacy.update.change.cleanup.detail" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Starší verze Gradey hesla do Bakalářů nahrávaly. Tato pole jsme odstranili z aktivní serverové databáze a ověřili, že v jejích šifrovaných záznamech žádná nezůstala. Zápisy nyní pole s hesly před uložením odstraňují. Smazání z aktivní databáze neodstraňuje okamžitě kopie v historických zálohách a protokolech, na které se vztahují jejich podmínky uchování."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "starší verze Gradey hesla do bakalářů nahrávaly. tato pole jsme odstranili z aktivní serverové databáze a ověřili, že v jejích šifrovaných záznamech žádná nezůstala. zápisy nyní pole s hesly před uložením odstraňují. smazání z aktivní databáze neodstraňuje okamžitě kopie v historických zálohách a protokolech, na které se vztahují jejich podmínky uchování."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Earlier versions of Gradey did upload Bakaláři passwords. We removed those fields from the active backend database and verified that none remained in its encrypted records. Writes now strip password fields before storage. Deleting from an active database does not immediately remove historical backup and log copies, which stay subject to their retention arrangements."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "earlier versions of Gradey did upload Bakaláři passwords. we removed those fields from the active backend database and verified that none remained in its encrypted records. writes now strip password fields before storage. deleting from an active database does not immediately remove historical backup and log copies, which stay subject to their retention arrangements."
-          }
-        }
-      }
-    },
-    "privacy.update.change.cleanup.summary" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pole s hesly jsme 8. září 2026 odstranili z aktivní databáze."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "pole s hesly jsme 8. září 2026 odstranili z aktivní databáze."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Password fields were removed from our active database on 8 September 2026."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "password fields were removed from our active database on 8 september 2026."
-          }
-        }
-      }
-    },
-    "privacy.update.change.cleanup.title" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Dříve uložená hesla jsme smazali"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "dříve uložená hesla jsme smazali"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "We deleted the passwords we used to store"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "we deleted the passwords we used to store"
-          }
-        }
-      }
-    },
-    "privacy.update.change.password.detail" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tvoje zařízení posílá uživatelské jméno a heslo přímo na HTTPS server školy. Gradey je uchovává v Klíčence vázané na dané zařízení, aby se v případě potřeby mohlo ke škole znovu přihlásit. Heslo není součástí dat, která aktualizovaná aplikace posílá do Gradey."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "tvoje zařízení posílá uživatelské jméno a heslo přímo na HTTPS server školy. Gradey je uchovává v klíčence vázané na dané zařízení, aby se v případě potřeby mohlo ke škole znovu přihlásit. heslo není součástí dat, která aktualizovaná aplikace posílá do Gradey."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Your device sends your username and password straight to your school’s HTTPS server to sign in. Gradey keeps them in the device Keychain, tied to that device, so it can sign in to the school again when it needs to. The password is not part of what the updated app sends to Gradey."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "your device sends your username and password straight to your school’s HTTPS server to sign in. Gradey keeps them in the device Keychain, tied to that device, so it can sign in to the school again when it needs to. the password is not part of what the updated app sends to Gradey."
-          }
-        }
-      }
-    },
-    "privacy.update.change.password.summary" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gradey už nenahrává tvoje heslo do Bakalářů na naše servery."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gradey už nenahrává tvoje heslo do bakalářů na naše servery."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gradey no longer uploads your Bakaláři password to our servers."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gradey no longer uploads your Bakaláři password to our servers."
-          }
-        }
-      }
-    },
-    "privacy.update.change.password.title" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Školní heslo zůstává v tvém zařízení"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "školní heslo zůstává v tvém zařízení"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Your school password stays on your device"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "your school password stays on your device"
-          }
-        }
-      }
-    },
-    "privacy.update.change.planner.detail" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Názvy, poznámky, data a nastavení Plánovače se ukládají v tomto zařízení. Se zapnutým exportem do Kalendáře Gradey spravuje vlastní události, které se můžou synchronizovat přes tvůj kalendářový účet. Při použití AI s vybranými školními údaji se po udělení souhlasu sdílí údaje o zvolených událostech. Poznámky k testu vyžadují samostatné zapnutí. Plánovač funguje i bez těchto voleb."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "názvy, poznámky, data a nastavení plánovače se ukládají v tomto zařízení. se zapnutým exportem do kalendáře Gradey spravuje vlastní události, které se můžou synchronizovat přes tvůj kalendářový účet. při použití AI s vybranými školními údaji se po udělení souhlasu sdílí údaje o zvolených událostech. poznámky k testu vyžadují samostatné zapnutí. plánovač funguje i bez těchto voleb."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Your Planner titles, notes, dates and preferences are saved on this device. With Calendar export enabled, Gradey manages its own events, which may sync through your calendar account. If you use a contextual AI action, the selected event details are shared with AI after consent. Test notes require a separate choice. Planner works without either option."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "your planner titles, notes, dates and preferences are saved on this device. with calendar export enabled, Gradey manages its own events, which may sync through your calendar account. if you use a contextual AI action, the selected event details are shared with AI after consent. test notes require a separate choice. planner works without either option."
-          }
-        }
-      }
-    },
-    "privacy.update.change.planner.summary" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Položky Plánovače se ukládají v tomto zařízení. Export do Kalendáře i sdílení vybraných údajů s AI jsou volitelné."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "položky plánovače se ukládají v tomto zařízení. export do kalendáře i sdílení vybraných údajů s AI jsou volitelné."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Planner items are saved on this device. Calendar export and selected AI sharing are optional."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "planner items are saved on this device. calendar export and selected AI sharing are optional."
-          }
-        }
-      }
-    },
-    "privacy.update.change.planner.title" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Novinka: Plánovač a export do Kalendáře"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "novinka: plánovač a export do kalendáře"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "New: Planner and Calendar export"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "new: planner and calendar export"
-          }
-        }
-      }
-    },
-    "privacy.update.change.tokens.detail" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Když propojíš účet Bakalářů s Gradey ID, aplikace získá samostatnou školní relaci. Její přístupový a obnovovací token uchováváme v šifrované podobě na Supabase. Tyto tokeny jsou citlivé údaje: po dobu své platnosti mohou umožňovat přístup ke školním datům. Pokud relaci nelze obnovit, připoj školní účet v Gradey znovu."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "když propojíš účet bakalářů s Gradey ID, aplikace získá samostatnou školní relaci. její přístupový a obnovovací token uchováváme v šifrované podobě na Supabase. tyto tokeny jsou citlivé údaje: po dobu své platnosti mohou umožňovat přístup ke školním datům. pokud relaci nelze obnovit, připoj školní účet v Gradey znovu."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "When you link a Bakaláři account to Gradey ID, the app obtains a separate school session. We store its access and refresh tokens in encrypted form on Supabase. These tokens are sensitive: while they are valid, they can allow access to your school data. If the session can no longer be renewed, reconnect the school account in Gradey."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "when you link a Bakaláři account to Gradey ID, the app obtains a separate school session. we store its access and refresh tokens in encrypted form on Supabase. these tokens are sensitive: while they are valid, they can allow access to your school data. if the session can no longer be renewed, reconnect the school account in Gradey."
-          }
-        }
-      }
-    },
-    "privacy.update.change.tokens.summary" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kontrola nových známek obnovuje samostatnou školní relaci místo přihlašování heslem."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "kontrola nových známek obnovuje samostatnou školní relaci místo přihlašování heslem."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "New-mark checks renew a separate school session instead of signing in with your password."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "new-mark checks renew a separate school session instead of signing in with your password."
-          }
-        }
-      }
-    },
-    "privacy.update.change.tokens.title" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kontroly na pozadí používají šifrované tokeny relace"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "kontroly na pozadí používají šifrované tokeny relace"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Background checks use encrypted session tokens"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "background checks use encrypted session tokens"
-          }
-        }
-      }
-    },
-    "privacy.update.change.watch.detail" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tvůj iPhone může přenést školní data a přihlašovací informace včetně školních přihlašovacích údajů na spárované Apple Watch, aby si data mohly načítat přímo ze školy. Hodinky proto mohou mít vlastní kopii školního hesla a tokenů relace. Chraň přístupové kódy svých zařízení a před předáním zařízení jinému člověku se odhlas nebo zruš párování."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "tvůj iPhone může přenést školní data a přihlašovací informace včetně školních přihlašovacích údajů na spárované Apple Watch, aby si data mohly načítat přímo ze školy. hodinky proto mohou mít vlastní kopii školního hesla a tokenů relace. chraň přístupové kódy svých zařízení a před předáním zařízení jinému člověku se odhlas nebo zruš párování."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Your iPhone can transfer school data and authentication information, including school credentials, to a paired Apple Watch so it can refresh directly from the school. The Watch may therefore keep its own copy of your school password and session tokens. Protect your device passcodes, and sign out or unpair a device before giving it to someone else."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "your iphone can transfer school data and authentication information, including school credentials, to a paired apple watch so it can refresh directly from the school. the watch may therefore keep its own copy of your school password and session tokens. protect your device passcodes, and sign out or unpair a device before giving it to someone else."
-          }
-        }
-      }
-    },
-    "privacy.update.change.watch.summary" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Spárované hodinky mohou mít vlastní kopii školních přihlašovacích údajů."
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "spárované hodinky mohou mít vlastní kopii školních přihlašovacích údajů."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "A paired Watch can hold its own copy of your school credentials."
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "a paired watch can hold its own copy of your school credentials."
-          }
-        }
-      }
-    },
-    "privacy.update.change.watch.title" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Co si uchovávají tvoje Apple Watch"
-          }
-        },
-        "cs-US" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "co si uchovávají tvoje Apple Watch"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "What your Apple Watch keeps"
-          }
-        },
-        "en-CO" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "what your apple watch keeps"
-          }
-        }
-      }
-    },
     "privacy.update.changes.title" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -20922,25 +20400,25 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Gradey už neposílá tvoje heslo do Bakalářů na naše servery. Než budeš pokračovat, přečti si, co se změnilo."
+            "value" : "Zásady nově popisují rozvrhy kamarádů, taneční a domácí úkoly ze školy. Než budeš pokračovat, přečti si, co se změnilo."
           }
         },
         "cs-US" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Gradey už neposílá tvoje heslo do bakalářů na naše servery. než budeš pokračovat, přečti si, co se změnilo."
+            "value" : "zásady nově popisují rozvrhy kamarádů, taneční a domácí úkoly ze školy. než budeš pokračovat, přečti si, co se změnilo."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Gradey no longer sends your Bakaláři password to our servers. Please read what changed before you continue."
+            "value" : "The policy now covers friends' timetables, dance classes and homework from your school. Please read what changed before you continue."
           }
         },
         "en-CO" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Gradey no longer sends your Bakaláři password to our servers. please read what changed before you continue."
+            "value" : "the policy now covers friends' timetables, dance classes and homework from your school. please read what changed before you continue."
           }
         }
       }
@@ -29588,6 +29066,267 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "which subject?"
+          }
+        }
+      }
+    },
+    "privacy.update.change.friends.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rozvrhy kamarádů zůstávají v tvém zařízení"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "rozvrhy kamarádů zůstávají v tvém zařízení"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Friends' timetables stay on your device"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "friends' timetables stay on your device"
+          }
+        }
+      }
+    },
+    "privacy.update.change.friends.summary" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Přihlášení kamaráda do Bakalářů zůstává jen v Klíčence tohoto zařízení a slouží jen k jeho rozvrhu."
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "přihlášení kamaráda do bakalářů zůstává jen v klíčence tohoto zařízení a slouží jen k jeho rozvrhu."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A friend's Bakaláři login is kept only in this device's Keychain and is used only for their timetable."
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "a friend's Bakaláři login is kept only in this device's Keychain and is used only for their timetable."
+          }
+        }
+      }
+    },
+    "privacy.update.change.friends.detail" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Když se kamarád přihlásí přes Bakaláři, tvoje zařízení pošle jeho přihlašovací údaje přímo na HTTPS server jeho školy a uloží je do Klíčenky tohoto zařízení, aby mohlo jeho rozvrh později znovu načíst. Gradey nikdy nenačítá jeho známky ani absenci. Veřejný rozvrh přihlášení nepotřebuje a PDF i fotky se čtou v zařízení, nikam se nenahrávají. Rozvrhy kamarádů se neposílají do Gradey, Gradey AI, Apple Watch ani do widgetů. Přidávej jen lidi, kteří s tím souhlasí. Odebráním kamaráda nebo odhlášením se jeho data z tohoto zařízení smažou."
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "když se kamarád přihlásí přes Bakaláři, tvoje zařízení pošle jeho přihlašovací údaje přímo na HTTPS server jeho školy a uloží je do klíčenky tohoto zařízení, aby mohlo jeho rozvrh později znovu načíst. Gradey nikdy nenačítá jeho známky ani absenci. veřejný rozvrh přihlášení nepotřebuje a pdf i fotky se čtou v zařízení, nikam se nenahrávají. rozvrhy kamarádů se neposílají do Gradey, Gradey AI, apple watch ani do widgetů. přidávej jen lidi, kteří s tím souhlasí. odebráním kamaráda nebo odhlášením se jeho data z tohoto zařízení smažou."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "If a friend signs in with Bakaláři, your device sends their login straight to their school's HTTPS server and keeps it in this device's Keychain so it can reload their timetable later. Gradey never loads their marks or absences. Public timetables need no login, and PDFs and photos are read on the device without being uploaded. Friends' timetables are not sent to Gradey, Gradey AI, Apple Watch or widgets. Only add someone who agrees to it. Removing a friend or signing out deletes their data from this device."
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "if a friend signs in with Bakaláři, your device sends their login straight to their school's HTTPS server and keeps it in this device's Keychain so it can reload their timetable later. Gradey never loads their marks or absences. public timetables need no login, and pdfs and photos are read on the device without being uploaded. friends' timetables are not sent to Gradey, Gradey AI, apple watch or widgets. only add someone who agrees to it. removing a friend or signing out deletes their data from this device."
+          }
+        }
+      }
+    },
+    "privacy.update.change.dance.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Taneční zůstávají v tvém zařízení"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "taneční zůstávají v tvém zařízení"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dance classes stay on your device"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "dance classes stay on your device"
+          }
+        }
+      }
+    },
+    "privacy.update.change.dance.summary" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gradey si neukládá heslo ke kurzu, jen soukromý odkaz na kalendář kurzu."
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gradey si neukládá heslo ke kurzu, jen soukromý odkaz na kalendář kurzu."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gradey doesn't keep your course password, only the course's private calendar link."
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gradey doesn't keep your course password, only the course's private calendar link."
+          }
+        }
+      }
+    },
+    "privacy.update.change.dance.detail" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Když připojíš kurz v TŠ Vavruška, tvoje zařízení jednou pošle heslo ke kurzu na vavruska.info, aby kurz našlo. Kurz a jeho soukromý odkaz na kalendář se uloží do Klíčenky tohoto zařízení. Lekce, příspěvky z nástěnky a začátky prodeje vstupenek se ukládají v zařízení a připomínky prodeje vstupenek se plánují přímo v něm. Nic o tvém kurzu se neposílá do Gradey. Odpojením se všechno smaže."
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "když připojíš kurz v tš vavruška, tvoje zařízení jednou pošle heslo ke kurzu na vavruska.info, aby kurz našlo. kurz a jeho soukromý odkaz na kalendář se uloží do klíčenky tohoto zařízení. lekce, příspěvky z nástěnky a začátky prodeje vstupenek se ukládají v zařízení a připomínky prodeje vstupenek se plánují přímo v něm. nic o tvém kurzu se neposílá do Gradey. odpojením se všechno smaže."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "If you connect a TŠ Vavruška course, your device sends the course password to vavruska.info once to find your course. The course and its private calendar link are kept in this device's Keychain. Lessons, notice-board posts and ticket-sale dates are cached on the device, and ticket-sale reminders are scheduled locally. Nothing about your course is sent to Gradey. Disconnecting removes all of it."
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "if you connect a tš vavruška course, your device sends the course password to vavruska.info once to find your course. the course and its private calendar link are kept in this device's Keychain. lessons, notice-board posts and ticket-sale dates are cached on the device, and ticket-sale reminders are scheduled locally. nothing about your course is sent to Gradey. disconnecting removes all of it."
+          }
+        }
+      }
+    },
+    "privacy.update.change.homework.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Domácí úkoly ze školy"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "domácí úkoly ze školy"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Homework from your school"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "homework from your school"
+          }
+        }
+      }
+    },
+    "privacy.update.change.homework.summary" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gradey načítá domácí úkoly ze školy, a když nějaký odškrtneš, dozví se to i škola."
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gradey načítá domácí úkoly ze školy, a když nějaký odškrtneš, dozví se to i škola."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gradey loads your homework from the school, and ticking one off tells the school too."
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gradey loads your homework from the school, and ticking one off tells the school too."
+          }
+        }
+      }
+    },
+    "privacy.update.change.homework.detail" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tvoje zařízení načítá domácí úkoly přímo ze serveru školy, stejně jako rozvrh, a ukazuje je v Plánovači a u hodin. Když úkol označíš jako hotový, zařízení to pošle na server školy, stejně jako oficiální aplikace. Úkoly se neukládají jako tvoje osobní položky Plánovače a neposílají se na servery Gradey."
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "tvoje zařízení načítá domácí úkoly přímo ze serveru školy, stejně jako rozvrh, a ukazuje je v plánovači a u hodin. když úkol označíš jako hotový, zařízení to pošle na server školy, stejně jako oficiální aplikace. úkoly se neukládají jako tvoje osobní položky plánovače a neposílají se na servery Gradey."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your device loads homework straight from your school's server, like your timetable, and shows it in the Planner and on lessons. When you mark homework as done, your device sends that to the school's server, as the official app does. Homework is not saved as a personal Planner item and is not sent to Gradey's servers."
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "your device loads homework straight from your school's server, like your timetable, and shows it in the planner and on lessons. when you mark homework as done, your device sends that to the school's server, as the official app does. homework is not saved as a personal planner item and is not sent to Gradey's servers."
           }
         }
       }

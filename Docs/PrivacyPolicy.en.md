@@ -1,14 +1,14 @@
 # Privacy Policy
 
-**Gradey 2.2 draft — publication and effective date must be confirmed before rollout.**
+**Revision 3 draft, not yet published.** It adds friends' timetables (3.11), TŠ Vavruška dance classes (3.12) and school homework (3.3) to revision 2, which was published on 9 September 2026 and took effect on 15 September 2026. Publish it in English and Czech on the Help Center before the release that ships `PrivacyPolicyRevision.current = 3`, and use the same effective date in both places and in `PrivacyPolicyRevision.effectiveDate`.
 
-This release source updates the policy published on 9 September 2026. It has not been published by this implementation task.
+Effective date: [set when published]
 
 This revision describes the privacy changes for Gradey 2.1 and the transition from older app versions. The active-database password cleanup described below was already completed on 8 September 2026. Features described for version 2.1 apply when you install that version.
 
 This Privacy Policy explains how **Open Side**, operated by **Filip Bukovina** ("we", "us" or "our"), processes personal data through **Gradey** and its related services.
 
-Gradey is an unofficial school-system client for students and parents. It is available on supported Apple devices, including iPhone, iPad, Apple Watch and Mac, with companion widgets. Gradey is independent of Bakaláři, EduPage and Strava.cz; those organisations do not operate or endorse the app.
+Gradey is an unofficial school-system client for students and parents. It is available on supported Apple devices, including iPhone, iPad, Apple Watch and Mac, with companion widgets. Gradey is independent of Bakaláři, EduPage, Strava.cz and TŠ Vavruška; those organisations do not operate or endorse the app.
 
 ## 1. Who is responsible for your data
 
@@ -19,7 +19,7 @@ The controller is **Filip Bukovina**, publishing Gradey as **OpenSide** at [open
 
 ## 2. What this policy covers
 
-This policy covers Gradey ID, connected school and canteen accounts, school-data features, Apple Watch and widgets, the personal Planner and optional Calendar export, Gradey AI, support, purchases and notifications.
+This policy covers Gradey ID, connected school and canteen accounts, school-data features, friends' timetables, the optional dance-class connection, Apple Watch and widgets, the personal Planner and optional Calendar export, Gradey AI, support, purchases and notifications.
 
 It does not replace the policies of your school, the official school or canteen systems, or services you use independently of Gradey.
 
@@ -58,9 +58,9 @@ For EduPage, Gradey uses locally stored credentials to sign in. The backend rece
 
 For Strava.cz, Gradey uses local credentials to sign in to the canteen service. Linked-account data sent to our backend includes session, service, canteen and account identifiers, without the password.
 
-Depending on your school and the features you use, Gradey processes names, class information, marks, subjects, absences, timetables, teacher and room information, and canteen or meal data.
+Depending on your school and the features you use, Gradey processes names, class information, marks, subjects, absences, timetables, homework, teacher and room information, and canteen or meal data.
 
-The device retrieves timetable and absence data. Background cloud checks retrieve marks and maintain related grade history and notifications. School information may also appear in local caches, widgets and Apple Watch, or be included in optional Gradey AI context as described below.
+The device retrieves timetable, absence and homework data. When you mark homework as done in Gradey, your device sends that status to your school's server, as the official app does. Background cloud checks retrieve marks and maintain related grade history and notifications. School information may also appear in local caches, widgets and Apple Watch, or be included in optional Gradey AI context as described below.
 
 ### 3.4 Apple Watch and widgets
 
@@ -110,7 +110,25 @@ Personal Planner items, including titles, notes, dates and related settings, are
 
 If you enable Calendar export, Gradey requests permission to create and manage its events in Apple Calendar. It can access existing Calendar information needed to find, update or remove those events. Exported information may sync through the calendar account you use, such as iCloud or another provider, under that provider's settings and policy.
 
-You can use the Planner without Calendar access. Personal Planner items are kept separately from school caches and are not automatically erased when you disconnect a school account.
+You can use the Planner without Calendar access. Personal Planner items are kept separately from school caches and are not automatically erased when you disconnect a school account. Homework that the Planner shows from your school comes from the school data described in section 3.3; it is not stored as a personal Planner item.
+
+### 3.11 Friends' timetables
+
+Gradey can show the timetable of a friend, partner or classmate next to yours. You choose how to add each one:
+
+- **Their Bakaláři login.** Your friend enters their username and password on your device. The device sends them to their school's HTTPS server and keeps the login and the resulting school session in this device's Keychain, tied to this device, so Gradey can load the timetable again when the session expires. Gradey uses this login only to load their timetable, never their marks, absences or messages.
+- **The school's public timetable.** If the school publishes its timetable, Gradey downloads the selected class from the school's server. No login is needed.
+- **A PDF or photo.** Gradey reads the file on your device, using the PDF's text or Apple's on-device text recognition for photos. The file is not uploaded. You can check and correct the result before it is saved.
+
+Friends' names, where each timetable comes from, and their timetables are stored only on your device. They are not sent to Gradey's backend, Gradey AI, Apple Watch or widgets.
+
+Only add someone with their agreement, and only use a login they chose to enter on your device. A Bakaláři login gives access to their whole school account on the school's server, even though Gradey only uses it for the timetable; your friend can withdraw it at any time by changing their password. Removing a friend in Settings deletes their stored login and timetable from your device, and signing out of Gradey removes all friends.
+
+### 3.12 Dance classes (TŠ Vavruška)
+
+Gradey can optionally connect a TŠ Vavruška youth dance course. You enter the course password from your course card, and your device sends it to vavruska.info over HTTPS to find your course. Gradey does not store that password. It keeps your course and the course's private calendar link in this device's Keychain, because the link works without a password.
+
+Lesson dates, notice-board posts and ticket-sale dates are downloaded from vavruska.info and cached on your device. Reminders for the start of ticket sales are scheduled locally. None of this is sent to Gradey's backend. Disconnecting the course in Settings removes the course, its cached data and its reminders from your device.
 
 ## 4. Why we process data
 
@@ -136,7 +154,7 @@ Depending on the features you use, recipients include:
 - **Microsoft Azure OpenAI:** messages and explicitly selected context needed to generate replies.
 - **Intercom:** support sessions, messages, attachments and associated technical information.
 - **RevenueCat:** purchase and entitlement processing.
-- **Your school, canteen and calendar providers:** information necessary for connections and actions you request.
+- **Your school, your friends' schools, your canteen, TŠ Vavruška and your calendar provider:** information necessary for connections and actions you request.
 
 Providers may act as our processors or as independent controllers for their own services, depending on the activity. We may also disclose information where required by law or necessary to establish, exercise or defend legal claims.
 
@@ -158,7 +176,7 @@ AI conversations, support records and purchase records may be held in separate s
 
 Historical backups and service logs are separate from the active database. They may retain older copies according to the relevant system's retention schedule and any applicable legal obligation. The 8 September cleanup did not verify or erase every historical backup, log or export, so it must not be understood as confirmation that all historical copies were deleted on that date. Contact **filip@openside.tech** for information about a specific record, its retention or a deletion request.
 
-On-device data and Calendar exports are separate from backend records. Signing out clears the relevant school session, but personal Planner data can remain. Deleting the app does not guarantee removal of every Keychain item, cloud record, Watch copy or exported Calendar event. Manage those records through the relevant app, device or service controls.
+On-device data and Calendar exports are separate from backend records. Signing out clears the relevant school session and removes friends' logins and timetables, but personal Planner data can remain. Deleting the app does not guarantee removal of every Keychain item, cloud record, Watch copy or exported Calendar event. Manage those records through the relevant app, device or service controls.
 
 ## 8. Children and school-account permissions
 
@@ -180,7 +198,7 @@ Official school records remain under the school's or school-system operator's co
 
 Security measures include HTTPS connections, device Keychain storage, encryption of stored backend session tokens, backend access controls and App Check for protected requests.
 
-Local school-session Keychain records are configured for the device that stores them rather than Keychain synchronisation between devices. Transfers to a paired Apple Watch are handled separately as described above.
+Local school-session Keychain records, including friends' logins and the dance-course calendar link, are configured for the device that stores them rather than Keychain synchronisation between devices. Transfers to a paired Apple Watch are handled separately as described above.
 
 No system can guarantee absolute security. Protect your Gradey ID, school account and device passcodes. School-access tokens still need protection even when a password is not uploaded to Gradey.
 

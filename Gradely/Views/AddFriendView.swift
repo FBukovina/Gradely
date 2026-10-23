@@ -176,6 +176,9 @@ struct AddFriendView: View {
 
             FriendSchoolField(viewModel: viewModel)
 
+            // Not tagged .username/.password: this is the friend's login, so
+            // AutoFill must neither suggest the user's own Bakaláři password
+            // nor offer to save the friend's into the user's Passwords.
             TextField(AppL10n.string("login.username"), text: $viewModel.username)
                 .gradelyTextInputAutocapitalization(.never)
                 .autocorrectionDisabled()
@@ -190,6 +193,7 @@ struct AddFriendView: View {
                         SecureField(AppL10n.string("login.password"), text: $viewModel.password)
                     }
                 }
+                .textContentType(.oneTimeCode)
                 .gradelyTextInputAutocapitalization(.never)
                 .autocorrectionDisabled()
                 .submitLabel(.go)

@@ -144,12 +144,16 @@ final class AddFriendViewModel {
     // MARK: - Bakaláři login
 
     func connectBakalari() async -> Friend? {
-        await run {
+        let friend = await run {
             try await self.friends.repository.connectBakalari(
                 name: self.trimmedName, schoolURL: self.schoolURL, schoolName: self.schoolName,
                 username: self.username, password: self.password
             )
         }
+        // iOS offers to save a password when a filled secure field leaves the
+        // screen; an empty one gives it nothing to save.
+        if friend != nil { password = "" }
+        return friend
     }
 
     // MARK: - Public timetable

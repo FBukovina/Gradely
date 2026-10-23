@@ -18,11 +18,3 @@ nonisolated final class GradeyGuestModeStore: GradeyGuestModeStoring {
         set { userDefaults.set(newValue, forKey: Self.storageKey) }
     }
 }
-
-nonisolated final class InMemoryGradeyGuestModeStore: GradeyGuestModeStoring {
-    var isEnabled: Bool
-
-    init(isEnabled: Bool = false) {
-        self.isEnabled = isEnabled
-    }
-}

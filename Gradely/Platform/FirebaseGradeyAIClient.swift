@@ -1162,40 +1162,6 @@ nonisolated private struct FirebaseGradeyAIContextDTO: Codable, Sendable {
     }
 }
 
-nonisolated enum FirebaseGradeyAIWireContract {
-    static func decodeStatus(_ data: Data) throws -> GradeyAIStatus {
-        try JSONDecoder().decode(FirebaseGradeyAIStatusDTO.self, from: data).model
-    }
-
-    static func decodeStreamEvent(
-        _ data: Data,
-        fallbackConversationID: String
-    ) throws -> GradeyAIStreamEvent {
-        let payload = try JSONDecoder().decode(FirebaseGradeyAIStreamEventDTO.self, from: data)
-        return try payload.model(fallbackConversationID: fallbackConversationID)
-    }
-
-    static func decodeChatDetail(
-        _ data: Data,
-        fallbackConversationID: String
-    ) throws -> GradeyAIConversationDetail {
-        let payload = try JSONDecoder().decode(FirebaseGradeyAIChatDetailResponse.self, from: data)
-        return GradeyAIConversationDetail(
-            conversation: payload.chat.model,
-            messages: payload.decodedMessages(fallbackConversationID: fallbackConversationID)
-        )
-    }
-
-    static func encodeMinimizedContext(
-        _ snapshot: GradeyAIContextSnapshot,
-        maximumBytes: Int = 96 * 1_024
-    ) throws -> Data {
-        var context = FirebaseGradeyAIContextDTO(snapshot)
-        try context.constrainEncodedSize(to: maximumBytes)
-        return try JSONEncoder().encode(context)
-    }
-}
-
 #else
 
 final class FirebaseGradeyAIClient: GradeyAIClient {

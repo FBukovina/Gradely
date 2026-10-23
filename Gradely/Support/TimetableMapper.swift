@@ -52,7 +52,8 @@ enum TimetableMapper {
                         ? atom.cycleIDs.compactMap { cycles[$0] }.compactMap { trimmed($0.name) ?? trimmed($0.abbrev) }
                         : [],
                     subjectID: atom.subjectID,
-                    groupIDs: atom.groupIDs
+                    groupIDs: atom.groupIDs,
+                    homeworkIDs: atom.homeworkIDs
                 )
             }
             .sorted { (hourOrder[$0.hour.id] ?? .max) < (hourOrder[$1.hour.id] ?? .max) }

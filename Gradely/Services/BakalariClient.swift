@@ -9,6 +9,9 @@ protocol BakalariClient {
     func fetchTimetable(baseURL: URL, accessToken: String, date: Date) async throws -> TimetableResponse
     func fetchPermanentTimetable(baseURL: URL, accessToken: String) async throws -> TimetableResponse
     func predictSubject(baseURL: URL, accessToken: String, subject: Subject, markText: String, weight: Int) async throws -> Subject
+    func fetchHomeworks(baseURL: URL, accessToken: String, from: Date, to: Date) async throws -> HomeworkResponse
+    func setHomeworkDone(baseURL: URL, accessToken: String, homeworkID: String, isDone: Bool) async throws
+    func downloadAttachment(baseURL: URL, accessToken: String, attachmentID: String) async throws -> Data
 }
 
 extension BakalariClient {
@@ -107,6 +110,33 @@ final class URLSessionBakalariClient: BakalariClient {
         )
     }
 
+    func fetchHomeworks(baseURL: URL, accessToken: String, from: Date, to: Date) async throws -> HomeworkResponse {
+        try await get(
+            baseURL: baseURL,
+            path: "api/3/homeworks",
+            query: ["from": TimetableDates.apiDateString(from), "to": TimetableDates.apiDateString(to)],
+            accessToken: accessToken
+        )
+    }
+
+    func setHomeworkDone(baseURL: URL, accessToken: String, homeworkID: String, isDone: Bool) async throws {
+        var request = URLRequest(url: makeURL(baseURL: baseURL, segments: ["api", "3", "homeworks", homeworkID, "student-done", isDone ? "true" : "false"]))
+        request.httpMethod = "PUT"
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        // IIS answers 411 to a PUT without a length.
+        request.httpBody = Data()
+        _ = try await sendForData(request)
+    }
+
+    /// Homework attachments come from the Komens attachment endpoint too.
+    func downloadAttachment(baseURL: URL, accessToken: String, attachmentID: String) async throws -> Data {
+        var request = URLRequest(url: makeURL(baseURL: baseURL, segments: ["api", "3", "komens", "attachment", attachmentID]))
+        request.httpMethod = "GET"
+        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        return try await sendForData(request)
+    }
+
     private func postForm<Response: Decodable>(
         baseURL: URL,
         path: String,
@@ -160,7 +190,21 @@ final class URLSessionBakalariClient: BakalariClient {
         return components.url ?? url
     }
 
-    private func send<Response: Decodable>(_ request: URLRequest) async throws -> Response {
+    /// Provider IDs can hold characters such as `[`, so each segment is
+    /// percent-encoded on its own.
+    private func makeURL(baseURL: URL, segments: [String]) -> URL {
+        guard var components = URLComponents(url: baseURL, resolvingAgainstBaseURL: false) else {
+            return segments.reduce(baseURL) { $0.appending(path: $1) }
+        }
+        let unreserved = CharacterSet(charactersIn: "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._~")
+        let encoded = segments.map { $0.addingPercentEncoding(withAllowedCharacters: unreserved) ?? $0 }
+        var basePath = components.percentEncodedPath
+        if basePath.hasSuffix("/") { basePath.removeLast() }
+        components.percentEncodedPath = basePath + "/" + encoded.joined(separator: "/")
+        return components.url ?? baseURL
+    }
+
+    private func sendForData(_ request: URLRequest) async throws -> Data {
         let (data, response) = try await urlSession.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse else {
             throw BakalariAPIError.invalidResponse
@@ -169,6 +213,11 @@ final class URLSessionBakalariClient: BakalariClient {
         guard (200..<300).contains(httpResponse.statusCode) else {
             throw BakalariAPIError.httpStatus(httpResponse.statusCode, readableError(from: data))
         }
+        return data
+    }
+
+    private func send<Response: Decodable>(_ request: URLRequest) async throws -> Response {
+        let data = try await sendForData(request)
 
         do {
             return try decoder.decode(Response.self, from: data)
@@ -331,6 +380,7 @@ struct MockBakalariClient: BakalariClient {
     var timetableError: Error?
     var predictionResult: Subject?
     var predictionError: Error?
+    var homeworkResult: HomeworkResponse = PreviewData.homeworkResponse
 
     init(
         loginResult: LoginResponse = LoginResponse(
@@ -448,6 +498,16 @@ struct MockBakalariClient: BakalariClient {
         )
     }
 
+    func fetchHomeworks(baseURL: URL, accessToken: String, from: Date, to: Date) async throws -> HomeworkResponse {
+        homeworkResult
+    }
+
+    func setHomeworkDone(baseURL: URL, accessToken: String, homeworkID: String, isDone: Bool) async throws {}
+
+    func downloadAttachment(baseURL: URL, accessToken: String, attachmentID: String) async throws -> Data {
+        PreviewData.homeworkAttachmentData
+    }
+
     /// Shifts the fixture's day dates onto the requested week so demo week navigation shows lessons.
     static func rebased(_ response: TimetableResponse, toWeekContaining date: Date) -> TimetableResponse {
         response.rebased(toWeekContaining: date)
@@ -546,5 +606,26 @@ struct DemoAwareBakalariClient: BakalariClient {
             markText: markText,
             weight: weight
         )
+    }
+
+    func fetchHomeworks(baseURL: URL, accessToken: String, from: Date, to: Date) async throws -> HomeworkResponse {
+        if DemoAccount.isDemoBaseURL(baseURL) || DemoAccount.isDemoToken(accessToken) {
+            return try await demoClient.fetchHomeworks(baseURL: baseURL, accessToken: accessToken, from: from, to: to)
+        }
+        return try await liveClient.fetchHomeworks(baseURL: baseURL, accessToken: accessToken, from: from, to: to)
+    }
+
+    func setHomeworkDone(baseURL: URL, accessToken: String, homeworkID: String, isDone: Bool) async throws {
+        if DemoAccount.isDemoBaseURL(baseURL) || DemoAccount.isDemoToken(accessToken) {
+            return try await demoClient.setHomeworkDone(baseURL: baseURL, accessToken: accessToken, homeworkID: homeworkID, isDone: isDone)
+        }
+        try await liveClient.setHomeworkDone(baseURL: baseURL, accessToken: accessToken, homeworkID: homeworkID, isDone: isDone)
+    }
+
+    func downloadAttachment(baseURL: URL, accessToken: String, attachmentID: String) async throws -> Data {
+        if DemoAccount.isDemoBaseURL(baseURL) || DemoAccount.isDemoToken(accessToken) {
+            return try await demoClient.downloadAttachment(baseURL: baseURL, accessToken: accessToken, attachmentID: attachmentID)
+        }
+        return try await liveClient.downloadAttachment(baseURL: baseURL, accessToken: accessToken, attachmentID: attachmentID)
     }
 }

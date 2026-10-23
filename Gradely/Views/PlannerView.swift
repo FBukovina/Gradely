@@ -3,6 +3,8 @@ import SwiftUI
 struct PlannerView: View {
     let store: PlannerStore
     let resolver: PlannerLessonResolver
+    /// School homework, listed with your own items; nil where there is none.
+    var homework: HomeworkStore? = nil
     var displayedWeek: TimetableWeek?
     var subjects: [PlannerSubjectReference] = []
     var focusedDay: Date? = nil
@@ -11,6 +13,7 @@ struct PlannerView: View {
     @State private var editorItem: PlannerItem?
     @State private var deletionItem: PlannerItem?
     @State private var errorMessage: String?
+    @State private var openHomework: HomeworkSelection?
 
     var body: some View {
         ScrollView {
@@ -39,7 +42,7 @@ struct PlannerView: View {
                     }
                 }
 
-                if visibleItems.isEmpty {
+                if visibleItems.isEmpty && visibleHomework.isEmpty {
                     if store.isLoaded {
                         emptyState
                     }
@@ -48,9 +51,18 @@ struct PlannerView: View {
                         PlainSection {
                             PlainSectionTitle(verbatim: group.title)
                         } content: {
-                            ForEach(group.items) { item in
-                                row(item)
-                                    .gradeySiriContext(.planner(item))
+                            ForEach(group.entries) { entry in
+                                switch entry {
+                                case .homework(let item):
+                                    if let homework {
+                                        HomeworkRow(homework: item, store: homework, showsDue: false) {
+                                            openHomework = HomeworkSelection(id: item.id)
+                                        } onError: { errorMessage = $0 }
+                                    }
+                                case .item(let item):
+                                    row(item)
+                                        .gradeySiriContext(.planner(item))
+                                }
                             }
                         }
                     }
@@ -80,8 +92,16 @@ struct PlannerView: View {
             await store.activate()
             if let initialItemID { editorItem = store.items.first { $0.id == initialItemID } }
         }
+        .task {
+            await homework?.refresh()
+        }
         .sheet(item: $editorItem) { item in
             PlannerItemEditorView(item: item, store: store, resolver: resolver, displayedWeek: displayedWeek, subjects: subjects)
+        }
+        .sheet(item: $openHomework) { selection in
+            if let homework {
+                HomeworkDetailView(homeworkID: selection.id, store: homework)
+            }
         }
         .confirmationDialog(AppL10n.string("planner.delete.confirm"), isPresented: Binding(
             get: { deletionItem != nil }, set: { if !$0 { deletionItem = nil } }
@@ -206,10 +226,36 @@ struct PlannerView: View {
         }
     }
 
+    /// Open homework under Upcoming, ticked-off homework under Completed.
+    private var visibleHomework: [Homework] {
+        guard let homework else { return [] }
+        return homework.items.filter { item in
+            guard showsCompleted ? item.isDone : item.isOpen else { return false }
+            guard let focusedDay else { return true }
+            return item.dueDay().map { Calendar.current.isDate($0, inSameDayAs: focusedDay) } ?? false
+        }
+    }
+
+    private enum Entry: Identifiable {
+        case homework(Homework)
+        case item(PlannerItem)
+
+        var id: String {
+            switch self {
+            case .homework(let homework): "homework-\(homework.id)"
+            case .item(let item): "item-\(item.id)"
+            }
+        }
+    }
+
+    private struct HomeworkSelection: Identifiable {
+        let id: String
+    }
+
     private struct Group: Identifiable {
         let date: Date?
         let title: String
-        let items: [PlannerItem]
+        let entries: [Entry]
         var id: String { date.map { String($0.timeIntervalSinceReferenceDate) } ?? "undated" }
     }
 
@@ -217,11 +263,13 @@ struct PlannerView: View {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
         let tomorrow = calendar.date(byAdding: .day, value: 1, to: today)
-        let grouped = Dictionary(grouping: visibleItems) { item -> Date? in
+        // School homework first on each day, then your own items.
+        let entries: [(day: Date?, entry: Entry)] =
+            visibleHomework.map { ($0.dueDay(in: calendar), .homework($0)) }
             // Group by the item's civil day, preserving all-day dates when the device travels.
-            return PlannerDayProjection.day(for: item, calendar: calendar)
-        }
-        return grouped.map { date, items in
+            + visibleItems.map { (PlannerDayProjection.day(for: $0, calendar: calendar), .item($0)) }
+        let grouped = Dictionary(grouping: entries) { $0.day }
+        return grouped.map { date, entries in
             let title: String
             if let date {
                 if date == today { title = AppL10n.string("timetable.today") }
@@ -233,7 +281,7 @@ struct PlannerView: View {
             } else {
                 title = AppL10n.string("planner.undated")
             }
-            return Group(date: date, title: title, items: items)
+            return Group(date: date, title: title, entries: entries.map(\.entry))
         }.sorted { ($0.date ?? .distantFuture) < ($1.date ?? .distantFuture) }
     }
 

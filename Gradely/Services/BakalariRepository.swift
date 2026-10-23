@@ -117,6 +117,7 @@ final class SchoolRepository {
     private let marksCache: any MarksCaching
     private let absenceCache: any AbsenceCaching
     private let timetableCache: any TimetableCaching
+    private let homeworkCache: any HomeworkCaching
     private let nextLessonWidgetStore: (any NextLessonWidgetStoring)?
     private let absenceOverrideStore: any AbsenceOverrideStoring
     private var latestAbsenceData: [SchoolDataScope: AbsenceData] = [:]
@@ -136,6 +137,7 @@ final class SchoolRepository {
     private var absenceRequests: [String: Task<AbsenceResponse, Error>] = [:]
     private var userRequests: [String: Task<UserResponse, Error>] = [:]
     private var timetableRequests: [String: Task<TimetableResponse, Error>] = [:]
+    private var homeworkRequests: [String: Task<HomeworkResponse, Error>] = [:]
     private(set) var sessionGeneration = UUID()
     var onSchoolCacheInvalidation: ((SchoolDataScope?) -> Void)?
 
@@ -173,10 +175,12 @@ final class SchoolRepository {
         absenceRequests.values.forEach { $0.cancel() }
         userRequests.values.forEach { $0.cancel() }
         timetableRequests.values.forEach { $0.cancel() }
+        homeworkRequests.values.forEach { $0.cancel() }
         markRequests.removeAll()
         absenceRequests.removeAll()
         userRequests.removeAll()
         timetableRequests.removeAll()
+        homeworkRequests.removeAll()
         try? nextLessonWidgetStore?.clear()
         watchSyncService?.update(user: nil)
         #if !os(macOS)
@@ -198,6 +202,7 @@ final class SchoolRepository {
         marksCache: any MarksCaching,
         absenceCache: any AbsenceCaching = InMemoryAbsenceCache(),
         timetableCache: any TimetableCaching = InMemoryTimetableCache(),
+        homeworkCache: any HomeworkCaching = InMemoryHomeworkCache(),
         nextLessonWidgetStore: (any NextLessonWidgetStoring)? = nil,
         absenceLessonSelectionStore: any AbsenceLessonSelectionStoring = InMemoryAbsenceLessonSelectionStore(),
         absenceOverrideStore: any AbsenceOverrideStoring = InMemoryAbsenceOverrideStore(),
@@ -212,6 +217,7 @@ final class SchoolRepository {
         self.marksCache = marksCache
         self.absenceCache = absenceCache
         self.timetableCache = timetableCache
+        self.homeworkCache = homeworkCache
         self.nextLessonWidgetStore = nextLessonWidgetStore
         self.absenceLessonSelectionStore = absenceLessonSelectionStore
         self.absenceOverrideStore = absenceOverrideStore
@@ -465,12 +471,15 @@ final class SchoolRepository {
             try marksCache.clear(scope: scope)
             try absenceCache.clear(scope: scope)
             try timetableCache.clear(scope: scope)
+            try homeworkCache.clear(scope: scope)
         } else {
             onSchoolCacheInvalidation?(nil)
             try marksCache.clear()
             try absenceCache.clear()
             try timetableCache.clear()
+            try homeworkCache.clear()
         }
+        removeDownloadedAttachments()
         try absenceLessonSelectionStore.clearAll()
         try? nextLessonWidgetStore?.clear()
     }
@@ -481,6 +490,8 @@ final class SchoolRepository {
         try marksCache.clear()
         try absenceCache.clear()
         try timetableCache.clear()
+        try homeworkCache.clear()
+        removeDownloadedAttachments()
         try? nextLessonWidgetStore?.clear()
         try absenceLessonSelectionStore.clearAll()
         #if canImport(WidgetKit) && (os(iOS) || os(macOS))
@@ -957,6 +968,90 @@ final class SchoolRepository {
         }
         try validate(requestContext)
         return GradeMath.parseAverageText(predictedSubject.averageText)
+    }
+
+    // MARK: - Homework
+
+    /// Homework comes from Bakaláři only.
+    var supportsHomework: Bool { currentProvider == .bakalari }
+
+    func loadCachedHomework() -> CachedHomework? {
+        guard let session = try? sessionStore.loadSession(), session.provider == .bakalari else { return nil }
+        return try? homeworkCache.load(scope: SchoolDataScope(session: session))
+    }
+
+    func loadHomework() async throws -> HomeworkResponse {
+        let session = try await validSession()
+        guard session.provider == .bakalari else { return HomeworkResponse(homeworks: []) }
+        let requestContext = context(for: session)
+        let response = try await fetchHomework(session: session)
+        try validate(requestContext)
+        try? homeworkCache.save(response, scope: SchoolDataScope(session: session))
+        return response
+    }
+
+    /// Ticks homework off in Bakaláři, as the official app does, then in the cache.
+    func setHomeworkDone(id: String, isDone: Bool) async throws {
+        let session = try await validSession()
+        guard session.provider == .bakalari else { return }
+        try await withBakalariRetry(session: session) { current in
+            try await self.client.setHomeworkDone(
+                baseURL: current.baseURL, accessToken: current.accessToken, homeworkID: id, isDone: isDone
+            )
+        }
+        let scope = SchoolDataScope(session: session)
+        if var cached = try? homeworkCache.load(scope: scope)?.response,
+           let index = cached.homeworks.firstIndex(where: { $0.id == id }) {
+            cached.homeworks[index].done = isDone
+            try? homeworkCache.save(cached, scope: scope)
+        }
+    }
+
+    /// Saves the file in a temporary folder of its own and returns it for preview.
+    func downloadHomeworkAttachment(_ attachment: HomeworkAttachment) async throws -> URL {
+        let session = try await validSession()
+        let data = try await withBakalariRetry(session: session) { current in
+            try await self.client.downloadAttachment(
+                baseURL: current.baseURL, accessToken: current.accessToken, attachmentID: attachment.id
+            )
+        }
+        let folderName = attachment.id.addingPercentEncoding(withAllowedCharacters: .alphanumerics) ?? UUID().uuidString
+        let folder = Self.attachmentsDirectory.appending(path: String(folderName.prefix(80)), directoryHint: .isDirectory)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        let fileName = attachment.name
+            .components(separatedBy: CharacterSet(charactersIn: "/:\\"))
+            .joined(separator: "-")
+        let fileURL = folder.appending(path: fileName.isEmpty ? "attachment" : fileName)
+        try data.write(to: fileURL, options: [.atomic, .completeFileProtection])
+        return fileURL
+    }
+
+    private static var attachmentsDirectory: URL {
+        FileManager.default.temporaryDirectory.appending(path: "HomeworkAttachments", directoryHint: .isDirectory)
+    }
+
+    private func removeDownloadedAttachments() {
+        try? FileManager.default.removeItem(at: Self.attachmentsDirectory)
+    }
+
+    private func fetchHomework(session: StoredSession) async throws -> HomeworkResponse {
+        let key = requestKey(session: session)
+        if let task = homeworkRequests[key] { return try await task.value }
+        let task = Task { try await self.performFetchHomework(session: session) }
+        homeworkRequests[key] = task
+        defer { homeworkRequests[key] = nil }
+        return try await task.value
+    }
+
+    /// The last month covers the Completed list; three months ahead covers long projects.
+    private func performFetchHomework(session: StoredSession) async throws -> HomeworkResponse {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: dateProvider())
+        let from = calendar.date(byAdding: .day, value: -30, to: today) ?? today
+        let to = calendar.date(byAdding: .day, value: 90, to: today) ?? today
+        return try await withBakalariRetry(session: session) { current in
+            try await self.client.fetchHomeworks(baseURL: current.baseURL, accessToken: current.accessToken, from: from, to: to)
+        }
     }
 
     func validSession() async throws -> StoredSession {

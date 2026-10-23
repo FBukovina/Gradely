@@ -4,6 +4,7 @@ struct TimetableView: View {
     @State private var viewModel: TimetableViewModel
     @State private var selectedLesson: PlannerLessonSelection?
     @State private var plannerStore: PlannerStore
+    private let homeworkStore: HomeworkStore?
     private let plannerResolver: PlannerLessonResolver
     private let siriTarget: GradeySiriDestination?
     @Environment(\.gradeySiriService) private var siriService
@@ -19,6 +20,7 @@ struct TimetableView: View {
     init(
         repository: SchoolRepository,
         plannerStore: PlannerStore? = nil,
+        homeworkStore: HomeworkStore? = nil,
         vavruska: VavruskaViewModel? = nil,
         friends: FriendsViewModel? = nil,
         accountHub: AnyView? = nil,
@@ -29,6 +31,7 @@ struct TimetableView: View {
         _plannerStore = State(initialValue: plannerStore ?? PlannerStore(
             persistence: InMemoryPlannerPersistence(), calendarService: UnavailablePlannerCalendarService()
         ))
+        self.homeworkStore = homeworkStore
         plannerResolver = PlannerLessonResolver(repository: repository)
         self.siriTarget = siriTarget
         self.accountHub = accountHub
@@ -110,7 +113,8 @@ struct TimetableView: View {
                     if selectedFriend == nil {
                         ToolbarItem(placement: .gradelyTopBarTrailing) {
                             NavigationLink {
-                                PlannerView(store: plannerStore, resolver: plannerResolver, displayedWeek: viewModel.week, subjects: plannerSubjects)
+                                PlannerView(store: plannerStore, resolver: plannerResolver, homework: homeworkStore,
+                                            displayedWeek: viewModel.week, subjects: plannerSubjects)
                             } label: {
                                 GradelyIcon(systemName: "checklist")
                             }
@@ -128,6 +132,9 @@ struct TimetableView: View {
                 .task {
                     plannerStore.loadIfNeeded()
                     await viewModel.loadIfNeeded()
+                }
+                .task {
+                    await homeworkStore?.refresh()
                 }
                 .task(id: selectedFriendID) {
                     await activeViewModel.loadIfNeeded()
@@ -162,7 +169,10 @@ struct TimetableView: View {
                 .sheet(item: $selectedLesson) { selection in
                     LessonDetailSheet(
                         lesson: selection.lesson, day: selection.day, scope: activeViewModel.schoolScope,
-                        plannerStore: plannerStore, resolver: plannerResolver,
+                        plannerStore: plannerStore,
+                        // A friend's lessons have no scope, and their homework isn't loaded.
+                        homeworkStore: activeViewModel.schoolScope == nil ? nil : homeworkStore,
+                        resolver: plannerResolver,
                         displayedWeek: activeViewModel.week, subjects: plannerSubjects
                     )
                 }
@@ -1010,10 +1020,13 @@ private struct LessonDetailSheet: View {
     let day: ScheduledDay
     let scope: SchoolDataScope?
     let plannerStore: PlannerStore
+    let homeworkStore: HomeworkStore?
     let resolver: PlannerLessonResolver
     let displayedWeek: TimetableWeek?
     let subjects: [PlannerSubjectReference]
     @State private var plannerItem: PlannerItem?
+    @State private var openHomework: LessonHomeworkSelection?
+    @State private var homeworkError: String?
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -1024,6 +1037,20 @@ private struct LessonDetailSheet: View {
                 PlannerItemEditorView(item: item, store: plannerStore, resolver: resolver,
                                       displayedWeek: displayedWeek, subjects: subjects)
             }
+            .sheet(item: $openHomework) { selection in
+                if let homeworkStore {
+                    HomeworkDetailView(homeworkID: selection.id, store: homeworkStore)
+                }
+            }
+            .alert(AppL10n.string("error.title"), isPresented: Binding(
+                get: { homeworkError != nil }, set: { if !$0 { homeworkError = nil } }
+            )) {
+                Button(AppL10n.string("action.done")) {}
+            } message: { Text(homeworkError ?? "") }
+    }
+
+    private var lessonHomework: [Homework] {
+        homeworkStore?.items(for: lesson, on: day) ?? []
     }
 
     @ViewBuilder
@@ -1080,7 +1107,8 @@ private struct LessonDetailSheet: View {
                         if let theme = lesson.theme {
                             DetailRow(systemImage: "text.book.closed.fill", title: "timetable.detail.theme", value: theme)
                         }
-                        if lesson.hasHomework {
+                        // Shown as rows below once the homework itself is loaded.
+                        if lesson.hasHomework && lessonHomework.isEmpty {
                             DetailRow(
                                 systemImage: "checklist",
                                 title: "timetable.detail.homework",
@@ -1088,6 +1116,10 @@ private struct LessonDetailSheet: View {
                             )
                         }
                     }
+                }
+
+                if !lessonHomework.isEmpty, let homeworkStore {
+                    homeworkSection(lessonHomework, store: homeworkStore)
                 }
 
                 if let scope {
@@ -1101,6 +1133,26 @@ private struct LessonDetailSheet: View {
         .background {
             SettingsBackground()
         }
+    }
+
+    /// Homework given in this lesson or due in it.
+    private func homeworkSection(_ items: [Homework], store: HomeworkStore) -> some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            SettingsModalSectionHeader(title: "timetable.detail.homework")
+            SettingsSurface(padding: Spacing.md) {
+                VStack(spacing: Spacing.sm) {
+                    ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
+                        if index > 0 {
+                            Divider()
+                        }
+                        HomeworkRow(homework: item, store: store) {
+                            openHomework = LessonHomeworkSelection(id: item.id)
+                        } onError: { homeworkError = $0 }
+                    }
+                }
+            }
+        }
+        .accessibilityIdentifier("lessonHomeworkSection")
     }
 
     /// Planning starts here: the hour's detail is the only place an item can be
@@ -1200,7 +1252,11 @@ private struct LessonDetailSheet: View {
     }
 }
 
-private struct DetailRow: View {
+private struct LessonHomeworkSelection: Identifiable {
+    let id: String
+}
+
+struct DetailRow: View {
     let systemImage: String
     let title: LocalizedStringKey
     let value: String

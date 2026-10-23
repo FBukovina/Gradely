@@ -325,7 +325,8 @@ struct TodayView: View {
 
     @ViewBuilder private func plannerCard(at now: Date) -> some View {
         if let snapshotStore {
-            let events = snapshotStore.events
+            let homework = snapshotStore.homeworkStore
+            let events = (snapshotStore.events + homework.upcomingEvents(at: now))
                 .filter { $0.expiresAt > now }
                 .sorted { $0.date == $1.date ? $0.id.uuidString < $1.id.uuidString : $0.date < $1.date }
                 .prefix(3)
@@ -334,7 +335,8 @@ struct TodayView: View {
                     TodayInfoRow(title: Text("today.planner.none"), icon: "check-list", tint: .secondary)
                 } else {
                     ForEach(Array(events)) { event in
-                        NavigationLink(value: TodayDestination.plannerItem(event.id)) {
+                        NavigationLink(value: homework.homework(eventID: event.id).map { TodayDestination.homework($0.id) }
+                            ?? TodayDestination.plannerItem(event.id)) {
                             TodayPlannerRow(event: event)
                         }
                         .buttonStyle(.plain)
@@ -459,9 +461,14 @@ struct TodayView: View {
                 PlannerItemEditorView(item: item, store: snapshotStore.plannerStore, resolver: PlannerLessonResolver(repository: repository),
                     displayedWeek: snapshotStore.cachedWeek(containing: item.orderingDate ?? Date()), subjects: plannerSubjects)
             } else { ContentUnavailableView("today.destination.unavailable", systemImage: "checklist") }
+        case .homework(let id):
+            if let snapshotStore {
+                HomeworkDetailView(homeworkID: id, store: snapshotStore.homeworkStore, isModal: false)
+            } else { ContentUnavailableView("today.destination.unavailable", systemImage: "checklist") }
         case .planner:
             if let snapshotStore {
                 PlannerView(store: snapshotStore.plannerStore, resolver: PlannerLessonResolver(repository: repository),
+                    homework: snapshotStore.homeworkStore,
                     displayedWeek: snapshotStore.cachedWeek(containing: Date()), subjects: plannerSubjects)
             } else { ContentUnavailableView("today.destination.unavailable", systemImage: "checklist") }
         case .vavruska:

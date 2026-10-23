@@ -1,6 +1,7 @@
 import Foundation
 
-/// A projection of personal Planner data. It never imports or copies provider payloads.
+/// A projection of personal Planner data, or of school homework for the Planner
+/// views and reminders. Gradey AI only ever sees the personal ones.
 struct SchoolEvent: Codable, Equatable, Identifiable, Sendable {
     enum Kind: String, Codable, Sendable { case homework, test, presentation, note, task }
     let id: UUID
@@ -66,6 +67,7 @@ struct SubjectInsightSummary: Equatable, Identifiable, Sendable {
 enum TodayDestination: Hashable, Sendable {
     case subject(String)
     case plannerItem(UUID)
+    case homework(String)
     case planner
     case vavruska
     case vavruskaReconnect

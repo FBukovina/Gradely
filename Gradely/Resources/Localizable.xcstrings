@@ -29591,6 +29591,412 @@
           }
         }
       }
+    },
+    "homework.school" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Úkol ze školy"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "úkol ze školy"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "School homework"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "school homework"
+          }
+        }
+      }
+    },
+    "homework.due.today" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Odevzdat dnes"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "odevzdat dneska"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Due today"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "due today"
+          }
+        }
+      }
+    },
+    "homework.due.tomorrow" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Odevzdat zítra"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "odevzdat zítra"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Due tomorrow"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "due tomorrow"
+          }
+        }
+      }
+    },
+    "homework.due.date" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Odevzdat %@"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "odevzdat %@"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Due %@"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "due %@"
+          }
+        }
+      }
+    },
+    "homework.markDone" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Označit jako hotové"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "označit jako hotové"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mark as done"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "mark as done"
+          }
+        }
+      }
+    },
+    "homework.markNotDone" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Označit jako nehotové"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "označit jako nehotové"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mark as not done"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "mark as not done"
+          }
+        }
+      }
+    },
+    "homework.detail.due" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Odevzdat"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "odevzdat"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Due"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "due"
+          }
+        }
+      }
+    },
+    "homework.detail.assigned" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zadáno"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "zadanej"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Assigned"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "assigned"
+          }
+        }
+      }
+    },
+    "homework.detail.notice" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Poznámka"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "poznámka"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Note"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "note"
+          }
+        }
+      }
+    },
+    "homework.detail.handIn" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Odevzdání"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "odevzdání"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Handing in"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "handing in"
+          }
+        }
+      }
+    },
+    "homework.detail.electronic" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Online přes Bakaláře"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "online přes bakaláře"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Online, through Bakaláři"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "online, through Bakaláři"
+          }
+        }
+      }
+    },
+    "homework.detail.status" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stav"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "stav"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Status"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "status"
+          }
+        }
+      }
+    },
+    "homework.closed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Uzavřeno učitelem"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "uzavřeno učitelem"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Closed by the teacher"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "closed by the teacher"
+          }
+        }
+      }
+    },
+    "homework.attachments" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Přílohy"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "přílohy"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Attachments"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "attachments"
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

@@ -92,6 +92,7 @@ import Foundation
         let marksCache: any MarksCaching = (try? MarksCache()) ?? InMemoryMarksCache()
         let absenceCache: any AbsenceCaching = (try? AbsenceCache()) ?? InMemoryAbsenceCache()
         let timetableCache: any TimetableCaching = (try? TimetableCache()) ?? InMemoryTimetableCache()
+        let homeworkCache: any HomeworkCaching = (try? HomeworkCache()) ?? InMemoryHomeworkCache()
         let absenceLessonSelectionStore: any AbsenceLessonSelectionStoring = (try? AbsenceLessonSelectionStore()) ?? InMemoryAbsenceLessonSelectionStore()
         let absenceOverrideStore: any AbsenceOverrideStoring = (try? AbsenceOverrideStore()) ?? UnavailableAbsenceOverrideStore()
         let schoolDirectoryCache: any SchoolDirectoryCaching = (try? SchoolDirectoryCache()) ?? InMemorySchoolDirectoryCache()
@@ -121,6 +122,7 @@ import Foundation
             marksCache: marksCache,
             absenceCache: absenceCache,
             timetableCache: timetableCache,
+            homeworkCache: homeworkCache,
             nextLessonWidgetStore: nextLessonWidgetStore,
             absenceLessonSelectionStore: absenceLessonSelectionStore,
             absenceOverrideStore: absenceOverrideStore,

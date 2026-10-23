@@ -246,6 +246,7 @@ struct ContentView: View {
                             TimetableView(
                                 repository: repository,
                                 plannerStore: plannerStore,
+                                homeworkStore: schoolSnapshotStore.homeworkStore,
                                 vavruska: vavruska,
                                 friends: friends,
                                 accountHub: AnyView(accountHub()),
@@ -363,6 +364,7 @@ struct ContentView: View {
             siriLessonTarget = nil
         }
         .onChange(of: plannerStore.items) { Task { await reconcilePlannerReminders() } }
+        .onChange(of: schoolSnapshotStore.homeworkStore.items) { Task { await reconcilePlannerReminders() } }
         .onChange(of: plannerRemindersEnabled) { Task { await reconcilePlannerReminders() } }
         .onChange(of: notificationSettingsStore.preferences) { Task { await reconcilePlannerReminders() } }
         .onChange(of: notificationRouter.pendingURL) { Task { await consumeNotificationRoute() } }
@@ -413,6 +415,7 @@ struct ContentView: View {
         .sheet(item: $plannerTarget) { target in
             NavigationStack {
                 PlannerView(store: plannerStore, resolver: PlannerLessonResolver(repository: repository),
+                            homework: schoolSnapshotStore.homeworkStore,
                             focusedDay: target.day, initialItemID: target.itemID)
             }
             .gradelyMacSheetSize(minWidth: 520, idealWidth: 600, minHeight: 520, idealHeight: 640)
@@ -611,6 +614,7 @@ struct ContentView: View {
         guard appViewModel.phase == .signedIn else { await plannerNotificationScheduler.cancelAll(); return }
         schoolSnapshotStore.activateCurrentScope()
         await plannerNotificationScheduler.reconcile(items: plannerStore.items, scope: schoolSnapshotStore.scope,
+                                                      homework: schoolSnapshotStore.homeworkStore.upcomingEvents(),
                                                       preferences: notificationSettingsStore.preferences)
     }
 

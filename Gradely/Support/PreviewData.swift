@@ -302,8 +302,8 @@ enum PreviewData {
     static let timetableDays: [TimetableDayDTO] = [
         TimetableDayDTO(
             atoms: [
-                timetableAtom(1, "math", "t-novak", "r-12", theme: "Lineární rovnice"),
-                timetableAtom(2, "czech", "t-svobodova", "r-12", theme: "Vyjmenovaná slova"),
+                timetableAtom(1, "math", "t-novak", "r-12", theme: "Lineární rovnice", homework: ["hw-math-1"]),
+                timetableAtom(2, "czech", "t-svobodova", "r-12", theme: "Vyjmenovaná slova", homework: ["hw-czech-1"]),
                 timetableAtom(3, "bio", "t-dvorak", "r-12"),
                 timetableAtom(4, "eng", "t-svobodova", "r-12")
             ],
@@ -312,7 +312,7 @@ enum PreviewData {
         ),
         TimetableDayDTO(
             atoms: [
-                timetableAtom(1, "eng", "t-svobodova", "r-12"),
+                timetableAtom(1, "eng", "t-svobodova", "r-12", homework: ["hw-eng-1"]),
                 timetableAtom(2, "math", "t-novak", "r-12", change: TimetableChange(
                     changeType: "Canceled",
                     description: "Hodina odpadá – učitel na školení."
@@ -328,7 +328,7 @@ enum PreviewData {
                 timetableAtom(1, "bio", "t-dvorak", "r-aula", change: TimetableChange(
                     changeType: "RoomChanged",
                     description: "Změna učebny: Aula."
-                )),
+                ), homework: ["hw-bio-1"]),
                 timetableAtom(2, "math", "t-novak", "r-12"),
                 timetableAtom(3, "eng", "t-svobodova", "r-12")
             ],
@@ -431,7 +431,8 @@ enum PreviewData {
         _ teacher: String,
         _ room: String,
         theme: String? = nil,
-        change: TimetableChange? = nil
+        change: TimetableChange? = nil,
+        homework: [String] = []
     ) -> TimetableAtom {
         TimetableAtom(
             hourID: hour,
@@ -439,9 +440,53 @@ enum PreviewData {
             teacherID: teacher,
             roomID: room,
             change: change,
+            homeworkIDs: homework,
             theme: theme
         )
     }
+
+    // MARK: - Homework
+
+    /// Dated from today, so the demo always has homework due soon.
+    static var homeworkResponse: HomeworkResponse {
+        func day(_ offset: Int) -> String {
+            let calendar = Calendar.current
+            let date = calendar.date(byAdding: .day, value: offset, to: calendar.startOfDay(for: Date())) ?? Date()
+            return TimetableDates.apiDateString(date) + "T00:00:00+01:00"
+        }
+        let math = HomeworkEntity(id: "math", abbrev: "M", name: "Matematika")
+        let czech = HomeworkEntity(id: "czech", abbrev: "ČJ", name: "Český jazyk")
+        let bio = HomeworkEntity(id: "bio", abbrev: "Bi", name: "Biologie")
+        let eng = HomeworkEntity(id: "eng", abbrev: "AJ", name: "Angličtina")
+        return HomeworkResponse(homeworks: [
+            HomeworkDTO(
+                id: "hw-math-1", dateStart: day(-2), dateEnd: day(1),
+                content: "Pracovní sešit str. 42, cvičení 3–6", hour: 1, subject: math,
+                teacher: HomeworkEntity(id: "t-novak", abbrev: "No", name: "Jan Novák")
+            ),
+            HomeworkDTO(
+                id: "hw-czech-1", dateStart: day(-1), dateEnd: day(3),
+                content: "Sloh: Můj nejoblíbenější den\nRozsah alespoň 150 slov, odevzdat na papíře.", hour: 2, subject: czech,
+                teacher: HomeworkEntity(id: "t-svobodova", abbrev: "Sv", name: "Eva Svobodová"),
+                attachments: [HomeworkAttachmentDTO(id: "att-czech-1", name: "Zadání slohu.txt", type: "text/plain", size: 214)]
+            ),
+            HomeworkDTO(
+                id: "hw-bio-1", dateStart: day(0), dateEnd: day(6),
+                content: "Referát o buňce, 5 minut, s obrázky.", notice: "Prezentaci pošlete předem e-mailem.",
+                hour: 1, subject: bio,
+                teacher: HomeworkEntity(id: "t-dvorak", abbrev: "Dv", name: "Petr Dvořák")
+            ),
+            HomeworkDTO(
+                id: "hw-eng-1", dateStart: day(-4), dateEnd: day(-1),
+                content: "Learn the vocabulary from Unit 4.", done: true, hour: 1, subject: eng,
+                teacher: HomeworkEntity(id: "t-svobodova", abbrev: "Sv", name: "Eva Svobodová")
+            )
+        ])
+    }
+
+    static let homeworkAttachmentData = Data(
+        "Sloh: Můj nejoblíbenější den\n\nPiš alespoň 150 slov. Popiš, co ten den děláš, s kým a proč je pro tebe nejlepší.\nOdevzdej na papíře na začátku hodiny.".utf8
+    )
 
     static let expiredSession = StoredSession(
         accessToken: "expired-access",

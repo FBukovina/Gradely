@@ -391,6 +391,8 @@ struct ScheduledLesson: Identifiable, Equatable {
     /// Preserve provider identifiers for personal links; display names are not identities.
     var subjectID: String? = nil
     var groupIDs: [String] = []
+    /// Homework given in this lesson, by Bakaláři homework ID.
+    var homeworkIDs: [String] = []
 
     var isCanceled: Bool { changeKind.isCanceled }
 

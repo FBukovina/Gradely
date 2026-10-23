@@ -54,11 +54,13 @@ final class PlannerNotificationScheduler {
         set { defaults.set(newValue, forKey: Self.enabledKey) }
     }
 
-    func reconcile(items: [PlannerItem], scope: SchoolDataScope?, preferences: NotificationPreferences,
+    /// `homework` is school homework still to do, reminded about like Planner items.
+    func reconcile(items: [PlannerItem], scope: SchoolDataScope?, homework: [SchoolEvent] = [],
+                   preferences: NotificationPreferences,
                    now: Date = Date(), calendar: Calendar = .current) async {
         revision += 1
         errorMessage = nil
-        let events = PlannerEventProjection.events(from: items, scope: scope)
+        let events = PlannerEventProjection.events(from: items, scope: scope) + homework
         pendingDesired = isEnabled ? PlannerReminderEngine.make(events: events, preferences: preferences, now: now, calendar: calendar) : []
         await drain()
     }

@@ -8,7 +8,8 @@ struct SchoolRefreshRequirements: OptionSet {
     static let history = Self(rawValue: 1 << 2)
     static let absence = Self(rawValue: 1 << 3)
     static let user = Self(rawValue: 1 << 4)
-    static let today: Self = [.marks, .timetable, .history, .absence, .user]
+    static let homework = Self(rawValue: 1 << 5)
+    static let today: Self = [.marks, .timetable, .history, .absence, .user, .homework]
     static let subjects: Self = [.marks, .history, .absence, .user]
 }
 
@@ -37,6 +38,7 @@ final class SchoolSnapshotStore {
     private(set) var freshness: [String: SchoolSourceFreshness] = [:]
     private(set) var revision = 0
     let plannerStore: PlannerStore
+    let homeworkStore: HomeworkStore
     let repository: SchoolRepository
     private let historyRepository: GradeyHistoryRepository?
     private let now: () -> Date
@@ -52,6 +54,7 @@ final class SchoolSnapshotStore {
         self.repository = repository
         self.historyRepository = historyRepository
         self.plannerStore = plannerStore ?? PlannerStore(persistence: InMemoryPlannerPersistence(), calendarService: UnavailablePlannerCalendarService())
+        self.homeworkStore = HomeworkStore(repository: repository, now: now)
         self.historyDirectory = historyDirectory
         self.insightState = SchoolInsightStateStore(directory: historyDirectory)
         self.now = now
@@ -101,6 +104,7 @@ final class SchoolSnapshotStore {
         guard let session else { return true }
         scope = SchoolDataScope(session: session)
         plannerStore.loadIfNeeded()
+        homeworkStore.activate()
         if let cached = try? repository.loadCachedMarks() {
             acceptMarks(cached.marksResponse.subjects, at: cached.cachedAt, isCached: true)
         }
@@ -158,6 +162,7 @@ final class SchoolSnapshotStore {
         absence = nil
         user = nil
         freshness = [:]
+        homeworkStore.invalidate()
         revision += 1
     }
 
@@ -188,6 +193,9 @@ final class SchoolSnapshotStore {
             absence = result
             if let loadedUser = result.user { user = loadedUser }
         }) }
+        if requirements.contains(.homework) {
+            pending.append(Task { [homeworkStore] in await homeworkStore.refresh(force: force) })
+        }
         if requirements.contains(.user) { pending.append(start(key: "user", ttl: 900, force: force) { [self] in
             guard let result = await repository.loadUser() else { throw AppError.unknown(AppL10n.string("error.unknown")) }
             guard generation == requestedGeneration, repository.sessionGeneration == requestedSession else { throw CancellationError() }

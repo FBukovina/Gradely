@@ -68,6 +68,25 @@ private enum SettingsConnectionRoute: Hashable {
     case vavruskaLink
 }
 
+private extension SettingsRoute {
+    init(_ route: SettingsConnectionRoute) {
+        switch route {
+        case .schoolLink(let reconnectAccountID): self = .schoolLink(reconnectAccountID: reconnectAccountID)
+        case .stravaCZLink: self = .stravaCZLink
+        case .vavruskaLink: self = .vavruskaLink
+        }
+    }
+
+    var connectionRoute: SettingsConnectionRoute? {
+        switch self {
+        case .detail: nil
+        case .schoolLink(let reconnectAccountID): .schoolLink(reconnectAccountID: reconnectAccountID)
+        case .stravaCZLink: .stravaCZLink
+        case .vavruskaLink: .vavruskaLink
+        }
+    }
+}
+
 struct GradeyAccountHubView: View {
     let account: GradeyAccount?
     let isGuestMode: Bool
@@ -97,9 +116,11 @@ struct GradeyAccountHubView: View {
     @AppStorage(GradeyDebugModeStore.storageKey) private var isDebugModeEnabled = false
 
     @State private var viewModel: GradeyAccountHubViewModel
-    @State private var compactPath: [SettingsRoute] = []
     @State private var detailPath: [SettingsConnectionRoute] = []
     @State private var selectedDestination: SettingsDestination?
+    /// Whether you opened `selectedDestination` yourself; the wide layout
+    /// preselects Account, which shouldn't open it when the screen narrows.
+    @State private var isShowingDestination = false
     @State private var pendingUnlinkAccount: LinkedAccount?
     @State private var isVavruskaDisconnectPresented = false
     @State private var isSupportSheetPresented = false
@@ -322,8 +343,26 @@ struct GradeyAccountHubView: View {
         #endif
     }
 
+    /// The single-column stack, read from the same state as the split layout
+    /// so the open page survives folding, unfolding and rotation.
+    private var compactPath: [SettingsRoute] {
+        get {
+            let page = isShowingDestination ? selectedDestination.map { [SettingsRoute.detail($0)] } : nil
+            return (page ?? []) + detailPath.map(SettingsRoute.init)
+        }
+        nonmutating set {
+            if case .detail(let destination) = newValue.first {
+                selectedDestination = destination
+                isShowingDestination = true
+            } else {
+                isShowingDestination = false
+            }
+            detailPath = newValue.compactMap(\.connectionRoute)
+        }
+    }
+
     private var compactLayout: some View {
-        NavigationStack(path: $compactPath) {
+        NavigationStack(path: Binding(get: { compactPath }, set: { compactPath = $0 })) {
             overview(selectedDestination: nil) { destination in
                 select(destination) {
                     compactPath.append(.detail(destination))
@@ -341,6 +380,7 @@ struct GradeyAccountHubView: View {
             overview(selectedDestination: selectedDestination) { destination in
                 select(destination) {
                     selectedDestination = destination
+                    isShowingDestination = true
                     detailPath = []
                 }
             }
@@ -2117,27 +2157,12 @@ private extension GradeyAccountHubView {
     }
 
     func openSchoolConnection(reconnectAccountID: String?) {
-        #if os(macOS)
+        // The single-column stack shows `detailPath` too.
         detailPath.append(.schoolLink(reconnectAccountID: reconnectAccountID))
-        #else
-        if horizontalSizeClass == .regular {
-            detailPath.append(.schoolLink(reconnectAccountID: reconnectAccountID))
-        } else {
-            compactPath.append(.schoolLink(reconnectAccountID: reconnectAccountID))
-        }
-        #endif
     }
 
     func openVavruskaConnection() {
-        #if os(macOS)
         detailPath.append(.vavruskaLink)
-        #else
-        if horizontalSizeClass == .regular {
-            detailPath.append(.vavruskaLink)
-        } else {
-            compactPath.append(.vavruskaLink)
-        }
-        #endif
     }
 
     @ViewBuilder
@@ -2277,15 +2302,7 @@ private extension GradeyAccountHubView {
     }
 
     func openStravaConnection() {
-        #if os(macOS)
         detailPath.append(.stravaCZLink)
-        #else
-        if horizontalSizeClass == .regular {
-            detailPath.append(.stravaCZLink)
-        } else {
-            compactPath.append(.stravaCZLink)
-        }
-        #endif
     }
 
     func schoolConnectionView(reconnectAccountID: String?) -> some View {

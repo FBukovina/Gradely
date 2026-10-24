@@ -8,7 +8,6 @@ struct TimetableView: View {
     private let plannerResolver: PlannerLessonResolver
     private let siriTarget: GradeySiriDestination?
     @Environment(\.gradeySiriService) private var siriService
-    private let accountHub: AnyView?
     private let onOpenGradeyAI: () -> Void
     private let vavruska: VavruskaViewModel?
     private let friends: FriendsViewModel?
@@ -16,6 +15,7 @@ struct TimetableView: View {
     @State private var selectedFriendID: UUID?
     @State private var friendViewModels: [UUID: TimetableViewModel] = [:]
     @State private var isAddFriendPresented = false
+    @Environment(\.gradelyUsesWideLayout) private var usesWideLayout
 
     init(
         repository: SchoolRepository,
@@ -23,7 +23,6 @@ struct TimetableView: View {
         homeworkStore: HomeworkStore? = nil,
         vavruska: VavruskaViewModel? = nil,
         friends: FriendsViewModel? = nil,
-        accountHub: AnyView? = nil,
         onOpenGradeyAI: @escaping () -> Void = {},
         siriTarget: GradeySiriDestination? = nil
     ) {
@@ -34,7 +33,6 @@ struct TimetableView: View {
         self.homeworkStore = homeworkStore
         plannerResolver = PlannerLessonResolver(repository: repository)
         self.siriTarget = siriTarget
-        self.accountHub = accountHub
         self.onOpenGradeyAI = onOpenGradeyAI
         self.vavruska = vavruska
         self.friends = friends
@@ -125,7 +123,7 @@ struct TimetableView: View {
 
                     #if !os(macOS)
                     ToolbarItem(placement: .gradelyTopBarTrailing) {
-                        AccountSettingsButton(accountHub: accountHub)
+                        AccountSettingsButton()
                     }
                     #endif
                 }
@@ -283,21 +281,25 @@ struct TimetableView: View {
                 .padding(.top, Spacing.md)
                 .padding(.bottom, Spacing.md)
             }
-            #if os(macOS)
-            Divider()
-            WeekGrid(
-                viewModel: activeViewModel,
-                plannerItems: attachedItems,
-                afterSchool: afterSchool,
-                onSelectDance: { isDancePresented = true }
-            ) { lesson, day in
-                selectedLesson = PlannerLessonSelection(lesson: lesson, day: day)
+            if usesWideLayout {
+                Divider()
+                WeekGrid(
+                    viewModel: activeViewModel,
+                    plannerItems: attachedItems,
+                    afterSchool: afterSchool,
+                    onSelectDance: { isDancePresented = true }
+                ) { lesson, day in
+                    selectedLesson = PlannerLessonSelection(lesson: lesson, day: day)
+                }
+                .refreshable {
+                    await activeViewModel.refresh()
+                    await vavruska?.refreshIfNeeded(force: true)
+                }
+            } else {
+                DayStrip(viewModel: activeViewModel)
+                Divider()
+                dayContent
             }
-            #else
-            DayStrip(viewModel: activeViewModel)
-            Divider()
-            dayContent
-            #endif
         }
     }
 
@@ -439,11 +441,11 @@ private struct WeekNavBar: View {
     }
 }
 
-#if os(macOS)
 // MARK: - Week grid
 
-/// The whole week at once on the Mac: a column per day, a row per lesson
-/// period. Clicking a lesson opens the same detail sheet as on iOS.
+/// The whole week at once on the Mac, iPad and the unfolded iPhone Duo: a
+/// column per day, a row per lesson period. Tapping a lesson opens the same
+/// detail sheet as the day list.
 private struct WeekGrid: View {
     let viewModel: TimetableViewModel
     let plannerItems: (ScheduledLesson, ScheduledDay) -> [PlannerItem]
@@ -665,7 +667,6 @@ private struct WeekGridLesson: View {
         lesson.changeKind == .none ? Brand.primary : lesson.changeKind.color
     }
 }
-#endif
 
 private struct DayStrip: View {
     let viewModel: TimetableViewModel

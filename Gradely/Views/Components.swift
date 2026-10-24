@@ -382,49 +382,28 @@ struct GitHubIcon: View {
 
 // MARK: - Account & Settings entry
 
+extension EnvironmentValues {
+    /// Opens the Account & Settings sheet, which the tab view presents.
+    @Entry var gradelyOpenAccountHub: (() -> Void)?
+}
+
 #if os(iOS)
 /// Toolbar button that opens the unified Account & Settings sheet.
 /// Shared by every primary tab, including Meals. The Mac opens Settings as
 /// its own window from the menu bar (⌘,) instead.
 struct AccountSettingsButton: View {
-    var accountHub: AnyView?
-    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
-    @State private var isAccountHubPresented = false
+    @Environment(\.gradelyOpenAccountHub) private var openAccountHub
 
-    @ViewBuilder
     var body: some View {
-        if horizontalSizeClass == .regular {
-            trigger
-                .fullScreenCover(isPresented: $isAccountHubPresented) {
-                    presentedAccountHub
-                }
-        } else {
-            trigger
-                .sheet(isPresented: $isAccountHubPresented) {
-                    presentedAccountHub
-                }
-        }
-    }
-
-    private var trigger: some View {
         Button {
-            isAccountHubPresented = true
+            openAccountHub?()
         } label: {
             GradelyIcon(systemName: "gearshape.fill")
                 .gradelyToolbarIconButton()
         }
-        .disabled(accountHub == nil)
+        .disabled(openAccountHub == nil)
         .accessibilityLabel(AppL10n.string("settings.title"))
         .accessibilityIdentifier("openAccountHubButton")
-    }
-
-    @ViewBuilder
-    private var presentedAccountHub: some View {
-        if let accountHub {
-            accountHub
-        } else {
-            EmptyView()
-        }
     }
 }
 #endif

@@ -222,6 +222,18 @@ extension EnvironmentValues {
     /// A new id each time the menu bar asks the selected screen to refresh;
     /// screens that aren't selected see `nil`.
     @Entry var gradelyRefreshCommand: UUID?
+
+    /// Room for the side-by-side layouts (Timetable week grid, Marks list
+    /// beside the subject): always on the Mac; on iOS only when the screen
+    /// is both wide and tall, so iPad and the unfolded iPhone Duo but not a
+    /// Pro Max turned sideways.
+    var gradelyUsesWideLayout: Bool {
+        #if os(macOS)
+        true
+        #else
+        horizontalSizeClass == .regular && verticalSizeClass == .regular
+        #endif
+    }
 }
 
 private struct RefreshCommandModifier: ViewModifier {

@@ -4,7 +4,6 @@ struct TodayView: View {
     @State private var viewModel: TodayViewModel
     @State private var reconnectAccount: LinkedAccount?
     @Environment(\.scenePhase) private var scenePhase
-    private let accountHub: AnyView?
     private let repository: SchoolRepository
     private let schoolDirectoryProvider: any SchoolDirectoryProviding
     private let onOpenGradeyAI: () -> Void
@@ -24,14 +23,12 @@ struct TodayView: View {
         gradeyAuthClient: (any GradeyAuthClient)? = nil,
         snapshotStore: SchoolSnapshotStore? = nil,
         vavruska: VavruskaViewModel? = nil,
-        accountHub: AnyView? = nil,
         onOpenGradeyAI: @escaping () -> Void = {},
         onOpenTimetable: (() -> Void)? = nil,
         onOpenMarks: (() -> Void)? = nil
     ) {
         self.repository = repository
         self.schoolDirectoryProvider = schoolDirectoryProvider
-        self.accountHub = accountHub
         self.onOpenGradeyAI = onOpenGradeyAI
         self.onOpenTimetable = onOpenTimetable
         self.onOpenMarks = onOpenMarks
@@ -76,7 +73,7 @@ struct TodayView: View {
                 }
                 #if !os(macOS)
                 ToolbarItem(placement: .gradelyTopBarTrailing) {
-                    AccountSettingsButton(accountHub: accountHub)
+                    AccountSettingsButton()
                 }
                 #endif
             }

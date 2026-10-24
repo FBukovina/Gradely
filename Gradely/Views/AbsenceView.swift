@@ -2,19 +2,16 @@ import SwiftUI
 
 struct AbsenceView: View {
     @State private var viewModel: AbsenceViewModel
-    private let accountHub: AnyView?
     private let snapshotStore: SchoolSnapshotStore?
     private let onOpenGradeyAI: () -> Void
 
     init(
         repository: SchoolRepository,
         snapshotStore: SchoolSnapshotStore? = nil,
-        accountHub: AnyView? = nil,
         onOpenGradeyAI: @escaping () -> Void = {}
     ) {
         _viewModel = State(initialValue: AbsenceViewModel(repository: repository, snapshotStore: snapshotStore))
         self.snapshotStore = snapshotStore
-        self.accountHub = accountHub
         self.onOpenGradeyAI = onOpenGradeyAI
     }
 
@@ -52,7 +49,7 @@ struct AbsenceView: View {
 
                     #if !os(macOS)
                     ToolbarItem(placement: .gradelyTopBarTrailing) {
-                        AccountSettingsButton(accountHub: accountHub)
+                        AccountSettingsButton()
                     }
                     #endif
                 }

@@ -3,17 +3,14 @@ import SwiftUI
 struct StravaCZView: View {
     @State private var viewModel: StravaCZViewModel
     private let repository: StravaCZRepository
-    private let accountHub: AnyView?
     private let onOpenGradeyAI: () -> Void
 
     init(
         repository: StravaCZRepository,
         linkedAccountRepository: LinkedAccountRepository? = nil,
-        accountHub: AnyView? = nil,
         onOpenGradeyAI: @escaping () -> Void = {}
     ) {
         self.repository = repository
-        self.accountHub = accountHub
         self.onOpenGradeyAI = onOpenGradeyAI
         _viewModel = State(initialValue: StravaCZViewModel(
             repository: repository,
@@ -33,7 +30,7 @@ struct StravaCZView: View {
 
                     #if !os(macOS)
                     ToolbarItem(placement: .gradelyTopBarTrailing) {
-                        AccountSettingsButton(accountHub: accountHub)
+                        AccountSettingsButton()
                     }
                     #endif
 

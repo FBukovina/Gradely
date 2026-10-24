@@ -48,6 +48,7 @@ struct ContentView: View {
     @State private var onboardingJourney: OnboardingJourney?
     @State private var plannerTarget: PlannerNavigationTarget?
     @State private var isVavruskaPresented = false
+    @State private var isAccountHubPresented = false
     @State private var siriSubjectID: String?
     @State private var siriSubjectRequestID: UUID?
     @State private var schoolRouteRequestID = UUID()
@@ -207,7 +208,6 @@ struct ContentView: View {
                                 gradeyAuthClient: gradeyAuthClient,
                                 snapshotStore: schoolSnapshotStore,
                                 vavruska: vavruska,
-                                accountHub: AnyView(accountHub()),
                                 onOpenGradeyAI: presentGradeyAI,
                                 onOpenTimetable: {
                                     selectedTab = .timetable
@@ -224,7 +224,6 @@ struct ContentView: View {
                                 repository: repository,
                                 historyRepository: historyRepository,
                                 snapshotStore: schoolSnapshotStore,
-                                accountHub: AnyView(accountHub()),
                                 onOpenGradeyAI: presentGradeyAI,
                                 siriSubjectID: siriSubjectID,
                                 siriRequestID: siriSubjectRequestID
@@ -236,7 +235,6 @@ struct ContentView: View {
                             AbsenceView(
                                 repository: repository,
                                 snapshotStore: schoolSnapshotStore,
-                                accountHub: AnyView(accountHub()),
                                 onOpenGradeyAI: presentGradeyAI
                             )
                             .environment(\.gradelyRefreshCommand, refreshID(for: .absence))
@@ -248,7 +246,6 @@ struct ContentView: View {
                                 plannerStore: plannerStore,
                                 vavruska: vavruska,
                                 friends: friends,
-                                accountHub: AnyView(accountHub()),
                                 onOpenGradeyAI: presentGradeyAI,
                                 siriTarget: siriLessonTarget
                             )
@@ -260,13 +257,22 @@ struct ContentView: View {
                                 StravaCZView(
                                     repository: stravaCZRepository,
                                     linkedAccountRepository: linkedAccountRepository,
-                                    accountHub: AnyView(accountHub()),
                                     onOpenGradeyAI: presentGradeyAI
                                 )
                                 .environment(\.gradelyRefreshCommand, refreshID(for: .stravaCZ))
                             }
                         }
                     }
+                    #if os(iOS)
+                    // Settings hangs off the tab view, not the toolbar button:
+                    // folding or rotating rebuilds the toolbar, and a sheet on
+                    // the button would close with it.
+                    .sheet(isPresented: $isAccountHubPresented) {
+                        accountHub()
+                            .presentationSizing(.page)
+                    }
+                    .environment(\.gradelyOpenAccountHub) { isAccountHubPresented = true }
+                    #endif
                     .id(schoolAccountRevision)
                     .tint(Brand.primary)
                     .gradelySidebarAdaptable()

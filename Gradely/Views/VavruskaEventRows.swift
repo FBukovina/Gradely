@@ -174,8 +174,7 @@ struct VavruskaAfterSchoolBlock: View {
     }
 }
 
-#if os(macOS)
-/// Row label of the Mac week grid's extra "after school" row.
+/// Row label of the week grid's extra "after school" row.
 struct VavruskaWeekGridLabel: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
@@ -229,4 +228,3 @@ struct VavruskaWeekGridEvent: View {
         .accessibilityIdentifier("timetableDanceEvent-\(event.id)")
     }
 }
-#endif

@@ -3,13 +3,13 @@ import SwiftUI
 struct SubjectsView: View {
     @State private var viewModel: SubjectsViewModel
     @State private var sortMode: SubjectSortMode = .focus
-    @State private var siriPath: [String] = []
-    /// Mac only: the subject shown next to the list.
+    @State private var path: [String] = []
+    /// Wide layouts only: the subject shown next to the list.
     @State private var selectedSubjectID: String?
+    @Environment(\.gradelyUsesWideLayout) private var usesWideLayout
     private let siriSubjectID: String?
     private let siriRequestID: UUID?
     private let repository: SchoolRepository
-    private let accountHub: AnyView?
     private let onOpenGradeyAI: () -> Void
 
     init(
@@ -17,7 +17,6 @@ struct SubjectsView: View {
         historyRepository: GradeyHistoryRepository? = nil,
         trends: [SubjectGradeTrend] = [],
         snapshotStore: SchoolSnapshotStore? = nil,
-        accountHub: AnyView? = nil,
         onOpenGradeyAI: @escaping () -> Void = {},
         siriSubjectID: String? = nil,
         siriRequestID: UUID? = nil
@@ -25,7 +24,6 @@ struct SubjectsView: View {
         self.repository = repository
         self.siriSubjectID = siriSubjectID
         self.siriRequestID = siriRequestID
-        self.accountHub = accountHub
         self.onOpenGradeyAI = onOpenGradeyAI
         let model = SubjectsViewModel(repository: repository, historyRepository: historyRepository, snapshotStore: snapshotStore)
         model.trends = trends
@@ -33,7 +31,7 @@ struct SubjectsView: View {
     }
 
     var body: some View {
-        NavigationStack(path: $siriPath) {
+        NavigationStack(path: $path) {
             Group {
                 if viewModel.isLoading && viewModel.subjects.isEmpty {
                     ContentUnavailableView {
@@ -73,11 +71,14 @@ struct SubjectsView: View {
             .navigationTitle(AppL10n.string("subjects.title"))
             .gradelyNavigationTitleDisplayMode(.inline)
             .toolbar {
-                // On the Mac the selected subject's page brings its own
-                // Gradey AI button; general chat stays on ⌘K.
+                // Beside the list, the selected subject's page brings its
+                // own Gradey AI button; general chat stays on the other tabs
+                // (and ⌘K on the Mac).
                 #if !os(macOS)
-                ToolbarItem(placement: .gradelyTopBarLeading) {
-                    GradeyAIToolbarButton(onOpen: onOpenGradeyAI)
+                if !usesWideLayout {
+                    ToolbarItem(placement: .gradelyTopBarLeading) {
+                        GradeyAIToolbarButton(onOpen: onOpenGradeyAI)
+                    }
                 }
                 #endif
 
@@ -95,7 +96,7 @@ struct SubjectsView: View {
 
                 #if !os(macOS)
                 ToolbarItem(placement: .gradelyTopBarTrailing) {
-                    AccountSettingsButton(accountHub: accountHub)
+                    AccountSettingsButton()
                 }
                 #endif
             }
@@ -106,7 +107,13 @@ struct SubjectsView: View {
                         prepared: viewModel.snapshotStore?.preparedCalculations[subject.id]), snapshotStore: viewModel.snapshotStore)
                 } else { ContentUnavailableView("detail.intelligence.subjectUnavailable", systemImage: "book.closed") }
             }
-            .onChange(of: siriSubjectID) { _, id in if id == nil { siriPath = [] } }
+            .onChange(of: siriSubjectID) { _, id in if id == nil { path = [] } }
+            .onChange(of: usesWideLayout) { _, isWide in
+                // Unfolding with a subject open shows it beside the list.
+                guard isWide, let subjectID = path.last else { return }
+                selectedSubjectID = subjectID
+                path = []
+            }
             .onChange(of: siriRequestID) { showSiriSubject() }
             .onChange(of: viewModel.snapshotStore?.revision) { viewModel.applySharedSnapshot() }
             .task {
@@ -119,23 +126,23 @@ struct SubjectsView: View {
 
     @ViewBuilder
     private var marksDashboard: some View {
-        #if os(macOS)
-        HStack(spacing: 0) {
-            marksList(selection: $selectedSubjectID)
-                .frame(width: 380)
+        if usesWideLayout {
+            HStack(spacing: 0) {
+                marksList(selection: $selectedSubjectID)
+                    .frame(width: 380)
 
-            Divider()
+                Divider()
 
-            selectedSubjectDetail
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-        }
-        .gradelyScreenBackground()
-        .onAppear(perform: selectFirstSubjectIfNeeded)
-        .onChange(of: viewModel.subjects.map(\.id)) { selectFirstSubjectIfNeeded() }
-        #else
-        marksList(selection: nil)
+                selectedSubjectDetail
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
             .gradelyScreenBackground()
-        #endif
+            .onAppear(perform: selectFirstSubjectIfNeeded)
+            .onChange(of: viewModel.subjects.map(\.id)) { selectFirstSubjectIfNeeded() }
+        } else {
+            marksList(selection: nil)
+                .gradelyScreenBackground()
+        }
     }
 
     private func marksList(selection: Binding<String?>?) -> some View {
@@ -165,10 +172,8 @@ struct SubjectsView: View {
                     subjects: displayedSubjects,
                     sortMode: $sortMode,
                     selection: selection,
-                    repository: repository,
                     snapshotStore: viewModel.snapshotStore,
-                    absence: { viewModel.absence(for: $0) },
-                    trend: { trend(for: $0) }
+                    absence: { viewModel.absence(for: $0) }
                 )
             }
             .padding(Spacing.lg)
@@ -181,7 +186,6 @@ struct SubjectsView: View {
         .accessibilityIdentifier("subjectsList")
     }
 
-    #if os(macOS)
     @ViewBuilder
     private var selectedSubjectDetail: some View {
         if let subject = viewModel.subjects.first(where: { $0.id == selectedSubjectID }) {
@@ -204,14 +208,13 @@ struct SubjectsView: View {
         guard !viewModel.subjects.contains(where: { $0.id == selectedSubjectID }) else { return }
         selectedSubjectID = displayedSubjects.first?.id
     }
-    #endif
 
     private func showSiriSubject() {
-        #if os(macOS)
-        if let siriSubjectID { selectedSubjectID = siriSubjectID }
-        #else
-        siriPath = siriSubjectID.map { [$0] } ?? []
-        #endif
+        if usesWideLayout {
+            if let siriSubjectID { selectedSubjectID = siriSubjectID }
+        } else {
+            path = siriSubjectID.map { [$0] } ?? []
+        }
     }
 
     private var displayedSubjects: [Subject] {
@@ -310,13 +313,11 @@ private struct MarksHero: View {
 private struct SubjectDirectory: View {
     let subjects: [Subject]
     @Binding var sortMode: SubjectSortMode
-    /// When set, rows select a subject shown beside the list (Mac) instead of
-    /// pushing its page.
+    /// When set, rows select a subject shown beside the list (wide layouts)
+    /// instead of pushing its page.
     let selection: Binding<String?>?
-    let repository: SchoolRepository
     let snapshotStore: SchoolSnapshotStore?
     let absence: (Subject) -> AbsencePerSubject?
-    let trend: (Subject) -> SubjectGradeTrend?
 
     var body: some View {
         PlainSection {
@@ -359,18 +360,9 @@ private struct SubjectDirectory: View {
                         }
                         .accessibilityAddTraits(selection.wrappedValue == subject.id ? .isSelected : [])
                     } else {
-                        NavigationLink {
-                            SubjectDetailView(
-                                viewModel: SubjectDetailViewModel(
-                                    subject: subject,
-                                    absence: absence(subject),
-                                    repository: repository,
-                                    trend: trend(subject),
-                                    prepared: snapshotStore?.preparedCalculations[subject.id]
-                                ),
-                                snapshotStore: snapshotStore
-                            )
-                        } label: {
+                        // By id, so an open subject can move beside the list
+                        // when the screen widens.
+                        NavigationLink(value: subject.id) {
                             SubjectRow(
                                 subject: subject,
                                 absence: absence(subject),

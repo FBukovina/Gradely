@@ -5,8 +5,8 @@ struct SubjectDetailView: View {
     @Environment(\.requestGradeyAIAction) private var requestAI
     private let snapshotStore: SchoolSnapshotStore?
     private let navigationScope: SchoolDataScope?
-    /// Shown next to the subject list (Mac) instead of pushed over it: the
-    /// page names the subject itself and the list owns the window title.
+    /// Shown next to the subject list (wide layouts) instead of pushed over
+    /// it: the page names the subject itself and the list owns the title.
     private let isEmbedded: Bool
 
     init(viewModel: SubjectDetailViewModel, snapshotStore: SchoolSnapshotStore? = nil, isEmbedded: Bool = false) {
@@ -52,10 +52,10 @@ struct SubjectDetailView: View {
         .scrollDismissesKeyboard(.interactively)
         .gradeySiriContext(.subject(viewModel.subject.id, navigationScope))
         .navigationTitle(navigationTitle)
-        .gradelyNavigationTitleDisplayMode(.large)
+        .gradelyNavigationTitleDisplayMode(isEmbedded ? .inline : .large)
         .toolbar {
             if !subjectUnavailable {
-                ToolbarItem(placement: .gradelyTopBarTrailing) {
+                ToolbarItem(placement: aiButtonPlacement) {
                     GradeyAIToolbarButton { requestAI(.subjectHelp, viewModel.subject.id, nil) }
                 }
             }
@@ -63,6 +63,16 @@ struct SubjectDetailView: View {
         .onChange(of: snapshotStore?.revision, initial: true) { _, _ in
             if !subjectUnavailable { refreshSubjectSnapshot() }
         }
+    }
+
+    /// Beside the list on iOS the button takes the leading spot where every
+    /// other tab keeps Gradey AI.
+    private var aiButtonPlacement: ToolbarItemPlacement {
+        #if os(macOS)
+        .gradelyTopBarTrailing
+        #else
+        isEmbedded ? .gradelyTopBarLeading : .gradelyTopBarTrailing
+        #endif
     }
 
     private var navigationTitle: String {

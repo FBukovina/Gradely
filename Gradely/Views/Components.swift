@@ -382,9 +382,26 @@ struct GitHubIcon: View {
 
 // MARK: - Account & Settings entry
 
+/// Opens the Account & Settings sheet, which the tab view presents.
+struct OpenAccountHubAction: Equatable {
+    private let open: () -> Void
+
+    init(_ open: @escaping () -> Void) {
+        self.open = open
+    }
+
+    func callAsFunction() {
+        open()
+    }
+
+    /// Every value sets the same state in ContentView, so any two are
+    /// interchangeable. Comparing equal keeps a fresh closure on each
+    /// ContentView update from redrawing every gear button.
+    static func == (lhs: Self, rhs: Self) -> Bool { true }
+}
+
 extension EnvironmentValues {
-    /// Opens the Account & Settings sheet, which the tab view presents.
-    @Entry var gradelyOpenAccountHub: (() -> Void)?
+    @Entry var gradelyOpenAccountHub: OpenAccountHubAction?
 }
 
 #if os(iOS)

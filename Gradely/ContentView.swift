@@ -271,7 +271,7 @@ struct ContentView: View {
                         accountHub()
                             .presentationSizing(.page)
                     }
-                    .environment(\.gradelyOpenAccountHub) { isAccountHubPresented = true }
+                    .environment(\.gradelyOpenAccountHub, OpenAccountHubAction { isAccountHubPresented = true })
                     #endif
                     .id(schoolAccountRevision)
                     .tint(Brand.primary)

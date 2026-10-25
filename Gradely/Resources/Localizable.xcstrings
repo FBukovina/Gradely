@@ -10391,9 +10391,6 @@
         }
       }
     },
-    "EdupageAPI/edupage-api" : {
-
-    },
     "End" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -18100,9 +18097,6 @@
         }
       }
     },
-    "openside.tech" : {
-
-    },
     "Person" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -24680,9 +24674,6 @@
           }
         }
       }
-    },
-    "Side" : {
-
     },
     "siri.average.calculated" : {
       "extractionState" : "manual",

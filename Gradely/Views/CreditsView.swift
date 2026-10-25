@@ -48,7 +48,7 @@ struct CreditsView: View {
                     opensideWordmark
 
                     HStack(spacing: Spacing.xs) {
-                        Text("openside.tech")
+                        Text(verbatim: "openside.tech")
                             .font(.gradely(.subheadline).weight(.semibold))
                             .foregroundStyle(Brand.primary)
 
@@ -65,9 +65,9 @@ struct CreditsView: View {
 
     private var opensideWordmark: some View {
         HStack(spacing: 0) {
-            Text("Open")
+            Text(verbatim: "Open")
                 .foregroundStyle(.primary)
-            Text("Side")
+            Text(verbatim: "Side")
                 .foregroundStyle(Color(red: 0.45, green: 0.18, blue: 0.82))
         }
         .font(.gradelyDisplay(size: 32))
@@ -120,7 +120,7 @@ struct CreditsView: View {
                 Text("edupage.attribution.message")
                     .font(.gradely(.footnote))
                     .foregroundStyle(.secondary)
-                Link("EdupageAPI/edupage-api", destination: URL(string: "https://github.com/EdupageAPI/edupage-api")!)
+                Link(String("EdupageAPI/edupage-api"), destination: URL(string: "https://github.com/EdupageAPI/edupage-api")!)
                     .font(.gradely(.footnote).weight(.semibold))
                     .foregroundStyle(Brand.primary)
             }

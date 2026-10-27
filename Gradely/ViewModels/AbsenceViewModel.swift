@@ -58,6 +58,7 @@ final class AbsenceViewModel {
     var monthRows: [AbsenceMonthSummary] = []
     var dayCountRows: [AbsenceCountRow] = []
     var monthCountRows: [AbsenceCountRow] = []
+    var dayLessons: [String: AbsenceDayLessons] = [:]
     var totalCounts: AbsenceCounts = .zero
     var isManualSelectionSheetPresented = false
     var manualSelectionDrafts: [String: Set<String>] = [:]
@@ -78,6 +79,7 @@ final class AbsenceViewModel {
     @ObservationIgnored private var predictionLessonsByDate: [String: [AbsenceLessonCandidate]] = [:]
     @ObservationIgnored private var predictionLessonCacheByID: [String: AbsenceLessonCandidate] = [:]
     @ObservationIgnored private var subjectResolutionTask: Task<Void, Never>?
+    @ObservationIgnored private var dayLessonsTask: Task<Void, Never>?
     @ObservationIgnored private var subjectResolutionToken = UUID()
     @ObservationIgnored private var lastSharedAbsence: AbsenceData?
     @ObservationIgnored private var lastSharedScope: SchoolDataScope?
@@ -91,6 +93,7 @@ final class AbsenceViewModel {
 
     deinit {
         subjectResolutionTask?.cancel()
+        dayLessonsTask?.cancel()
     }
 
     var manualResolutionCandidates: [AbsencePartialDayCandidate] {
@@ -192,7 +195,7 @@ final class AbsenceViewModel {
         overrideMetadata = data.overrideMetadata
         overrideErrorMessage = data.overrideError
         response = data.response
-        applyAbsenceSnapshots(from: data.response)
+        applyAbsenceSnapshots(from: data)
         subjectAbsenceState = state(
             for: data.absencesPerSubject,
             source: data.subjectResolutionSource,
@@ -202,18 +205,42 @@ final class AbsenceViewModel {
             unresolvedPartialDays: data.unresolvedPartialDays
         )
         user = data.user ?? snapshotStore?.user ?? user
+
+        dayLessonsTask?.cancel()
+        dayLessonsTask = Task {
+            let lessons = await repository.loadAbsenceDayLessons(for: data, user: user)
+            guard !Task.isCancelled, currentData == data else { return }
+            dayLessons = lessons
+        }
     }
 
-    private func applyAbsenceSnapshots(from response: AbsenceResponse) {
-        dayRows = AbsenceSummary.daySummaries(for: response.absences)
-        monthRows = AbsenceSummary.monthSummaries(for: response.absences)
-        totalCounts = AbsenceSummary.totalCounts(for: response.absences)
+    private func applyAbsenceSnapshots(from data: AbsenceData) {
+        // Rows keep every raw day so a fully removed day stays visible and
+        // tappable; its effective counts are zero after the projection.
+        let effectiveByDateKey = Dictionary(
+            data.response.absences.map { (AbsenceOverrideProjection.dateKey($0.date), $0) },
+            uniquingKeysWith: { first, _ in first }
+        )
+        let displayedDays = data.rawResponse.absences.map { raw in
+            effectiveByDateKey[AbsenceOverrideProjection.dateKey(raw.date)]
+                ?? AbsenceDay(date: raw.date, unsolved: 0, ok: 0, missed: 0, late: 0,
+                              soon: 0, school: 0, distanceTeaching: 0)
+        }
+        dayRows = AbsenceSummary.daySummaries(for: displayedDays)
+        monthRows = AbsenceSummary.monthSummaries(for: data.response.absences)
+        totalCounts = AbsenceSummary.totalCounts(for: data.response.absences)
         dayCountRows = dayRows.map {
             AbsenceCountRow(id: "day-\($0.id)", title: $0.title, counts: $0.counts)
         }
         monthCountRows = monthRows.map {
             AbsenceCountRow(id: "month-\($0.id)", title: $0.title, counts: $0.counts)
         }
+    }
+
+    func dayLessons(forDayRowID rowID: String) -> AbsenceDayLessons? {
+        let rawID = String(rowID.dropFirst("day-".count))
+        guard let day = rawResponse?.absences.first(where: { $0.id == rawID }) else { return nil }
+        return dayLessons[AbsenceOverrideProjection.dateKey(day.date)]
     }
 
     private func startSubjectResolutionIfNeeded(for response: AbsenceResponse) {
@@ -318,6 +345,9 @@ final class AbsenceViewModel {
         } else if currentData != nil {
             subjectResolutionTask?.cancel()
             subjectResolutionTask = nil
+            dayLessonsTask?.cancel()
+            dayLessonsTask = nil
+            dayLessons = [:]
             subjectResolutionToken = UUID()
             currentData = nil
             response = nil

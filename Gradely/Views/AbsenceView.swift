@@ -175,7 +175,8 @@ struct AbsenceView: View {
                         totalTitle: AppL10n.string("absence.total"),
                         rows: viewModel.dayCountRows,
                         emptyTitle: "absence.days.empty",
-                        onSelect: { viewModel.openOverrideEditor(dayRowID: $0) }
+                        onSelect: { viewModel.openOverrideEditor(dayRowID: $0) },
+                        lessons: { viewModel.dayLessons(forDayRowID: $0) }
                     )
                 case .months:
                     if viewModel.monthRows.count >= 2 {
@@ -255,6 +256,7 @@ private struct AbsenceCountsList: View {
     let rows: [AbsenceCountRow]
     let emptyTitle: LocalizedStringKey
     var onSelect: ((String) -> Void)? = nil
+    var lessons: ((String) -> AbsenceDayLessons?)? = nil
 
     var body: some View {
         if rows.isEmpty {
@@ -274,7 +276,12 @@ private struct AbsenceCountsList: View {
                     Divider()
                     if let onSelect {
                         Button { onSelect(row.id) } label: {
-                            countRow(title: row.title, counts: row.counts, isTotal: false)
+                            VStack(alignment: .leading, spacing: Spacing.xs) {
+                                countRowContent(title: row.title, counts: row.counts, isTotal: false)
+                                lessonsLine(for: row.id)
+                            }
+                            .padding(.vertical, Spacing.md)
+                            .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
                         .accessibilityElement(children: .combine)
@@ -291,7 +298,66 @@ private struct AbsenceCountsList: View {
         }
     }
 
+    @ViewBuilder
+    private func lessonsLine(for rowID: String) -> some View {
+        if let day = lessons?(rowID) {
+            switch day.status {
+            case .resolved:
+                if !day.lessons.isEmpty {
+                    Text(attributedSubjects(for: day.lessons))
+                        .font(.gradely(.caption))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(3)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .accessibilityLabel(lessonsAccessibilityLabel(for: day.lessons))
+                        .accessibilityIdentifier("absenceDayLessons-\(rowID)")
+                }
+            case .needsSelection(let required):
+                Text(String(format: AppL10n.string("absence.days.chooseLessons"), required))
+                    .font(.gradely(.caption))
+                    .foregroundStyle(Brand.primary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .accessibilityIdentifier("absenceDayLessons-\(rowID)")
+            }
+        }
+    }
+
+    private func attributedSubjects(for lessons: [AbsenceDayLesson]) -> AttributedString {
+        var result = AttributedString()
+        for (index, lesson) in lessons.enumerated() {
+            if index > 0 {
+                result.append(AttributedString(" · "))
+            }
+            var part = AttributedString(lesson.subjectName)
+            if lesson.isHidden {
+                part.strikethroughStyle = .single
+                part.foregroundColor = .secondary.opacity(0.55)
+            }
+            result.append(part)
+        }
+        return result
+    }
+
+    private func lessonsAccessibilityLabel(for lessons: [AbsenceDayLesson]) -> String {
+        lessons.map { lesson in
+            lesson.isHidden
+                ? String(format: AppL10n.string("absence.days.removedLesson"), lesson.subjectName)
+                : lesson.subjectName
+        }
+        .joined(separator: ", ")
+    }
+
     private func countRow(
+        title: String,
+        counts: AbsenceCounts,
+        isTotal: Bool
+    ) -> some View {
+        countRowContent(title: title, counts: counts, isTotal: isTotal)
+            .padding(.vertical, Spacing.md)
+            .contentShape(Rectangle())
+    }
+
+    private func countRowContent(
         title: String,
         counts: AbsenceCounts,
         isTotal: Bool
@@ -310,8 +376,6 @@ private struct AbsenceCountsList: View {
                 .font(.gradely(.subheadline).weight(.bold).monospacedDigit())
                 .frame(minWidth: 28, alignment: .trailing)
         }
-        .padding(.vertical, Spacing.md)
-        .contentShape(Rectangle())
     }
 
     private func categoryChips(for counts: AbsenceCounts) -> some View {

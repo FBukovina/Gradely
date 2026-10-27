@@ -61,8 +61,28 @@ final class AbsenceOverrideEditorViewModel {
         return String(format: AppL10n.string("absence.override.subjectMappingUnavailable"), unmatched.joined(separator: ", "))
     }
 
+    /// Timetable lessons behind the missed (not late or early) hours, once every
+    /// recorded hour has its lesson and category.
+    var pickedLessonIDs: Set<String>? {
+        guard let context, hasOriginalSelection else { return nil }
+        let categoriesMatch = AbsenceOverrideCategory.allCases.allSatisfy { category in
+            allocations.filter { $0.category == category }.count == category.count(in: context.rawDay)
+        }
+        let missed = allocations.filter { $0.category?.contributesToBase == true }
+        let ids = Set(missed.compactMap(\.lessonID))
+        guard categoriesMatch, !ids.isEmpty, ids.count == missed.count else { return nil }
+        return ids
+    }
+
     var canSave: Bool {
-        guard let context, hasOriginalSelection, hiddenCount > 0, !isLoading, !isSaving,
+        if hiddenCount == 0 {
+            guard let context, !isLoading, !isSaving else { return false }
+            // Nothing removed: restore the day, or remember a new lesson pick.
+            if context.existingOverride != nil { return true }
+            guard let pickedLessonIDs else { return false }
+            return pickedLessonIDs != context.selectedLessonIDs
+        }
+        guard let context, hasOriginalSelection, !isLoading, !isSaving,
               hiddenSubjectMappingError == nil else { return false }
         guard allocations.allSatisfy({ !$0.subjectName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && $0.category != nil }) else { return false }
         return AbsenceOverrideCategory.allCases.allSatisfy { category in
@@ -96,6 +116,7 @@ final class AbsenceOverrideEditorViewModel {
                 confirmOriginalLessons()
             } else if loaded.lessons.count < originalCount {
                 useManualAllocations()
+                fillManualAllocations(from: loaded.lessons)
             }
         } catch {
             errorMessage = error.localizedDescription
@@ -111,16 +132,34 @@ final class AbsenceOverrideEditorViewModel {
         guard let context, originalLessonIDs.count == originalCount else { return }
         let singleCategory = availableCategories.count == 1 ? availableCategories.first : nil
         allocations = context.lessons.filter { originalLessonIDs.contains($0.id) }.map { lesson in
-            let matches = context.subjects.filter {
-                $0.subjectKey == lesson.subjectKey || normalized($0.subjectName) == normalized(lesson.subjectName)
-            }
-            let match = matches.count == 1 ? matches.first : nil
+            let subject = subject(for: lesson, in: context)
             return DraftAllocation(id: lesson.id, lessonID: lesson.id, lessonTitle: lesson.displayTitle,
-                                   subjectKey: match?.subjectKey ?? (context.subjects.isEmpty ? lesson.subjectKey : nil),
-                                   subjectName: match?.subjectName ?? (context.subjects.isEmpty ? lesson.subjectName : ""),
+                                   subjectKey: subject.key, subjectName: subject.name,
                                    category: singleCategory, isHidden: false)
         }
         usesManualAllocations = false
+    }
+
+    /// The school can record more hours than the timetable shows. The lessons it
+    /// does show fill the first rows, so only the extra hours need a subject.
+    private func fillManualAllocations(from lessons: [AbsenceLessonCandidate]) {
+        guard let context, availableCategories.count == 1 else { return }
+        for (index, lesson) in zip(allocations.indices, lessons) {
+            let subject = subject(for: lesson, in: context)
+            allocations[index].lessonID = lesson.id
+            allocations[index].lessonTitle = lesson.displayTitle
+            allocations[index].subjectKey = subject.key
+            allocations[index].subjectName = subject.name
+        }
+    }
+
+    private func subject(for lesson: AbsenceLessonCandidate,
+                         in context: AbsenceOverrideEditorContext) -> (key: String?, name: String) {
+        let matches = context.subjects.filter {
+            $0.subjectKey == lesson.subjectKey || normalized($0.subjectName) == normalized(lesson.subjectName)
+        }
+        if matches.count == 1 { return (matches[0].subjectKey, matches[0].subjectName) }
+        return context.subjects.isEmpty ? (lesson.subjectKey, lesson.subjectName) : (nil, "")
     }
 
     func useManualAllocations() {
@@ -164,6 +203,28 @@ final class AbsenceOverrideEditorViewModel {
         isSaving = true
         errorMessage = nil
         defer { isSaving = false }
+        // Nothing left hidden means the override is restored instead of saved.
+        // A complete pick is kept, so the day still lists its subjects.
+        if hiddenCount == 0 {
+            do {
+                let data = if let pickedLessonIDs {
+                    try await repository.saveAbsenceDayLessonPick(pickedLessonIDs, context: context, user: user)
+                } else {
+                    try await repository.restoreAbsenceOverride(
+                        dateKey: dateKey,
+                        scope: context.scope,
+                        overrideScope: context.overrideScope,
+                        sessionGeneration: context.sessionGeneration,
+                        user: user
+                    )
+                }
+                onSave(data)
+                didSave = true
+            } catch {
+                errorMessage = error.localizedDescription
+            }
+            return
+        }
         let saved = AbsenceDayOverride(
             id: context.existingOverride?.id ?? UUID(), scope: context.overrideScope, dateKey: dateKey,
             baselineDay: context.rawDay,

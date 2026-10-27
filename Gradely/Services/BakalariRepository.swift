@@ -688,6 +688,63 @@ final class SchoolRepository {
         return editor
     }
 
+    /// Resolves the missed lessons behind every raw absence day. Marks and
+    /// selections come from local stores only; only missing timetable weeks hit
+    /// the network.
+    func loadAbsenceDayLessons(for data: AbsenceData, user: UserResponse?) async -> [String: AbsenceDayLessons] {
+        // Offline, the stale session still reads the cached weeks.
+        guard let session = (try? await validSession()) ?? (try? sessionStore.loadSession()) else { return [:] }
+        let requestContext = context(for: session)
+        let scope = SchoolDataScope(session: session)
+
+        var weekStarts: [Date] = []
+        var seenWeekStarts: Set<Date> = []
+        for day in data.rawResponse.absences {
+            guard let date = AbsenceOverrideProjection.schoolDate(day.date) else { continue }
+            let monday = TimetableDates.monday(of: date)
+            if seenWeekStarts.insert(monday).inserted {
+                weekStarts.append(monday)
+            }
+        }
+        let timetables = await loadTermTimetableResponses(weekStarts: weekStarts, session: session, progress: nil)
+        do {
+            try validate(requestContext)
+        } catch {
+            return [:]
+        }
+
+        let marks = (try? marksCache.load(scope: scope))?.marksResponse.subjects ?? []
+        let selections = (try? absenceLessonSelectionStore.load(
+            scope: absenceLessonSelectionScope(session: session, user: user)
+        )) ?? .empty
+        let overridesByDate = Dictionary(
+            data.overrideMetadata.activeOverrides.map { ($0.dateKey, $0) },
+            uniquingKeysWith: { first, _ in first }
+        )
+
+        var result: [String: AbsenceDayLessons] = [:]
+        for day in data.rawResponse.absences {
+            let dateKey = AbsenceOverrideProjection.dateKey(day.date)
+            guard result[dateKey] == nil else { continue }
+            let timetable = timetables.responses.first { response in
+                response.days.contains { AbsenceOverrideProjection.dateKey($0.date) == dateKey }
+            }
+            var timetableLessons: [AbsenceLessonCandidate]?
+            if let timetable, let date = AbsenceOverrideProjection.schoolDate(day.date) {
+                timetableLessons = AbsenceTimetableLessonResolver.candidates(on: date, in: timetable, subjects: marks)
+            }
+            if let resolved = AbsenceDayLessonResolver.resolve(
+                day: day,
+                timetableLessons: timetableLessons,
+                selectedLessonIDs: selections.selectedLessonIDs(for: dateKey),
+                activeOverride: overridesByDate[dateKey]
+            ) {
+                result[dateKey] = resolved
+            }
+        }
+        return result
+    }
+
     func saveAbsenceOverride(_ edit: AbsenceDayOverride, context editor: AbsenceOverrideEditorContext,
                              user: UserResponse?) async throws -> AbsenceData {
         let session = try overrideSession(scope: editor.scope, overrideScope: editor.overrideScope, generation: editor.sessionGeneration)
@@ -708,6 +765,21 @@ final class SchoolRepository {
         latestAbsenceData[editor.scope] = projected
         onAbsenceOverridesChange?(editor.scope, projected)
         return projected
+    }
+
+    /// Remembers which lessons a day's absence covers without removing any, and
+    /// drops the day's saved edit. The timetable fallback reads the pick like
+    /// one made in the Choose missed lessons sheet.
+    func saveAbsenceDayLessonPick(_ lessonIDs: Set<String>, context editor: AbsenceOverrideEditorContext,
+                                  user: UserResponse?) async throws -> AbsenceData {
+        let session = try overrideSession(scope: editor.scope, overrideScope: editor.overrideScope, generation: editor.sessionGeneration)
+        let selectionScope = absenceLessonSelectionScope(session: session, user: user)
+        var selections = try absenceLessonSelectionStore.load(scope: selectionScope)
+        selections.selectedLessonIDsByDate[editor.dateKey] = lessonIDs.sorted()
+        try absenceLessonSelectionStore.save(selections, scope: selectionScope)
+        var overrides = try absenceOverrideStore.load(scope: editor.overrideScope)
+        overrides.removeAll { $0.dateKey == editor.dateKey }
+        return try persistRestoredOverrides(overrides, session: session, user: user)
     }
 
     func restoreAbsenceOverride(dateKey: String, scope: SchoolDataScope, overrideScope: SchoolDataScope,

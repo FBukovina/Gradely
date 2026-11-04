@@ -121,6 +121,7 @@ struct TodayView: View {
                     schoolConnectionNotice(account)
                 }
                 TodayHero(snapshot: viewModel.snapshot, now: now)
+                TodayCzechLaunchRow(now: now)
                 if viewModel.isLoading {
                     loadingRow
                 }
@@ -1015,6 +1016,58 @@ private struct TodayDisclosureIcon: View {
         GradelyIcon("arrow-right-01", size: 13)
             .foregroundStyle(Color.secondary.opacity(0.6))
             .accessibilityHidden(true)
+    }
+}
+
+/// Asks people to vote for Gradey during its CzechLaunch week. It owns its
+/// dismissed flag so tapping Hide updates it straight away instead of on the
+/// next `TimelineView` tick.
+private struct TodayCzechLaunchRow: View {
+    @AppStorage("today.czechLaunch.dismissed") private var isDismissed = false
+    @Environment(\.openURL) private var openURL
+    let now: Date
+
+    private static let projectURL = URL(string: "https://czechlaunch.cz/project/gradey")!
+    /// Sunday 8 November 2026, 23:59 in Prague (CET, UTC+1). The row hides
+    /// itself then, so it needs no follow-up release.
+    private static let votingEnds = Date(timeIntervalSince1970: 1_794_178_740)
+
+    var body: some View {
+        if !isDismissed, now < Self.votingEnds {
+            HStack(spacing: Spacing.sm) {
+                Button {
+                    openURL(Self.projectURL)
+                } label: {
+                    HStack(spacing: Spacing.sm) {
+                        TodayInfoRow(
+                            title: Text("today.czechlaunch.title"),
+                            subtitle: Text("today.czechlaunch.subtitle"),
+                            icon: "rocket-01",
+                            tint: Brand.primary
+                        )
+                        GradelyIcon("arrow-up-right-01", size: 13)
+                            .foregroundStyle(Color.secondary.opacity(0.6))
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("todayCzechLaunchLink")
+
+                Button {
+                    isDismissed = true
+                } label: {
+                    GradelyIcon("cancel-01", size: 14)
+                        .foregroundStyle(.secondary)
+                        .frame(width: 34, height: 34)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(AppL10n.string("today.czechlaunch.hide"))
+                .accessibilityIdentifier("todayCzechLaunchHide")
+            }
+            .accessibilityElement(children: .contain)
+            .accessibilityIdentifier("todayCzechLaunch")
+        }
     }
 }
 

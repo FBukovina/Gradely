@@ -17,3 +17,4 @@ Gradey 2.6.1 makes use of bigger screens: the unfolded iPhone Duo and iPad.
 - iPhone, iPad, and Apple Watch: **2.6.1 (1)**.
 - Mac and Mac widgets: **2.6.1 (41)**.
 - Built from `release/2.6.1`: Gradey 2.6 plus the wide layouts, the friend password fix and the Credits fix. Homework and privacy policy revision 3 stay on `main` for the next release.
+- Also on `release/2.6.1` only: a row on Today asking people to vote for Gradey on CzechLaunch (czechlaunch.cz/project/gradey). It hides itself on 8 November 2026 at 23:59 Prague time, or when tapped away, so it needs no follow-up release.

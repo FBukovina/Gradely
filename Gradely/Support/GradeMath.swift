@@ -274,7 +274,12 @@ enum GradeMath {
 
     static func band(for mark: Mark) -> GradeBand {
         guard !mark.isPoints else { return .excellent }
-        switch mark.markText.trimmingCharacters(in: .whitespacesAndNewlines) {
+        return band(forMarkText: mark.markText)
+    }
+
+    /// "1"–"5" with or without +/-; anything else (verbal results) is neutral.
+    static func band(forMarkText markText: String) -> GradeBand {
+        switch markText.trimmingCharacters(in: .whitespacesAndNewlines) {
         case "1", "1+", "1-": return .excellent
         case "2", "2+", "2-": return .good
         case "3", "3+", "3-": return .average

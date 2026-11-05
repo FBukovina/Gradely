@@ -12,6 +12,9 @@ protocol BakalariClient {
     func fetchHomeworks(baseURL: URL, accessToken: String, from: Date, to: Date) async throws -> HomeworkResponse
     func setHomeworkDone(baseURL: URL, accessToken: String, homeworkID: String, isDone: Bool) async throws
     func downloadAttachment(baseURL: URL, accessToken: String, attachmentID: String) async throws -> Data
+    func fetchFinalMarks(baseURL: URL, accessToken: String) async throws -> FinalMarksResponse
+    func fetchKomens(baseURL: URL, accessToken: String, box: KomensBox) async throws -> KomensResponse
+    func markKomensRead(baseURL: URL, accessToken: String, messageID: String) async throws
 }
 
 extension BakalariClient {
@@ -129,12 +132,37 @@ final class URLSessionBakalariClient: BakalariClient {
         _ = try await sendForData(request)
     }
 
-    /// Homework attachments come from the Komens attachment endpoint too.
+    /// Komens and homework attachments both come from the Komens endpoint.
     func downloadAttachment(baseURL: URL, accessToken: String, attachmentID: String) async throws -> Data {
         var request = URLRequest(url: makeURL(baseURL: baseURL, segments: ["api", "3", "komens", "attachment", attachmentID]))
         request.httpMethod = "GET"
         request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
         return try await sendForData(request)
+    }
+
+    func fetchFinalMarks(baseURL: URL, accessToken: String) async throws -> FinalMarksResponse {
+        try await get(baseURL: baseURL, path: "api/3/marks/final", accessToken: accessToken)
+    }
+
+    /// The lists are POSTs with an empty form, like the official app sends.
+    func fetchKomens(baseURL: URL, accessToken: String, box: KomensBox) async throws -> KomensResponse {
+        var request = URLRequest(url: makeURL(baseURL: baseURL, segments: ["api", "3", "komens", "messages", box.rawValue]))
+        request.httpMethod = "POST"
+        request.setValue("application/x-www-form-urlencoded; charset=utf-8", forHTTPHeaderField: "Content-Type")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        request.httpBody = Data()
+        return try await send(request)
+    }
+
+    func markKomensRead(baseURL: URL, accessToken: String, messageID: String) async throws {
+        var request = URLRequest(url: makeURL(baseURL: baseURL, segments: ["api", "3", "komens", "message", messageID, "mark-as-read"]))
+        request.httpMethod = "PUT"
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        // IIS answers 411 to a PUT without a length.
+        request.httpBody = Data()
+        _ = try await sendForData(request)
     }
 
     private func postForm<Response: Decodable>(
@@ -381,6 +409,8 @@ struct MockBakalariClient: BakalariClient {
     var predictionResult: Subject?
     var predictionError: Error?
     var homeworkResult: HomeworkResponse = PreviewData.homeworkResponse
+    var finalMarksResult: FinalMarksResponse = PreviewData.finalMarksResponse
+    var komensResult: KomensSnapshot = PreviewData.komensSnapshot
 
     init(
         loginResult: LoginResponse = LoginResponse(
@@ -505,8 +535,18 @@ struct MockBakalariClient: BakalariClient {
     func setHomeworkDone(baseURL: URL, accessToken: String, homeworkID: String, isDone: Bool) async throws {}
 
     func downloadAttachment(baseURL: URL, accessToken: String, attachmentID: String) async throws -> Data {
-        PreviewData.homeworkAttachmentData
+        attachmentID.hasPrefix("komens") ? PreviewData.komensAttachmentData : PreviewData.homeworkAttachmentData
     }
+
+    func fetchFinalMarks(baseURL: URL, accessToken: String) async throws -> FinalMarksResponse {
+        finalMarksResult
+    }
+
+    func fetchKomens(baseURL: URL, accessToken: String, box: KomensBox) async throws -> KomensResponse {
+        KomensResponse(messages: box == .received ? komensResult.received : komensResult.noticeboard)
+    }
+
+    func markKomensRead(baseURL: URL, accessToken: String, messageID: String) async throws {}
 
     /// Shifts the fixture's day dates onto the requested week so demo week navigation shows lessons.
     static func rebased(_ response: TimetableResponse, toWeekContaining date: Date) -> TimetableResponse {
@@ -627,5 +667,26 @@ struct DemoAwareBakalariClient: BakalariClient {
             return try await demoClient.downloadAttachment(baseURL: baseURL, accessToken: accessToken, attachmentID: attachmentID)
         }
         return try await liveClient.downloadAttachment(baseURL: baseURL, accessToken: accessToken, attachmentID: attachmentID)
+    }
+
+    func fetchFinalMarks(baseURL: URL, accessToken: String) async throws -> FinalMarksResponse {
+        if DemoAccount.isDemoBaseURL(baseURL) || DemoAccount.isDemoToken(accessToken) {
+            return try await demoClient.fetchFinalMarks(baseURL: baseURL, accessToken: accessToken)
+        }
+        return try await liveClient.fetchFinalMarks(baseURL: baseURL, accessToken: accessToken)
+    }
+
+    func fetchKomens(baseURL: URL, accessToken: String, box: KomensBox) async throws -> KomensResponse {
+        if DemoAccount.isDemoBaseURL(baseURL) || DemoAccount.isDemoToken(accessToken) {
+            return try await demoClient.fetchKomens(baseURL: baseURL, accessToken: accessToken, box: box)
+        }
+        return try await liveClient.fetchKomens(baseURL: baseURL, accessToken: accessToken, box: box)
+    }
+
+    func markKomensRead(baseURL: URL, accessToken: String, messageID: String) async throws {
+        if DemoAccount.isDemoBaseURL(baseURL) || DemoAccount.isDemoToken(accessToken) {
+            return try await demoClient.markKomensRead(baseURL: baseURL, accessToken: accessToken, messageID: messageID)
+        }
+        try await liveClient.markKomensRead(baseURL: baseURL, accessToken: accessToken, messageID: messageID)
     }
 }

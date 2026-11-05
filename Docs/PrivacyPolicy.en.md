@@ -1,6 +1,6 @@
 # Privacy Policy
 
-**Revision 3 draft, not yet published.** It adds friends' timetables (3.11), TŠ Vavruška dance classes (3.12) and school homework (3.3) to revision 2, which was published on 9 September 2026 and took effect on 15 September 2026. Publish it in English and Czech on the Help Center before the release that ships `PrivacyPolicyRevision.current = 3`, and use the same effective date in both places and in `PrivacyPolicyRevision.effectiveDate`.
+**Revision 3 draft, not yet published.** It adds friends' timetables (3.11), TŠ Vavruška dance classes (3.12), and school homework, Komens messages and report cards (3.3) to revision 2, which was published on 9 September 2026 and took effect on 15 September 2026. Publish it in English and Czech on the Help Center before the release that ships `PrivacyPolicyRevision.current = 3`, and use the same effective date in both places and in `PrivacyPolicyRevision.effectiveDate`.
 
 Effective date: [set when published]
 
@@ -58,9 +58,9 @@ For EduPage, Gradey uses locally stored credentials to sign in. The backend rece
 
 For Strava.cz, Gradey uses local credentials to sign in to the canteen service. Linked-account data sent to our backend includes session, service, canteen and account identifiers, without the password.
 
-Depending on your school and the features you use, Gradey processes names, class information, marks, subjects, absences, timetables, homework, teacher and room information, and canteen or meal data.
+Depending on your school and the features you use, Gradey processes names, class information, marks, subjects, absences, timetables, homework, Komens messages and noticeboard posts with their attachments, report cards, teacher and room information, and canteen or meal data.
 
-The device retrieves timetable, absence and homework data. When you mark homework as done in Gradey, your device sends that status to your school's server, as the official app does. Background cloud checks retrieve marks and maintain related grade history and notifications. School information may also appear in local caches, widgets and Apple Watch, or be included in optional Gradey AI context as described below.
+The device retrieves timetable, absence, homework, Komens and report card data. When you mark homework as done or open an unread Komens message in Gradey, your device sends that status to your school's server, as the official app does. Komens messages and report cards are kept on your device; they are not sent to Gradey's backend or to Gradey AI, and the report card estimate is calculated on the device. Background cloud checks retrieve marks and maintain related grade history and notifications. School information may also appear in local caches, widgets and Apple Watch, or be included in optional Gradey AI context as described below.
 
 ### 3.4 Apple Watch and widgets
 

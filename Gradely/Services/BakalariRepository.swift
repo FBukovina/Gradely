@@ -118,6 +118,8 @@ final class SchoolRepository {
     private let absenceCache: any AbsenceCaching
     private let timetableCache: any TimetableCaching
     private let homeworkCache: any HomeworkCaching
+    private let komensCache: ScopedFileCache<KomensSnapshot>
+    private let finalMarksCache: ScopedFileCache<FinalMarksResponse>
     private let nextLessonWidgetStore: (any NextLessonWidgetStoring)?
     private let absenceOverrideStore: any AbsenceOverrideStoring
     private var latestAbsenceData: [SchoolDataScope: AbsenceData] = [:]
@@ -138,6 +140,7 @@ final class SchoolRepository {
     private var userRequests: [String: Task<UserResponse, Error>] = [:]
     private var timetableRequests: [String: Task<TimetableResponse, Error>] = [:]
     private var homeworkRequests: [String: Task<HomeworkResponse, Error>] = [:]
+    private var komensRequests: [String: Task<KomensSnapshot, Error>] = [:]
     private(set) var sessionGeneration = UUID()
     var onSchoolCacheInvalidation: ((SchoolDataScope?) -> Void)?
 
@@ -176,11 +179,13 @@ final class SchoolRepository {
         userRequests.values.forEach { $0.cancel() }
         timetableRequests.values.forEach { $0.cancel() }
         homeworkRequests.values.forEach { $0.cancel() }
+        komensRequests.values.forEach { $0.cancel() }
         markRequests.removeAll()
         absenceRequests.removeAll()
         userRequests.removeAll()
         timetableRequests.removeAll()
         homeworkRequests.removeAll()
+        komensRequests.removeAll()
         try? nextLessonWidgetStore?.clear()
         watchSyncService?.update(user: nil)
         #if !os(macOS)
@@ -203,6 +208,8 @@ final class SchoolRepository {
         absenceCache: any AbsenceCaching = InMemoryAbsenceCache(),
         timetableCache: any TimetableCaching = InMemoryTimetableCache(),
         homeworkCache: any HomeworkCaching = InMemoryHomeworkCache(),
+        komensCache: ScopedFileCache<KomensSnapshot>? = nil,
+        finalMarksCache: ScopedFileCache<FinalMarksResponse>? = nil,
         nextLessonWidgetStore: (any NextLessonWidgetStoring)? = nil,
         absenceLessonSelectionStore: any AbsenceLessonSelectionStoring = InMemoryAbsenceLessonSelectionStore(),
         absenceOverrideStore: any AbsenceOverrideStoring = InMemoryAbsenceOverrideStore(),
@@ -218,6 +225,8 @@ final class SchoolRepository {
         self.absenceCache = absenceCache
         self.timetableCache = timetableCache
         self.homeworkCache = homeworkCache
+        self.komensCache = komensCache ?? .inMemory(prefix: KomensSnapshot.cachePrefix)
+        self.finalMarksCache = finalMarksCache ?? .inMemory(prefix: FinalMarksResponse.cachePrefix)
         self.nextLessonWidgetStore = nextLessonWidgetStore
         self.absenceLessonSelectionStore = absenceLessonSelectionStore
         self.absenceOverrideStore = absenceOverrideStore
@@ -472,12 +481,16 @@ final class SchoolRepository {
             try absenceCache.clear(scope: scope)
             try timetableCache.clear(scope: scope)
             try homeworkCache.clear(scope: scope)
+            komensCache.clear(scope: scope)
+            finalMarksCache.clear(scope: scope)
         } else {
             onSchoolCacheInvalidation?(nil)
             try marksCache.clear()
             try absenceCache.clear()
             try timetableCache.clear()
             try homeworkCache.clear()
+            komensCache.clear()
+            finalMarksCache.clear()
         }
         removeDownloadedAttachments()
         try absenceLessonSelectionStore.clearAll()
@@ -491,6 +504,8 @@ final class SchoolRepository {
         try absenceCache.clear()
         try timetableCache.clear()
         try homeworkCache.clear()
+        komensCache.clear()
+        finalMarksCache.clear()
         removeDownloadedAttachments()
         try? nextLessonWidgetStore?.clear()
         try absenceLessonSelectionStore.clearAll()
@@ -1079,8 +1094,9 @@ final class SchoolRepository {
         }
     }
 
-    /// Saves the file in a temporary folder of its own and returns it for preview.
-    func downloadHomeworkAttachment(_ attachment: HomeworkAttachment) async throws -> URL {
+    /// Saves a homework or Komens file in a temporary folder of its own and
+    /// returns it for preview.
+    func downloadAttachment(_ attachment: SchoolAttachment) async throws -> URL {
         let session = try await validSession()
         let data = try await withBakalariRetry(session: session) { current in
             try await self.client.downloadAttachment(
@@ -1099,7 +1115,7 @@ final class SchoolRepository {
     }
 
     private static var attachmentsDirectory: URL {
-        FileManager.default.temporaryDirectory.appending(path: "HomeworkAttachments", directoryHint: .isDirectory)
+        FileManager.default.temporaryDirectory.appending(path: "SchoolAttachments", directoryHint: .isDirectory)
     }
 
     private func removeDownloadedAttachments() {
@@ -1124,6 +1140,89 @@ final class SchoolRepository {
         return try await withBakalariRetry(session: session) { current in
             try await self.client.fetchHomeworks(baseURL: current.baseURL, accessToken: current.accessToken, from: from, to: to)
         }
+    }
+
+    // MARK: - Report cards
+
+    /// Report cards come from Bakaláři only.
+    var supportsReportCards: Bool { currentProvider == .bakalari }
+
+    func loadCachedFinalMarks() -> CachedValue<FinalMarksResponse>? {
+        guard let session = try? sessionStore.loadSession(), session.provider == .bakalari else { return nil }
+        return finalMarksCache.load(scope: SchoolDataScope(session: session))
+    }
+
+    func loadFinalMarks() async throws -> FinalMarksResponse {
+        let session = try await validSession()
+        guard session.provider == .bakalari else { return FinalMarksResponse(terms: []) }
+        let requestContext = context(for: session)
+        let response = try await withBakalariRetry(session: session) { current in
+            try await self.client.fetchFinalMarks(baseURL: current.baseURL, accessToken: current.accessToken)
+        }
+        try validate(requestContext)
+        finalMarksCache.save(response, scope: SchoolDataScope(session: session))
+        return response
+    }
+
+    // MARK: - Komens
+
+    /// Komens comes from Bakaláři only.
+    var supportsKomens: Bool { currentProvider == .bakalari }
+
+    func loadCachedKomens() -> CachedValue<KomensSnapshot>? {
+        guard let session = try? sessionStore.loadSession(), session.provider == .bakalari else { return nil }
+        return komensCache.load(scope: SchoolDataScope(session: session))
+    }
+
+    func loadKomens() async throws -> KomensSnapshot {
+        let session = try await validSession()
+        guard session.provider == .bakalari else { return KomensSnapshot(received: [], noticeboard: []) }
+        let requestContext = context(for: session)
+        let snapshot = try await fetchKomens(session: session)
+        try validate(requestContext)
+        komensCache.save(snapshot, scope: SchoolDataScope(session: session))
+        return snapshot
+    }
+
+    /// Marks a message read in Bakaláři, as the official app does when it is opened.
+    func markKomensRead(id: String) async throws {
+        let session = try await validSession()
+        guard session.provider == .bakalari else { return }
+        try await withBakalariRetry(session: session) { current in
+            try await self.client.markKomensRead(baseURL: current.baseURL, accessToken: current.accessToken, messageID: id)
+        }
+        let scope = SchoolDataScope(session: session)
+        if var cached = komensCache.load(scope: scope)?.value {
+            cached.markRead(id: id)
+            komensCache.save(cached, scope: scope)
+        }
+    }
+
+    private func fetchKomens(session: StoredSession) async throws -> KomensSnapshot {
+        let key = requestKey(session: session)
+        if let task = komensRequests[key] { return try await task.value }
+        let task = Task { try await self.performFetchKomens(session: session) }
+        komensRequests[key] = task
+        defer { komensRequests[key] = nil }
+        return try await task.value
+    }
+
+    /// Older Bakaláři versions have no noticeboard; the received list still loads then.
+    private func performFetchKomens(session: StoredSession) async throws -> KomensSnapshot {
+        let received = try await withBakalariRetry(session: session) { current in
+            try await self.client.fetchKomens(baseURL: current.baseURL, accessToken: current.accessToken, box: .received)
+        }
+        let noticeboard: [KomensMessageDTO]
+        do {
+            noticeboard = try await withBakalariRetry(session: session) { current in
+                try await self.client.fetchKomens(baseURL: current.baseURL, accessToken: current.accessToken, box: .noticeboard)
+            }.messages
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch {
+            noticeboard = komensCache.load(scope: SchoolDataScope(session: session))?.value.noticeboard ?? []
+        }
+        return KomensSnapshot(received: received.messages, noticeboard: noticeboard)
     }
 
     func validSession() async throws -> StoredSession {

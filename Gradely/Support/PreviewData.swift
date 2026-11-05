@@ -468,7 +468,7 @@ enum PreviewData {
                 id: "hw-czech-1", dateStart: day(-1), dateEnd: day(3),
                 content: "Sloh: Můj nejoblíbenější den\nRozsah alespoň 150 slov, odevzdat na papíře.", hour: 2, subject: czech,
                 teacher: HomeworkEntity(id: "t-svobodova", abbrev: "Sv", name: "Eva Svobodová"),
-                attachments: [HomeworkAttachmentDTO(id: "att-czech-1", name: "Zadání slohu.txt", type: "text/plain", size: 214)]
+                attachments: [SchoolAttachmentDTO(id: "att-czech-1", name: "Zadání slohu.txt", type: "text/plain", size: 214)]
             ),
             HomeworkDTO(
                 id: "hw-bio-1", dateStart: day(0), dateEnd: day(6),

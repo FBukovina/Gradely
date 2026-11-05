@@ -29,8 +29,8 @@ struct PrivacyPolicyChange: Identifiable, Hashable, Sendable {
 /// release that does not touch the policy must not re-prompt. Bump it only when
 /// the published policy materially changes, and refresh `changes` when you do.
 enum PrivacyPolicyRevision {
-    /// Revision 3 adds friends' timetables, TŠ Vavruška dance classes and
-    /// school homework. Revision 2 (effective 15 September 2026) removed
+    /// Revision 3 adds friends' timetables, TŠ Vavruška dance classes, school
+    /// homework, Komens messages and report cards. Revision 2 (effective 15 September 2026) removed
     /// Bakaláři password upload and documented the Planner, Gradey AI and
     /// Apple Watch.
     static let current = 3
@@ -61,6 +61,10 @@ enum PrivacyPolicyRevision {
         PrivacyPolicyChange(id: "dance", iconName: "music-note-01"),
         // Policy section 3.3
         PrivacyPolicyChange(id: "homework", iconName: "book-open-01"),
+        // Policy section 3.3
+        PrivacyPolicyChange(id: "messages", iconName: "mail-01"),
+        // Policy section 3.3
+        PrivacyPolicyChange(id: "reportCards", iconName: "graduation-scroll"),
     ]
 
     /// Effective date in the in-app language, not the device language.

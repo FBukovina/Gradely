@@ -3,6 +3,7 @@ import SwiftUI
 struct TodayView: View {
     @State private var viewModel: TodayViewModel
     @State private var reconnectAccount: LinkedAccount?
+    @State private var isKomensPresented = false
     @Environment(\.scenePhase) private var scenePhase
     private let repository: SchoolRepository
     private let schoolDirectoryProvider: any SchoolDirectoryProviding
@@ -58,6 +59,11 @@ struct TodayView: View {
                 ToolbarItem(placement: .gradelyTopBarLeading) {
                     GradeyAIToolbarButton(onOpen: onOpenGradeyAI)
                 }
+                if let komens = snapshotStore?.komensStore, komens.isSupported {
+                    ToolbarItem(placement: .gradelyTopBarTrailing) {
+                        KomensToolbarButton(store: komens) { isKomensPresented = true }
+                    }
+                }
                 ToolbarItem(placement: .gradelyTopBarTrailing) {
                     Button {
                         Task {
@@ -95,6 +101,11 @@ struct TodayView: View {
                 Button(AppL10n.string("action.ok"), role: .cancel) { viewModel.clearError() }
             } message: {
                 Text(viewModel.errorMessage ?? "")
+            }
+            .sheet(isPresented: $isKomensPresented) {
+                if let komens = snapshotStore?.komensStore {
+                    KomensView(store: komens)
+                }
             }
             .sheet(item: $reconnectAccount) { account in
                 TodaySchoolReconnectSheet(

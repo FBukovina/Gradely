@@ -34,7 +34,7 @@ struct HomeworkDTO: Codable, Equatable {
     let hour: Int?
     let subject: HomeworkEntity?
     let teacher: HomeworkEntity?
-    let attachments: [HomeworkAttachmentDTO]
+    let attachments: [SchoolAttachmentDTO]
 
     enum CodingKeys: String, CodingKey {
         case id = "ID"
@@ -63,7 +63,7 @@ struct HomeworkDTO: Codable, Equatable {
         hour: Int? = nil,
         subject: HomeworkEntity? = nil,
         teacher: HomeworkEntity? = nil,
-        attachments: [HomeworkAttachmentDTO] = []
+        attachments: [SchoolAttachmentDTO] = []
     ) {
         self.id = id
         self.dateStart = dateStart
@@ -92,7 +92,7 @@ struct HomeworkDTO: Codable, Equatable {
         hour = try container.decodeIfPresent(Int.self, forKey: .hour)
         subject = try container.decodeIfPresent(HomeworkEntity.self, forKey: .subject)
         teacher = try container.decodeIfPresent(HomeworkEntity.self, forKey: .teacher)
-        attachments = try container.decodeIfPresent([HomeworkAttachmentDTO].self, forKey: .attachments) ?? []
+        attachments = try container.decodeIfPresent([SchoolAttachmentDTO].self, forKey: .attachments) ?? []
     }
 }
 
@@ -108,7 +108,8 @@ struct HomeworkEntity: Codable, Equatable {
     }
 }
 
-struct HomeworkAttachmentDTO: Codable, Equatable {
+/// Homework and Komens messages list their files the same way.
+struct SchoolAttachmentDTO: Codable, Equatable {
     let id: String
     let name: String?
     let type: String?
@@ -144,7 +145,7 @@ struct Homework: Identifiable, Equatable, Sendable {
     var isDone: Bool
     let isClosed: Bool
     let isElectronic: Bool
-    let attachments: [HomeworkAttachment]
+    let attachments: [SchoolAttachment]
 
     /// Bakaláři dates are school days, so they are read and shown in Prague time.
     static let timeZone = TimeZone(identifier: "Europe/Prague") ?? .current
@@ -169,7 +170,7 @@ struct Homework: Identifiable, Equatable, Sendable {
         isClosed = dto.closed
         isElectronic = dto.electronic
         attachments = dto.attachments.map {
-            HomeworkAttachment(id: $0.id, name: Self.trimmed($0.name) ?? $0.id, size: $0.size.flatMap { $0 > 0 ? $0 : nil })
+            SchoolAttachment(id: $0.id, name: Self.trimmed($0.name) ?? $0.id, size: $0.size.flatMap { $0 > 0 ? $0 : nil })
         }
     }
 
@@ -213,7 +214,8 @@ struct Homework: Identifiable, Equatable, Sendable {
     }
 
     /// "2020-11-10T00:00:00+01:00", with or without fractions, or a bare day.
-    private static func schoolDate(_ value: String?) -> Date? {
+    /// Komens and report cards send their dates the same way.
+    static func schoolDate(_ value: String?) -> Date? {
         guard let value, !value.isEmpty else { return nil }
         let formatter = ISO8601DateFormatter()
         if let date = formatter.date(from: value) { return date }
@@ -235,7 +237,7 @@ struct Homework: Identifiable, Equatable, Sendable {
     }
 }
 
-struct HomeworkAttachment: Identifiable, Equatable, Sendable {
+struct SchoolAttachment: Identifiable, Equatable, Sendable {
     let id: String
     let name: String
     let size: Int?

@@ -29988,6 +29988,1165 @@
           }
         }
       }
+    },
+    "komens.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zprávy"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "zprávy"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Messages"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "messages"
+          }
+        }
+      }
+    },
+    "komens.untitled" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bez předmětu"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "bez předmětu"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No subject"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "no subject"
+          }
+        }
+      }
+    },
+    "komens.select" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vyber zprávu"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "vyber si zprávu"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose a message"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "pick a message"
+          }
+        }
+      }
+    },
+    "komens.box.received" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Přijaté"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "přijatý"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Received"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "inbox"
+          }
+        }
+      }
+    },
+    "komens.box.noticeboard" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nástěnka"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "nástěnka"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Noticeboard"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "noticeboard"
+          }
+        }
+      }
+    },
+    "komens.empty.received" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ze školy ti zatím nic nepřišlo."
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ze školy zatím nic nepřišlo"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No messages from school."
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "nothing from school yet"
+          }
+        }
+      }
+    },
+    "komens.empty.noticeboard" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Na nástěnce nic není."
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "na nástěnce je zatím prázdno"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nothing on the noticeboard."
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "noticeboard's empty rn"
+          }
+        }
+      }
+    },
+    "komens.unread" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nepřečtená"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "nepřečtená"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unread"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "unread"
+          }
+        }
+      }
+    },
+    "komens.unreadCount" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "variations" : {
+            "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld nepřečtené"
+                }
+              },
+              "many" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld nepřečtené"
+                }
+              },
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld nepřečtená"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld nepřečtených"
+                }
+              }
+            }
+          }
+        },
+        "cs-US" : {
+          "variations" : {
+            "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld nepřečtený"
+                }
+              },
+              "many" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld nepřečtený"
+                }
+              },
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld nepřečtená"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld nepřečtenejch"
+                }
+              }
+            }
+          }
+        },
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld unread"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld unread"
+                }
+              }
+            }
+          }
+        },
+        "en-CO" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld unread"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld unread"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "reportCard.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vysvědčení"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "vysvědko"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Report card"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "report card"
+          }
+        }
+      }
+    },
+    "reportCard.term" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@. pololetí %2$@"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@. pololetí %2$@"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Semester %1$@, %2$@"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "semester %1$@, %2$@"
+          }
+        }
+      }
+    },
+    "reportCard.borderline.1" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Na hraně · %@ od jedničky"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "na hraně · %@ od jedničky"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Borderline · %@ from a 1"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "on the edge · %@ from a 1"
+          }
+        }
+      }
+    },
+    "reportCard.borderline.2" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Na hraně · %@ od dvojky"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "na hraně · %@ od dvojky"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Borderline · %@ from a 2"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "on the edge · %@ from a 2"
+          }
+        }
+      }
+    },
+    "reportCard.borderline.3" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Na hraně · %@ od trojky"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "na hraně · %@ od trojky"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Borderline · %@ from a 3"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "on the edge · %@ from a 3"
+          }
+        }
+      }
+    },
+    "reportCard.borderline.4" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Na hraně · %@ od čtyřky"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "na hraně · %@ od čtyřky"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Borderline · %@ from a 4"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "on the edge · %@ from a 4"
+          }
+        }
+      }
+    },
+    "reportCard.borderline.5" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Na hraně · %@ od pětky"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "na hraně · %@ od pětky"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Borderline · %@ from a 5"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "on the edge · %@ from a 5"
+          }
+        }
+      }
+    },
+    "reportCard.row.estimate" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "odhad %@"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "odhad %@"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "estimate %@"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "estimate %@"
+          }
+        }
+      }
+    },
+    "reportCard.borderlineCount" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "variations" : {
+            "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld na hraně"
+                }
+              },
+              "many" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld na hraně"
+                }
+              },
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld na hraně"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld na hraně"
+                }
+              }
+            }
+          }
+        },
+        "cs-US" : {
+          "variations" : {
+            "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld na hraně"
+                }
+              },
+              "many" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld na hraně"
+                }
+              },
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld na hraně"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld na hraně"
+                }
+              }
+            }
+          }
+        },
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld borderline"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld borderline"
+                }
+              }
+            }
+          }
+        },
+        "en-CO" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld on the edge"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld on the edge"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "reportCard.hero.estimate" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Odhad průměru na vysvědčení"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "odhad průměru na vysvědku"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Expected report card average"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "expected report card avg"
+          }
+        }
+      }
+    },
+    "reportCard.estimate.footer" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Odhad z tvých průměrů. Známky na vysvědčení dávají učitelé."
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "odhad z tvejch průměrů. známky ale dávaj učitelé"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Estimated from your averages. Your teachers decide the marks."
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "estimated from ur averages. teachers have the final say"
+          }
+        }
+      }
+    },
+    "reportCard.subjects" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Předměty"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "předměty"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Subjects"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "subjects"
+          }
+        }
+      }
+    },
+    "reportCard.past" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Předchozí vysvědčení"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "starý vysvědka"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Earlier report cards"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "past report cards"
+          }
+        }
+      }
+    },
+    "reportCard.past.loading" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Načítám vysvědčení…"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "načítám vysvědka…"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Loading report cards…"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "loading report cards…"
+          }
+        }
+      }
+    },
+    "reportCard.past.empty" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zatím žádné vysvědčení."
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "zatím žádný vysvědko"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No report cards yet."
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "no report cards yet"
+          }
+        }
+      }
+    },
+    "reportCard.hero.written" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Průměr na vysvědčení"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "průměr na vysvědku"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Report card average"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "report card avg"
+          }
+        }
+      }
+    },
+    "reportCard.row.average" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Průměr %@"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "průměr %@"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Average %@"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "avg %@"
+          }
+        }
+      }
+    },
+    "reportCard.row.written" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zapsáno na vysvědčení"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "už je na vysvědku"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "On the report card"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "already on the report card"
+          }
+        }
+      }
+    },
+    "reportCard.row.noMarks" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zatím bez známek"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "zatím žádný známky"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No marks yet"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "no marks yet"
+          }
+        }
+      }
+    },
+    "reportCard.absence %@ %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zameškáno %1$@ h · neomluveno %2$@ h"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "zameškáno %1$@ h · neomluveno %2$@ h"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Missed %1$@ h · %2$@ h unexcused"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "missed %1$@ h · %2$@ h unexcused"
+          }
+        }
+      }
+    },
+    "privacy.update.change.messages.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zprávy ze školy"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "zprávy ze školy"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Messages from your school"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "messages from your school"
+          }
+        }
+      }
+    },
+    "privacy.update.change.messages.summary" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gradey ukazuje zprávy z Komensu a nástěnku školy, a otevřením zprávy dáš škole vědět, že je přečtená."
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gradey ukazuje zprávy z Komensu a nástěnku školy, a otevřením zprávy dáš škole vědět, že je přečtená."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gradey shows your Komens messages and noticeboard, and opening a message tells the school it's read."
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gradey shows your Komens messages and noticeboard, and opening a message tells the school it's read."
+          }
+        }
+      }
+    },
+    "privacy.update.change.messages.detail" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tvoje zařízení načítá zprávy z Komensu, příspěvky z nástěnky a jejich přílohy přímo ze serveru školy a kopii si nechává v zařízení. Když otevřeš nepřečtenou zprávu, zařízení dá serveru školy vědět, že je přečtená, stejně jako oficiální aplikace. Zprávy se neposílají na servery Gradey ani do Gradey AI."
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "tvoje zařízení načítá zprávy z Komensu, příspěvky z nástěnky a jejich přílohy přímo ze serveru školy a kopii si nechává v zařízení. když otevřeš nepřečtenou zprávu, zařízení dá serveru školy vědět, že je přečtená, stejně jako oficiální aplikace. zprávy se neposílají na servery Gradey ani do Gradey AI."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your device loads Komens messages, noticeboard posts and their attachments straight from your school's server and keeps a copy on the device. When you open an unread message, your device tells the school's server it has been read, as the official app does. Messages are not sent to Gradey's servers or to Gradey AI."
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "your device loads Komens messages, noticeboard posts and their attachments straight from your school's server and keeps a copy on the device. when you open an unread message, your device tells the school's server it has been read, as the official app does. messages are not sent to Gradey's servers or to Gradey AI."
+          }
+        }
+      }
+    },
+    "privacy.update.change.reportCards.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vysvědčení zůstávají v tvém zařízení"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "vysvědčení zůstávají v tvém zařízení"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Report cards stay on your device"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "report cards stay on your device"
+          }
+        }
+      }
+    },
+    "privacy.update.change.reportCards.summary" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gradey načítá tvoje vysvědčení ze školy a odhad toho dalšího počítá přímo v zařízení."
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gradey načítá tvoje vysvědčení ze školy a odhad toho dalšího počítá přímo v zařízení."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gradey loads your report cards from the school and estimates the next one on your device."
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gradey loads your report cards from the school and estimates the next one on your device."
+          }
+        }
+      }
+    },
+    "privacy.update.change.reportCards.detail" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tvoje zařízení načítá vysvědčení se známkami, průměry a zameškanými hodinami přímo ze serveru školy a kopii si nechává v zařízení. Odhad na toto pololetí se počítá v zařízení z tvých současných průměrů. Nic z toho se neposílá na servery Gradey ani do Gradey AI."
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "tvoje zařízení načítá vysvědčení se známkami, průměry a zameškanými hodinami přímo ze serveru školy a kopii si nechává v zařízení. odhad na toto pololetí se počítá v zařízení z tvých současných průměrů. nic z toho se neposílá na servery Gradey ani do Gradey AI."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your device loads your report cards, with final marks, averages and missed hours, straight from your school's server and keeps a copy on the device. This semester's estimate is worked out on your device from your current averages. None of it is sent to Gradey's servers or to Gradey AI."
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "your device loads your report cards, with final marks, averages and missed hours, straight from your school's server and keeps a copy on the device. this semester's estimate is worked out on your device from your current averages. none of it is sent to Gradey's servers or to Gradey AI."
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

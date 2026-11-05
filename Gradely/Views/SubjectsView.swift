@@ -1,9 +1,16 @@
 import SwiftUI
 
+/// Where the Marks stack goes: a subject, or the report card and its past terms.
+enum MarksRoute: Hashable {
+    case subject(String)
+    case reportCard
+    case reportCardTerm(ReportCardTerm)
+}
+
 struct SubjectsView: View {
     @State private var viewModel: SubjectsViewModel
     @State private var sortMode: SubjectSortMode = .focus
-    @State private var path: [String] = []
+    @State private var path: [MarksRoute] = []
     /// Wide layouts only: the subject shown next to the list.
     @State private var selectedSubjectID: String?
     @Environment(\.gradelyUsesWideLayout) private var usesWideLayout
@@ -100,17 +107,24 @@ struct SubjectsView: View {
                 }
                 #endif
             }
-            .navigationDestination(for: String.self) { subjectID in
-                if let subject = viewModel.subjects.first(where: { $0.id == subjectID }) {
-                    SubjectDetailView(viewModel: SubjectDetailViewModel(subject: subject, absence: viewModel.absence(for: subject), repository: repository,
-                        trend: trend(for: subject),
-                        prepared: viewModel.snapshotStore?.preparedCalculations[subject.id]), snapshotStore: viewModel.snapshotStore)
-                } else { ContentUnavailableView("detail.intelligence.subjectUnavailable", systemImage: "book.closed") }
+            .navigationDestination(for: MarksRoute.self) { route in
+                switch route {
+                case .subject(let subjectID):
+                    if let subject = viewModel.subjects.first(where: { $0.id == subjectID }) {
+                        SubjectDetailView(viewModel: SubjectDetailViewModel(subject: subject, absence: viewModel.absence(for: subject), repository: repository,
+                            trend: trend(for: subject),
+                            prepared: viewModel.snapshotStore?.preparedCalculations[subject.id]), snapshotStore: viewModel.snapshotStore)
+                    } else { ContentUnavailableView("detail.intelligence.subjectUnavailable", systemImage: "book.closed") }
+                case .reportCard:
+                    ReportCardView(subjects: viewModel.subjects, prepared: preparedCalculations, repository: repository)
+                case .reportCardTerm(let term):
+                    ReportCardTermView(term: term)
+                }
             }
             .onChange(of: siriSubjectID) { _, id in if id == nil { path = [] } }
             .onChange(of: usesWideLayout) { _, isWide in
                 // Unfolding with a subject open shows it beside the list.
-                guard isWide, let subjectID = path.last else { return }
+                guard isWide, case .subject(let subjectID)? = path.last else { return }
                 selectedSubjectID = subjectID
                 path = []
             }
@@ -160,6 +174,13 @@ struct SubjectsView: View {
                 }
 
                 MarksHero(viewModel: viewModel)
+
+                if repository.supportsReportCards {
+                    MarksReportCardRow(
+                        estimates: ReportCardEstimate.estimates(subjects: viewModel.subjects, prepared: preparedCalculations, written: nil),
+                        period: ReportCardPeriod(containing: Date())
+                    )
+                }
 
                 if viewModel.hasLocalAbsenceAdjustments {
                     GradelyLabel(AppL10n.string("absence.title") + " · " + AppL10n.string("absence.override.adjusted"), systemImage: "eye.slash")
@@ -213,8 +234,12 @@ struct SubjectsView: View {
         if usesWideLayout {
             if let siriSubjectID { selectedSubjectID = siriSubjectID }
         } else {
-            path = siriSubjectID.map { [$0] } ?? []
+            path = siriSubjectID.map { [.subject($0)] } ?? []
         }
+    }
+
+    private var preparedCalculations: [String: PreparedGradeCalculation] {
+        viewModel.snapshotStore?.preparedCalculations ?? [:]
     }
 
     private var displayedSubjects: [Subject] {
@@ -362,7 +387,7 @@ private struct SubjectDirectory: View {
                     } else {
                         // By id, so an open subject can move beside the list
                         // when the screen widens.
-                        NavigationLink(value: subject.id) {
+                        NavigationLink(value: MarksRoute.subject(subject.id)) {
                             SubjectRow(
                                 subject: subject,
                                 absence: absence(subject),

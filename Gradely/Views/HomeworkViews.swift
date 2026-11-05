@@ -239,13 +239,76 @@ struct HomeworkDetailView: View {
     }
 
     private func attachments(_ homework: Homework) -> some View {
+        SchoolAttachmentsSection(
+            attachments: homework.attachments,
+            downloadingID: downloadingID,
+            identifierPrefix: "homeworkAttachment",
+            onOpen: open
+        )
+    }
+
+    private func doneButton(_ homework: Homework) -> some View {
+        Button {
+            Task {
+                do { try await store.setDone(!homework.isDone, id: homework.id) }
+                catch { errorMessage = error.localizedDescription }
+            }
+        } label: {
+            GradelyLabel(
+                AppL10n.string(homework.isDone ? "homework.markNotDone" : "homework.markDone"),
+                systemImage: homework.isDone ? "undo-02" : "checkmark"
+            )
+        }
+        .buttonStyle(PrimaryButtonStyle())
+        .disabled(store.pendingIDs.contains(homework.id))
+        .accessibilityIdentifier("homeworkDetailDoneButton")
+    }
+
+    private func open(_ attachment: SchoolAttachment) {
+        downloadingID = attachment.id
+        Task {
+            defer { downloadingID = nil }
+            do { previewURL = try await store.download(attachment) }
+            catch { errorMessage = error.localizedDescription }
+        }
+    }
+
+    /// macOS has no navigation bar in a sheet, so the view names itself and
+    /// carries the close button.
+    @ViewBuilder private var macHeader: some View {
+        #if os(macOS)
+        HStack(alignment: .firstTextBaseline, spacing: Spacing.md) {
+            Text(verbatim: navigationTitle)
+                .font(.gradely(.title2).bold())
+                .lineLimit(2)
+            Spacer(minLength: Spacing.sm)
+            Button { dismiss() } label: { GradelyModalCloseLabel() }
+                .buttonStyle(.plain)
+                .keyboardShortcut(.cancelAction)
+                .accessibilityLabel(AppL10n.string("action.done"))
+                .accessibilityIdentifier("modalDismissButton")
+        }
+        #endif
+    }
+}
+
+// MARK: - Attachments
+
+/// Files attached to homework or a Komens message; tapping one previews it.
+struct SchoolAttachmentsSection: View {
+    let attachments: [SchoolAttachment]
+    let downloadingID: String?
+    let identifierPrefix: String
+    let onOpen: (SchoolAttachment) -> Void
+
+    var body: some View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
             SettingsModalSectionHeader(title: "homework.attachments")
             SettingsSurface(padding: Spacing.md) {
                 VStack(spacing: Spacing.sm) {
-                    ForEach(Array(homework.attachments.enumerated()), id: \.element.id) { index, attachment in
+                    ForEach(Array(attachments.enumerated()), id: \.element.id) { index, attachment in
                         if index > 0 { Divider() }
-                        Button { open(attachment) } label: {
+                        Button { onOpen(attachment) } label: {
                             HStack(spacing: Spacing.md) {
                                 GradelyIcon("attachment-01", size: 18)
                                     .foregroundStyle(Brand.primary)
@@ -271,54 +334,10 @@ struct HomeworkDetailView: View {
                         }
                         .buttonStyle(.plain)
                         .disabled(downloadingID != nil)
-                        .accessibilityIdentifier("homeworkAttachment-\(attachment.id)")
+                        .accessibilityIdentifier("\(identifierPrefix)-\(attachment.id)")
                     }
                 }
             }
         }
-    }
-
-    private func doneButton(_ homework: Homework) -> some View {
-        Button {
-            Task {
-                do { try await store.setDone(!homework.isDone, id: homework.id) }
-                catch { errorMessage = error.localizedDescription }
-            }
-        } label: {
-            GradelyLabel(
-                AppL10n.string(homework.isDone ? "homework.markNotDone" : "homework.markDone"),
-                systemImage: homework.isDone ? "undo-02" : "checkmark"
-            )
-        }
-        .buttonStyle(PrimaryButtonStyle())
-        .disabled(store.pendingIDs.contains(homework.id))
-        .accessibilityIdentifier("homeworkDetailDoneButton")
-    }
-
-    private func open(_ attachment: HomeworkAttachment) {
-        downloadingID = attachment.id
-        Task {
-            defer { downloadingID = nil }
-            do { previewURL = try await store.download(attachment) }
-            catch { errorMessage = error.localizedDescription }
-        }
-    }
-
-    /// macOS has no navigation bar in a sheet, so the view names itself and
-    /// carries the close button.
-    @ViewBuilder private var macHeader: some View {
-        #if os(macOS)
-        HStack(alignment: .firstTextBaseline, spacing: Spacing.md) {
-            Text(verbatim: navigationTitle)
-                .font(.gradely(.title2).bold())
-                .lineLimit(2)
-            Spacer(minLength: Spacing.sm)
-            Button { dismiss() } label: { GradelyModalCloseLabel() }
-                .buttonStyle(.plain)
-                .keyboardShortcut(.cancelAction)
-                .accessibilityLabel(AppL10n.string("action.done"))
-                .accessibilityIdentifier("modalDismissButton")
-        }
-        #endif
     }
 }

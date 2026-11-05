@@ -18,9 +18,9 @@ Nahrazuje první odstavec:
 
 Nahrazují odstavec se seznamem zpracovávaných údajů a odstavec o tom, co stahuje zařízení:
 
-> Podle tvé školy a funkcí, které používáš, Gradey zpracovává jména, údaje o třídě, známky, předměty, absenci, rozvrhy, domácí úkoly, údaje o učitelích a učebnách a údaje o jídelně nebo obědech.
+> Podle tvé školy a funkcí, které používáš, Gradey zpracovává jména, údaje o třídě, známky, předměty, absenci, rozvrhy, domácí úkoly, zprávy a příspěvky z nástěnky v Komensu včetně příloh, vysvědčení, údaje o učitelích a učebnách a údaje o jídelně nebo obědech.
 >
-> Rozvrh, absenci a domácí úkoly stahuje přímo zařízení. Když v Gradey označíš úkol jako hotový, zařízení tento stav pošle na server tvé školy, stejně jako oficiální aplikace.
+> Rozvrh, absenci, domácí úkoly, Komens a vysvědčení stahuje přímo zařízení. Když v Gradey označíš úkol jako hotový nebo otevřeš nepřečtenou zprávu z Komensu, zařízení tento stav pošle na server tvé školy, stejně jako oficiální aplikace. Zprávy z Komensu a vysvědčení zůstávají v tvém zařízení; neposílají se na backend Gradey ani do Gradey AI a odhad vysvědčení se počítá přímo v zařízení.
 
 ## 3.10 – doplnění na konec oddílu
 

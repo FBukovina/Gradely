@@ -107,8 +107,8 @@ final class HomeworkStore {
         }
     }
 
-    func download(_ attachment: HomeworkAttachment) async throws -> URL {
-        try await repository.downloadHomeworkAttachment(attachment)
+    func download(_ attachment: SchoolAttachment) async throws -> URL {
+        try await repository.downloadAttachment(attachment)
     }
 
     func homework(id: String) -> Homework? { items.first { $0.id == id } }

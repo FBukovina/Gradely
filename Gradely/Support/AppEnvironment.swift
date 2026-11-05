@@ -123,6 +123,8 @@ import Foundation
             absenceCache: absenceCache,
             timetableCache: timetableCache,
             homeworkCache: homeworkCache,
+            komensCache: .onDisk(prefix: KomensSnapshot.cachePrefix),
+            finalMarksCache: .onDisk(prefix: FinalMarksResponse.cachePrefix),
             nextLessonWidgetStore: nextLessonWidgetStore,
             absenceLessonSelectionStore: absenceLessonSelectionStore,
             absenceOverrideStore: absenceOverrideStore,

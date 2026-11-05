@@ -1,10 +1,8 @@
 # Privacy Policy
 
-**Revision 3 draft, not yet published.** It adds friends' timetables (3.11), TŠ Vavruška dance classes (3.12), and school homework, Komens messages and report cards (3.3) to revision 2, which was published on 9 September 2026 and took effect on 15 September 2026. Publish it in English and Czech on the Help Center before the release that ships `PrivacyPolicyRevision.current = 3`, and use the same effective date in both places and in `PrivacyPolicyRevision.effectiveDate`.
+**Published: 5 November 2026. Effective date: 5 November 2026.**
 
-Effective date: [set when published]
-
-This revision describes the privacy changes for Gradey 2.1 and the transition from older app versions. The active-database password cleanup described below was already completed on 8 September 2026. Features described for version 2.1 apply when you install that version.
+This revision describes friends' timetables, TŠ Vavruška dance classes, and homework, Komens messages and report cards from Bakaláři (Gradey 2.7). It keeps the description of the Gradey 2.1 changes and the transition from older app versions. The active-database password cleanup described below was completed on 8 September 2026.
 
 This Privacy Policy explains how **Open Side**, operated by **Filip Bukovina** ("we", "us" or "our"), processes personal data through **Gradey** and its related services.
 

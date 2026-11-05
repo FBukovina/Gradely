@@ -35,22 +35,16 @@ enum PrivacyPolicyRevision {
     /// Apple Watch.
     static let current = 3
 
-    // Revision 3 is drafted in `Docs/PrivacyPolicy.en.md` and
-    // `Docs/PrivacyPolicy-revision3.cs.md` but not published yet. Publish both
-    // on help.bukovinafilip.com, set `effectiveDate` to the date they show,
-    // then delete this block.
-    #if !DEBUG
-    #error("Publish privacy policy revision 3 and set PrivacyPolicyRevision.effectiveDate to its date")
-    #endif
-
+    /// The date on `Docs/PrivacyPolicy.en.md` and `Docs/PrivacyPolicy.cs.md`,
+    /// as published on help.bukovinafilip.com.
     static let effectiveDate: Date = {
         var components = DateComponents()
         components.year = 2026
-        components.month = 10
-        components.day = 26
+        components.month = 11
+        components.day = 5
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(identifier: "Europe/Prague") ?? .gmt
-        return calendar.date(from: components) ?? Date(timeIntervalSince1970: 1_792_969_200)
+        return calendar.date(from: components) ?? Date(timeIntervalSince1970: 1_793_833_200)
     }()
 
     /// Ordered most-important first; the sheet renders them in this order.

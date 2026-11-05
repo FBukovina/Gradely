@@ -81,6 +81,8 @@ struct KomensView: View {
             }
         }
         .background { SettingsBackground() }
+        // The message beside the list belongs to the box it was picked in.
+        .onChange(of: box) { selectedID = nil }
         #else
         NavigationStack {
             messageList(showsPicker: true)

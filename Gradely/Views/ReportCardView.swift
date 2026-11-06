@@ -50,7 +50,9 @@ enum ReportCardText {
 
     /// "Na hraně · 0,04 od dvojky".
     static func borderline(_ borderline: ReportCardEstimate.Borderline) -> String {
-        String(format: AppL10n.string("reportCard.borderline.\(borderline.mark)"), GradeMath.formattedAverage(borderline.distance))
+        // A literal key would be interpolated into "reportCard.borderline.%lld".
+        let key = "reportCard.borderline.\(borderline.mark)"
+        return String(format: AppL10n.string(String.LocalizationValue(key)), GradeMath.formattedAverage(borderline.distance))
     }
 
     static func hours(_ value: Double) -> String {

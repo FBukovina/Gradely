@@ -1,10 +1,12 @@
 import SwiftUI
 
-/// Where the Marks stack goes: a subject, or the report card and its past terms.
+/// Where the Marks stack goes: a subject, the report card and its past
+/// terms, or the Gradey Recap list.
 enum MarksRoute: Hashable {
     case subject(String)
     case reportCard
     case reportCardTerm(ReportCardTerm)
+    case recap
 }
 
 struct SubjectsView: View {
@@ -119,6 +121,10 @@ struct SubjectsView: View {
                     ReportCardView(subjects: viewModel.subjects, prepared: preparedCalculations, repository: repository)
                 case .reportCardTerm(let term):
                     ReportCardTermView(term: term)
+                case .recap:
+                    if let recapStore = viewModel.snapshotStore?.recapStore {
+                        RecapHubView(store: recapStore)
+                    }
                 }
             }
             .onChange(of: siriSubjectID) { _, id in if id == nil { path = [] } }
@@ -180,6 +186,10 @@ struct SubjectsView: View {
                         estimates: ReportCardEstimate.estimates(subjects: viewModel.subjects, prepared: preparedCalculations, written: nil),
                         period: ReportCardPeriod(containing: Date())
                     )
+                }
+
+                if let recapStore = viewModel.snapshotStore?.recapStore {
+                    MarksRecapRow(store: recapStore)
                 }
 
                 if viewModel.hasLocalAbsenceAdjustments {

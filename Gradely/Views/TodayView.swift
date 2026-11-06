@@ -132,6 +132,9 @@ struct TodayView: View {
                     schoolConnectionNotice(account)
                 }
                 TodayHero(snapshot: viewModel.snapshot, now: now)
+                if let recapStore = snapshotStore?.recapStore {
+                    TodayRecapRow(store: recapStore)
+                }
                 if viewModel.isLoading {
                     loadingRow
                 }

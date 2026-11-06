@@ -11,6 +11,8 @@ struct MacWindowActions {
     var refresh: () -> Void
     var newPlannerItem: () -> Void
     var openGradeyAI: () -> Void
+    /// Nil while no recap is out.
+    var openRecap: (() -> Void)?
 }
 
 private struct MacWindowActionsKey: FocusedValueKey {
@@ -94,6 +96,13 @@ struct GradeyMacCommands: Commands {
             Button(AppL10n.string("gradey.ai.title")) { actions?.openGradeyAI() }
                 .keyboardShortcut("k")
                 .disabled(actions == nil)
+
+            Button {
+                actions?.openRecap?()
+            } label: {
+                Text(verbatim: "Gradey Recap")
+            }
+            .disabled(actions?.openRecap == nil)
 
             Button(AppL10n.string("action.refresh")) { actions?.refresh() }
                 .keyboardShortcut("r")

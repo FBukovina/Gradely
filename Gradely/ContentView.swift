@@ -48,6 +48,7 @@ struct ContentView: View {
     @State private var onboardingJourney: OnboardingJourney?
     @State private var plannerTarget: PlannerNavigationTarget?
     @State private var isVavruskaPresented = false
+    @State private var recapPeriod: RecapPeriod?
     @State private var isAccountHubPresented = false
     @State private var siriSubjectID: String?
     @State private var siriSubjectRequestID: UUID?
@@ -274,6 +275,7 @@ struct ContentView: View {
                     }
                     .environment(\.gradelyOpenAccountHub, OpenAccountHubAction { isAccountHubPresented = true })
                     #endif
+                    .environment(\.gradeyOpenRecap, OpenRecapAction { recapPeriod = $0 })
                     .id(schoolAccountRevision)
                     .tint(Brand.primary)
                     .gradelySidebarAdaptable()
@@ -360,6 +362,7 @@ struct ContentView: View {
                 isGradeyAIPresented = false
                 plannerTarget = nil
                 isVavruskaPresented = false
+                recapPeriod = nil
                 siriSubjectID = nil
                 siriLessonTarget = nil
                 gradeyAIViewModel.reset()
@@ -394,6 +397,7 @@ struct ContentView: View {
             schoolSnapshotStore.activateCurrentScope()
             isGradeyAIPresented = false
             plannerTarget = nil
+            recapPeriod = nil
             gradeyAIViewModel.reset()
             selectedTab = .today
             schoolAccountRevision = UUID()
@@ -433,6 +437,7 @@ struct ContentView: View {
             }
             .gradelyMacSheetSize(minWidth: 520, idealWidth: 600, minHeight: 560, idealHeight: 720)
         }
+        .recapStory(item: $recapPeriod, store: schoolSnapshotStore.recapStore)
         .privacyPolicyUpdate(isPresented: shouldShowPrivacyPolicyUpdate, onDismiss: {
             waitingForPolicyDismissal = false
             Task { await consumeNotificationRoute() }
@@ -555,7 +560,8 @@ struct ContentView: View {
             Task { await reconcilePlannerReminders() }
                     restartOnboarding(.newUser)
                 }
-            }
+            },
+            recapStore: schoolSnapshotStore.recapStore
         )
     }
 
@@ -640,7 +646,8 @@ struct ContentView: View {
             selectTab: { selectedTab = $0 },
             refresh: { refreshCommand = RefreshCommand(tab: selectedTab) },
             newPlannerItem: { isNewPlannerItemPresented = true },
-            openGradeyAI: presentGradeyAI
+            openGradeyAI: presentGradeyAI,
+            openRecap: schoolSnapshotStore.recapStore.periods.first.map { latest in { recapPeriod = latest } }
         )
     }
     #endif

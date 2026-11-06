@@ -52,13 +52,19 @@ struct GradeyDebugPanel: View {
     let onClearCache: () -> Void
     let onResetAsNewUser: () -> Void
     let onDisable: () -> Void
+    var recapStore: RecapStore?
 
     @State private var pendingAction: GradeyDebugPendingAction?
+    @State private var recapPeriod: RecapPeriod?
     @State private var copiedField: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.xl) {
             DetailSectionHeader(title: "debug.title")
+
+            if let recapStore {
+                recapSection(recapStore)
+            }
 
             SettingsSurface(padding: 0) {
                 VStack(spacing: 0) {
@@ -220,6 +226,40 @@ struct GradeyDebugPanel: View {
             Text(actionMessage)
         }
         .accessibilityIdentifier("debugPanel")
+    }
+
+    /// Every recap of this and last school year, whether it's out yet or not.
+    private func recapSection(_ store: RecapStore) -> some View {
+        let listed = Set(RecapCalendar.listed(at: store.now()).map(\.id))
+        let periods = RecapCalendar.candidates(around: store.now()).sorted {
+            $0.end != $1.end ? $0.end > $1.end : $0.kind.priority < $1.kind.priority
+        }
+        return SettingsSurface(padding: 0) {
+            VStack(spacing: 0) {
+                ForEach(Array(periods.enumerated()), id: \.element.id) { offset, period in
+                    if offset > 0 { SettingsRowDivider(leadingInset: 20) }
+                    Button {
+                        recapPeriod = period
+                    } label: {
+                        HStack(spacing: Spacing.md) {
+                            Text(verbatim: "Gradey Recap · " + RecapText.title(period))
+                                .font(.gradely(.subheadline).weight(.semibold))
+                                .foregroundStyle(.primary)
+                            Spacer(minLength: Spacing.sm)
+                            Text(verbatim: listed.contains(period.id) ? "out" : "not out yet")
+                                .font(.gradely(.caption))
+                                .foregroundStyle(.secondary)
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, Spacing.md)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+        .accessibilityIdentifier("debugRecapSection")
+        .recapStory(item: $recapPeriod, store: store)
     }
 
     private var progressSummary: String {

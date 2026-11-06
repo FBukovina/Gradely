@@ -125,6 +125,7 @@ import Foundation
             homeworkCache: homeworkCache,
             komensCache: .onDisk(prefix: KomensSnapshot.cachePrefix),
             finalMarksCache: .onDisk(prefix: FinalMarksResponse.cachePrefix),
+            recapArchiveCache: .onDisk(prefix: RecapArchive.cachePrefix),
             nextLessonWidgetStore: nextLessonWidgetStore,
             absenceLessonSelectionStore: absenceLessonSelectionStore,
             absenceOverrideStore: absenceOverrideStore,
@@ -186,9 +187,13 @@ import Foundation
         var preloadedSession = arguments.contains("-uiTestingLoggedIn") ? PreviewData.expiredSession : nil
         preloadedSession?.bakalari = BakalariCredentials(username: DemoAccount.username, password: DemoAccount.password)
         let store = InMemorySessionStore(session: preloadedSession)
+        let recapFixture = arguments.contains("-uiTestingRecapData")
+            ? PreviewData.recapFixture(now: RecapStore.launchNow(arguments: arguments)())
+            : nil
+        let demoMarks = recapFixture?.marks ?? PreviewData.marksResponse
         let cache = InMemoryMarksCache(
             cachedMarks: arguments.contains("-uiTestingCachedMarks")
-                ? CachedMarks(marksResponse: PreviewData.marksResponse, cachedAt: Date())
+                ? CachedMarks(marksResponse: demoMarks, cachedAt: Date())
                 : nil
         )
         let testOverrideStore: any AbsenceOverrideStoring
@@ -294,6 +299,11 @@ import Foundation
             // Before the view model below reads it.
             UserDefaults.standard.set(true, forKey: VavruskaSettings.enabledKey)
         }
+        let recapArchiveCache = ScopedFileCache<RecapArchive>.inMemory(prefix: RecapArchive.cachePrefix)
+        if let recapFixture, let session = try? store.loadSession() {
+            recapArchiveCache.save(recapFixture.archive, scope: SchoolDataScope(session: session))
+            UserDefaults.standard.removeObject(forKey: RecapStore.hiddenKey)
+        }
 
         return AppEnvironment(
             repository: SchoolRepository(
@@ -307,13 +317,14 @@ import Foundation
                         appVersion: nil,
                         userID: "mock-user"
                     ),
-                    absenceResult: useLargeSubjectAbsenceMock
+                    marksResult: demoMarks,
+                    absenceResult: recapFixture?.absence ?? (useLargeSubjectAbsenceMock
                         ? PreviewData.largeSubjectAbsenceResponseWithoutSubjectRows
                         : (
                             useManualSubjectAbsenceMock
                                 ? PreviewData.manualSubjectAbsenceResponseWithoutSubjectRows
                                 : (useEmptySubjectAbsenceMock ? PreviewData.absenceResponseWithoutSubjectRows : PreviewData.absenceResponse)
-                        ),
+                        )),
                     timetableResult: useLargeSubjectAbsenceMock
                         ? PreviewData.largeSubjectTimetableResponse
                         : (useManualSubjectAbsenceMock ? PreviewData.manualSubjectTimetableResponse : PreviewData.timetableResponse)
@@ -321,6 +332,7 @@ import Foundation
                 eduPageClient: eduPageClient,
                 sessionStore: store,
                 marksCache: cache,
+                recapArchiveCache: recapArchiveCache,
                 absenceOverrideStore: testOverrideStore,
                 schoolDirectoryProvider: schoolDirectoryProvider
             ),

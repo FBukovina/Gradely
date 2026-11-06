@@ -41,6 +41,7 @@ final class SchoolSnapshotStore {
     let plannerStore: PlannerStore
     let homeworkStore: HomeworkStore
     let komensStore: KomensStore
+    let recapStore: RecapStore
     let repository: SchoolRepository
     private let historyRepository: GradeyHistoryRepository?
     private let now: () -> Date
@@ -58,6 +59,7 @@ final class SchoolSnapshotStore {
         self.plannerStore = plannerStore ?? PlannerStore(persistence: InMemoryPlannerPersistence(), calendarService: UnavailablePlannerCalendarService())
         self.homeworkStore = HomeworkStore(repository: repository, now: now)
         self.komensStore = KomensStore(repository: repository, now: now)
+        self.recapStore = RecapStore(repository: repository)
         self.historyDirectory = historyDirectory
         self.insightState = SchoolInsightStateStore(directory: historyDirectory)
         self.now = now
@@ -67,6 +69,7 @@ final class SchoolSnapshotStore {
         repository.onAbsenceDataLoaded = { [weak self] changedScope, data, fetchedAt in
             self?.acceptNetworkAbsenceUpdate(data, scope: changedScope, fetchedAt: fetchedAt)
         }
+        recapStore.attach(self)
     }
 
     var marksFetchedAt: Date? { freshness["marks"]?.lastSuccessAt }

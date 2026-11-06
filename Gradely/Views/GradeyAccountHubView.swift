@@ -105,6 +105,8 @@ struct GradeyAccountHubView: View {
     let onDebugSignOut: () -> Void
     let onDebugClearCache: () -> Void
     let onDebugResetAsNewUser: () -> Void
+    /// Lets the debug panel open any recap, out yet or not.
+    let recapStore: RecapStore?
 
     @AppStorage(PlannerNotificationScheduler.enabledKey) private var plannerRemindersEnabled = false
     @Environment(\.dismiss) private var dismiss
@@ -163,7 +165,8 @@ struct GradeyAccountHubView: View {
         onRestartOnboarding: @escaping (OnboardingJourney) -> Void = { _ in },
         onDebugSignOut: @escaping () -> Void = {},
         onDebugClearCache: @escaping () -> Void = {},
-        onDebugResetAsNewUser: @escaping () -> Void = {}
+        onDebugResetAsNewUser: @escaping () -> Void = {},
+        recapStore: RecapStore? = nil
     ) {
         self.account = account
         self.isGuestMode = isGuestMode
@@ -182,6 +185,7 @@ struct GradeyAccountHubView: View {
         self.onDebugSignOut = onDebugSignOut
         self.onDebugClearCache = onDebugClearCache
         self.onDebugResetAsNewUser = onDebugResetAsNewUser
+        self.recapStore = recapStore
         _selectedDestination = State(initialValue: .account)
         _viewModel = State(initialValue: GradeyAccountHubViewModel(
             account: account,
@@ -1775,7 +1779,8 @@ private extension GradeyAccountHubView {
                     },
                     onDisable: {
                         isDebugModeEnabled = false
-                    }
+                    },
+                    recapStore: recapStore
                 )
             }
         }

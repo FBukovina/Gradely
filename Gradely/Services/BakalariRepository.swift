@@ -120,6 +120,7 @@ final class SchoolRepository {
     private let homeworkCache: any HomeworkCaching
     private let komensCache: ScopedFileCache<KomensSnapshot>
     private let finalMarksCache: ScopedFileCache<FinalMarksResponse>
+    private let recapArchiveCache: ScopedFileCache<RecapArchive>
     private let nextLessonWidgetStore: (any NextLessonWidgetStoring)?
     private let absenceOverrideStore: any AbsenceOverrideStoring
     private var latestAbsenceData: [SchoolDataScope: AbsenceData] = [:]
@@ -210,6 +211,7 @@ final class SchoolRepository {
         homeworkCache: any HomeworkCaching = InMemoryHomeworkCache(),
         komensCache: ScopedFileCache<KomensSnapshot>? = nil,
         finalMarksCache: ScopedFileCache<FinalMarksResponse>? = nil,
+        recapArchiveCache: ScopedFileCache<RecapArchive>? = nil,
         nextLessonWidgetStore: (any NextLessonWidgetStoring)? = nil,
         absenceLessonSelectionStore: any AbsenceLessonSelectionStoring = InMemoryAbsenceLessonSelectionStore(),
         absenceOverrideStore: any AbsenceOverrideStoring = InMemoryAbsenceOverrideStore(),
@@ -227,6 +229,7 @@ final class SchoolRepository {
         self.homeworkCache = homeworkCache
         self.komensCache = komensCache ?? .inMemory(prefix: KomensSnapshot.cachePrefix)
         self.finalMarksCache = finalMarksCache ?? .inMemory(prefix: FinalMarksResponse.cachePrefix)
+        self.recapArchiveCache = recapArchiveCache ?? .inMemory(prefix: RecapArchive.cachePrefix)
         self.nextLessonWidgetStore = nextLessonWidgetStore
         self.absenceLessonSelectionStore = absenceLessonSelectionStore
         self.absenceOverrideStore = absenceOverrideStore
@@ -376,6 +379,7 @@ final class SchoolRepository {
         try marksCache.clear(scope: scope)
         try absenceCache.clear(scope: scope)
         try timetableCache.clear(scope: scope)
+        recapArchiveCache.clear(scope: scope)
         try? nextLessonWidgetStore?.clear()
         watchSyncService?.update(session: session)
     }
@@ -483,6 +487,7 @@ final class SchoolRepository {
             try homeworkCache.clear(scope: scope)
             komensCache.clear(scope: scope)
             finalMarksCache.clear(scope: scope)
+            recapArchiveCache.clear(scope: scope)
         } else {
             onSchoolCacheInvalidation?(nil)
             try marksCache.clear()
@@ -491,6 +496,7 @@ final class SchoolRepository {
             try homeworkCache.clear()
             komensCache.clear()
             finalMarksCache.clear()
+            recapArchiveCache.clear()
         }
         removeDownloadedAttachments()
         try absenceLessonSelectionStore.clearAll()
@@ -506,6 +512,7 @@ final class SchoolRepository {
         try homeworkCache.clear()
         komensCache.clear()
         finalMarksCache.clear()
+        recapArchiveCache.clear()
         removeDownloadedAttachments()
         try? nextLessonWidgetStore?.clear()
         try absenceLessonSelectionStore.clearAll()
@@ -923,6 +930,7 @@ final class SchoolRepository {
         let response = try await fetchMarks(session: session)
         try validate(requestContext)
         try marksCache.save(response, scope: SchoolDataScope(session: session))
+        archiveForRecap(marks: response, scope: SchoolDataScope(session: session))
         return response
     }
 
@@ -940,7 +948,10 @@ final class SchoolRepository {
         let absence = await absenceResponse
         let loadedUser = await user
         try validate(requestContext)
-        if let absence { try? absenceCache.save(absence, scope: SchoolDataScope(session: session)) }
+        if let absence {
+            try? absenceCache.save(absence, scope: SchoolDataScope(session: session))
+            archiveForRecap(absence: absence, scope: SchoolDataScope(session: session))
+        }
         let resolved = resolvedUser(loadedUser, session: session)
         if let resolved { watchSyncService?.update(user: resolved) }
         let projected = absence.map { projectAbsenceData(rawResponse: $0, session: session, user: resolved) }
@@ -957,6 +968,7 @@ final class SchoolRepository {
         let response = try await fetchAbsences(session: session)
         try validate(requestContext)
         try? absenceCache.save(response, scope: scope)
+        archiveForRecap(absence: response, scope: scope)
 
         let resolvedAbsenceUser = resolvedUser(await user, session: session)
         try validate(requestContext)
@@ -1162,6 +1174,49 @@ final class SchoolRepository {
         try validate(requestContext)
         finalMarksCache.save(response, scope: SchoolDataScope(session: session))
         return response
+    }
+
+    // MARK: - Recap
+
+    /// Every semester of marks and absence this device has seen for the account.
+    func loadRecapArchive() -> RecapArchive {
+        guard let session = try? sessionStore.loadSession() else { return RecapArchive() }
+        return recapArchiveCache.load(scope: SchoolDataScope(session: session))?.value ?? RecapArchive()
+    }
+
+    private func archiveForRecap(marks response: MarksResponse, scope: SchoolDataScope) {
+        // A new semester with no marks yet must not replace the last one.
+        guard let semester = RecapArchive.semester(ofMarks: response.subjects) else { return }
+        var archive = recapArchiveCache.load(scope: scope)?.value ?? RecapArchive()
+        archive.marks[RecapArchive.key(for: semester)] = response
+        archive.prune(now: dateProvider())
+        recapArchiveCache.save(archive, scope: scope)
+    }
+
+    private func archiveForRecap(absence response: AbsenceResponse, scope: SchoolDataScope) {
+        guard let semester = RecapArchive.semester(ofAbsence: response) else { return }
+        var archive = recapArchiveCache.load(scope: scope)?.value ?? RecapArchive()
+        archive.absence[RecapArchive.key(for: semester)] = response
+        archive.prune(now: dateProvider())
+        recapArchiveCache.save(archive, scope: scope)
+    }
+
+    /// The weeks from `start` up to `end`, cached ones first, the rest four at a time.
+    func loadTimetableWeeks(from start: Date, to end: Date) async -> [TimetableWeek] {
+        guard let session = (try? await validSession()) ?? (try? sessionStore.loadSession()) else { return [] }
+        let requestContext = context(for: session)
+        var weekStarts: [Date] = []
+        var monday = TimetableDates.monday(of: start)
+        while monday < end {
+            weekStarts.append(monday)
+            monday = TimetableDates.addingWeeks(1, to: monday)
+        }
+        let loaded = await loadTermTimetableResponses(weekStarts: weekStarts, session: session, progress: nil)
+        guard (try? validate(requestContext)) != nil else { return [] }
+        return loaded.responses.compactMap { response in
+            guard let first = response.days.lazy.compactMap({ MarkDateFormatter.date(from: $0.date) }).first else { return nil }
+            return TimetableMapper.makeWeek(from: response, weekStart: TimetableDates.monday(of: first))
+        }
     }
 
     // MARK: - Komens

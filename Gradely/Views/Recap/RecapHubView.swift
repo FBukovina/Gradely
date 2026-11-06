@@ -122,6 +122,7 @@ struct MarksRecapRow: View {
 struct TodayRecapRow: View {
     let store: RecapStore
     @Environment(\.gradeyOpenRecap) private var openRecap
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
         if let period = store.featured {
@@ -144,7 +145,7 @@ struct TodayRecapRow: View {
                                 Text(verbatim: "Gradey Recap · " + RecapText.summary(store.summary(for: period)))
                                     .font(.gradely(.caption))
                                     .foregroundStyle(.secondary)
-                                    .lineLimit(2)
+                                    .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 2)
                             }
                             Spacer(minLength: 0)
                         }
@@ -157,6 +158,7 @@ struct TodayRecapRow: View {
                         store.hide(period)
                     } label: {
                         GradelyIcon("cancel-01", size: 16)
+                            .dynamicTypeSize(.medium)
                             .foregroundStyle(.secondary)
                             .frame(width: 32, height: 32)
                             .contentShape(Rectangle())

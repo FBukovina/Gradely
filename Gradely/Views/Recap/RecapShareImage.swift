@@ -32,7 +32,7 @@ private struct RecapShareCanvas: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.lg) {
-            RecapSlideView(recap: recap, slide: slide, animated: false)
+            RecapSlideView(recap: recap, slide: slide, animated: false, showsLogo: false)
             HStack(alignment: .lastTextBaseline, spacing: Spacing.sm) {
                 // The logo is the wordmark itself.
                 Image("GradeyLogo")

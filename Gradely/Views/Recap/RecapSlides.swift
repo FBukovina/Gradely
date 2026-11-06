@@ -71,12 +71,17 @@ enum RecapText {
             let month = period.start.formatted(Date.FormatStyle(locale: AppLanguageOverride.locale, timeZone: Homework.timeZone).month(.wide))
             return String(format: AppL10n.string("recap.intro.month"), month)
         case .quarter:
-            return RecapText.localized("recap.intro.quarter.\(period.number)")
+            return keepingOrdinal(RecapText.localized("recap.intro.quarter.\(period.number)"))
         case .semester:
-            return RecapText.localized("recap.intro.semester.\(period.number)")
+            return keepingOrdinal(RecapText.localized("recap.intro.semester.\(period.number)"))
         case .calendarYear:
             return String(format: AppL10n.string("recap.intro.year"), String(period.year))
         }
+    }
+
+    /// "1. pololetí" never breaks after the "1.".
+    private static func keepingOrdinal(_ text: String) -> String {
+        text.replacingOccurrences(of: ". ", with: ".\u{00A0}")
     }
 
     static func schoolYear(_ startYear: Int) -> String {
@@ -186,6 +191,8 @@ struct RecapSlideView: View {
     let recap: Recap
     let slide: RecapSlide
     var animated = true
+    /// The share image carries its own wordmark, so it leaves out the faded one.
+    var showsLogo = true
 
     private let ink = RecapPalette.ink
 
@@ -236,13 +243,15 @@ struct RecapSlideView: View {
                 note(AppL10n.string("recap.intro.springFromReportCard"))
             }
             Spacer(minLength: Spacing.xl)
-            Image("GradeyLogo")
-                .renderingMode(.template)
-                .resizable()
-                .scaledToFit()
-                .frame(width: 96, height: 96)
-                .opacity(0.22)
-                .accessibilityHidden(true)
+            if showsLogo {
+                Image("GradeyLogo")
+                    .renderingMode(.template)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 96, height: 96)
+                    .opacity(0.22)
+                    .accessibilityHidden(true)
+            }
         }
     }
 
@@ -392,6 +401,7 @@ struct RecapSlideView: View {
         if let personality = recap.personality {
             Spacer(minLength: Spacing.lg)
             GradelyIcon(RecapText.personalityIcon(personality), size: 64)
+                .dynamicTypeSize(.large)
             Text(verbatim: RecapText.personalityTitle(personality))
                 .font(.gradely(size: 48, weight: .bold, relativeTo: .largeTitle))
                 .lineLimit(3)

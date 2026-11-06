@@ -16,8 +16,10 @@ final class RecapStore {
     private let defaults: UserDefaults
     @ObservationIgnored private weak var snapshot: SchoolSnapshotStore?
     @ObservationIgnored private var summaries: [String: Recap] = [:]
-    @ObservationIgnored private var summariesRevision: Int?
-    @ObservationIgnored private var summariesDay: Date?
+    @ObservationIgnored private var semesters: [RecapSemester]?
+    @ObservationIgnored private var reportCards: [ReportCardTerm]?
+    @ObservationIgnored private var cacheRevision: Int?
+    @ObservationIgnored private var cacheDay: Date?
 
     init(repository: SchoolRepository, now: (() -> Date)? = nil, defaults: UserDefaults = .standard) {
         self.repository = repository
@@ -47,17 +49,25 @@ final class RecapStore {
 
     /// Marks and absence only; cheap enough for list rows.
     func summary(for period: RecapPeriod) -> Recap {
-        let revision = snapshot?.revision
-        let day = RecapCalendar.calendar.startOfDay(for: now())
-        if revision != summariesRevision || day != summariesDay {
-            summaries = [:]
-            summariesRevision = revision
-            summariesDay = day
-        }
+        resetCacheIfStale()
         if let cached = summaries[period.id] { return cached }
-        let recap = RecapBuilder.build(period, input: input(reportCards: cachedReportCards()))
+        let reportCards = reportCards ?? cachedReportCards()
+        self.reportCards = reportCards
+        let recap = RecapBuilder.build(period, input: input(reportCards: reportCards))
         summaries[period.id] = recap
         return recap
+    }
+
+    /// New school data or a new day starts the summaries over.
+    private func resetCacheIfStale() {
+        let revision = snapshot?.revision
+        let day = RecapCalendar.calendar.startOfDay(for: now())
+        guard revision != cacheRevision || day != cacheDay else { return }
+        summaries = [:]
+        semesters = nil
+        reportCards = nil
+        cacheRevision = revision
+        cacheDay = day
     }
 
     /// Everything, including the period's timetable weeks and the subjects
@@ -92,6 +102,13 @@ final class RecapStore {
     // MARK: - Input
 
     private func input(reportCards: [ReportCardTerm]) -> RecapInput {
+        resetCacheIfStale()
+        if semesters == nil { semesters = loadSemesters() }
+        return RecapInput(semesters: semesters ?? [], reportCards: reportCards, now: now())
+    }
+
+    /// The archive plus the live snapshot, each semester's averages prepared once.
+    private func loadSemesters() -> [RecapSemester] {
         let archive = repository.loadRecapArchive()
         var subjects: [ReportCardPeriod: [Subject]] = [:]
         var absences: [ReportCardPeriod: AbsenceResponse] = [:]
@@ -108,12 +125,18 @@ final class RecapStore {
         if let live = snapshot?.absence?.response, let period = RecapArchive.semester(ofAbsence: live) {
             absences[period] = live
         }
-        let periods = Set(subjects.keys).union(absences.keys)
-        return RecapInput(
-            semesters: periods.map { RecapSemester(period: $0, subjects: subjects[$0] ?? [], absence: absences[$0]) },
-            reportCards: reportCards,
-            now: now()
-        )
+        let livePrepared = snapshot?.preparedCalculations ?? [:]
+        let liveIDs = Set(snapshot?.subjects.map(\.id) ?? [])
+        return Set(subjects.keys).union(absences.keys).map { period in
+            let semesterSubjects = subjects[period] ?? []
+            var prepared: [String: PreparedGradeCalculation] = [:]
+            for subject in semesterSubjects {
+                let live = liveIDs.contains(subject.id) ? livePrepared[subject.id] : nil
+                prepared[subject.id] = live.flatMap { $0.revision == GradeMath.revision(for: subject) ? $0 : nil }
+                    ?? GradeMath.prepare(subject)
+            }
+            return RecapSemester(period: period, subjects: semesterSubjects, absence: absences[period], prepared: prepared)
+        }
     }
 
     private func cachedReportCards() -> [ReportCardTerm] {

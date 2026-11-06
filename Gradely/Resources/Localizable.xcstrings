@@ -2368,13 +2368,13 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Odpadlo"
+            "value" : "Odpadlé hodiny"
           }
         },
         "cs-US" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "odpadlo"
+            "value" : "odpadlý hodiny"
           }
         },
         "en" : {
@@ -2386,7 +2386,7 @@
         "en-CO" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "canceled"
+            "value" : "canceled lessons"
           }
         }
       }

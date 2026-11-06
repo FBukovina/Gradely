@@ -26,6 +26,8 @@ struct RecapStoryView: View {
     @State private var index = 0
     @State private var playback = RecapPlayback()
     @State private var shareURL: URL?
+    /// The slide `shareURL` shows; the button is dimmed while it's another.
+    @State private var shareIndex: Int?
     @State private var pressStartedAt: Date?
     @FocusState private var isFocused: Bool
 
@@ -72,20 +74,25 @@ struct RecapStoryView: View {
         .sensoryFeedback(.selection, trigger: index)
         .task {
             isFocused = true
+            // Seen once it's opened, even if it's closed before it finishes loading.
+            store.hide(period)
             recap = store.summary(for: period)
             let full = await store.recap(for: period)
             // The timetable slide may arrive late; stay on the slide being read.
             let current = slide
             recap = full
             if let current, let position = full.slides.firstIndex(of: current) { index = position }
-            store.hide(period)
         }
         .task(id: TimerKey(index: index, isLoaded: recap != nil, isVoiceOver: voiceOverEnabled)) {
             await runTimer()
         }
         .task(id: ShareKey(index: index, recap: recap)) {
-            guard let recap, let slide else { return }
+            // Rendering takes the main thread for a moment, so it waits until
+            // the slide has settled and is skipped for slides tapped past.
+            try? await Task.sleep(for: .milliseconds(600))
+            guard !Task.isCancelled, let recap, let slide else { return }
             shareURL = RecapShareImage.render(recap, slide: slide, number: index + 1)
+            shareIndex = index
         }
     }
 
@@ -151,6 +158,7 @@ struct RecapStoryView: View {
                         playback.isPausedByUser.toggle()
                     } label: {
                         GradelyIcon(playback.isPausedByUser ? "play" : "pause", size: 18)
+                            .dynamicTypeSize(.large)
                             .frame(width: 36, height: 36)
                     }
                     .buttonStyle(.plain)
@@ -160,6 +168,7 @@ struct RecapStoryView: View {
                     dismiss()
                 } label: {
                     GradelyIcon("cancel-01", size: 20)
+                        .dynamicTypeSize(.large)
                         .frame(width: 36, height: 36)
                 }
                 .buttonStyle(.plain)
@@ -187,6 +196,7 @@ struct RecapStoryView: View {
                 ShareLink(item: shareURL) {
                     HStack(spacing: Spacing.sm) {
                         GradelyIcon("share-03", size: 18)
+                            .dynamicTypeSize(.large)
                         Text(verbatim: AppL10n.string("recap.share"))
                             .font(.gradely(.headline))
                     }
@@ -196,6 +206,9 @@ struct RecapStoryView: View {
                     .foregroundStyle(Color.white)
                 }
                 .buttonStyle(.plain)
+                .disabled(shareIndex != index)
+                .opacity(shareIndex == index ? 1 : 0.5)
+                .animation(.easeInOut(duration: 0.2), value: shareIndex == index)
                 .accessibilityIdentifier("recapShareButton")
             }
         }
@@ -267,6 +280,8 @@ private struct RecapProgressBar: View {
                 .frame(height: 4)
             }
         }
+        // Segments jump to the new slide; only the current one fills smoothly.
+        .transaction { $0.animation = nil }
         .accessibilityElement()
         .accessibilityLabel(Text(verbatim: String(format: AppL10n.string("recap.progress"), index + 1, count)))
     }

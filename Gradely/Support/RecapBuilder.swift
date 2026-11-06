@@ -5,6 +5,12 @@ struct RecapSemester {
     let period: ReportCardPeriod
     let subjects: [Subject]
     let absence: AbsenceResponse?
+    /// By subject ID; worked out once per semester, not per recap.
+    var prepared: [String: PreparedGradeCalculation] = [:]
+
+    func prepared(_ subject: Subject) -> PreparedGradeCalculation {
+        prepared[subject.id] ?? GradeMath.prepare(subject)
+    }
 }
 
 struct RecapInput {
@@ -36,7 +42,10 @@ enum RecapBuilder {
 
         let subjects = subjectStats(numeric, semesters: semesters, from: period.start, to: end)
         let average = mean(subjects.map(\.average))
-        let ranked = subjects.filter { $0.markCount >= 2 }.sorted {
+        // Outside a month a subject needs three marks to rank, so a single
+        // lucky 1 in a rarely marked subject doesn't top a whole semester.
+        let minimumMarks = period.kind == .month ? 2 : 3
+        let ranked = subjects.filter { $0.markCount >= minimumMarks }.sorted {
             $0.average != $1.average ? $0.average < $1.average : $0.markCount > $1.markCount
         }
         let top = ranked.first
@@ -91,7 +100,7 @@ enum RecapBuilder {
         var entries: [MarkEntry] = []
         for semester in semesters {
             for subject in semester.subjects {
-                let prepared = Dictionary(GradeMath.prepare(subject).marks.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+                let prepared = Dictionary(semester.prepared(subject).marks.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
                 for mark in subject.marks {
                     guard let date = MarkDateFormatter.date(from: mark.markDate), date >= start, date < end,
                           seen.insert(mark.id).inserted else { continue }
@@ -125,9 +134,10 @@ enum RecapBuilder {
         return bySubject.compactMap { subjectID, marks -> RecapSubjectStat? in
             guard let name = marks.last?.subjectName else { return nil }
             var average = weightedMean(marks)
-            let sources = semesters.compactMap { $0.subjects.first { $0.id == subjectID } }
-            if sources.count == 1, let subject = sources.first {
-                let prepared = GradeMath.prepare(subject)
+            let sources = semesters.compactMap { semester in
+                semester.subjects.first { $0.id == subjectID }.map { semester.prepared($0) }
+            }
+            if sources.count == 1, let prepared = sources.first {
                 let inside = prepared.marks.allSatisfy { mark in mark.date.map { $0 >= start && $0 < end } ?? false }
                 if inside, let official = prepared.displayAverage { average = official }
             }
@@ -310,8 +320,9 @@ enum RecapBuilder {
             return RecapReportCard(average: average, isEstimate: false,
                                    ones: term.marks.filter { $0.markText == "1" }.count, borderline: 0)
         }
-        guard let subjects = semesters.first(where: { $0.period == semester })?.subjects, !subjects.isEmpty else { return nil }
-        let prepared = Dictionary(subjects.map { ($0.id, GradeMath.prepare($0)) }, uniquingKeysWith: { first, _ in first })
+        guard let data = semesters.first(where: { $0.period == semester }), !data.subjects.isEmpty else { return nil }
+        let subjects = data.subjects
+        let prepared = Dictionary(subjects.map { ($0.id, data.prepared($0)) }, uniquingKeysWith: { first, _ in first })
         let estimates = ReportCardEstimate.estimates(subjects: subjects, prepared: prepared, written: term)
         guard let average = ReportCardEstimate.average(of: estimates) else { return nil }
         return RecapReportCard(average: average, isEstimate: true,

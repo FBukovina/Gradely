@@ -15,9 +15,21 @@ enum RecapPalette {
     static let rose = Color(.sRGB, red: 1.0, green: 0.561, blue: 0.639)
     static let lilac = Color(.sRGB, red: 0.725, green: 0.651, blue: 1.0)
 
+    /// A recap's own colour: its tile in the list and its first slide. Never
+    /// sky, which is the slide that follows the first one.
+    static func tile(for period: RecapPeriod) -> Color {
+        switch period.kind {
+        case .month: [teal, lime, rose, amber, lilac][period.number % 5]
+        case .quarter: emerald
+        case .semester: lilac
+        case .calendarYear: amber
+        }
+    }
+
     static func background(for slide: RecapSlide, in recap: Recap) -> Color {
         switch slide {
-        case .intro, .reportCard: emerald
+        case .intro: tile(for: recap.period)
+        case .reportCard: emerald
         case .marks, .summary, .lastYear: sky
         case .average: band(GradeMath.band(for: recap.average))
         case .topSubject, .personality: lilac
@@ -61,6 +73,23 @@ enum RecapText {
             return ReportCardText.term(ReportCardPeriod(startYear: period.year, semester: period.number))
         case .calendarYear:
             return String(format: AppL10n.string("recap.period.year"), String(period.year))
+        }
+    }
+
+    /// "Říjen", "1. čtvrtletí", "1. pololetí", "Rok 2026": the title without
+    /// its school year, for the list that's grouped by it.
+    static func shortTitle(_ period: RecapPeriod) -> String {
+        switch period.kind {
+        case .month:
+            let month = period.start.formatted(Date.FormatStyle(locale: AppLanguageOverride.locale, timeZone: Homework.timeZone).month(.wide))
+            return isChronicallyOnline ? month.lowercased() : month.prefix(1).uppercased() + month.dropFirst()
+        case .quarter, .semester:
+            let short = title(period)
+                .replacingOccurrences(of: schoolYear(period.year), with: "")
+                .trimmingCharacters(in: .whitespaces)
+            return keepingOrdinal(short)
+        case .calendarYear:
+            return title(period)
         }
     }
 
@@ -191,8 +220,6 @@ struct RecapSlideView: View {
     let recap: Recap
     let slide: RecapSlide
     var animated = true
-    /// The share image carries its own wordmark, so it leaves out the faded one.
-    var showsLogo = true
 
     private let ink = RecapPalette.ink
 
@@ -227,7 +254,8 @@ struct RecapSlideView: View {
 
     private var intro: some View {
         Group {
-            kicker(verbatim: "Gradey Recap")
+            RecapLogo(size: 30, showsGradey: true)
+                .accessibilityAddTraits(.isHeader)
             Spacer(minLength: Spacing.xl)
             Text(verbatim: RecapText.headline(recap.period))
                 .font(.gradely(size: 54, weight: .bold, relativeTo: .largeTitle))
@@ -243,15 +271,6 @@ struct RecapSlideView: View {
                 note(AppL10n.string("recap.intro.springFromReportCard"))
             }
             Spacer(minLength: Spacing.xl)
-            if showsLogo {
-                Image("GradeyLogo")
-                    .renderingMode(.template)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 96, height: 96)
-                    .opacity(0.22)
-                    .accessibilityHidden(true)
-            }
         }
     }
 
@@ -466,7 +485,8 @@ struct RecapSlideView: View {
 
     private var summary: some View {
         Group {
-            kicker(verbatim: "Gradey Recap")
+            RecapLogo(size: 22, showsGradey: true)
+                .accessibilityAddTraits(.isHeader)
             Text(verbatim: RecapText.title(recap.period))
                 .font(.gradely(size: 36, weight: .bold, relativeTo: .largeTitle))
                 .lineLimit(2)

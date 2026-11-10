@@ -3,7 +3,7 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 /// A 1080 × 1920 PNG of one slide for Instagram stories and the like. It
-/// carries the Gradey wordmark and the period, never a name or school.
+/// carries the Recap logo and the period, never a name or school.
 enum RecapShareImage {
     static let size = CGSize(width: 360, height: 640)
 
@@ -32,23 +32,18 @@ private struct RecapShareCanvas: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.lg) {
-            RecapSlideView(recap: recap, slide: slide, animated: false, showsLogo: false)
-            HStack(alignment: .lastTextBaseline, spacing: Spacing.sm) {
-                // The logo is the wordmark itself.
-                Image("GradeyLogo")
-                    .renderingMode(.template)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(height: 26)
-                    .accessibilityLabel(Text(verbatim: "Gradey"))
-                Spacer()
-                if slide != .intro && slide != .summary {
+            RecapSlideView(recap: recap, slide: slide, animated: false)
+            // The first and the last slide open with the logo and the period.
+            if slide != .intro && slide != .summary {
+                HStack(alignment: .lastTextBaseline, spacing: Spacing.sm) {
+                    RecapLogo(size: 20, showsGradey: true)
+                    Spacer()
                     Text(verbatim: RecapText.title(recap.period))
                         .font(.gradely(.subheadline).weight(.semibold))
                         .opacity(0.75)
                 }
+                .foregroundStyle(RecapPalette.ink)
             }
-            .foregroundStyle(RecapPalette.ink)
         }
         .padding(.horizontal, Spacing.xl)
         .padding(.top, 48)

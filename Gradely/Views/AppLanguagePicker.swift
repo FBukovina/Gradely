@@ -15,30 +15,15 @@ struct AppLanguageOptionsList: View {
     }
 
     private var languageOptions: some View {
-        Group {
-            if usesSettingsChrome {
-                SettingsSurface(padding: 0) {
-                    options
-                }
-            } else {
-                SettingsSurface(padding: 0) {
-                    options
-                }
-            }
+        SettingsSurface(padding: 0) {
+            options
         }
     }
 
     private var chronicallyOnlineToggle: some View {
-        Group {
-            if usesSettingsChrome {
-                SettingsSurface {
-                    toggleContent
-                }
-            } else {
-                SettingsSurface {
-                    toggleContent
-                }
-            }
+        // In Settings it's as tight as the toggles under it.
+        SettingsSurface(padding: usesSettingsChrome ? Spacing.md : 20) {
+            toggleContent
         }
     }
 
@@ -65,7 +50,7 @@ struct AppLanguageOptionsList: View {
                 } label: {
                     languageRow(language)
                         .padding(.horizontal, 20)
-                        .padding(.vertical, compact ? Spacing.sm : Spacing.md)
+                        .padding(.vertical, compact || usesSettingsChrome ? Spacing.sm : Spacing.md)
                         .frame(maxWidth: .infinity, minHeight: rowMinHeight, alignment: .leading)
                         .contentShape(Rectangle())
                 }
@@ -101,7 +86,9 @@ struct AppLanguageOptionsList: View {
         #if os(macOS)
         36
         #else
-        compact ? 58 : 72
+        // Settings rows are as tall as every other row there; onboarding's
+        // are bigger targets.
+        usesSettingsChrome ? 0 : (compact ? 58 : 72)
         #endif
     }
 

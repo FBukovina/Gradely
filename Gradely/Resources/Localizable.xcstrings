@@ -1,6 +1,64 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "settings.connected.inUse" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Používá se"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "používá se"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In use"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "in use"
+          }
+        }
+      }
+    },
+    "settings.connected.actions" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Akce účtu"
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "akce účtu"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Account actions"
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "account actions"
+          }
+        }
+      }
+    },
     "recap.absence.kicker" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -24205,25 +24263,25 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "O aplikaci a podpora"
+            "value" : "O aplikaci"
           }
         },
         "cs-US" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "o appce a podpora"
+            "value" : "o appce"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "About & support"
+            "value" : "About"
           }
         },
         "en-CO" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "about & support"
+            "value" : "about"
           }
         }
       }

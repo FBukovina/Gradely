@@ -160,8 +160,9 @@ struct GradeySiriDiscoverySettingsView: View {
             Toggle(isOn: Binding(get: { settings.isEnabled }, set: { enabled in
                 if enabled { confirming = true } else { settings.setEnabled(false) }
             })) { Text("siri.discovery.title") }
+                .tint(Brand.primary)
                 .accessibilityIdentifier("siriDiscoveryToggle")
-            Text("siri.discovery.description").font(.gradely(.footnote)).foregroundStyle(.secondary)
+            // What's shared is spelled out in the alert, before it turns on.
             if let error = settings.errorMessage { Text(error).font(.gradely(.footnote)).foregroundStyle(.secondary) }
         }
         .alert("siri.discovery.title", isPresented: $confirming) {

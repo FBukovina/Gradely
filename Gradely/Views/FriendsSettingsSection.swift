@@ -13,48 +13,24 @@ struct FriendsSettingsSection: View {
     @State private var isRemovePresented = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Spacing.lg) {
-            if friends.friends.isEmpty {
-                SettingsSurface {
-                    HStack(alignment: .top, spacing: Spacing.md) {
-                        SettingsIcon(name: "user-group")
-                        VStack(alignment: .leading, spacing: Spacing.xs) {
-                            Text("friends.settings.empty.title")
-                                .font(.gradely(.headline))
-                            Text("friends.settings.empty.message")
-                                .font(.gradely(.subheadline))
-                                .foregroundStyle(.secondary)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    }
+        // The same shape as school and canteen above: who's connected, then
+        // the row that adds one.
+        SettingsSurface(padding: 0) {
+            VStack(spacing: 0) {
+                ForEach(friends.friends, id: \.id) { friend in
+                    row(friend)
+                    SettingsRowDivider()
                 }
-            } else {
-                SettingsSurface(padding: 0) {
-                    VStack(spacing: 0) {
-                        ForEach(Array(friends.friends.enumerated()), id: \.element.id) { index, friend in
-                            if index > 0 { SettingsRowDivider() }
-                            row(friend)
-                        }
-                    }
-                }
-            }
 
-            Button {
-                isAddPresented = true
-            } label: {
-                Label {
-                    Text("friends.menu.add")
-                } icon: {
-                    GradelyIcon("user-add-02", size: 15)
-                        .foregroundStyle(Brand.primary)
+                Button {
+                    isAddPresented = true
+                } label: {
+                    SettingsActionRow(title: "friends.menu.add", iconName: "user-add-02")
+                        .settingsRowInsets()
                 }
-                .frame(maxWidth: .infinity)
-                .frame(minHeight: ControlMetrics.minHeight)
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("settingsAddFriendButton")
             }
-            .buttonStyle(.bordered)
-            .tint(Brand.primary)
-            .accessibilityIdentifier("settingsAddFriendButton")
         }
         .sheet(isPresented: $isAddPresented) {
             AddFriendView(friends: friends)
@@ -84,7 +60,8 @@ struct FriendsSettingsSection: View {
             SettingsIcon(name: icon(for: friend.source))
             VStack(alignment: .leading, spacing: 2) {
                 Text(verbatim: friend.name)
-                    .font(.gradely(.body).weight(.semibold))
+                    .font(.gradely(.body).weight(.medium))
+                    .fixedSize(horizontal: false, vertical: true)
                 Text(verbatim: friend.source.summary)
                     .font(.gradely(.caption))
                     .foregroundStyle(.secondary)
@@ -107,18 +84,15 @@ struct FriendsSettingsSection: View {
                     GradelyLabel("friends.remove.action", systemImage: "trash")
                 }
             } label: {
-                GradelyIcon(systemName: "ellipsis.circle")
-                    .foregroundStyle(.secondary)
-                    .frame(width: 32, height: 32)
-                    .contentShape(Rectangle())
+                SettingsRowMenuLabel()
             }
             .menuStyle(.button)
             .buttonStyle(.plain)
             .accessibilityLabel(AppL10n.string("friends.settings.actions"))
             .accessibilityIdentifier("friendActions-\(friend.id)")
         }
-        .padding(.horizontal, SettingsRowMetrics.inset)
-        .padding(.vertical, Spacing.md)
+        .settingsRowInsets(vertical: Spacing.md)
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("friendRow-\(friend.id)")
     }
 

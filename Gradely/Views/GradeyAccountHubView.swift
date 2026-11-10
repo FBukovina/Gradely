@@ -32,17 +32,6 @@ enum SettingsDestination: String, CaseIterable, Hashable, Identifiable {
         }
     }
 
-    var subtitle: String {
-        switch self {
-        case .account: AppL10n.string("settings.destination.account.subtitle")
-        case .connectedServices: AppL10n.string("settings.destination.connected.subtitle")
-        case .notifications: AppL10n.string("settings.destination.notifications.subtitle")
-        case .privacyData: AppL10n.string("settings.destination.privacy.subtitle")
-        case .appPreferences: AppL10n.string("settings.destination.preferences.subtitle")
-        case .supportAbout: AppL10n.string("settings.destination.support.subtitle")
-        }
-    }
-
     var hugeiconName: String {
         switch self {
         case .account: "user"
@@ -657,32 +646,31 @@ struct GradeyAccountHubView: View {
                     AccountAvatar(
                         name: profileAvatarName,
                         avatarURL: viewModel.account?.avatarURL,
-                        size: 60
+                        size: 44
                     )
 
-                    VStack(alignment: .leading, spacing: Spacing.xs) {
+                    VStack(alignment: .leading, spacing: 2) {
                         Text(profileDisplayName)
                             .font(.gradely(.headline))
                             .foregroundStyle(.primary)
                             .fixedSize(horizontal: false, vertical: true)
 
                         Text(profileSubtitle)
-                            .font(.gradely(.subheadline))
-                            .foregroundStyle(Brand.primary.opacity(0.78))
+                            .font(.gradely(.footnote))
+                            .foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
 
                     SettingsDisclosureIcon()
                 }
-                .padding(.horizontal, 20)
-                .padding(.vertical, Spacing.md)
-                .frame(maxWidth: .infinity, minHeight: 104, alignment: .leading)
+                .settingsRowInsets(vertical: Spacing.md)
+                .frame(maxWidth: .infinity, minHeight: 72, alignment: .leading)
                 .background {
                     if isSelected {
-                        RoundedRectangle(cornerRadius: Radius.xl - 4, style: .continuous)
+                        RoundedRectangle(cornerRadius: Radius.sm, style: .continuous)
                             .fill(Brand.primary.opacity(0.10))
-                            .padding(4)
+                            .padding(Spacing.xs)
                     }
                 }
                 .contentShape(Rectangle())
@@ -722,10 +710,11 @@ struct GradeyAccountHubView: View {
         .accessibilityIdentifier("settingsDestination-\(destination.rawValue)")
     }
 
-    private func overviewSubtitle(for destination: SettingsDestination) -> String {
+    /// Only pages with a state to report get a second line.
+    private func overviewSubtitle(for destination: SettingsDestination) -> String? {
         switch destination {
-        case .account:
-            return destination.subtitle
+        case .account, .privacyData, .supportAbout:
+            return nil
         case .connectedServices:
             let school: String
             if schoolAccounts.isEmpty {
@@ -768,12 +757,8 @@ struct GradeyAccountHubView: View {
                 )
             }
             return AppL10n.string("settings.overview.notifications.on")
-        case .privacyData:
-            return destination.subtitle
         case .appPreferences:
             return languageStore.selection.displayName
-        case .supportAbout:
-            return destination.subtitle
         }
     }
 
@@ -839,152 +824,6 @@ private extension GradeyAccountHubView {
 
     var accountDetail: some View {
         VStack(alignment: .leading, spacing: Spacing.xl) {
-            DetailSectionHeader(title: "settings.account.profile.title")
-
-            SettingsSurface {
-                VStack(alignment: .leading, spacing: Spacing.lg) {
-                    AdaptiveSettingsStack {
-                        AccountAvatar(
-                            name: profileAvatarName,
-                            avatarURL: viewModel.account?.avatarURL,
-                            size: 72
-                        )
-
-                        VStack(alignment: .leading, spacing: Spacing.xs) {
-                            Text(profileDisplayName)
-                                .font(.gradely(.title3).weight(.bold))
-                                .fixedSize(horizontal: false, vertical: true)
-
-                            Text(profileSubtitle)
-                                .font(.gradely(.body))
-                                .foregroundStyle(Brand.primary.opacity(0.78))
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-
-                    if !isGuestMode {
-                        Divider()
-
-                        VStack(alignment: .leading, spacing: Spacing.sm) {
-                            Text("settings.account.name.title")
-                                .font(.gradely(.subheadline).weight(.semibold))
-                                .foregroundStyle(.primary)
-
-                            TextField(
-                                "settings.account.name.placeholder",
-                                text: Binding(
-                                    get: { viewModel.fullNameDraft },
-                                    set: viewModel.updateFullNameDraft
-                                )
-                            )
-                            .focused($isFullNameFieldFocused)
-                            .gradelyTextInputAutocapitalization(.words)
-                            .submitLabel(.done)
-                            .gradelyBorderlessTextFields()
-                            .padding(.horizontal, Spacing.md)
-                            .frame(minHeight: ControlMetrics.fieldHeight)
-                            .background(
-                                Color.gradelyTertiaryFill,
-                                in: RoundedRectangle(cornerRadius: Radius.sm, style: .continuous)
-                            )
-                            .overlay {
-                                RoundedRectangle(cornerRadius: Radius.sm, style: .continuous)
-                                    .strokeBorder(
-                                        isFullNameFieldFocused
-                                            ? Brand.primary.opacity(0.65)
-                                            : Color.primary.opacity(0.06),
-                                        lineWidth: isFullNameFieldFocused ? 1.5 : 1
-                                    )
-                            }
-                            .onSubmit {
-                                guard viewModel.canSaveFullName else { return }
-                                saveFullName()
-                            }
-                            .accessibilityIdentifier("accountFullNameField")
-
-                            if viewModel.trimmedFullName.count > 80 {
-                                SettingsHugeiconLabel(
-                                    "settings.account.name.tooLong",
-                                    iconName: "alert-circle",
-                                    iconColor: .red
-                                )
-                                .font(.gradely(.caption))
-                                .foregroundStyle(.red)
-                                    .fixedSize(horizontal: false, vertical: true)
-                                    .accessibilityIdentifier("accountFullNameValidationError")
-                            } else if let fullNameErrorMessage = viewModel.fullNameErrorMessage {
-                                SettingsHugeiconLabel(
-                                    verbatim: fullNameErrorMessage,
-                                    iconName: "alert-circle",
-                                    iconColor: .red
-                                )
-                                    .font(.gradely(.caption))
-                                    .foregroundStyle(.red)
-                                    .fixedSize(horizontal: false, vertical: true)
-                                    .accessibilityIdentifier("accountFullNameSaveError")
-                            } else {
-                                Text("settings.account.name.caption")
-                                    .font(.gradely(.caption))
-                                    .foregroundStyle(.secondary)
-                                    .fixedSize(horizontal: false, vertical: true)
-                            }
-
-                            Button {
-                                saveFullName()
-                            } label: {
-                                if viewModel.isUpdatingFullName {
-                                    ProgressView()
-                                        .frame(maxWidth: .infinity)
-                                        .frame(minHeight: ControlMetrics.minHeight)
-                                } else {
-                                    Text("settings.account.name.save")
-                                        .fontWeight(.semibold)
-                                        .frame(maxWidth: .infinity)
-                                        .frame(minHeight: ControlMetrics.minHeight)
-                                }
-                            }
-                            .buttonStyle(.bordered)
-                            .tint(Brand.primary)
-                            .disabled(!viewModel.canSaveFullName)
-                            .accessibilityIdentifier("accountFullNameSaveButton")
-                        }
-
-                        Divider()
-
-                        SettingsValueRow(
-                            title: "settings.account.appleID.title",
-                            value: viewModel.account?.email
-                                ?? AppL10n.string("gradey.account.appleConnected")
-                        )
-                        .accessibilityIdentifier("accountAppleIDValue")
-                    }
-
-                    if repository.availableStudents.count > 1 {
-                        Divider()
-
-                        Button {
-                            isStudentPickerPresented = true
-                        } label: {
-                            SettingsActionRow(
-                                title: "edupage.children.switch",
-                                message: "settings.account.children.message",
-                                iconName: "students"
-                            )
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityIdentifier("switchEduPageStudentButton")
-                    }
-                }
-            }
-            .onAppear {
-                focusFullNameIfRequested()
-            }
-            .onChange(of: shouldFocusFullName) { _, shouldFocus in
-                guard shouldFocus else { return }
-                focusFullNameIfRequested()
-            }
-
             if isGuestMode {
                 DetailSectionHeader(title: "gradey.guest.accountSection.title")
 
@@ -1012,31 +851,153 @@ private extension GradeyAccountHubView {
                         .accessibilityIdentifier("leaveGuestModeButton")
                     }
                 }
+            } else {
+                DetailSectionHeader(title: "settings.account.profile.title")
+
+                SettingsSurface {
+                    accountNameEditor
+                }
+                .onAppear {
+                    focusFullNameIfRequested()
+                }
+                .onChange(of: shouldFocusFullName) { _, shouldFocus in
+                    guard shouldFocus else { return }
+                    focusFullNameIfRequested()
+                }
             }
 
-            DetailSectionHeader(title: "settings.account.session.title")
+            SettingsSurface(padding: 0) {
+                VStack(spacing: 0) {
+                    if repository.availableStudents.count > 1 {
+                        Button {
+                            isStudentPickerPresented = true
+                        } label: {
+                            SettingsActionRow(title: "edupage.children.switch", iconName: "students")
+                                .settingsRowInsets()
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityIdentifier("switchEduPageStudentButton")
 
-            Button(role: .destructive) {
-                isSignOutConfirmationPresented = true
-            } label: {
-                SettingsHugeiconLabel(
-                    accountSignOutTitle,
-                    iconName: "logout-01",
-                    iconColor: .red
+                        SettingsRowDivider()
+                    }
+
+                    Button {
+                        isSignOutConfirmationPresented = true
+                    } label: {
+                        SettingsActionRow(
+                            title: accountSignOutTitle,
+                            iconName: "logout-01",
+                            tint: .red,
+                            accessory: .none
+                        )
+                        .settingsRowInsets()
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("accountSignOutButton")
+
+                    if !isGuestMode {
+                        SettingsRowDivider()
+
+                        deleteGradeyAccountRow
+                    }
+                }
+            }
+        }
+    }
+
+    /// The name field with its error, the Apple ID under it. Save shows up
+    /// once there's a change to save.
+    var accountNameEditor: some View {
+        VStack(alignment: .leading, spacing: Spacing.md) {
+            VStack(alignment: .leading, spacing: Spacing.sm) {
+                Text("settings.account.name.title")
+                    .font(.gradely(.subheadline).weight(.semibold))
+                    .foregroundStyle(.primary)
+
+                TextField(
+                    "settings.account.name.placeholder",
+                    text: Binding(
+                        get: { viewModel.fullNameDraft },
+                        set: viewModel.updateFullNameDraft
+                    )
                 )
-                .font(.gradely(.body).weight(.semibold))
-                .frame(maxWidth: .infinity)
-                .frame(minHeight: ControlMetrics.minHeight)
-            }
-            .buttonStyle(.bordered)
-            .tint(.red)
-            .accessibilityIdentifier("accountSignOutButton")
+                .focused($isFullNameFieldFocused)
+                .gradelyTextInputAutocapitalization(.words)
+                .submitLabel(.done)
+                .gradelyBorderlessTextFields()
+                .padding(.horizontal, Spacing.md)
+                .frame(minHeight: ControlMetrics.fieldHeight)
+                .background(
+                    Color.gradelyTertiaryFill,
+                    in: RoundedRectangle(cornerRadius: Radius.sm, style: .continuous)
+                )
+                .overlay {
+                    RoundedRectangle(cornerRadius: Radius.sm, style: .continuous)
+                        .strokeBorder(
+                            isFullNameFieldFocused
+                                ? Brand.primary.opacity(0.65)
+                                : Color.primary.opacity(0.06),
+                            lineWidth: isFullNameFieldFocused ? 1.5 : 1
+                        )
+                }
+                .onSubmit {
+                    guard viewModel.canSaveFullName else { return }
+                    saveFullName()
+                }
+                .accessibilityIdentifier("accountFullNameField")
 
-            if !isGuestMode {
-                DetailSectionHeader(title: "settings.privacy.delete.title")
+                if viewModel.trimmedFullName.count > 80 {
+                    SettingsHugeiconLabel(
+                        "settings.account.name.tooLong",
+                        iconName: "alert-circle",
+                        iconColor: .red
+                    )
+                    .font(.gradely(.caption))
+                    .foregroundStyle(.red)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("accountFullNameValidationError")
+                } else if let fullNameErrorMessage = viewModel.fullNameErrorMessage {
+                    SettingsHugeiconLabel(
+                        verbatim: fullNameErrorMessage,
+                        iconName: "alert-circle",
+                        iconColor: .red
+                    )
+                    .font(.gradely(.caption))
+                    .foregroundStyle(.red)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("accountFullNameSaveError")
+                }
 
-                deleteGradeyAccountButton
+                if viewModel.canSaveFullName || viewModel.isUpdatingFullName {
+                    Button {
+                        saveFullName()
+                    } label: {
+                        if viewModel.isUpdatingFullName {
+                            ProgressView()
+                                .frame(maxWidth: .infinity)
+                                .frame(minHeight: ControlMetrics.minHeight)
+                        } else {
+                            Text("settings.account.name.save")
+                                .fontWeight(.semibold)
+                                .frame(maxWidth: .infinity)
+                                .frame(minHeight: ControlMetrics.minHeight)
+                        }
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(Brand.primary)
+                    .disabled(!viewModel.canSaveFullName)
+                    .accessibilityIdentifier("accountFullNameSaveButton")
+                }
             }
+
+            Divider()
+
+            SettingsValueRow(
+                title: "settings.account.appleID.title",
+                value: viewModel.account?.email
+                    ?? AppL10n.string("gradey.account.appleConnected")
+            )
+            .accessibilityIdentifier("accountAppleIDValue")
         }
     }
 
@@ -1044,100 +1005,67 @@ private extension GradeyAccountHubView {
         VStack(alignment: .leading, spacing: Spacing.xl) {
             DetailSectionHeader(title: "settings.connected.school.title")
 
-            if isSchoolCloudLinkMissing {
-                cloudLinkWarning(
-                    kind: .schoolCloudLink,
-                    message: "onboarding.sync.warning.school"
-                ) {
-                    await retrySchoolCloudLink()
-                }
-            }
+            SettingsSurface(padding: 0) {
+                VStack(spacing: 0) {
+                    if isSchoolCloudLinkMissing {
+                        cloudLinkWarning(
+                            kind: .schoolCloudLink,
+                            message: "onboarding.sync.warning.school"
+                        ) {
+                            await retrySchoolCloudLink()
+                        }
+                        SettingsRowDivider()
+                    }
 
-            if schoolAccounts.isEmpty {
-                EmptyServiceCard(
-                    title: "settings.connected.school.empty.title",
-                    message: isGuestMode
-                        ? "settings.connected.school.guest.message"
-                        : "settings.connected.school.empty.message",
-                    iconName: "school"
-                )
+                    ForEach(schoolAccounts) { linkedAccount in
+                        connectedAccountRow(linkedAccount)
+                        SettingsRowDivider()
+                    }
 
-                Button {
-                    openSchoolConnection(reconnectAccountID: nil)
-                } label: {
-                    SettingsHugeiconLabel(
-                        "gradey.account.linkSchool.title",
-                        iconName: "link-04",
-                        iconColor: Brand.primary
-                    )
-                    .font(.gradely(.body).weight(.semibold))
-                    .frame(maxWidth: .infinity)
-                    .frame(minHeight: ControlMetrics.minHeight)
+                    connectServiceRow(
+                        title: schoolAccounts.isEmpty
+                            ? "gradey.account.linkSchool.title"
+                            : "settings.connected.school.addAnother",
+                        iconName: schoolAccounts.isEmpty ? "school" : "add-01",
+                        accessibilityIdentifier: "accountLinkSchoolButton"
+                    ) {
+                        openSchoolConnection(reconnectAccountID: nil)
+                    }
+                    .disabled(isGuestMode)
                 }
-                .buttonStyle(.bordered)
-                .tint(Brand.primary)
-                .disabled(isGuestMode)
-                .accessibilityIdentifier("accountLinkSchoolButton")
-            } else {
-                ForEach(schoolAccounts) { linkedAccount in
-                    connectedAccountCard(linkedAccount)
-                }
-
-                Button {
-                    openSchoolConnection(reconnectAccountID: nil)
-                } label: {
-                    SettingsHugeiconLabel(
-                        "settings.connected.school.addAnother",
-                        iconName: "add-01",
-                        iconColor: Brand.primary
-                    )
-                        .frame(maxWidth: .infinity)
-                        .frame(minHeight: ControlMetrics.minHeight)
-                }
-                .buttonStyle(.bordered)
-                .tint(Brand.primary)
-                .disabled(isGuestMode)
-                .accessibilityIdentifier("accountLinkSchoolButton")
             }
 
             DetailSectionHeader(title: "settings.connected.canteen.title")
 
-            if isMealsCloudLinkMissing {
-                cloudLinkWarning(
-                    kind: .mealsCloudLink,
-                    message: "onboarding.sync.warning.meals"
-                ) {
-                    await retryMealsCloudLink()
-                }
-            }
+            SettingsSurface(padding: 0) {
+                VStack(spacing: 0) {
+                    if isMealsCloudLinkMissing {
+                        cloudLinkWarning(
+                            kind: .mealsCloudLink,
+                            message: "onboarding.sync.warning.meals"
+                        ) {
+                            await retryMealsCloudLink()
+                        }
+                        SettingsRowDivider()
+                    }
 
-            if canteenAccounts.isEmpty {
-                EmptyServiceCard(
-                    title: "settings.connected.canteen.empty.title",
-                    message: isGuestMode
-                        ? "settings.connected.canteen.guest.message"
-                        : "settings.connected.canteen.empty.message",
-                    iconName: "restaurant-02"
-                )
-
-                Button {
-                    openStravaConnection()
-                } label: {
-                    SettingsHugeiconLabel(
-                        "gradey.account.linkStrava.title",
-                        iconName: "link-04",
-                        iconColor: Brand.primary
-                    )
-                        .frame(maxWidth: .infinity)
-                        .frame(minHeight: ControlMetrics.minHeight)
-                }
-                .buttonStyle(.bordered)
-                .tint(Brand.primary)
-                .disabled(isGuestMode)
-                .accessibilityIdentifier("accountLinkStravaCZButton")
-            } else {
-                ForEach(canteenAccounts) { linkedAccount in
-                    connectedAccountCard(linkedAccount)
+                    if canteenAccounts.isEmpty {
+                        connectServiceRow(
+                            title: "gradey.account.linkStrava.title",
+                            iconName: "restaurant-02",
+                            accessibilityIdentifier: "accountLinkStravaCZButton"
+                        ) {
+                            openStravaConnection()
+                        }
+                        .disabled(isGuestMode)
+                    } else {
+                        ForEach(Array(canteenAccounts.enumerated()), id: \.element.id) { index, linkedAccount in
+                            if index > 0 {
+                                SettingsRowDivider()
+                            }
+                            connectedAccountRow(linkedAccount)
+                        }
+                    }
                 }
             }
 
@@ -1158,65 +1086,106 @@ private extension GradeyAccountHubView {
         }
     }
 
-    func connectedAccountCard(_ linkedAccount: LinkedAccount) -> some View {
-        SettingsSurface {
-            VStack(alignment: .leading, spacing: Spacing.lg) {
-                AdaptiveSettingsStack {
-                    SettingsIcon(
-                        name: linkedAccount.provider.isSchoolProvider ? "school" : "restaurant-02"
+    /// A row that starts connecting a service.
+    func connectServiceRow(
+        title: LocalizedStringKey,
+        iconName: String,
+        accessibilityIdentifier: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            SettingsActionRow(title: title, iconName: iconName)
+                .settingsRowInsets()
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier(accessibilityIdentifier)
+    }
+
+    /// A linked school or canteen account: who it is, what it needs, when it
+    /// last synced. Its actions are in the menu.
+    func connectedAccountRow(_ linkedAccount: LinkedAccount) -> some View {
+        let isSchool = linkedAccount.provider.isSchoolProvider
+        let isInUse = isSchool && viewModel.activeSchoolAccountID == linkedAccount.id
+
+        return VStack(alignment: .leading, spacing: Spacing.sm) {
+            HStack(spacing: Spacing.md) {
+                SettingsIcon(name: isSchool ? "school" : "restaurant-02")
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(linkedAccount.displayName)
+                        .font(.gradely(.body).weight(.medium))
+                        .fixedSize(horizontal: false, vertical: true)
+                        .accessibilityIdentifier("linkedAccountRow-\(linkedAccount.id)")
+
+                    Text(linkedAccount.subtitle)
+                        .font(.gradely(.caption))
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+                Menu {
+                    if isSchool, !isInUse {
+                        Button {
+                            activate(linkedAccount)
+                        } label: {
+                            GradelyLabel("settings.connected.activate", systemImage: "checkmark")
+                        }
+                        .accessibilityIdentifier("linkedAccountActivate-\(linkedAccount.id)")
+                    }
+
+                    Button(role: .destructive) {
+                        pendingUnlinkAccount = linkedAccount
+                    } label: {
+                        GradelyLabel("gradey.account.unlink.action", systemImage: "trash")
+                    }
+                    .accessibilityIdentifier("linkedAccountUnlinkAction-\(linkedAccount.id)")
+                } label: {
+                    SettingsRowMenuLabel()
+                }
+                .menuStyle(.button)
+                .buttonStyle(.plain)
+                .accessibilityLabel(AppL10n.string("settings.connected.actions"))
+                .accessibilityIdentifier("linkedAccountMenu-\(linkedAccount.id)")
+            }
+
+            Group {
+                if linkedAccount.status != .active {
+                    SettingsRowStatusLabel(
+                        text: linkedAccount.actionRequiredReason.flatMap { $0.isEmpty ? nil : $0 }
+                            ?? linkedAccount.status.displayName,
+                        iconName: "alert-02",
+                        color: .gradelySystemOrange
                     )
-
-                    VStack(alignment: .leading, spacing: Spacing.xs) {
-                        Text(linkedAccount.displayName)
-                            .font(.gradely(.headline))
-                            .fixedSize(horizontal: false, vertical: true)
-                            .accessibilityIdentifier("linkedAccountRow-\(linkedAccount.id)")
-
-                        Text(linkedAccount.subtitle)
-                            .font(.gradely(.subheadline))
-                            .foregroundStyle(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-
-                    StatusChip(
-                        text: linkedAccount.status.displayName,
-                        color: linkedAccount.status == .active ? Brand.primary : .gradelySystemOrange
+                } else if isInUse, schoolAccounts.count > 1 {
+                    SettingsRowStatusLabel(
+                        text: AppL10n.string("settings.connected.inUse"),
+                        iconName: "tick-02",
+                        color: Brand.primary
                     )
                 }
 
-                if let actionRequiredReason = linkedAccount.actionRequiredReason,
-                   !actionRequiredReason.isEmpty {
-                    Label {
-                        Text(actionRequiredReason)
-                            .fixedSize(horizontal: false, vertical: true)
-                    } icon: {
-                        GradelyIcon("alert-02", size: 14)
-                            .foregroundStyle(Color.gradelySystemOrange)
+                if isSchool, accountNeedsAttention(linkedAccount) {
+                    Button {
+                        openSchoolConnection(reconnectAccountID: linkedAccount.id)
+                    } label: {
+                        SettingsInlineLink(title: "settings.connected.reconnect")
                     }
-                    .font(.gradely(.footnote))
-                    .foregroundStyle(Color.gradelySystemOrange)
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("linkedAccountReconnect-\(linkedAccount.id)")
                 }
 
-                VStack(alignment: .leading, spacing: Spacing.sm) {
-                    if let lastSyncedAt = linkedAccount.lastSyncedAt {
-                        SettingsMetadataRow(
-                            title: "settings.connected.lastSync",
-                            value: lastSyncedAt.formatted(date: .abbreviated, time: .shortened)
-                        )
-                    }
-
-                    if let lastPolledAt = linkedAccount.lastPolledAt {
-                        SettingsMetadataRow(
-                            title: "settings.connected.lastChecked",
-                            value: lastPolledAt.formatted(date: .abbreviated, time: .shortened)
-                        )
-                    }
+                if let summary = syncSummary(
+                    lastSyncedAt: linkedAccount.lastSyncedAt,
+                    lastPolledAt: linkedAccount.lastPolledAt
+                ) {
+                    Text(verbatim: summary)
+                        .font(.gradely(.caption))
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
 
-                if linkedAccount.provider.isSchoolProvider {
-                    Divider()
-
+                if isSchool {
                     Toggle(isOn: Binding(
                         get: {
                             viewModel.accounts.first(where: { $0.id == linkedAccount.id })?.notificationsEnabled
@@ -1228,13 +1197,8 @@ private extension GradeyAccountHubView {
                             }
                         }
                     )) {
-                        VStack(alignment: .leading, spacing: Spacing.xs) {
-                            Text("settings.connected.accountNotifications.title")
-                            Text("settings.connected.accountNotifications.message")
-                                .font(.gradely(.caption))
-                                .foregroundStyle(.secondary)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
+                        Text("settings.connected.accountNotifications.title")
+                            .font(.gradely(.subheadline))
                     }
                     .tint(Brand.primary)
                     .disabled(
@@ -1244,117 +1208,66 @@ private extension GradeyAccountHubView {
                     )
                     .accessibilityIdentifier("linkedAccountNotificationsToggle-\(linkedAccount.id)")
                 }
-
-                Divider()
-
-                ViewThatFits(in: .horizontal) {
-                    HStack(spacing: Spacing.sm) {
-                        connectedAccountActions(linkedAccount)
-                    }
-
-                    VStack(alignment: .leading, spacing: Spacing.sm) {
-                        connectedAccountActions(linkedAccount)
-                    }
-                }
             }
+            .padding(.leading, SettingsIcon.frameSize + Spacing.md)
         }
+        .settingsRowInsets(vertical: Spacing.md)
         .disabled(viewModel.isMutating(linkedAccount))
         .overlay {
             if viewModel.isMutating(linkedAccount) {
                 ProgressView()
-                    .padding(Spacing.lg)
-                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: Radius.md))
             }
         }
     }
 
-    @ViewBuilder
-    func connectedAccountActions(_ linkedAccount: LinkedAccount) -> some View {
-        if linkedAccount.provider.isSchoolProvider,
-           viewModel.activeSchoolAccountID != linkedAccount.id {
-            Button {
-                activate(linkedAccount)
-            } label: {
-                SettingsHugeiconLabel(
-                    "settings.connected.activate",
-                    iconName: "checkmark-circle-02",
-                    iconColor: Brand.primary
-                )
-                    .frame(maxWidth: .infinity)
-                    .frame(minHeight: ControlMetrics.minHeight)
-            }
-            .buttonStyle(.bordered)
-            .tint(Brand.primary)
-            .accessibilityIdentifier("linkedAccountActivate-\(linkedAccount.id)")
+    /// "Last sync · 9. 11. 14:02", or the last check when it never synced.
+    func syncSummary(lastSyncedAt: Date?, lastPolledAt: Date? = nil) -> String? {
+        if let lastSyncedAt {
+            return "\(AppL10n.string("settings.connected.lastSync")) · \(shortTimestamp(lastSyncedAt))"
         }
+        if let lastPolledAt {
+            return "\(AppL10n.string("settings.connected.lastChecked")) · \(shortTimestamp(lastPolledAt))"
+        }
+        return nil
+    }
 
-        if linkedAccount.provider.isSchoolProvider,
-           linkedAccount.status == .actionRequired || linkedAccount.status == .failed {
-            Button {
-                openSchoolConnection(reconnectAccountID: linkedAccount.id)
-            } label: {
-                SettingsHugeiconLabel(
-                    "settings.connected.reconnect",
-                    iconName: "refresh-04",
-                    iconColor: Brand.primary
-                )
-                    .frame(maxWidth: .infinity)
-                    .frame(minHeight: ControlMetrics.minHeight)
-            }
-            .buttonStyle(.bordered)
-            .tint(Brand.primary)
-            .accessibilityIdentifier("linkedAccountReconnect-\(linkedAccount.id)")
-        }
-
-        Button(role: .destructive) {
-            pendingUnlinkAccount = linkedAccount
-        } label: {
-            SettingsHugeiconLabel(
-                "gradey.account.unlink.action",
-                iconName: "delete-02",
-                iconColor: .red
-            )
-                .frame(maxWidth: .infinity)
-                .frame(minHeight: ControlMetrics.minHeight)
-        }
-        .buttonStyle(.bordered)
-        .tint(.red)
-        .accessibilityIdentifier("linkedAccountUnlinkAction-\(linkedAccount.id)")
+    func shortTimestamp(_ date: Date) -> String {
+        "\(SchoolDateFormatting.shortDate(date)) \(date.formatted(date: .omitted, time: .shortened))"
     }
 
     var notificationsDetail: some View {
         VStack(alignment: .leading, spacing: Spacing.xl) {
             DetailSectionHeader(title: "settings.notifications.device.title")
 
-            SettingsSurface {
-                AdaptiveSettingsStack {
-                    SettingsIcon(name: notificationPermissionIconName)
+            SettingsSurface(padding: Spacing.md) {
+                VStack(alignment: .leading, spacing: Spacing.md) {
+                    AdaptiveSettingsStack {
+                        SettingsIcon(name: notificationPermissionIconName)
 
-                    VStack(alignment: .leading, spacing: Spacing.xs) {
-                        Text("settings.notifications.permission.title")
-                            .font(.gradely(.headline))
-                        Text(notificationPermissionLabel)
-                            .font(.gradely(.subheadline))
-                            .foregroundStyle(notificationPermissionColor)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-
-                    if notificationAuthorizationStatus != .authorized {
-                        Button(notificationPermissionActionTitle) {
-                            Task {
-                                await resolveNotificationPermission()
-                            }
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("settings.notifications.permission.title")
+                                .font(.gradely(.body).weight(.medium))
+                            Text(notificationPermissionLabel)
+                                .font(.gradely(.caption))
+                                .foregroundStyle(notificationPermissionColor)
                         }
-                        .buttonStyle(.bordered)
-                        .tint(Brand.primary)
-                        .frame(minHeight: ControlMetrics.minHeight)
-                        .accessibilityIdentifier("notificationPermissionAction")
-                    }
-                }
-            }
+                        .frame(maxWidth: .infinity, alignment: .leading)
 
-            SettingsSurface {
-                VStack(alignment: .leading, spacing: Spacing.sm) {
+                        if notificationAuthorizationStatus != .authorized {
+                            Button(notificationPermissionActionTitle) {
+                                Task {
+                                    await resolveNotificationPermission()
+                                }
+                            }
+                            .buttonStyle(.bordered)
+                            .tint(Brand.primary)
+                            .frame(minHeight: ControlMetrics.minHeight)
+                            .accessibilityIdentifier("notificationPermissionAction")
+                        }
+                    }
+
+                    Divider()
+
                     Toggle(isOn: Binding(get: { plannerRemindersEnabled }, set: { enabled in
                         if !enabled { plannerRemindersEnabled = false }
                         else { Task { await enablePlannerReminders() } }
@@ -1362,15 +1275,13 @@ private extension GradeyAccountHubView {
                         .tint(Brand.primary)
                         .disabled(isRequestingPlannerPermission)
                         .accessibilityIdentifier("plannerRemindersToggle")
-                    Text("planner.reminders.message")
-                        .font(.gradely(.caption)).foregroundStyle(.secondary)
                 }
             }
 
             DetailSectionHeader(title: "gradey.account.notifications.title")
 
-            SettingsSurface {
-                VStack(alignment: .leading, spacing: Spacing.lg) {
+            SettingsSurface(padding: Spacing.md) {
+                VStack(alignment: .leading, spacing: Spacing.md) {
                     Toggle(isOn: Binding(
                         get: { viewModel.notificationPreferences.newMarksEnabled },
                         set: { enabled in
@@ -1387,37 +1298,39 @@ private extension GradeyAccountHubView {
 
                     Divider()
 
-                    Picker("gradey.account.notifications.lockScreen", selection: Binding(
-                        get: { viewModel.notificationPreferences.lockScreenDetail },
-                        set: { detail in
-                            updateNotificationPreferences { preferences in
-                                preferences.lockScreenDetail = detail
-                            }
-                        }
-                    )) {
-                        Text("gradey.account.notifications.privateSummary")
-                            .tag(NotificationLockScreenDetail.privateSummary)
-                        Text("gradey.account.notifications.markAndSubject")
-                            .tag(NotificationLockScreenDetail.markAndSubject)
-                        Text("gradey.account.notifications.fullDetails")
-                            .tag(NotificationLockScreenDetail.fullDetails)
-                    }
-                    .pickerStyle(.menu)
-                    .disabled(!notificationControlsAreEnabled)
-                    .accessibilityIdentifier("lockScreenDetailPicker")
+                    // A menu picker on its own shows only the value: say what it sets.
+                    AdaptiveSettingsStack {
+                        Text("gradey.account.notifications.lockScreen")
+                            .frame(maxWidth: .infinity, alignment: .leading)
 
-                    Text(lockScreenDetailSummary)
-                        .font(.gradely(.caption))
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .accessibilityIdentifier("lockScreenDetailSummary")
+                        Picker("gradey.account.notifications.lockScreen", selection: Binding(
+                            get: { viewModel.notificationPreferences.lockScreenDetail },
+                            set: { detail in
+                                updateNotificationPreferences { preferences in
+                                    preferences.lockScreenDetail = detail
+                                }
+                            }
+                        )) {
+                            Text("gradey.account.notifications.privateSummary")
+                                .tag(NotificationLockScreenDetail.privateSummary)
+                            Text("gradey.account.notifications.markAndSubject")
+                                .tag(NotificationLockScreenDetail.markAndSubject)
+                            Text("gradey.account.notifications.fullDetails")
+                                .tag(NotificationLockScreenDetail.fullDetails)
+                        }
+                        .labelsHidden()
+                        .pickerStyle(.menu)
+                        .fixedSize()
+                        .disabled(!notificationControlsAreEnabled)
+                        .accessibilityIdentifier("lockScreenDetailPicker")
+                    }
                 }
             }
 
             DetailSectionHeader(title: "settings.notifications.quietHours.title")
 
-            SettingsSurface {
-                VStack(alignment: .leading, spacing: Spacing.lg) {
+            SettingsSurface(padding: Spacing.md) {
+                VStack(alignment: .leading, spacing: Spacing.md) {
                     Toggle(isOn: Binding(
                         get: { viewModel.notificationPreferences.quietHoursEnabled },
                         set: { enabled in
@@ -1449,21 +1362,6 @@ private extension GradeyAccountHubView {
                     )
                     .disabled(!quietHoursControlsAreEnabled)
                     .accessibilityIdentifier("quietHoursEndPicker")
-
-                    Label {
-                        Text(
-                            String(
-                                format: AppL10n.string("settings.notifications.timeZone"),
-                                viewModel.notificationPreferences.quietHoursTimeZoneIdentifier
-                            )
-                        )
-                        .fixedSize(horizontal: false, vertical: true)
-                    } icon: {
-                        GradelyIcon("globe-02", size: 13)
-                            .foregroundStyle(.secondary)
-                    }
-                    .font(.gradely(.caption))
-                    .foregroundStyle(.secondary)
                 }
             }
 
@@ -1476,14 +1374,13 @@ private extension GradeyAccountHubView {
 
     var privacyDataDetail: some View {
         VStack(alignment: .leading, spacing: Spacing.xl) {
-            SettingsSurface { GradeySiriDiscoverySettingsView() }
+            SettingsSurface(padding: Spacing.md) { GradeySiriDiscoverySettingsView() }
             DetailSectionHeader(title: "settings.privacy.documents.title")
 
             SettingsSurface(padding: 0) {
                 VStack(spacing: 0) {
                     legalSettingsRow(
                         title: "legal.privacyPolicy",
-                        message: "settings.privacy.policy.caption",
                         iconName: "security-lock",
                         url: AppLinks.privacyPolicyURL,
                         accessibilityIdentifier: "privacyPolicyLink"
@@ -1493,7 +1390,6 @@ private extension GradeyAccountHubView {
 
                     legalSettingsRow(
                         title: "legal.termsOfUse",
-                        message: "settings.privacy.terms.caption",
                         iconName: "left-to-right-list-bullet",
                         url: AppLinks.termsOfUseURL,
                         accessibilityIdentifier: "termsOfUseLink"
@@ -1506,10 +1402,9 @@ private extension GradeyAccountHubView {
                     } label: {
                         SettingsActionRow(
                             title: "privacy.update.settingsRow.title",
-                            message: "privacy.update.settingsRow.caption",
                             iconName: "legal-document-01"
                         )
-                        .padding(20)
+                        .settingsRowInsets()
                     }
                     .buttonStyle(.plain)
                     .accessibilityIdentifier("privacyChangesLink")
@@ -1528,48 +1423,34 @@ private extension GradeyAccountHubView {
 
             DetailSectionHeader(title: "settings.privacy.export.title")
 
-            SettingsSurface {
-                VStack(alignment: .leading, spacing: Spacing.md) {
-                    SettingsActionRow(
-                        title: "settings.privacy.export.action",
-                        message: "settings.privacy.export.caption",
-                        iconName: "file-export"
-                    )
-
+            SettingsSurface(padding: 0) {
+                VStack(spacing: 0) {
                     Button {
                         exportGradeyData()
                     } label: {
-                        if isExporting || viewModel.isExporting {
-                            ProgressView()
-                                .frame(maxWidth: .infinity)
-                                .frame(minHeight: ControlMetrics.minHeight)
-                        } else {
-                            SettingsHugeiconLabel(
-                                "settings.privacy.export.prepare",
-                                iconName: "file-export",
-                                iconColor: Brand.primary
-                            )
-                                .frame(maxWidth: .infinity)
-                                .frame(minHeight: ControlMetrics.minHeight)
-                        }
+                        SettingsActionRow(
+                            title: "settings.privacy.export.prepare",
+                            iconName: "file-export",
+                            accessory: isExporting || viewModel.isExporting ? .progress : .none
+                        )
+                        .settingsRowInsets()
                     }
-                    .buttonStyle(.bordered)
-                    .tint(Brand.primary)
+                    .buttonStyle(.plain)
                     .disabled(isGuestMode || isExporting || viewModel.isExporting)
                     .accessibilityIdentifier("accountExportButton")
 
                     if let exportedDataURL {
+                        SettingsRowDivider()
+
                         ShareLink(item: exportedDataURL) {
-                            SettingsHugeiconLabel(
-                                "settings.privacy.export.share",
+                            SettingsActionRow(
+                                title: "settings.privacy.export.share",
                                 iconName: "share-03",
-                                iconColor: Brand.primary
+                                accessory: .none
                             )
-                                .frame(maxWidth: .infinity)
-                                .frame(minHeight: ControlMetrics.minHeight)
+                            .settingsRowInsets()
                         }
-                        .buttonStyle(.bordered)
-                        .tint(Brand.primary)
+                        .buttonStyle(.plain)
                         .accessibilityIdentifier("accountExportShareButton")
                     }
                 }
@@ -1585,36 +1466,22 @@ private extension GradeyAccountHubView {
         VStack(alignment: .leading, spacing: Spacing.xl) {
             AppLanguageOptionsList(store: languageStore, usesSettingsChrome: true)
 
-            SettingsSurface {
-                Toggle(isOn: $showMealsTab) {
-                    VStack(alignment: .leading, spacing: Spacing.xs) {
+            SettingsSurface(padding: Spacing.md) {
+                VStack(alignment: .leading, spacing: Spacing.md) {
+                    Toggle(isOn: $showMealsTab) {
                         Text("settings.showMealsTab")
-                            .font(.gradely(.body).weight(.medium))
-                        Text("settings.showMealsTab.message")
-                            .font(.gradely(.caption))
-                            .foregroundStyle(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
                     }
-                }
-                .tint(Brand.primary)
-                .accessibilityIdentifier("showMealsTabToggle")
-            }
+                    .tint(Brand.primary)
+                    .accessibilityIdentifier("showMealsTabToggle")
 
-            if let vavruska {
-                SettingsSurface {
-                    VStack(alignment: .leading, spacing: Spacing.lg) {
+                    if let vavruska {
+                        Divider()
+
                         Toggle(isOn: Binding(
                             get: { vavruska.isEnabled },
                             set: { vavruska.isEnabled = $0 }
                         )) {
-                            VStack(alignment: .leading, spacing: Spacing.xs) {
-                                Text("settings.showVavruska")
-                                    .font(.gradely(.body).weight(.medium))
-                                Text("settings.showVavruska.message")
-                                    .font(.gradely(.caption))
-                                    .foregroundStyle(.secondary)
-                                    .fixedSize(horizontal: false, vertical: true)
-                            }
+                            Text("settings.showVavruska")
                         }
                         .tint(Brand.primary)
                         .accessibilityIdentifier("showVavruskaToggle")
@@ -1623,7 +1490,7 @@ private extension GradeyAccountHubView {
                             Button {
                                 openVavruskaConnection()
                             } label: {
-                                PlainLinkLabel("settings.connected.dance.connect")
+                                SettingsInlineLink(title: "settings.connected.dance.connect")
                             }
                             .buttonStyle(.plain)
                             .accessibilityIdentifier("preferencesConnectVavruskaButton")
@@ -1644,10 +1511,9 @@ private extension GradeyAccountHubView {
                     Button(action: IntercomIdentity.presentMessenger) {
                         SettingsActionRow(
                             title: "settings.support.chat",
-                            message: "settings.support.chat.message",
                             iconName: "message-multiple-01"
                         )
-                        .padding(20)
+                        .settingsRowInsets()
                     }
                     .buttonStyle(.plain)
                     .accessibilityIdentifier("supportChatButton")
@@ -1660,10 +1526,9 @@ private extension GradeyAccountHubView {
                     } label: {
                         SettingsActionRow(
                             title: "support.tips.menu",
-                            message: "support.tips.message",
                             iconName: "favourite"
                         )
-                        .padding(20)
+                        .settingsRowInsets()
                     }
                     .buttonStyle(.plain)
                     .accessibilityIdentifier("supportGradelyButton")
@@ -1676,7 +1541,7 @@ private extension GradeyAccountHubView {
                             message: "filip@openside.tech",
                             iconName: "mail-01"
                         )
-                        .padding(20)
+                        .settingsRowInsets()
                     }
                     .buttonStyle(.plain)
                     .accessibilityIdentifier("developerContactLink")
@@ -1686,33 +1551,12 @@ private extension GradeyAccountHubView {
                     Link(destination: AppLinks.githubRepositoryURL) {
                         SettingsActionRow(
                             title: "github.repository",
-                            message: "settings.support.github.message",
                             iconName: "github-01"
                         )
-                        .padding(20)
+                        .settingsRowInsets()
                     }
                     .buttonStyle(.plain)
                     .accessibilityIdentifier("githubRepositoryLink")
-
-                    SettingsRowDivider()
-
-                    legalSettingsRow(
-                        title: "legal.privacyPolicy",
-                        message: "settings.privacy.policy.caption",
-                        iconName: "security-lock",
-                        url: AppLinks.privacyPolicyURL,
-                        accessibilityIdentifier: "aboutPrivacyPolicyLink"
-                    )
-
-                    SettingsRowDivider()
-
-                    legalSettingsRow(
-                        title: "legal.termsOfUse",
-                        message: "settings.privacy.terms.caption",
-                        iconName: "left-to-right-list-bullet",
-                        url: AppLinks.termsOfUseURL,
-                        accessibilityIdentifier: "aboutTermsOfUseLink"
-                    )
                 }
             }
 
@@ -1725,35 +1569,26 @@ private extension GradeyAccountHubView {
                     } label: {
                         SettingsActionRow(
                             title: "credits.title",
-                            message: "settings.about.credits.message",
                             iconName: "user-group"
                         )
-                        .padding(20)
+                        .settingsRowInsets()
                     }
                     .buttonStyle(.plain)
                     .accessibilityIdentifier("settingsCreditsButton")
 
-                    SettingsRowDivider()
+                    SettingsRowDivider(leadingInset: SettingsRowMetrics.inset)
 
                     Button {
                         unlockDebugModeIfNeeded()
                     } label: {
                         SettingsValueRow(
                             title: "settings.about.version",
-                            value: appVersion
+                            value: "\(appVersion) (\(appBuild))"
                         )
-                        .padding(20)
+                        .settingsRowInsets(vertical: Spacing.md)
                     }
                     .buttonStyle(.plain)
                     .accessibilityIdentifier("settingsVersionRow")
-
-                    SettingsRowDivider()
-
-                    SettingsValueRow(
-                        title: "settings.about.build",
-                        value: appBuild
-                    )
-                    .padding(20)
                 }
             }
 
@@ -1816,26 +1651,19 @@ private extension GradeyAccountHubView {
         isGuestMode ? "gradey.guest.schoolLogout" : "action.logout"
     }
 
-    var deleteGradeyAccountButton: some View {
-        Button(role: .destructive) {
+    var deleteGradeyAccountRow: some View {
+        Button {
             isDeleteConfirmationPresented = true
         } label: {
-            if isDeletingAccount || viewModel.isDeletingAccount {
-                ProgressView()
-                    .frame(maxWidth: .infinity)
-                    .frame(minHeight: ControlMetrics.minHeight)
-            } else {
-                SettingsHugeiconLabel(
-                    "settings.privacy.delete.action",
-                    iconName: "delete-02",
-                    iconColor: .red
-                )
-                .frame(maxWidth: .infinity)
-                .frame(minHeight: ControlMetrics.minHeight)
-            }
+            SettingsActionRow(
+                title: "settings.privacy.delete.action",
+                iconName: "delete-02",
+                tint: .red,
+                accessory: isDeletingAccount || viewModel.isDeletingAccount ? .progress : .none
+            )
+            .settingsRowInsets()
         }
-        .buttonStyle(.bordered)
-        .tint(.red)
+        .buttonStyle(.plain)
         .disabled(isGuestMode || isDeletingAccount || viewModel.isDeletingAccount)
         .accessibilityIdentifier("accountDeleteButton")
     }
@@ -1953,21 +1781,6 @@ private extension GradeyAccountHubView {
         }
     }
 
-    var lockScreenDetailSummary: LocalizedStringKey {
-        if !viewModel.notificationPreferences.newMarksEnabled {
-            return "gradey.account.notifications.disabledSummary"
-        }
-
-        switch viewModel.notificationPreferences.lockScreenDetail {
-        case .privateSummary:
-            return "gradey.account.notifications.privateSummaryDetail"
-        case .markAndSubject:
-            return "gradey.account.notifications.markAndSubjectDetail"
-        case .fullDetails:
-            return "gradey.account.notifications.fullDetailsDetail"
-        }
-    }
-
     var appVersion: String {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
             ?? AppL10n.string("settings.about.unknown")
@@ -2013,24 +1826,37 @@ private extension GradeyAccountHubView {
 
     var studentPicker: some View {
         NavigationStack {
-            List(repository.availableStudents) { student in
-                Button {
-                    switchStudent(student)
-                } label: {
-                    VStack(alignment: .leading, spacing: Spacing.xs) {
-                        Text(student.fullName)
-                            .fixedSize(horizontal: false, vertical: true)
-                        if let className = student.className {
-                            Text(className)
-                                .font(.gradely(.caption))
-                                .foregroundStyle(.secondary)
-                                .fixedSize(horizontal: false, vertical: true)
+            ScrollView {
+                VStack(spacing: 0) {
+                    ForEach(repository.availableStudents) { student in
+                        Divider()
+
+                        Button {
+                            switchStudent(student)
+                        } label: {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(student.fullName)
+                                    .font(.gradely(.body).weight(.medium))
+                                    .fixedSize(horizontal: false, vertical: true)
+                                if let className = student.className {
+                                    Text(className)
+                                        .font(.gradely(.caption))
+                                        .foregroundStyle(.secondary)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
+                            }
+                            .frame(maxWidth: .infinity, minHeight: ControlMetrics.minHeight, alignment: .leading)
+                            .padding(.vertical, Spacing.sm)
+                            .contentShape(Rectangle())
                         }
+                        .buttonStyle(.plain)
                     }
-                    .frame(minHeight: ControlMetrics.minHeight, alignment: .leading)
                 }
+                .padding(Spacing.lg)
             }
+            .gradelyScreenBackground()
             .navigationTitle("edupage.children.title")
+            .gradelyNavigationTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("action.cancel") {
@@ -2140,7 +1966,6 @@ private extension GradeyAccountHubView {
 
     func legalSettingsRow(
         title: LocalizedStringKey,
-        message: LocalizedStringKey,
         iconName: String,
         url: URL,
         accessibilityIdentifier: String
@@ -2148,12 +1973,8 @@ private extension GradeyAccountHubView {
         Button {
             openURL(url)
         } label: {
-            SettingsActionRow(
-                title: title,
-                message: message,
-                iconName: iconName
-            )
-            .padding(20)
+            SettingsActionRow(title: title, iconName: iconName)
+                .settingsRowInsets()
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier(accessibilityIdentifier)
@@ -2180,130 +2001,103 @@ private extension GradeyAccountHubView {
         }
     }
 
-    @ViewBuilder
+    /// The dance course: which one, whether it needs a new sign-in, when it
+    /// last synced. Unlinking is in the menu.
     func vavruskaSection(_ vavruska: VavruskaViewModel) -> some View {
-        if let course = vavruska.course {
-            let ended = vavruska.isCourseEnded(at: Date())
-            SettingsSurface {
-                VStack(alignment: .leading, spacing: Spacing.lg) {
-                    AdaptiveSettingsStack {
+        SettingsSurface(padding: 0) {
+            if let course = vavruska.course {
+                let ended = vavruska.isCourseEnded(at: Date())
+                let needsReconnect = vavruska.phase == .needsReconnect
+
+                VStack(alignment: .leading, spacing: Spacing.sm) {
+                    HStack(spacing: Spacing.md) {
                         SettingsIcon(name: "music-note-03")
 
-                        VStack(alignment: .leading, spacing: Spacing.xs) {
+                        VStack(alignment: .leading, spacing: 2) {
                             Text(verbatim: course.courseCode.map { String(format: AppL10n.string("vavruska.course.title"), $0) }
                                 ?? AppL10n.string("vavruska.title"))
-                                .font(.gradely(.headline))
+                                .font(.gradely(.body).weight(.medium))
+                                .fixedSize(horizontal: false, vertical: true)
                                 .accessibilityIdentifier("vavruskaCourseRow")
                             Text(verbatim: [AppL10n.string("settings.connected.dance.school"), course.scheduleSummary]
                                 .compactMap { $0 }.joined(separator: " · "))
-                                .font(.gradely(.subheadline))
+                                .font(.gradely(.caption))
                                 .foregroundStyle(.secondary)
                                 .fixedSize(horizontal: false, vertical: true)
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
 
-                        StatusChip(
-                            text: AppL10n.string(
-                                vavruska.phase == .needsReconnect ? "settings.connected.dance.status.reconnect"
-                                    : ended ? "settings.connected.dance.status.ended" : "settings.connected.dance.status.active"
-                            ),
-                            color: vavruska.phase == .needsReconnect ? .gradelySystemOrange : ended ? .secondary : Brand.primary
-                        )
+                        Menu {
+                            Button(role: .destructive) {
+                                isVavruskaDisconnectPresented = true
+                            } label: {
+                                GradelyLabel("gradey.account.unlink.action", systemImage: "trash")
+                            }
+                            .accessibilityIdentifier("vavruskaDisconnectButton")
+                        } label: {
+                            SettingsRowMenuLabel()
+                        }
+                        .menuStyle(.button)
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(AppL10n.string("settings.connected.actions"))
+                        .accessibilityIdentifier("vavruskaMenu")
                     }
 
-                    if let fetchedAt = vavruska.snapshot.lastFetchedAt {
-                        SettingsMetadataRow(
-                            title: "settings.connected.lastSync",
-                            value: fetchedAt.formatted(date: .abbreviated, time: .shortened)
-                        )
-                    }
+                    Group {
+                        if needsReconnect {
+                            SettingsRowStatusLabel(
+                                text: AppL10n.string("settings.connected.dance.status.reconnect"),
+                                iconName: "alert-02",
+                                color: .gradelySystemOrange
+                            )
+                        } else if ended {
+                            SettingsRowStatusLabel(
+                                text: AppL10n.string("settings.connected.dance.status.ended"),
+                                iconName: "calendar-03",
+                                color: .secondary
+                            )
+                        }
 
-                    Divider()
+                        if needsReconnect || ended {
+                            Button {
+                                openVavruskaConnection()
+                            } label: {
+                                SettingsInlineLink(title: ended ? "vavruska.ended.button" : "settings.connected.reconnect")
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityIdentifier("vavruskaReconnectSettingsButton")
+                        }
 
-                    Toggle(isOn: Binding(
-                        get: { vavruska.ticketAlertsEnabled },
-                        set: { enabled in Task { await vavruska.setTicketAlertsEnabled(enabled) } }
-                    )) {
-                        VStack(alignment: .leading, spacing: Spacing.xs) {
-                            Text("vavruska.alerts.toggle")
-                            Text("vavruska.alerts.message")
+                        if let summary = syncSummary(lastSyncedAt: vavruska.snapshot.lastFetchedAt) {
+                            Text(verbatim: summary)
                                 .font(.gradely(.caption))
                                 .foregroundStyle(.secondary)
                                 .fixedSize(horizontal: false, vertical: true)
                         }
-                    }
-                    .tint(Brand.primary)
-                    .accessibilityIdentifier("settingsVavruskaTicketAlertsToggle")
 
-                    Divider()
-
-                    ViewThatFits(in: .horizontal) {
-                        HStack(spacing: Spacing.sm) {
-                            vavruskaActions(vavruska, ended: ended)
+                        Toggle(isOn: Binding(
+                            get: { vavruska.ticketAlertsEnabled },
+                            set: { enabled in Task { await vavruska.setTicketAlertsEnabled(enabled) } }
+                        )) {
+                            Text("vavruska.alerts.toggle")
+                                .font(.gradely(.subheadline))
                         }
-                        VStack(alignment: .leading, spacing: Spacing.sm) {
-                            vavruskaActions(vavruska, ended: ended)
-                        }
+                        .tint(Brand.primary)
+                        .accessibilityIdentifier("settingsVavruskaTicketAlertsToggle")
                     }
+                    .padding(.leading, SettingsIcon.frameSize + Spacing.md)
+                }
+                .settingsRowInsets(vertical: Spacing.md)
+            } else {
+                connectServiceRow(
+                    title: "settings.connected.dance.connect",
+                    iconName: "music-note-03",
+                    accessibilityIdentifier: "accountLinkVavruskaButton"
+                ) {
+                    openVavruskaConnection()
                 }
             }
-        } else {
-            EmptyServiceCard(
-                title: "settings.connected.dance.empty.title",
-                message: "settings.connected.dance.empty.message",
-                iconName: "music-note-03"
-            )
-
-            Button {
-                openVavruskaConnection()
-            } label: {
-                SettingsHugeiconLabel(
-                    "settings.connected.dance.connect",
-                    iconName: "link-04",
-                    iconColor: Brand.primary
-                )
-                    .frame(maxWidth: .infinity)
-                    .frame(minHeight: ControlMetrics.minHeight)
-            }
-            .buttonStyle(.bordered)
-            .tint(Brand.primary)
-            .accessibilityIdentifier("accountLinkVavruskaButton")
         }
-    }
-
-    @ViewBuilder
-    func vavruskaActions(_ vavruska: VavruskaViewModel, ended: Bool) -> some View {
-        if vavruska.phase == .needsReconnect || ended {
-            Button {
-                openVavruskaConnection()
-            } label: {
-                SettingsHugeiconLabel(
-                    ended ? "vavruska.ended.button" : "settings.connected.reconnect",
-                    iconName: "refresh-04",
-                    iconColor: Brand.primary
-                )
-                    .frame(maxWidth: .infinity)
-                    .frame(minHeight: ControlMetrics.minHeight)
-            }
-            .buttonStyle(.bordered)
-            .tint(Brand.primary)
-            .accessibilityIdentifier("vavruskaReconnectSettingsButton")
-        }
-
-        Button(role: .destructive) {
-            isVavruskaDisconnectPresented = true
-        } label: {
-            SettingsHugeiconLabel(
-                "gradey.account.unlink.action",
-                iconName: "delete-02",
-                iconColor: .red
-            )
-                .frame(maxWidth: .infinity)
-                .frame(minHeight: ControlMetrics.minHeight)
-        }
-        .buttonStyle(.bordered)
-        .tint(.red)
-        .accessibilityIdentifier("vavruskaDisconnectButton")
     }
 
     func openStravaConnection() {
@@ -2422,48 +2216,41 @@ private extension GradeyAccountHubView {
         message: LocalizedStringKey,
         retry: @escaping () async -> Void
     ) -> some View {
-        SettingsSurface {
-            VStack(alignment: .leading, spacing: Spacing.md) {
-                SettingsHugeiconLabel(
-                    "onboarding.sync.warning.title",
-                    iconName: "alert-02",
-                    iconColor: .gradelySystemOrange
-                )
-                    .font(.gradely(.headline))
-                    .foregroundStyle(Color.gradelySystemOrange)
-
+        // The first row of its service's list: what's wrong, and the one
+        // thing to do about it.
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: Spacing.md) {
+                SettingsIcon(name: "alert-02", color: .gradelySystemOrange)
+                    .accessibilityHidden(true)
                 Text(message)
                     .font(.gradely(.subheadline))
-                    .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
-
-                Button {
-                    Task {
-                        retryingCloudLink = kind
-                        await retry()
-                        retryingCloudLink = nil
-                    }
-                } label: {
-                    if retryingCloudLink == kind {
-                        ProgressView()
-                            .frame(maxWidth: .infinity)
-                            .frame(minHeight: ControlMetrics.minHeight)
-                    } else {
-                        SettingsHugeiconLabel(
-                            "onboarding.sync.warning.retry",
-                            iconName: "refresh-04",
-                            iconColor: Brand.primary
-                        )
-                            .frame(maxWidth: .infinity)
-                            .frame(minHeight: ControlMetrics.minHeight)
-                    }
-                }
-                .buttonStyle(.bordered)
-                .tint(Brand.primary)
-                .disabled(retryingCloudLink != nil)
-                .accessibilityIdentifier("accountRetry-\(kind.rawValue)")
             }
+
+            Button {
+                Task {
+                    retryingCloudLink = kind
+                    await retry()
+                    retryingCloudLink = nil
+                }
+            } label: {
+                if retryingCloudLink == kind {
+                    ProgressView()
+                        .controlSize(.small)
+                        .frame(minHeight: ControlMetrics.minHeight)
+                } else {
+                    SettingsInlineLink(title: "onboarding.sync.warning.retry")
+                }
+            }
+            .buttonStyle(.plain)
+            .disabled(retryingCloudLink != nil)
+            .padding(.leading, SettingsIcon.frameSize + Spacing.md)
+            .accessibilityIdentifier("accountRetry-\(kind.rawValue)")
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, SettingsRowMetrics.inset)
+        // The link is as tall as a control, so it brings its own space below.
+        .padding(.top, Spacing.md)
     }
 
     func switchStudent(_ student: SchoolStudentProfile) {
@@ -2561,7 +2348,8 @@ private struct SettingsOverviewRow: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     let destination: SettingsDestination
-    let subtitle: String
+    /// The page's live state, for pages that have one worth showing here.
+    let subtitle: String?
     let statusIconName: String?
     let statusColor: Color
     let statusAccessibilityLabel: String?
@@ -2577,12 +2365,11 @@ private struct SettingsOverviewRow: View {
                     regularLayout
                 }
             }
-            .padding(.horizontal, 20)
-            .padding(.vertical, Spacing.md)
-            .frame(maxWidth: .infinity, minHeight: 84, alignment: .leading)
+            .settingsRowInsets()
+            .frame(maxWidth: .infinity, minHeight: 60, alignment: .leading)
             .background {
                 if isSelected {
-                    RoundedRectangle(cornerRadius: Radius.xl - 4, style: .continuous)
+                    RoundedRectangle(cornerRadius: Radius.sm, style: .continuous)
                         .fill(Brand.primary.opacity(0.10))
                         .padding(Spacing.xs)
                 }
@@ -2598,16 +2385,18 @@ private struct SettingsOverviewRow: View {
         HStack(spacing: Spacing.md) {
             SettingsIcon(name: destination.hugeiconName)
 
-            VStack(alignment: .leading, spacing: Spacing.xs) {
+            VStack(alignment: .leading, spacing: 2) {
                 Text(destination.title)
-                    .font(.gradely(.headline))
+                    .font(.gradely(.body).weight(.medium))
                     .foregroundStyle(.primary)
                     .fixedSize(horizontal: false, vertical: true)
 
-                Text(subtitle)
-                    .font(.gradely(.footnote))
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
+                if let subtitle {
+                    Text(subtitle)
+                        .font(.gradely(.caption))
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
 
                 if let statusIconName, let statusAccessibilityLabel {
                     Label {
@@ -2633,7 +2422,7 @@ private struct SettingsOverviewRow: View {
                 SettingsIcon(name: destination.hugeiconName)
 
                 Text(destination.title)
-                    .font(.gradely(.headline))
+                    .font(.gradely(.body).weight(.medium))
                     .foregroundStyle(.primary)
                     .fixedSize(horizontal: false, vertical: true)
 
@@ -2642,11 +2431,13 @@ private struct SettingsOverviewRow: View {
                 SettingsDisclosureIcon()
             }
 
-            Text(subtitle)
-                .font(.gradely(.footnote))
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.leading, SettingsIcon.frameSize + Spacing.md)
+            if let subtitle {
+                Text(subtitle)
+                    .font(.gradely(.caption))
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.leading, SettingsIcon.frameSize + Spacing.md)
+            }
 
             if let statusIconName, let statusAccessibilityLabel {
                 Label {
@@ -2724,27 +2515,21 @@ private struct AccountAvatar: View {
         }
         .frame(width: size, height: size)
         .clipShape(Circle())
-        .overlay {
-            Circle()
-                .strokeBorder(Brand.primary.opacity(0.38), lineWidth: 1)
-        }
-        .shadow(color: Brand.primary.opacity(0.22), radius: 12, x: 0, y: 6)
         .accessibilityHidden(true)
     }
 
     private var fallback: some View {
         ZStack {
-            Brand.gradient
+            Brand.primary.opacity(0.14)
 
             if initials.isEmpty {
-                GradelyIcon("user", size: size * 0.36)
-                    .foregroundStyle(Brand.onAccent)
+                GradelyIcon("user", size: size * 0.42)
             } else {
                 Text(initials)
-                    .font(.gradely(size: size * 0.30, weight: .bold))
+                    .font(.gradely(size: size * 0.36, weight: .bold))
             }
         }
-        .foregroundStyle(Brand.onAccent)
+        .foregroundStyle(Brand.primary)
     }
 
     private var initials: String {
@@ -2787,58 +2572,105 @@ struct DetailSectionHeader: View {
     }
 }
 
-private struct SettingsActionRow: View {
+/// One tappable Settings row: icon, title, an optional value underneath and
+/// what sits at the trailing edge. `tint` colours the icon and title, for
+/// sign out and delete.
+struct SettingsActionRow: View {
+    enum Accessory {
+        case disclosure
+        case progress
+        case none
+    }
+
     let title: LocalizedStringKey
-    let message: LocalizedStringKey
+    var message: LocalizedStringKey?
     let iconName: String
+    var tint: Color?
+    var accessory: Accessory = .disclosure
 
     var body: some View {
         HStack(alignment: .center, spacing: Spacing.md) {
-            SettingsIcon(name: iconName)
+            SettingsIcon(name: iconName, color: tint ?? Brand.primary.opacity(0.88))
 
-            VStack(alignment: .leading, spacing: Spacing.xs) {
+            VStack(alignment: .leading, spacing: 2) {
                 Text(title)
                     .font(.gradely(.body).weight(.medium))
-                    .foregroundStyle(.primary)
+                    .foregroundStyle(tint ?? Color.primary)
                     .fixedSize(horizontal: false, vertical: true)
 
-                Text(message)
-                    .font(.gradely(.caption))
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
+                if let message {
+                    Text(message)
+                        .font(.gradely(.caption))
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
-            SettingsDisclosureIcon()
+            switch accessory {
+            case .disclosure:
+                SettingsDisclosureIcon()
+            case .progress:
+                ProgressView()
+                    .controlSize(.small)
+                    .frame(width: 24, height: 24)
+            case .none:
+                EmptyView()
+            }
         }
         .frame(minHeight: ControlMetrics.minHeight)
         .contentShape(Rectangle())
     }
 }
 
-private struct EmptyServiceCard: View {
-    let title: LocalizedStringKey
-    let message: LocalizedStringKey
+extension View {
+    /// Insets of a row inside `SettingsSurface(padding: 0)`.
+    func settingsRowInsets(vertical: CGFloat = Spacing.sm) -> some View {
+        padding(.horizontal, SettingsRowMetrics.inset)
+            .padding(.vertical, vertical)
+    }
+}
+
+/// The "…" that opens a row's menu.
+struct SettingsRowMenuLabel: View {
+    var body: some View {
+        GradelyIcon(systemName: "ellipsis.circle")
+            .foregroundStyle(.secondary)
+            .frame(width: SettingsIcon.frameSize, height: SettingsIcon.frameSize)
+            .contentShape(Rectangle())
+    }
+}
+
+/// One line of state under a connected service's name.
+private struct SettingsRowStatusLabel: View {
+    let text: String
     let iconName: String
+    let color: Color
 
     var body: some View {
-        SettingsSurface {
-            HStack(alignment: .top, spacing: Spacing.md) {
-                SettingsIcon(name: iconName)
-
-                VStack(alignment: .leading, spacing: Spacing.xs) {
-                    Text(title)
-                        .font(.gradely(.headline))
-                        .fixedSize(horizontal: false, vertical: true)
-                    Text(message)
-                        .font(.gradely(.subheadline))
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
+        HStack(alignment: .firstTextBaseline, spacing: Spacing.xs) {
+            GradelyIcon(iconName, size: 13)
+            Text(verbatim: text)
+                .fixedSize(horizontal: false, vertical: true)
         }
-        .accessibilityIdentifier("linkedAccountsEmptyState")
+        .font(.gradely(.caption).weight(.semibold))
+        .foregroundStyle(color)
+    }
+}
+
+/// A green text link that starts at the row's text edge.
+private struct SettingsInlineLink: View {
+    let title: LocalizedStringKey
+
+    var body: some View {
+        HStack(spacing: Spacing.xs) {
+            Text(title)
+            GradelyIcon("arrow-right-01", size: 13)
+        }
+        .font(.gradely(.subheadline).weight(.semibold))
+        .foregroundStyle(Brand.primary)
+        .frame(minHeight: ControlMetrics.minHeight, alignment: .leading)
+        .contentShape(Rectangle())
     }
 }
 
@@ -2861,30 +2693,6 @@ private struct SettingsAvailabilityMessage: View {
         .foregroundStyle(.secondary)
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, Spacing.xs)
-    }
-}
-
-private struct SettingsMetadataRow: View {
-    let title: LocalizedStringKey
-    let value: String
-
-    var body: some View {
-        ViewThatFits(in: .horizontal) {
-            HStack(alignment: .firstTextBaseline, spacing: Spacing.md) {
-                Text(title)
-                    .foregroundStyle(.secondary)
-                Spacer(minLength: Spacing.md)
-                Text(value)
-                    .multilineTextAlignment(.trailing)
-            }
-
-            VStack(alignment: .leading, spacing: Spacing.xs) {
-                Text(title)
-                    .foregroundStyle(.secondary)
-                Text(value)
-            }
-        }
-        .font(.gradely(.caption))
     }
 }
 

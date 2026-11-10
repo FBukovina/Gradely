@@ -277,58 +277,32 @@ struct HiddenAbsencesView: View {
     @State private var confirmRestoreAll = false
 
     var body: some View {
-        NavigationStack {
-            List {
-                Section {
-                    Text("absence.override.localOnly").foregroundStyle(.secondary)
-                }
+        ModalNavigationContainer {
+            AbsenceSheetPage(title: "absence.override.hiddenTitle") {
                 if let error = viewModel.overrideErrorMessage {
-                    Section {
-                        GradelyLabel(error, systemImage: "exclamationmark.triangle")
-                            .foregroundStyle(GradeBand.poor.foregroundColor)
-                    }
+                    GradelyLabel(error, systemImage: "exclamationmark.triangle")
+                        .font(.gradely(.subheadline))
+                        .foregroundStyle(GradeBand.poor.foregroundColor)
                 }
+
                 if viewModel.allOverrides.isEmpty {
-                    ContentUnavailableView(AppL10n.string("absence.override.none"), systemImage: "eye")
-                        .accessibilityIdentifier("absenceHiddenEmpty")
-                }
-                ForEach(viewModel.allOverrides) { saved in
-                    Section {
-                        HStack {
-                            Text(saved.dateKey).font(.gradely(.headline))
-                            Spacer()
-                            Text("\(saved.hiddenAllocationIDs.count)").monospacedDigit()
+                    emptyState
+                } else {
+                    PlainSection(footer: "absence.override.localOnly") {
+                        ForEach(viewModel.allOverrides) { saved in
+                            dayRow(saved)
                         }
-                        if viewModel.overrideMetadata.reviewOverrides.contains(where: { $0.id == saved.id }) {
-                            GradelyLabel("absence.override.needsReview", systemImage: "exclamationmark.triangle")
-                                .foregroundStyle(GradeBand.average.foregroundColor)
-                            Text("absence.override.reviewMessage").font(.gradely(.caption)).foregroundStyle(.secondary)
-                        } else {
-                            GradelyLabel("absence.override.adjusted", systemImage: "eye.slash")
-                                .foregroundStyle(.secondary)
-                        }
-                        ForEach(saved.allocations.filter { saved.hiddenAllocationIDs.contains($0.id) }) { allocation in
-                            HStack {
-                                Text(allocation.subjectName)
-                                Spacer()
-                                Text(allocation.category.localizedTitle).foregroundStyle(.secondary)
-                            }.font(.gradely(.caption))
-                        }
-                        Button("absence.override.editTitle") { viewModel.openOverrideEditor(dateKey: saved.dateKey) }
-                            .accessibilityIdentifier("absenceHiddenEdit-\(saved.dateKey)")
-                        Button("absence.override.restore") { Task { await viewModel.restoreOverride(dateKey: saved.dateKey) } }
-                            .accessibilityIdentifier("absenceHiddenRestore-\(saved.dateKey)")
                     }
                     .disabled(viewModel.isRestoringOverrides)
-                }
-                if !viewModel.allOverrides.isEmpty {
+
                     Button("absence.override.restoreAll", role: .destructive) { confirmRestoreAll = true }
+                        .buttonStyle(.bordered)
+                        .tint(.red)
                         .disabled(viewModel.isRestoringOverrides)
+                        .padding(.horizontal, Spacing.xs)
                         .accessibilityIdentifier("absenceHiddenRestoreAll")
                 }
             }
-            .navigationTitle("absence.override.hiddenTitle")
-            .gradelyNavigationTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) { Button("action.done") { dismiss() } }
             }
@@ -341,7 +315,91 @@ struct HiddenAbsencesView: View {
             .sheet(item: $viewModel.editor) { editor in AbsenceOverrideEditorView(viewModel: editor) }
         }
         .gradelyMacSheetSize(minWidth: 460, idealWidth: 540, minHeight: 420, idealHeight: 560)
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("absenceHiddenList")
+    }
+
+    private var emptyState: some View {
+        VStack(spacing: Spacing.md) {
+            GradelyIcon("view-off", size: 30)
+                .foregroundStyle(.secondary)
+            Text("absence.override.none")
+                .font(.gradely(.headline))
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, Spacing.xxl * 2)
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("absenceHiddenEmpty")
+    }
+
+    /// One day: its date, the lessons hidden on it, and the two ways out.
+    private func dayRow(_ saved: AbsenceDayOverride) -> some View {
+        let day = dayTitle(saved.dateKey)
+        let needsReview = viewModel.overrideMetadata.reviewOverrides.contains { $0.id == saved.id }
+
+        return VStack(alignment: .leading, spacing: Spacing.sm) {
+            Text(verbatim: day)
+                .font(.gradely(.headline))
+
+            if needsReview {
+                VStack(alignment: .leading, spacing: 2) {
+                    GradelyLabel("absence.override.needsReview", systemImage: "exclamationmark.triangle", iconSize: 13)
+                        .font(.gradely(.caption).weight(.semibold))
+                        .foregroundStyle(GradeBand.average.foregroundColor)
+                    Text("absence.override.reviewMessage")
+                        .font(.gradely(.caption))
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+
+            VStack(alignment: .leading, spacing: Spacing.xs) {
+                ForEach(saved.hiddenAllocations) { allocation in
+                    HStack(alignment: .firstTextBaseline, spacing: Spacing.sm) {
+                        Text(verbatim: allocation.subjectName)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Spacer(minLength: Spacing.sm)
+                        Text(verbatim: allocation.category.localizedTitle)
+                            .foregroundStyle(.secondary)
+                    }
+                    .font(.gradely(.subheadline))
+                }
+            }
+
+            HStack(spacing: Spacing.lg) {
+                Button {
+                    viewModel.openOverrideEditor(dateKey: saved.dateKey)
+                } label: {
+                    linkLabel("absence.override.edit.short")
+                }
+                .accessibilityLabel(Text(verbatim: AppL10n.string("absence.override.editTitle") + ", " + day))
+                .accessibilityIdentifier("absenceHiddenEdit-\(saved.dateKey)")
+
+                Button {
+                    Task { await viewModel.restoreOverride(dateKey: saved.dateKey) }
+                } label: {
+                    linkLabel("absence.override.restore.short")
+                }
+                .accessibilityLabel(Text(verbatim: AppL10n.string("absence.override.restore") + ", " + day))
+                .accessibilityIdentifier("absenceHiddenRestore-\(saved.dateKey)")
+            }
+            .buttonStyle(.plain)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func linkLabel(_ title: LocalizedStringKey) -> some View {
+        Text(title)
+            .font(.gradely(.subheadline).weight(.semibold))
+            .foregroundStyle(Brand.primary)
+            .frame(minHeight: ControlMetrics.minHeight)
+            .contentShape(Rectangle())
+    }
+
+    /// "út 3. 11." instead of the stored 2026-11-03.
+    private func dayTitle(_ dateKey: String) -> String {
+        MarkDateFormatter.date(from: dateKey).map { SchoolDateFormatting.weekdayShortDate($0) } ?? dateKey
     }
 }
 

@@ -3,6 +3,9 @@ import SwiftUI
 struct AbsenceOverrideEditorView: View {
     @Bindable var viewModel: AbsenceOverrideEditorViewModel
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    /// The lesson number's column, as wide as two of its digits.
+    @ScaledMetric(relativeTo: .headline) private var hourColumnWidth: CGFloat = 24
 
     var body: some View {
         ModalNavigationContainer {
@@ -124,52 +127,50 @@ struct AbsenceOverrideEditorView: View {
         context: AbsenceOverrideEditorContext
     ) -> some View {
         let lesson = context.lessons.first { $0.id == allocation.wrappedValue.lessonID }
+        // At accessibility sizes the button goes under the lesson: beside
+        // it, the subject pushed it off the sheet.
+        let stacked = dynamicTypeSize.isAccessibilitySize
         return VStack(alignment: .leading, spacing: Spacing.sm) {
-            HStack(spacing: Spacing.md) {
+            HStack(alignment: stacked ? .firstTextBaseline : .center, spacing: Spacing.md) {
                 Text(lesson?.hourCaption ?? "–")
                     .font(.gradely(.headline).weight(.bold))
                     .monospacedDigit()
                     .foregroundStyle(.secondary)
-                    .frame(width: 24, alignment: .leading)
+                    .frame(width: hourColumnWidth, alignment: .leading)
 
-                VStack(alignment: .leading, spacing: 2) {
-                    if allocation.wrappedValue.subjectName.isEmpty || allocation.wrappedValue.lessonID == nil {
-                        subjectField(allocation, context: context)
-                    } else {
-                        Text(allocation.wrappedValue.subjectName)
-                            .font(.gradely(.subheadline).weight(.semibold))
-                            .strikethrough(allocation.wrappedValue.isHidden)
-                            .foregroundStyle(allocation.wrappedValue.isHidden ? .secondary : .primary)
+                VStack(alignment: .leading, spacing: stacked ? Spacing.sm : 2) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        if allocation.wrappedValue.subjectName.isEmpty || allocation.wrappedValue.lessonID == nil {
+                            subjectField(allocation, context: context)
+                        } else {
+                            Text(allocation.wrappedValue.subjectName)
+                                .font(.gradely(.subheadline).weight(.semibold))
+                                .strikethrough(allocation.wrappedValue.isHidden)
+                                .foregroundStyle(allocation.wrappedValue.isHidden ? .secondary : .primary)
+                        }
+                        let detail = detailCaption(for: allocation.wrappedValue, lesson: lesson)
+                        if !detail.isEmpty {
+                            Text(detail)
+                                .font(.gradely(.caption).monospacedDigit())
+                                .foregroundStyle(.secondary)
+                        }
+                        if allocation.wrappedValue.isHidden {
+                            Text("absence.override.removed")
+                                .font(.gradely(.caption))
+                                .foregroundStyle(GradeBand.poor.foregroundColor)
+                        }
                     }
-                    let detail = detailCaption(for: allocation.wrappedValue, lesson: lesson)
-                    if !detail.isEmpty {
-                        Text(detail)
-                            .font(.gradely(.caption).monospacedDigit())
-                            .foregroundStyle(.secondary)
-                    }
-                    if allocation.wrappedValue.isHidden {
-                        Text("absence.override.removed")
-                            .font(.gradely(.caption))
-                            .foregroundStyle(GradeBand.poor.foregroundColor)
+                    if stacked {
+                        removeButton(allocation)
                     }
                 }
 
-                Spacer(minLength: Spacing.sm)
-
-                Button {
-                    allocation.wrappedValue.isHidden.toggle()
-                } label: {
-                    Text(allocation.wrappedValue.isHidden
-                        ? AppL10n.string("absence.override.putBack")
-                        : AppL10n.string("absence.override.remove"))
+                if !stacked {
+                    Spacer(minLength: Spacing.sm)
+                    removeButton(allocation)
                 }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
-                .tint(allocation.wrappedValue.isHidden ? Brand.primary : GradeBand.poor.foregroundColor)
-                .accessibilityIdentifier(allocation.wrappedValue.isHidden
-                    ? "absenceOverridePutBack-\(allocation.wrappedValue.id)"
-                    : "absenceOverrideRemove-\(allocation.wrappedValue.id)")
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
 
             if viewModel.availableCategories.count > 1 {
                 Picker("absence.override.category", selection: allocation.category) {
@@ -184,6 +185,24 @@ struct AbsenceOverrideEditorView: View {
         }
     }
 
+    private func removeButton(
+        _ allocation: Binding<AbsenceOverrideEditorViewModel.DraftAllocation>
+    ) -> some View {
+        Button {
+            allocation.wrappedValue.isHidden.toggle()
+        } label: {
+            Text(allocation.wrappedValue.isHidden
+                ? AppL10n.string("absence.override.putBack")
+                : AppL10n.string("absence.override.remove"))
+        }
+        .buttonStyle(.bordered)
+        .controlSize(.small)
+        .tint(allocation.wrappedValue.isHidden ? Brand.primary : GradeBand.poor.foregroundColor)
+        .accessibilityIdentifier(allocation.wrappedValue.isHidden
+            ? "absenceOverridePutBack-\(allocation.wrappedValue.id)"
+            : "absenceOverrideRemove-\(allocation.wrappedValue.id)")
+    }
+
     /// Stands in for the subject name when the timetable couldn't place the hour.
     @ViewBuilder
     private func subjectField(
@@ -194,20 +213,48 @@ struct AbsenceOverrideEditorView: View {
             TextField(AppL10n.string("absence.override.subject"), text: allocation.subjectName)
                 .font(.gradely(.subheadline).weight(.semibold))
                 .accessibilityIdentifier("absenceOverrideSubject-\(allocation.wrappedValue.id)")
-        } else {
-            Picker("absence.override.subject", selection: Binding(
-                get: { viewModel.selectedSubjectID(for: allocation.wrappedValue) },
-                set: { viewModel.selectSubject($0, allocationID: allocation.wrappedValue.id) }
-            )) {
-                Text("absence.override.chooseSubject").tag("")
-                ForEach(context.subjects) { subject in
-                    Text(subject.subjectName).tag(subject.id)
+        } else if dynamicTypeSize.isAccessibilitySize {
+            // The system menu picker stays one line tall and as wide as its
+            // text, which at these sizes is wider than the sheet. This
+            // label wraps.
+            let selectedID = viewModel.selectedSubjectID(for: allocation.wrappedValue)
+            Menu {
+                subjectPicker(allocation, context: context)
+            } label: {
+                HStack(alignment: .firstTextBaseline, spacing: Spacing.xs) {
+                    Text(verbatim: context.subjects.first { $0.id == selectedID }?.subjectName
+                        ?? AppL10n.string("absence.override.chooseSubject"))
+                        .multilineTextAlignment(.leading)
+                        .fixedSize(horizontal: false, vertical: true)
+                    GradelyIcon(systemName: "chevron.up.chevron.down", size: 13)
                 }
+                .font(.gradely(.subheadline).weight(.semibold))
+                .foregroundStyle(Brand.primary)
+                .frame(minHeight: ControlMetrics.minHeight)
+                .contentShape(Rectangle())
             }
-            .pickerStyle(.menu)
-            .labelsHidden()
-            .fixedSize()
             .accessibilityIdentifier("absenceOverrideSubject-\(allocation.wrappedValue.id)")
+        } else {
+            subjectPicker(allocation, context: context)
+                .pickerStyle(.menu)
+                .labelsHidden()
+                .fixedSize()
+                .accessibilityIdentifier("absenceOverrideSubject-\(allocation.wrappedValue.id)")
+        }
+    }
+
+    private func subjectPicker(
+        _ allocation: Binding<AbsenceOverrideEditorViewModel.DraftAllocation>,
+        context: AbsenceOverrideEditorContext
+    ) -> some View {
+        Picker("absence.override.subject", selection: Binding(
+            get: { viewModel.selectedSubjectID(for: allocation.wrappedValue) },
+            set: { viewModel.selectSubject($0, allocationID: allocation.wrappedValue.id) }
+        )) {
+            Text("absence.override.chooseSubject").tag("")
+            ForEach(context.subjects) { subject in
+                Text(subject.subjectName).tag(subject.id)
+            }
         }
     }
 

@@ -367,10 +367,31 @@ struct GradelyIcon: View {
     }
 
     var body: some View {
+        GradelyIconGlyph(iconName: iconName, size: size)
+            // The boxes icons sit in are fixed, so a glyph stops growing at
+            // the largest standard text size.
+            .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
+            .accessibilityHidden(true)
+    }
+}
+
+/// The glyph in a box of its own size. Both come from one scaled number: a
+/// font that grew on its own was cut off by a box that didn't.
+private struct GradelyIconGlyph: View {
+    private static let fontName = HugeiconsStrokeRounded.load()
+
+    private let iconName: String
+    @ScaledMetric private var side: CGFloat
+
+    init(iconName: String, size: CGFloat) {
+        self.iconName = iconName
+        _side = ScaledMetric(wrappedValue: size, relativeTo: .body)
+    }
+
+    var body: some View {
         Text(attributedIconName)
-        .font(HugeiconsStrokeRounded.font(size: size))
-        .frame(width: size, height: size)
-        .accessibilityHidden(true)
+            .font(Self.fontName.map { .custom($0, fixedSize: side) } ?? .system(size: side))
+            .frame(width: side, height: side)
     }
 
     private var attributedIconName: AttributedString {

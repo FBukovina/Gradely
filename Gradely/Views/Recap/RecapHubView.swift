@@ -62,6 +62,7 @@ private struct RecapTileHeader: View {
 struct RecapHubView: View {
     let store: RecapStore
     @Environment(\.gradeyOpenRecap) private var openRecap
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     private let columns = [GridItem(.adaptive(minimum: 150), spacing: Spacing.md, alignment: .top)]
 
@@ -101,22 +102,33 @@ struct RecapHubView: View {
     }
 
     private func featuredTile(_ period: RecapPeriod) -> some View {
-        Button {
+        // Beside the play button a large headline gets a word a line, so at
+        // accessibility sizes the button goes under it.
+        let stacked = dynamicTypeSize.isAccessibilitySize
+        let layout = stacked
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: Spacing.lg))
+            : AnyLayout(HStackLayout(alignment: .bottom, spacing: Spacing.md))
+
+        return Button {
             openRecap?(period)
         } label: {
             VStack(alignment: .leading, spacing: Spacing.xxl) {
                 RecapTileHeader(period: period, logoSize: 22)
-                HStack(alignment: .bottom, spacing: Spacing.md) {
+                layout {
                     VStack(alignment: .leading, spacing: Spacing.sm) {
                         Text(verbatim: RecapText.headline(period))
                             .font(.gradely(size: 38, weight: .bold, relativeTo: .largeTitle))
+                            // Past this size "1. čtvrtletí" no longer fits on a line.
+                            .dynamicTypeSize(...DynamicTypeSize.accessibility3)
                             .fixedSize(horizontal: false, vertical: true)
                         Text(verbatim: RecapText.summary(store.summary(for: period)))
                             .font(.gradely(.headline))
                             .opacity(0.8)
                             .fixedSize(horizontal: false, vertical: true)
                     }
-                    Spacer(minLength: 0)
+                    if !stacked {
+                        Spacer(minLength: 0)
+                    }
                     GradelyIcon("play", size: 18)
                         .dynamicTypeSize(.large)
                         .foregroundStyle(RecapPalette.tile(for: period))

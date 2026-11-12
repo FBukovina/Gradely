@@ -716,33 +716,26 @@ struct GradeyAccountHubView: View {
         case .account, .privacyData, .supportAbout:
             return nil
         case .connectedServices:
-            let school: String
+            // A service that's waiting for the user is named in the status
+            // line instead, so it isn't said twice.
+            var parts: [String] = []
             if schoolAccounts.isEmpty {
-                school = AppL10n.string("settings.overview.school.notConnected")
-            } else if schoolAccounts.contains(where: accountNeedsAttention) {
-                school = "\(AppL10n.string("settings.connected.school.title")): \(AppL10n.string("gradey.account.status.actionRequired"))"
-            } else {
-                school = AppL10n.string("settings.overview.school.active")
+                parts.append(AppL10n.string("settings.overview.school.notConnected"))
+            } else if !schoolAccounts.contains(where: accountNeedsAttention) {
+                parts.append(AppL10n.string("settings.overview.school.active"))
             }
 
-            let meals: String
             if canteenAccounts.isEmpty {
-                meals = AppL10n.string("settings.overview.canteen.notConnected")
-            } else if canteenAccounts.contains(where: accountNeedsAttention) {
-                meals = "\(AppL10n.string("settings.connected.canteen.title")): \(AppL10n.string("gradey.account.status.actionRequired"))"
-            } else {
-                meals = AppL10n.string("settings.overview.canteen.connected")
+                parts.append(AppL10n.string("settings.overview.canteen.notConnected"))
+            } else if !canteenAccounts.contains(where: accountNeedsAttention) {
+                parts.append(AppL10n.string("settings.overview.canteen.connected"))
             }
-            var parts = [school, meals]
-            if let vavruska, let course = vavruska.course {
-                if vavruska.phase == .needsReconnect {
-                    parts.append("\(AppL10n.string("settings.connected.dance.title")): \(AppL10n.string("gradey.account.status.actionRequired"))")
-                } else {
-                    parts.append(course.courseCode.map { String(format: AppL10n.string("settings.overview.dance.connected"), $0) }
-                        ?? AppL10n.string("settings.connected.dance.title"))
-                }
+
+            if let vavruska, let course = vavruska.course, vavruska.phase != .needsReconnect {
+                parts.append(course.courseCode.map { String(format: AppL10n.string("settings.overview.dance.connected"), $0) }
+                    ?? AppL10n.string("settings.connected.dance.title"))
             }
-            return parts.joined(separator: " · ")
+            return parts.isEmpty ? nil : parts.joined(separator: " · ")
         case .notifications:
             guard notificationsAreAvailable else {
                 return AppL10n.string("settings.overview.notifications.unavailable")
@@ -767,17 +760,33 @@ struct GradeyAccountHubView: View {
     ) -> (iconName: String, color: Color, accessibilityLabel: String)? {
         switch destination {
         case .connectedServices:
-            if viewModel.accounts.contains(where: accountNeedsAttention) {
-                return (
-                    "alert-circle",
-                    .gradelySystemOrange,
-                    AppL10n.string("gradey.account.status.actionRequired")
-                )
-            }
-            return nil
+            let services = servicesNeedingAttention
+            guard let first = services.first else { return nil }
+            // "Školní účty, jídelna: Vyžaduje akci"
+            let names = ([first] + services.dropFirst().map { $0.lowercased() }).joined(separator: ", ")
+            return (
+                "alert-circle",
+                .gradelySystemOrange,
+                "\(names): \(AppL10n.string("gradey.account.status.actionRequired"))"
+            )
         default:
             return nil
         }
+    }
+
+    /// Titles of the connected services that are waiting for the user.
+    private var servicesNeedingAttention: [String] {
+        var titles: [String] = []
+        if schoolAccounts.contains(where: accountNeedsAttention) {
+            titles.append(AppL10n.string("settings.connected.school.title"))
+        }
+        if canteenAccounts.contains(where: accountNeedsAttention) {
+            titles.append(AppL10n.string("settings.connected.canteen.title"))
+        }
+        if let vavruska, vavruska.course != nil, vavruska.phase == .needsReconnect {
+            titles.append(AppL10n.string("settings.connected.dance.title"))
+        }
+        return titles
     }
 
     private func accountNeedsAttention(_ account: LinkedAccount) -> Bool {
@@ -2391,13 +2400,7 @@ private struct SettingsOverviewRow: View {
                     .foregroundStyle(.primary)
                     .fixedSize(horizontal: false, vertical: true)
 
-                if let subtitle {
-                    Text(subtitle)
-                        .font(.gradely(.caption))
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-
+                // What needs the user comes before what's fine.
                 if let statusIconName, let statusAccessibilityLabel {
                     Label {
                         Text(statusAccessibilityLabel)
@@ -2407,6 +2410,13 @@ private struct SettingsOverviewRow: View {
                     }
                         .font(.gradely(.caption).weight(.semibold))
                         .foregroundStyle(statusColor)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                if let subtitle {
+                    Text(subtitle)
+                        .font(.gradely(.caption))
+                        .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
@@ -2431,14 +2441,6 @@ private struct SettingsOverviewRow: View {
                 SettingsDisclosureIcon()
             }
 
-            if let subtitle {
-                Text(subtitle)
-                    .font(.gradely(.caption))
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.leading, SettingsIcon.frameSize + Spacing.md)
-            }
-
             if let statusIconName, let statusAccessibilityLabel {
                 Label {
                     Text(statusAccessibilityLabel)
@@ -2448,6 +2450,14 @@ private struct SettingsOverviewRow: View {
                 }
                     .font(.gradely(.caption).weight(.semibold))
                     .foregroundStyle(statusColor)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.leading, SettingsIcon.frameSize + Spacing.md)
+            }
+
+            if let subtitle {
+                Text(subtitle)
+                    .font(.gradely(.caption))
+                    .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.leading, SettingsIcon.frameSize + Spacing.md)
             }

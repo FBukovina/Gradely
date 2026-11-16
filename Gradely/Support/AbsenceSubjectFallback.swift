@@ -49,6 +49,12 @@ enum AbsenceSubjectFallback {
         term(containing: date, now: date, calendar: calendar)
     }
 
+    /// Last day of the semester containing `date` (31 January or 30 June).
+    /// In July and August that is the 30 June already past.
+    static func termEnd(containing date: Date, calendar: Calendar = TimetableDates.weekCalendar) -> Date {
+        termBounds(containing: date, calendar: calendar).termEnd
+    }
+
     static func term(
         for absences: [AbsenceDay],
         now: Date,

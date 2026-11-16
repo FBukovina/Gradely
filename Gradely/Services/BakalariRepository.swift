@@ -1201,6 +1201,43 @@ final class SchoolRepository {
         recapArchiveCache.save(archive, scope: scope)
     }
 
+    /// The timetable from tomorrow to the end of the current semester, counted
+    /// by subject. Nil after the semester's last day or when a week can't be
+    /// read, so the Absence rows keep their usual line instead of a low guess.
+    func loadAbsenceSemesterOutlook() async -> AbsenceSemesterOutlook? {
+        guard let session = (try? await validSession()) ?? (try? sessionStore.loadSession()) else { return nil }
+        let requestContext = context(for: session)
+        let calendar = TimetableDates.weekCalendar
+        let now = dateProvider()
+        let termEnd = AbsenceSubjectFallback.termEnd(containing: now, calendar: calendar)
+        guard let start = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: now)),
+              start <= termEnd
+        else { return nil }
+
+        var weekStarts: [Date] = []
+        var monday = TimetableDates.monday(of: start)
+        while monday <= termEnd {
+            weekStarts.append(monday)
+            monday = TimetableDates.addingWeeks(1, to: monday)
+        }
+        let loaded = await loadTermTimetableResponses(
+            weekStarts: weekStarts,
+            session: session,
+            progress: nil,
+            maxCacheAge: 6 * 60 * 60
+        )
+        guard (try? validate(requestContext)) != nil, loaded.failedWeeks == 0 else { return nil }
+
+        let marks = (try? marksCache.load(scope: SchoolDataScope(session: session)))?.marksResponse.subjects ?? []
+        return AbsenceSemesterOutlook.make(
+            timetables: loaded.responses,
+            markSubjects: marks,
+            from: start,
+            through: termEnd,
+            calendar: calendar
+        )
+    }
+
     /// The weeks from `start` up to `end`, cached ones first, the rest four at a time.
     func loadTimetableWeeks(from start: Date, to end: Date) async -> [TimetableWeek] {
         guard let session = (try? await validSession()) ?? (try? sessionStore.loadSession()) else { return [] }
@@ -1612,15 +1649,20 @@ final class SchoolRepository {
         )
     }
 
+    /// `maxCacheAge` refetches cached weeks older than that, falling back to
+    /// the old copy when the fetch fails (for future weeks that may change).
     private func loadTermTimetableResponses(
         weekStarts: [Date],
         session: StoredSession,
-        progress: ((AbsenceSubjectResolutionProgress) async -> Void)?
+        progress: ((AbsenceSubjectResolutionProgress) async -> Void)?,
+        maxCacheAge: TimeInterval? = nil
     ) async -> TermTimetableLoadResult {
         let totalWeeks = weekStarts.count
         var loaded: [LoadedTimetableWeek] = []
         var missingWeekStarts: [Date] = []
+        var staleByWeekStart: [Date: TimetableResponse] = [:]
         var lastPublishedCompletedWeeks: Int?
+        let now = dateProvider()
 
         func publishProgress(force: Bool = false, completedWeeks: Int) async {
             guard let progress else { return }
@@ -1642,7 +1684,12 @@ final class SchoolRepository {
 
         for weekStart in weekStarts {
             if let cached = try? timetableCache.load(weekStart: weekStart, scope: SchoolDataScope(session: session)) {
-                loaded.append(LoadedTimetableWeek(weekStart: weekStart, response: cached.response))
+                if let maxCacheAge, now.timeIntervalSince(cached.cachedAt) >= maxCacheAge {
+                    staleByWeekStart[weekStart] = cached.response
+                    missingWeekStarts.append(weekStart)
+                } else {
+                    loaded.append(LoadedTimetableWeek(weekStart: weekStart, response: cached.response))
+                }
             } else {
                 missingWeekStarts.append(weekStart)
             }
@@ -1672,7 +1719,7 @@ final class SchoolRepository {
             while let outcome = await group.next() {
                 completedWeeks += 1
 
-                if let response = outcome.response {
+                if let response = outcome.response ?? staleByWeekStart[outcome.weekStart] {
                     loaded.append(LoadedTimetableWeek(weekStart: outcome.weekStart, response: response))
                 } else {
                     failedWeeks += 1

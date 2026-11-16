@@ -2,6 +2,7 @@ import SwiftUI
 
 struct AbsenceView: View {
     @State private var viewModel: AbsenceViewModel
+    @AppStorage(AbsenceSemesterOutlook.settingKey) private var showsSemesterAllowance = false
     private let snapshotStore: SchoolSnapshotStore?
     private let onOpenGradeyAI: () -> Void
 
@@ -58,6 +59,9 @@ struct AbsenceView: View {
                 }
                 .gradelyOnRefreshCommand { await viewModel.refresh(forceRefresh: true) }
                 .onChange(of: snapshotStore?.revision) { _, _ in viewModel.applySharedSnapshot() }
+                .onChange(of: showsSemesterAllowance, initial: true) { _, enabled in
+                    viewModel.setSemesterOutlookEnabled(enabled)
+                }
                 .sheet(isPresented: $viewModel.isHiddenAbsencesSheetPresented) {
                     HiddenAbsencesView(viewModel: viewModel)
                 }
@@ -163,6 +167,8 @@ struct AbsenceView: View {
                     SubjectAbsenceTable(
                         state: viewModel.subjectAbsenceState,
                         risk: { viewModel.risk(for: $0) },
+                        semesterAllowance: { viewModel.semesterAllowance(for: $0) },
+                        semesterEnd: viewModel.isSemesterOutlookEnabled ? viewModel.semesterOutlook?.termEnd : nil,
                         onRetry: {
                             viewModel.retrySubjectResolution()
                         },
@@ -452,6 +458,9 @@ private struct AbsenceMonthsChartCard: View {
 private struct SubjectAbsenceTable: View {
     let state: AbsenceViewModel.SubjectAbsenceState
     let risk: (AbsenceSubjectSummary) -> AbsenceRiskSubject
+    let semesterAllowance: (AbsenceSubjectSummary) -> AbsenceSemesterAllowance?
+    /// Set while the semester allowance is shown, for the line saying what it counts.
+    let semesterEnd: Date?
     let onRetry: () -> Void
     let onResolveMissingHours: () -> Void
 
@@ -478,6 +487,14 @@ private struct SubjectAbsenceTable: View {
                     )
                 }
                 if !rows.isEmpty {
+                    if let semesterEnd, rows.contains(where: { semesterAllowance($0) != nil }) {
+                        Text(String(format: AppL10n.string("absence.semester.basis"), SchoolDateFormatting.shortDate(semesterEnd)))
+                            .font(.gradely(.caption))
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal, Spacing.xs)
+                            .accessibilityIdentifier("absenceSemesterBasis")
+                    }
                     riskList(rows: rows)
                 }
             }
@@ -515,37 +532,70 @@ private struct SubjectAbsenceTable: View {
                 level: risk.level
             )
 
-            HStack(spacing: Spacing.xs) {
-                Text(
-                    String(
-                        format: AppL10n.string("absence.risk.missed"),
-                        risk.missedLessons,
-                        risk.totalLessons
-                    )
-                )
-                .font(.gradely(.caption))
-                .foregroundStyle(.secondary)
-
-                if let status = riskStatus(for: risk) {
-                    Text(verbatim: "·")
-                        .font(.gradely(.caption))
-                        .foregroundStyle(.secondary)
-
-                    Text(status.text)
-                        .font(.gradely(.caption).weight(.semibold))
-                        .foregroundStyle(status.color)
-                }
-            }
-            .lineLimit(1)
-            .minimumScaleFactor(0.8)
+            statusLine(risk: risk, status: riskStatus(for: risk, row: row))
         }
         .padding(.vertical, Spacing.md)
         .accessibilityIdentifier("absenceRow-\(row.stableID)")
     }
 
-    private func riskStatus(for risk: AbsenceRiskSubject) -> (text: String, color: Color)? {
+    /// "Missed 5 of 40 lessons · status" on one line when it fits, else the
+    /// status goes under it rather than shrinking or cutting off.
+    private func statusLine(
+        risk: AbsenceRiskSubject,
+        status: (text: String, color: Color)?
+    ) -> some View {
+        let missed = Text(
+            String(
+                format: AppL10n.string("absence.risk.missed"),
+                risk.missedLessons,
+                risk.totalLessons
+            )
+        )
+        .font(.gradely(.caption))
+        .foregroundStyle(.secondary)
+
+        let statusText = status.map { status in
+            Text(status.text)
+                .font(.gradely(.caption).weight(.semibold))
+                .foregroundStyle(status.color)
+        }
+
+        return ViewThatFits(in: .horizontal) {
+            HStack(spacing: Spacing.xs) {
+                missed
+                if let statusText {
+                    Text(verbatim: "·")
+                        .font(.gradely(.caption))
+                        .foregroundStyle(.secondary)
+                    statusText
+                }
+            }
+            .lineLimit(1)
+
+            VStack(alignment: .leading, spacing: 2) {
+                missed
+                statusText
+            }
+            .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private func riskStatus(
+        for risk: AbsenceRiskSubject,
+        row: AbsenceSubjectSummary
+    ) -> (text: String, color: Color)? {
         guard risk.threshold != nil else {
             return (AppL10n.string("absence.risk.noThreshold"), .secondary)
+        }
+        if let allowance = semesterAllowance(row) {
+            switch allowance {
+            case .canMiss(let lessons):
+                return (String(format: AppL10n.string("absence.semester.canMiss"), lessons), .secondary)
+            case .noMoreMisses:
+                return (AppL10n.string("absence.semester.noMore"), GradeBand.average.foregroundColor)
+            case .overEvenWithFullAttendance:
+                return (AppL10n.string("absence.semester.overEvenWithFullAttendance"), GradeBand.poor.foregroundColor)
+            }
         }
         guard let misses = risk.missesUntilLimit else { return nil }
         if misses == 0 {

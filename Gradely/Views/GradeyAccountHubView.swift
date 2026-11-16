@@ -103,6 +103,7 @@ struct GradeyAccountHubView: View {
     @Environment(\.openURL) private var openURL
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage("settings.showMealsTab") private var showMealsTab = true
+    @AppStorage(AbsenceSemesterOutlook.settingKey) private var showsAbsenceSemesterAllowance = false
     @Bindable private var languageStore = AppLanguageStore.shared
     @AppStorage(GradeyDebugModeStore.storageKey) private var isDebugModeEnabled = false
 
@@ -1482,6 +1483,14 @@ private extension GradeyAccountHubView {
                     }
                     .tint(Brand.primary)
                     .accessibilityIdentifier("showMealsTabToggle")
+
+                    Divider()
+
+                    Toggle(isOn: $showsAbsenceSemesterAllowance) {
+                        Text("settings.showAbsenceSemesterAllowance")
+                    }
+                    .tint(Brand.primary)
+                    .accessibilityIdentifier("showAbsenceSemesterAllowanceToggle")
 
                     if let vavruska {
                         Divider()

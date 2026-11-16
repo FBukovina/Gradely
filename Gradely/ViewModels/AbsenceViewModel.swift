@@ -71,6 +71,9 @@ final class AbsenceViewModel {
     var predictionSelectedLessons: [AbsenceLessonCandidate] = []
     var predictionErrorMessage: String?
     var isLoadingPredictionLessons = false
+    /// Set from the Settings toggle; the outlook loads only while it's on.
+    private(set) var isSemesterOutlookEnabled = false
+    var semesterOutlook: AbsenceSemesterOutlook?
 
     private let repository: SchoolRepository
     private let snapshotStore: SchoolSnapshotStore?
@@ -80,6 +83,7 @@ final class AbsenceViewModel {
     @ObservationIgnored private var predictionLessonCacheByID: [String: AbsenceLessonCandidate] = [:]
     @ObservationIgnored private var subjectResolutionTask: Task<Void, Never>?
     @ObservationIgnored private var dayLessonsTask: Task<Void, Never>?
+    @ObservationIgnored private var semesterOutlookTask: Task<Void, Never>?
     @ObservationIgnored private var subjectResolutionToken = UUID()
     @ObservationIgnored private var lastSharedAbsence: AbsenceData?
     @ObservationIgnored private var lastSharedScope: SchoolDataScope?
@@ -94,6 +98,7 @@ final class AbsenceViewModel {
     deinit {
         subjectResolutionTask?.cancel()
         dayLessonsTask?.cancel()
+        semesterOutlookTask?.cancel()
     }
 
     var manualResolutionCandidates: [AbsencePartialDayCandidate] {
@@ -133,6 +138,34 @@ final class AbsenceViewModel {
         .make(summary: row, threshold: response?.percentageThreshold)
     }
 
+    func semesterAllowance(for row: AbsenceSubjectSummary) -> AbsenceSemesterAllowance? {
+        guard isSemesterOutlookEnabled else { return nil }
+        return semesterOutlook?.allowance(for: row, threshold: response?.percentageThreshold)
+    }
+
+    func setSemesterOutlookEnabled(_ enabled: Bool) {
+        guard enabled != isSemesterOutlookEnabled else { return }
+        isSemesterOutlookEnabled = enabled
+        if enabled {
+            reloadSemesterOutlook()
+        } else {
+            semesterOutlookTask?.cancel()
+            semesterOutlookTask = nil
+            semesterOutlook = nil
+        }
+    }
+
+    private func reloadSemesterOutlook() {
+        semesterOutlookTask?.cancel()
+        guard isSemesterOutlookEnabled else { return }
+        semesterOutlookTask = Task {
+            let outlook = await repository.loadAbsenceSemesterOutlook()
+            guard !Task.isCancelled, isSemesterOutlookEnabled else { return }
+            semesterOutlook = outlook
+            semesterOutlookTask = nil
+        }
+    }
+
     func loadIfNeeded() async {
         guard !hasLoaded else { return }
         hasLoaded = true
@@ -159,6 +192,8 @@ final class AbsenceViewModel {
             isLoading = false
             isRefreshing = false
         }
+
+        reloadSemesterOutlook()
 
         if let snapshotStore {
             await snapshotStore.refresh(requirements: [.absence, .user], force: forceRefresh)
@@ -334,6 +369,10 @@ final class AbsenceViewModel {
             if currentData?.scope != data.scope || currentData?.overrideScope != data.overrideScope
                 || currentData?.sessionGeneration != data.sessionGeneration {
                 clearAccountDrafts()
+                if currentData?.scope != data.scope {
+                    semesterOutlook = nil
+                    reloadSemesterOutlook()
+                }
             }
             subjectResolutionTask?.cancel()
             subjectResolutionTask = nil
@@ -361,6 +400,9 @@ final class AbsenceViewModel {
             monthCountRows = []
             totalCounts = .zero
             subjectAbsenceState = .idle
+            semesterOutlookTask?.cancel()
+            semesterOutlookTask = nil
+            semesterOutlook = nil
             clearAccountDrafts()
         }
     }

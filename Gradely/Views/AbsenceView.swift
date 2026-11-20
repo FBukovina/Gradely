@@ -22,8 +22,10 @@ struct AbsenceView: View {
                 .navigationTitle(AppL10n.string("absence.title"))
                 .gradelyNavigationTitleDisplayMode(.inline)
                 .toolbar {
-                    ToolbarItem(placement: .gradelyTopBarLeading) {
-                        GradeyAIToolbarButton(onOpen: onOpenGradeyAI)
+                    if GradeyAIAvailability.isEnabled {
+                        ToolbarItem(placement: .gradelyTopBarLeading) {
+                            GradeyAIToolbarButton(onOpen: onOpenGradeyAI)
+                        }
                     }
 
                     ToolbarItem(placement: .gradelyTopBarTrailing) {

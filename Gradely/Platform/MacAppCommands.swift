@@ -93,9 +93,11 @@ struct GradeyMacCommands: Commands {
 
             Divider()
 
-            Button(AppL10n.string("gradey.ai.title")) { actions?.openGradeyAI() }
-                .keyboardShortcut("k")
-                .disabled(actions == nil)
+            if GradeyAIAvailability.isEnabled {
+                Button(AppL10n.string("gradey.ai.title")) { actions?.openGradeyAI() }
+                    .keyboardShortcut("k")
+                    .disabled(actions == nil)
+            }
 
             Button {
                 actions?.openRecap?()

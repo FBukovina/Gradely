@@ -85,8 +85,10 @@ struct SubjectsView: View {
                 // (and ⌘K on the Mac).
                 #if !os(macOS)
                 if !usesWideLayout {
-                    ToolbarItem(placement: .gradelyTopBarLeading) {
-                        GradeyAIToolbarButton(onOpen: onOpenGradeyAI)
+                    if GradeyAIAvailability.isEnabled {
+                        ToolbarItem(placement: .gradelyTopBarLeading) {
+                            GradeyAIToolbarButton(onOpen: onOpenGradeyAI)
+                        }
                     }
                 }
                 #endif

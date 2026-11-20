@@ -2,6 +2,8 @@ import GradelyWatchShared
 import SwiftUI
 
 struct ContentView: View {
+    private static let showsGradeyAI = false
+
     @ObservedObject var model: WatchAppModel
 
     var body: some View {
@@ -16,7 +18,9 @@ struct ContentView: View {
                         TodayLessonsView(model: model)
                     }
 
-                    if model.isRecurringSupporter {
+                    // Gradey AI is off while it moves to the OpenAI API; flip
+                    // together with GradeyAIAvailability on the iPhone.
+                    if Self.showsGradeyAI, model.isRecurringSupporter {
                         NavigationStack {
                             GradeyAIWatchView(model: model)
                         }

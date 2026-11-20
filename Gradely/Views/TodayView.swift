@@ -56,8 +56,10 @@ struct TodayView: View {
             .navigationTitle("Today")
             .gradelyNavigationTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .gradelyTopBarLeading) {
-                    GradeyAIToolbarButton(onOpen: onOpenGradeyAI)
+                if GradeyAIAvailability.isEnabled {
+                    ToolbarItem(placement: .gradelyTopBarLeading) {
+                        GradeyAIToolbarButton(onOpen: onOpenGradeyAI)
+                    }
                 }
                 if let komens = snapshotStore?.komensStore, komens.isSupported {
                     ToolbarItem(placement: .gradelyTopBarTrailing) {

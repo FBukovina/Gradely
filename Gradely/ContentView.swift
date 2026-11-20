@@ -446,6 +446,7 @@ struct ContentView: View {
             privacyPolicyStore.accept()
         }
         .environment(\.requestGradeyAIAction) { action, subjectID, eventID in
+            guard GradeyAIAvailability.isEnabled else { return }
             Task {
                 let expectedGeneration = repository.sessionGeneration
                 isGradeyAIPresented = true
@@ -631,6 +632,7 @@ struct ContentView: View {
     }
 
     private func presentGradeyAI() {
+        guard GradeyAIAvailability.isEnabled else { return }
         isGradeyAIPresented = true
     }
 
@@ -653,7 +655,7 @@ struct ContentView: View {
     #endif
 
     private func preloadGradeyAIIfNeeded() async {
-        guard appViewModel.phase == .signedIn, !appViewModel.isGuestMode else { return }
+        guard GradeyAIAvailability.isEnabled, appViewModel.phase == .signedIn, !appViewModel.isGuestMode else { return }
         async let bootstrap: Void = gradeyAIViewModel.bootstrap()
         async let entitlement = supportTipProvider.currentEntitlement()
         _ = await bootstrap

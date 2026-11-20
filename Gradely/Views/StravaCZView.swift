@@ -24,8 +24,10 @@ struct StravaCZView: View {
                 .navigationTitle(AppL10n.string("stravacz.title"))
                 .gradelyNavigationTitleDisplayMode(.inline)
                 .toolbar {
-                    ToolbarItem(placement: .gradelyTopBarLeading) {
-                        GradeyAIToolbarButton(onOpen: onOpenGradeyAI)
+                    if GradeyAIAvailability.isEnabled {
+                        ToolbarItem(placement: .gradelyTopBarLeading) {
+                            GradeyAIToolbarButton(onOpen: onOpenGradeyAI)
+                        }
                     }
 
                     #if !os(macOS)

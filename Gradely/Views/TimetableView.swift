@@ -68,8 +68,10 @@ struct TimetableView: View {
                 }
                 #endif
                 .toolbar {
-                    ToolbarItem(placement: .gradelyTopBarLeading) {
-                        GradeyAIToolbarButton(onOpen: onOpenGradeyAI)
+                    if GradeyAIAvailability.isEnabled {
+                        ToolbarItem(placement: .gradelyTopBarLeading) {
+                            GradeyAIToolbarButton(onOpen: onOpenGradeyAI)
+                        }
                     }
 
                     #if os(macOS)

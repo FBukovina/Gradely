@@ -54,7 +54,7 @@ struct SubjectDetailView: View {
         .navigationTitle(navigationTitle)
         .gradelyNavigationTitleDisplayMode(isEmbedded ? .inline : .large)
         .toolbar {
-            if !subjectUnavailable {
+            if GradeyAIAvailability.isEnabled && !subjectUnavailable {
                 ToolbarItem(placement: aiButtonPlacement) {
                     GradeyAIToolbarButton { requestAI(.subjectHelp, viewModel.subject.id, nil) }
                 }

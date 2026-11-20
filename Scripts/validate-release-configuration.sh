@@ -171,6 +171,10 @@ validate_firebase_plist() {
         fi
     done
 
+    if [ "$(plist_value "$firebase_plist" PROJECT_ID)" != "gradey-9628e" ]; then
+        fail "GoogleService-Info.plist must come from the Gradey Firebase project (gradey-9628e)"
+    fi
+
     firebase_bundle_id=$(plist_value "$firebase_plist" BUNDLE_ID)
     if [ -n "$expected_bundle_id" ] && [ "$firebase_bundle_id" != "$expected_bundle_id" ]; then
         fail "GoogleService-Info.plist BUNDLE_ID does not match the app bundle identifier"

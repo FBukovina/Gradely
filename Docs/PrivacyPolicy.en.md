@@ -1,8 +1,8 @@
 # Privacy Policy
 
-**Published: 5 November 2026. Effective date: 5 November 2026.**
+**Draft revision prepared on 20 November 2026. The policy published on 5 November 2026 remains in effect.**
 
-This revision describes friends' timetables, TŠ Vavruška dance classes, and homework, Komens messages and report cards from Bakaláři (Gradey 2.7). It keeps the description of the Gradey 2.1 changes and the transition from older app versions. The active-database password cleanup described below was completed on 8 September 2026.
+This revision describes the move from Microsoft Azure OpenAI to the OpenAI API for Gradey AI. Before sending your first message to OpenAI, Gradey asks for your consent to share data with the new processor, even if you previously agreed to use Gradey AI. The active-database password cleanup described below was completed on 8 September 2026.
 
 This Privacy Policy explains how **Open Side**, operated by **Filip Bukovina** ("we", "us" or "our"), processes personal data through **Gradey** and its related services.
 
@@ -72,7 +72,7 @@ Gradey AI is optional and asks for separate in-app consent. Using AI is not requ
 
 When you use it, we process your messages and conversation history for that conversation. General chat does not automatically attach your school record. You can select a subject, a week, study priorities or a specific test; only the selected academic summaries, recent grades, lessons and eligible Planner titles and dates are shared. Planner notes are excluded unless you explicitly choose to include the selected test’s notes. Credentials, school URLs, teacher names and Calendar identifiers are excluded from this automatically selected context.
 
-The selected information is sent through our AI backend, hosted using Google Firebase, to Microsoft Azure OpenAI to generate the response. You can inspect the selected context before sending. Local calculations, simulations and Today insights do not require AI or share their content with an AI provider. A material change to the AI processor requires renewed in-app AI consent.
+To generate a reply, our AI backend on Google Firebase sends OpenAI your message, recent messages from the same conversation and any school information you selected. You can inspect the selected context before sending. Local calculations, simulations and Today insights do not require AI or share their content with an AI provider. A material change to the AI processor requires renewed in-app AI consent.
 
 AI-related processing also includes authentication identifiers, consent status, request and usage information, and verified subscription status where needed to apply daily Compute allowances. A short-lived Gradey ID access token is verified by the backend to connect usage across devices; it is not included in model prompts or stored in the Compute ledger. RevenueCat entitlement verification determines the applicable service allowance. Accounting records include request identifiers, prices, reservations, settlement outcomes and provider costs, without storing another school-context archive for recovery. Conversations can be retained so you can return to them. Use the available conversation-deletion and consent controls, or contact us about removal.
 
@@ -149,7 +149,7 @@ Depending on the features you use, recipients include:
 - **Apple:** authentication, payments, notifications, device services and any Apple cloud services you use.
 - **Supabase:** Gradey ID, linked accounts, encrypted session and push tokens, preferences and school data used for background marks, history and notifications.
 - **Google Firebase:** AI authentication, backend processing, conversations, usage and consent records, and request security.
-- **Microsoft Azure OpenAI:** messages and explicitly selected context needed to generate replies.
+- **OpenAI:** your message, recent messages from the same conversation and any school information you select for a reply.
 - **Intercom:** support sessions, messages, attachments and associated technical information.
 - **RevenueCat:** purchase and entitlement processing.
 - **Your school, your friends' schools, your canteen, TŠ Vavruška and your calendar provider:** information necessary for connections and actions you request.

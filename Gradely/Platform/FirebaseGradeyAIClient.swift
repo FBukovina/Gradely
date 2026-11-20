@@ -39,16 +39,15 @@ final class FirebaseGradeyAIClient: GradeyAIClient {
         return response.model
     }
 
-    func acceptConsent() async throws -> GradeyAIConsent {
-        let accountID = gradeyAccountID
-        try await identityCoordinator.ensureIdentity()
-        try await validateScope(nil, accountID: accountID)
-        let currentStatus = try await loadStatus()
-        try await validateScope(nil, accountID: accountID)
+    func acceptConsent(termsVersion: String) async throws -> GradeyAIConsent {
+        guard termsVersion == GradeyAIConsent.disclosureVersion else {
+            throw GradeyAIError.server(code: "consent_required", message: "The AI terms changed.", retryable: false)
+        }
         let response: FirebaseGradeyAIStatusEnvelope = try await call(
             "gradeyAIAcceptConsent",
             request: FirebaseGradeyAIAcceptConsentRequest(
-                termsVersion: currentStatus.termsVersion,
+                termsVersion: termsVersion,
+                disclosureVersion: GradeyAIConsent.disclosureVersion,
                 gradeyAccountID: gradeyAccountID
             )
         )
@@ -165,6 +164,7 @@ final class FirebaseGradeyAIClient: GradeyAIClient {
                         actionID: frozen.actionID.rawValue,
                         catalogVersion: frozen.catalogVersion,
                         maximumComputeCost: frozen.maximumComputeCost,
+                        disclosureVersion: GradeyAIConsent.disclosureVersion,
                         contextSelectionID: frozen.contextSelectionID,
                         gradeyAccessToken: proof
                     )
@@ -359,12 +359,13 @@ nonisolated private struct FirebaseGradeyAIEmptyRequest: Codable, Sendable {
     }
 }
 
-nonisolated private struct FirebaseGradeyAIAcceptConsentRequest: Codable, Sendable {
+nonisolated private struct FirebaseGradeyAIAcceptConsentRequest: Encodable, Sendable {
     let termsVersion: String
+    let disclosureVersion: String
     var gradeyAccountID: String?
 
     enum CodingKeys: String, CodingKey {
-        case termsVersion
+        case termsVersion, disclosureVersion
         case gradeyAccountID = "gradey_account_id"
     }
 }
@@ -415,6 +416,7 @@ nonisolated private struct FirebaseGradeyAIStreamRequest: Codable, Sendable {
     let actionID: String
     let catalogVersion: String?
     let maximumComputeCost: Int
+    let disclosureVersion: String
     let contextSelectionID: String
     let gradeyAccessToken: String?
 
@@ -428,7 +430,7 @@ nonisolated private struct FirebaseGradeyAIStreamRequest: Codable, Sendable {
         case context
         case contextGeneratedAt
         case gradeyAccountID = "gradey_account_id"
-        case actionID, catalogVersion, maximumComputeCost, contextSelectionID, gradeyAccessToken
+        case actionID, catalogVersion, maximumComputeCost, disclosureVersion, contextSelectionID, gradeyAccessToken
     }
 }
 
@@ -1171,7 +1173,7 @@ final class FirebaseGradeyAIClient: GradeyAIClient {
     }
 
     func loadStatus() async throws -> GradeyAIStatus { throw GradeyAIError.notConfigured }
-    func acceptConsent() async throws -> GradeyAIConsent { throw GradeyAIError.notConfigured }
+    func acceptConsent(termsVersion: String) async throws -> GradeyAIConsent { throw GradeyAIError.notConfigured }
     func revokeConsent() async throws { throw GradeyAIError.notConfigured }
     func listConversations(schoolScope: String) async throws -> [GradeyAIConversation] {
         throw GradeyAIError.notConfigured

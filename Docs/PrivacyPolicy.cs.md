@@ -1,8 +1,8 @@
 # Zásady ochrany soukromí
 
-**Zveřejněno: 5. listopadu 2026. Účinnost: 5. listopadu 2026.**
+**Návrh změny ze dne 20. listopadu 2026. Nadále platí zásady zveřejněné 5. listopadu 2026.**
 
-Tato revize popisuje rozvrhy kamarádů, taneční v TŠ Vavruška a domácí úkoly, zprávy z Komensu a vysvědčení z Bakalářů (Gradey 2.7). Zachovává popis změn v Gradey 2.1 a přechodu ze starších verzí aplikace. Výmaz hesel z aktivní databáze popsaný níže byl dokončen 8. září 2026.
+Tato verze popisuje přechod Gradey AI ze služby Microsoft Azure OpenAI na API společnosti OpenAI. Před prvním odesláním zprávy do OpenAI vám Gradey představí nového zpracovatele a požádá o samostatný souhlas s AI, i když jste ho již dříve udělili. Výmaz hesel z aktivní databáze popsaný níže byl dokončen 8. září 2026.
 
 Tyto Zásady ochrany soukromí vysvětlují, jak **Open Side**, které provozuje **Filip Bukovina** („my“, „nás“), zpracovává osobní údaje prostřednictvím aplikace **Gradey** a souvisejících služeb.
 
@@ -72,7 +72,7 @@ Gradey AI je volitelná a žádá o samostatný souhlas v aplikaci. K zobrazení
 
 Když ji používáte, zpracováváme vaše zprávy a historii dané konverzace. Obecný chat k nim vaše školní údaje automaticky nepřikládá. Můžete vybrat předmět, týden, studijní priority nebo konkrétní test; sdílí se jen vybrané souhrny prospěchu, nedávné známky, hodiny a odpovídající názvy a termíny z Plánovače. Poznámky z Plánovače se vynechávají, pokud výslovně nezvolíte zahrnutí poznámek k vybranému testu. Přihlašovací údaje, adresy škol, jména učitelů a identifikátory Kalendáře jsou z tohoto automaticky vybraného kontextu vyloučené.
 
-Vybrané informace se posílají přes náš backend pro AI, provozovaný v Google Firebase, do Microsoft Azure OpenAI, který vytvoří odpověď. Vybraný kontext si můžete před odesláním prohlédnout. Místní výpočty, simulace a postřehy na Dnes AI nevyžadují a svůj obsah poskytovateli AI nesdílejí. Podstatná změna zpracovatele AI vyžaduje nový souhlas s AI v aplikaci.
+Pro vytvoření odpovědi náš backend v Google Firebase odešle společnosti OpenAI vaši zprávu, nedávné zprávy z téže konverzace a případné školní údaje, které jste vybrali. Vybraný kontext si můžete před odesláním prohlédnout. Místní výpočty, simulace a postřehy na Dnes AI nevyžadují a svůj obsah poskytovateli AI nesdílejí. Podstatná změna zpracovatele AI vyžaduje nový souhlas s AI v aplikaci.
 
 Zpracování související s AI zahrnuje také autentizační identifikátory, stav souhlasu, údaje o požadavcích a využití a ověřený stav předplatného tam, kde je potřeba pro uplatnění denních limitů Compute. Krátkodobý přístupový token Gradey ID ověřuje backend, aby propojil využití napříč zařízeními; nevkládá se do promptů modelu ani se neukládá do evidence Compute. Ověření nároků přes RevenueCat určuje příslušný limit služby. Účetní záznamy obsahují identifikátory požadavků, ceny, rezervace, výsledky vyúčtování a náklady poskytovatele, bez ukládání dalšího archivu školního kontextu pro obnovu. Konverzace se mohou uchovávat, abyste se k nim mohli vrátit. Použijte dostupné možnosti mazání konverzací a nastavení souhlasu, nebo nás o odstranění požádejte.
 
@@ -149,7 +149,7 @@ Podle funkcí, které používáte, mezi příjemce patří:
 - **Apple:** přihlášení, platby, oznámení, služby zařízení a cloudové služby Apple, které používáte.
 - **Supabase:** Gradey ID, propojené účty, šifrované tokeny relací a push oznámení, předvolby a školní údaje používané pro známky na pozadí, historii a oznámení.
 - **Google Firebase:** přihlášení k AI, zpracování na backendu, konverzace, záznamy o využití a souhlasu a zabezpečení požadavků.
-- **Microsoft Azure OpenAI:** zprávy a výslovně vybraný kontext potřebný k vytvoření odpovědí.
+- **OpenAI:** vaše zpráva, nedávné zprávy z téže konverzace a případné školní údaje, které vyberete pro vytvoření odpovědi.
 - **Intercom:** relace podpory, zprávy, přílohy a související technické údaje.
 - **RevenueCat:** zpracování nákupů a nároků.
 - **Vaše škola, školy vašich kamarádů, vaše jídelna, TŠ Vavruška a váš poskytovatel kalendáře:** údaje potřebné pro připojení a akce, o které požádáte.

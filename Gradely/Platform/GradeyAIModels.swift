@@ -35,6 +35,9 @@ enum GradeyAIIdentityTier: String, Codable, Equatable, Sendable {
 }
 
 struct GradeyAIConsent: Codable, Equatable, Sendable {
+    // Identifies the processor disclosure bundled with this build.
+    nonisolated static let disclosureVersion = "2026-11-20.openai1"
+
     let consented: Bool
     let termsVersion: String?
 

@@ -124,8 +124,14 @@ struct GradeyAIView: View {
                 .accessibilityElement(children: .contain)
                 .accessibilityIdentifier("gradeyAILoading")
         } else if let status = viewModel.status {
-            if status.consentRequired {
-                GradeyAIConsentScreen(viewModel: viewModel)
+            if status.termsVersion != GradeyAIConsent.disclosureVersion {
+                GradeyAIUnavailableState(
+                    title: AppL10n.string("gradey.ai.compute.unavailable"),
+                    message: AppL10n.string("gradey.ai.consent.unsupported"),
+                    onRetry: { Task { await viewModel.refreshStatus() } }
+                )
+            } else if status.consentRequired {
+                GradeyAIConsentScreen(viewModel: viewModel, termsVersion: status.termsVersion)
             } else {
                 GradeyAIChatScreen(
                     viewModel: viewModel,

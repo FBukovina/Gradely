@@ -31,6 +31,8 @@ enum GradeyAIError: LocalizedError, Equatable {
             // The backend contract supplies stable codes; its diagnostic copy
             // is not localized to the student's selected app language.
             switch code.lowercased().replacingOccurrences(of: "_", with: "-") {
+            case "consent-required":
+                return AppL10n.string("gradey.ai.compute.consentRequired")
             case "quota-exceeded":
                 return AppL10n.string("gradey.ai.limit.reached")
             case "catalog-changed", "price-changed":
@@ -77,7 +79,7 @@ protocol GradeyAIClient {
     func createConversation(schoolScope: String, title: String?, contextSelectionID: String) async throws -> GradeyAIConversation
     func streamReply(request: GradeyAIReplyRequest) -> AsyncThrowingStream<GradeyAIStreamEvent, Error>
     func recoverRequest(_ pending: GradeyAIPendingRequest) async throws -> GradeyAIGenerationRecovery
-    func acceptConsent() async throws -> GradeyAIConsent
+    func acceptConsent(termsVersion: String) async throws -> GradeyAIConsent
     func revokeConsent() async throws
     func listConversations(schoolScope: String) async throws -> [GradeyAIConversation]
     func createConversation(schoolScope: String, title: String?) async throws -> GradeyAIConversation
@@ -125,7 +127,7 @@ final class MockGradeyAIClient: GradeyAIClient {
         status: GradeyAIStatus = GradeyAIStatus(
             enabled: true,
             consentRequired: false,
-            termsVersion: "1",
+            termsVersion: GradeyAIConsent.disclosureVersion,
             dailyLimit: 5,
             dailyUsed: 0,
             remaining: 5,
@@ -146,8 +148,11 @@ final class MockGradeyAIClient: GradeyAIClient {
         return status
     }
 
-    func acceptConsent() async throws -> GradeyAIConsent {
+    func acceptConsent(termsVersion: String) async throws -> GradeyAIConsent {
         if let error { throw error }
+        guard termsVersion == status.termsVersion, termsVersion == GradeyAIConsent.disclosureVersion else {
+            throw GradeyAIError.server(code: "consent_required", message: "The AI terms changed.", retryable: false)
+        }
         status.consentRequired = false
         return GradeyAIConsent(consented: true, termsVersion: status.termsVersion)
     }

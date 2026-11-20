@@ -356,7 +356,7 @@ import Foundation
                 status: GradeyAIStatus(
                     enabled: !useGradeyAIDisabledMock,
                     consentRequired: arguments.contains("-uiTestingGradeyAIConsentRequired"),
-                    termsVersion: "2026-07-10.v1",
+                    termsVersion: GradeyAIConsent.disclosureVersion,
                     dailyLimit: 5,
                     dailyUsed: useGradeyAIQuotaMock ? 2 : 0,
                     remaining: useGradeyAIQuotaMock ? 3 : 5,

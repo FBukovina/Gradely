@@ -187,7 +187,7 @@ final class LiveWatchSyncService: NSObject, WatchSyncing {
             if !handedOffToStream, relayGeneration == generation { activeAIRequestID = nil }
         }
 
-        guard let aiClient, let contextBuilder else {
+        guard GradeyAIAvailability.isEnabled, let aiClient, let contextBuilder else {
             reply(replyHandler, .failure(code: GradelyWatchAIErrorCode.notConfigured, message: "Gradey AI is not available."))
             return
         }
@@ -201,7 +201,7 @@ final class LiveWatchSyncService: NSObject, WatchSyncing {
                 reply(replyHandler, .failure(code: GradelyWatchAIErrorCode.consentRequired, message: "Enable Gradey AI on iPhone."))
                 return
             }
-            guard status.enabled else {
+            guard status.enabled, status.termsVersion == GradeyAIConsent.disclosureVersion else {
                 reply(replyHandler, .failure(code: GradelyWatchAIErrorCode.notConfigured, message: "Gradey AI is not available."))
                 return
             }

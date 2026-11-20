@@ -4,6 +4,7 @@ import SwiftUI
 /// pinned consent action so it stays reachable at every text size.
 struct GradeyAIConsentScreen: View {
     let viewModel: GradeyAIViewModel
+    let termsVersion: String
 
     var body: some View {
         ScrollView {
@@ -127,7 +128,7 @@ struct GradeyAIConsentScreen: View {
 
     private var consentAction: some View {
         Button {
-            Task { await viewModel.acceptConsent() }
+            Task { await viewModel.acceptConsent(termsVersion: termsVersion) }
         } label: {
             HStack(spacing: Spacing.sm) {
                 if viewModel.isLoading {

@@ -252,14 +252,16 @@ final class GradeyAIViewModel {
         }
     }
 
-    func acceptConsent() async {
+    func acceptConsent(termsVersion: String) async {
+        guard status?.consentRequired == true, status?.termsVersion == termsVersion,
+              termsVersion == GradeyAIConsent.disclosureVersion else { return }
         guard let scope = try? contextBuilder.currentSchoolScope() else { return }
         let generation = lifecycleGeneration
         errorMessage = nil
         isLoading = true
         defer { if generation == lifecycleGeneration { isLoading = false } }
         do {
-            _ = try await client.acceptConsent()
+            _ = try await client.acceptConsent(termsVersion: termsVersion)
             guard matchesScope(scope, generation: generation) else { return }
             let loadedStatus = try await client.loadStatus()
             guard matchesScope(scope, generation: generation) else { return }
@@ -272,6 +274,7 @@ final class GradeyAIViewModel {
         } catch {
             guard matchesScope(scope, generation: generation) else { return }
             errorMessage = userFacingMessage(for: error)
+            await refreshStatus()
         }
     }
 

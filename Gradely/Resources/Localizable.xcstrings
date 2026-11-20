@@ -16079,25 +16079,54 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Gradey používá Google Firebase ke zpracování a ukládání chatů a Microsoft Azure OpenAI k vytvoření odpovědí z tvých zpráv a vybraného kontextu."
+            "value" : "Gradey ukládá chaty v Google Firebase. Pro odpověď odešle společnosti OpenAI tvoji zprávu, nedávné zprávy z tohoto chatu a případné školní údaje, které vybereš."
           }
         },
         "cs-US" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Gradey používá Google Firebase ke zpracování a ukládání chatů a Microsoft Azure OpenAI k vytvoření odpovědí z tvých zpráv a vybraného kontextu."
+            "value" : "Gradey ukládá chaty v Google Firebase. Pro odpověď odešle společnosti OpenAI tvoji zprávu, nedávné zprávy z tohoto chatu a případné školní údaje, které vybereš."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Gradey uses Google Firebase to process and store chats, and Microsoft Azure OpenAI to generate replies from your messages and selected context."
+            "value" : "Gradey stores chats in Google Firebase. To generate a reply, Gradey sends OpenAI your message, recent messages from this chat and any school information you select."
           }
         },
         "en-CO" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Gradey uses Google Firebase to process and store chats, and Microsoft Azure OpenAI to generate replies from your messages and selected context."
+            "value" : "Gradey stores chats in Google Firebase. To generate a reply, Gradey sends OpenAI your message, recent messages from this chat and any school information you select."
+          }
+        }
+      }
+    },
+    "gradey.ai.consent.unsupported" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Změnily se podmínky sdílení údajů s AI. Zkontroluj, jestli je dostupná aktualizace Gradey, a zkus to znovu."
+          }
+        },
+        "cs-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Změnily se podmínky sdílení údajů s AI. Zkontroluj, jestli je dostupná aktualizace Gradey, a zkus to znovu."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The AI data-sharing terms have changed. Check for a Gradey update, then try again."
+          }
+        },
+        "en-CO" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The AI data-sharing terms have changed. Check for a Gradey update, then try again."
           }
         }
       }
@@ -17685,25 +17714,25 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Google Firebase a Microsoft Azure OpenAI zpracovávají tvoje zprávy, související historii chatu a vybrané školní údaje pro odpovědi AI."
+            "value" : "Google Firebase a OpenAI zpracovávají tvoje zprávy, související historii chatu a vybrané školní údaje pro odpovědi AI."
           }
         },
         "cs-US" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Google Firebase a Microsoft Azure OpenAI zpracovávají tvoje zprávy, související historii chatu a vybrané školní údaje pro odpovědi AI."
+            "value" : "Google Firebase a OpenAI zpracovávají tvoje zprávy, související historii chatu a vybrané školní údaje pro odpovědi AI."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Google Firebase and Microsoft Azure OpenAI process your messages, relevant chat history and selected school information to provide AI replies."
+            "value" : "Google Firebase and OpenAI process your messages, relevant chat history and selected school information to provide AI replies."
           }
         },
         "en-CO" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Google Firebase and Microsoft Azure OpenAI process your messages, relevant chat history and selected school information to provide AI replies."
+            "value" : "Google Firebase and OpenAI process your messages, relevant chat history and selected school information to provide AI replies."
           }
         }
       }

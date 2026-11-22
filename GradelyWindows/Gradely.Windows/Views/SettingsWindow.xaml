@@ -1,0 +1,136 @@
+<Window x:Class="Gradely.Windows.Views.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Gradey — Settings"
+        Width="780" Height="540" MinWidth="640" MinHeight="460"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource SettingsBackgroundBrush}">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="230" />
+            <ColumnDefinition Width="1" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <!-- Left Sidebar -->
+        <StackPanel Grid.Column="0" Background="{DynamicResource SidebarBackgroundBrush}" Margin="0,12,0,0">
+            <TextBlock Text="{Binding L10n[nav.settings]}" FontSize="19" FontWeight="Bold" Margin="20,8,16,14" />
+
+            <RadioButton GroupName="SettingsNav" IsChecked="{Binding IsAccountSection}" Style="{StaticResource SidebarNavButtonStyle}">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="&#xE77B;" FontFamily="{StaticResource IconFont}" FontSize="15" VerticalAlignment="Center" Margin="0,0,10,0" />
+                    <TextBlock Text="{Binding L10n[settings.account]}" VerticalAlignment="Center" />
+                </StackPanel>
+            </RadioButton>
+
+            <RadioButton GroupName="SettingsNav" IsChecked="{Binding IsPreferencesSection}" Style="{StaticResource SidebarNavButtonStyle}">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="&#xE713;" FontFamily="{StaticResource IconFont}" FontSize="15" VerticalAlignment="Center" Margin="0,0,10,0" />
+                    <TextBlock Text="{Binding L10n[settings.preferences]}" VerticalAlignment="Center" />
+                </StackPanel>
+            </RadioButton>
+
+            <RadioButton GroupName="SettingsNav" IsChecked="{Binding IsAboutSection}" Style="{StaticResource SidebarNavButtonStyle}">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="&#xE946;" FontFamily="{StaticResource IconFont}" FontSize="15" VerticalAlignment="Center" Margin="0,0,10,0" />
+                    <TextBlock Text="{Binding L10n[settings.about]}" VerticalAlignment="Center" />
+                </StackPanel>
+            </RadioButton>
+        </StackPanel>
+
+        <Border Grid.Column="1" Background="{DynamicResource HairlineBrush}" />
+
+        <!-- Right Detail Pane -->
+        <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto">
+            <StackPanel Margin="28,24">
+
+                <!-- ACCOUNT -->
+                <StackPanel Visibility="{Binding IsAccountSection, Converter={StaticResource BoolToVis}}">
+                    <TextBlock Text="{Binding L10n[settings.account]}" FontSize="24" FontWeight="Bold" Margin="0,0,0,16" />
+
+                    <Border Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1" CornerRadius="14" Padding="16" Margin="0,0,0,18">
+                        <StackPanel>
+                            <TextBlock Text="{Binding AccountName}" FontSize="17" FontWeight="Bold" />
+                            <TextBlock Text="{Binding SchoolName}" Style="{StaticResource SecondaryTextStyle}" FontSize="13.5" Margin="0,2,0,0" />
+                            <TextBlock Text="{Binding ProviderName}" Foreground="{DynamicResource BrandPrimaryBrush}" FontSize="12" FontWeight="SemiBold" Margin="0,4,0,0" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- EduPage Parent Student Switcher -->
+                    <StackPanel Visibility="{Binding HasMultipleStudents, Converter={StaticResource BoolToVis}}" Margin="0,0,0,18">
+                        <TextBlock Text="{Binding L10n[settings.switchStudent]}" Style="{StaticResource SectionHeaderCapsStyle}" Margin="0,0,0,8" />
+                        <ItemsControl ItemsSource="{Binding AvailableStudents}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Button Command="{Binding DataContext.SwitchStudentCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                            CommandParameter="{Binding}"
+                                            Style="{StaticResource SubtleButtonStyle}"
+                                            HorizontalContentAlignment="Left"
+                                            Margin="0,0,0,6">
+                                        <TextBlock FontSize="13.5" FontWeight="SemiBold">
+                                            <Run Text="{Binding FullName, Mode=OneWay}" />
+                                            <Run Text=" · " />
+                                            <Run Text="{Binding ClassName, Mode=OneWay}" Foreground="{DynamicResource SecondaryLabelBrush}" />
+                                        </TextBlock>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+
+                    <Button Content="{Binding L10n[common.signOut]}"
+                            Command="{Binding SignOutCommand}"
+                            Style="{StaticResource SubtleButtonStyle}"
+                            Foreground="{DynamicResource BandPoorBrush}"
+                            FontWeight="Bold"
+                            HorizontalAlignment="Left"
+                            Padding="18,9" />
+                </StackPanel>
+
+                <!-- PREFERENCES -->
+                <StackPanel Visibility="{Binding IsPreferencesSection, Converter={StaticResource BoolToVis}}">
+                    <TextBlock Text="{Binding L10n[settings.preferences]}" FontSize="24" FontWeight="Bold" Margin="0,0,0,18" />
+
+                    <TextBlock Text="{Binding L10n[settings.theme]}" Style="{StaticResource SectionHeaderCapsStyle}" Margin="0,0,0,6" />
+                    <ComboBox ItemsSource="{Binding ThemeOptions}" SelectedItem="{Binding Theme}" Width="240" Height="34" HorizontalAlignment="Left" Margin="0,0,0,16" />
+
+                    <TextBlock Text="{Binding L10n[settings.language]}" Style="{StaticResource SectionHeaderCapsStyle}" Margin="0,0,0,6" />
+                    <ComboBox ItemsSource="{Binding LanguageOptions}" SelectedItem="{Binding Language}" Width="240" Height="34" HorizontalAlignment="Left" Margin="0,0,0,18" />
+
+                    <Border Style="{StaticResource HairlineSeparatorStyle}" />
+
+                    <CheckBox IsChecked="{Binding ShowMealsTab}" Margin="0,6">
+                        <TextBlock Text="{Binding L10n[settings.showMealsTab]}" FontSize="14" FontWeight="Medium" />
+                    </CheckBox>
+
+                    <CheckBox IsChecked="{Binding ShowAbsenceSemesterAllowance}" Margin="0,10">
+                        <TextBlock Text="{Binding L10n[settings.semesterAllowance]}" FontSize="14" FontWeight="Medium" />
+                    </CheckBox>
+
+                    <CheckBox IsChecked="{Binding ChronicallyOnline}" Margin="0,10">
+                        <StackPanel>
+                            <TextBlock Text="{Binding L10n[settings.chronicallyOnline]}" FontSize="14" FontWeight="Medium" />
+                            <TextBlock Text="{Binding L10n[settings.chronicallyOnlineDesc]}" Style="{StaticResource SecondaryTextStyle}" FontSize="12" />
+                        </StackPanel>
+                    </CheckBox>
+                </StackPanel>
+
+                <!-- ABOUT -->
+                <StackPanel Visibility="{Binding IsAboutSection, Converter={StaticResource BoolToVis}}">
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,14">
+                        <Image Source="pack://application:,,,/Assets/GradeyLogo.png" Width="44" Height="44" Margin="0,0,14,0" />
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="Gradey for Windows" FontSize="22" FontWeight="Bold" />
+                            <TextBlock Text="Native .NET 10 WPF Desktop Client · v2.8.2" Style="{StaticResource SecondaryTextStyle}" FontSize="13" />
+                        </StackPanel>
+                    </StackPanel>
+
+                    <TextBlock Text="{Binding L10n[settings.privacyNote]}" Style="{StaticResource SecondaryTextStyle}" FontSize="13.5" TextWrapping="Wrap" Margin="0,4,0,16" />
+
+                    <TextBlock Text="Supports Bakaláři API v3, EduPage (including 2FA &amp; parent accounts), and Strava.cz canteen ordering. Not an official Bakaláři or EduPage product."
+                               Style="{StaticResource SecondaryTextStyle}" FontSize="12.5" TextWrapping="Wrap" />
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</Window>

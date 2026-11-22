@@ -1,0 +1,229 @@
+<UserControl x:Class="Gradely.Windows.Views.AbsenceView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:Gradely.Windows.Controls">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel MaxWidth="760" Margin="32,24,32,40">
+
+            <!-- Hero Total Absence -->
+            <TextBlock Text="{Binding L10n[absence.totalTitle]}" Style="{StaticResource SecondaryTextStyle}" FontWeight="SemiBold" />
+            <StackPanel Orientation="Horizontal" Margin="0,2,0,4">
+                <TextBlock Text="{Binding Absence.TotalHours}" Style="{StaticResource HeroNumberTextStyle}" Foreground="{DynamicResource BrandPrimaryBrush}" />
+                <TextBlock Text="{Binding L10n[absence.hours]}" FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource SecondaryLabelBrush}" VerticalAlignment="Bottom" Margin="8,0,0,10" />
+            </StackPanel>
+            <TextBlock Text="{Binding Absence.BreakdownSummary}" Style="{StaticResource SecondaryTextStyle}" FontSize="13.5" TextWrapping="Wrap" />
+
+            <!-- Local Override Status Banners -->
+            <Border Background="{DynamicResource BrandPrimarySoftBrush}" CornerRadius="10" Padding="12,9" Margin="0,12,0,0"
+                    Visibility="{Binding Absence.LocalAdjustmentBanner, Converter={StaticResource NullToVis}}">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Left" Text="{Binding Absence.LocalAdjustmentBanner}" Foreground="{DynamicResource BrandPrimaryBrush}" FontSize="12.5" FontWeight="SemiBold" VerticalAlignment="Center" TextWrapping="Wrap" />
+                    <Button DockPanel.Dock="Right" Content="{Binding L10n[common.restore]}" Command="{Binding Absence.RestoreAllOverridesCommand}" Style="{StaticResource LinkButtonStyle}" Margin="10,0,0,0" HorizontalAlignment="Right" />
+                </DockPanel>
+            </Border>
+
+            <Border Background="{DynamicResource WarningOrangeSoftBrush}" CornerRadius="10" Padding="12,9" Margin="0,8,0,0"
+                    Visibility="{Binding Absence.ReviewOverridesBanner, Converter={StaticResource NullToVis}}">
+                <TextBlock Text="{Binding Absence.ReviewOverridesBanner}" Foreground="{DynamicResource WarningOrangeBrush}" FontSize="12.5" FontWeight="SemiBold" TextWrapping="Wrap" />
+            </Border>
+
+            <Border Style="{StaticResource HairlineSeparatorStyle}" />
+
+            <!-- WHAT-IF ABSENCE PREDICTOR -->
+            <DockPanel Margin="0,0,0,8">
+                <StackPanel DockPanel.Dock="Left">
+                    <TextBlock Text="{Binding L10n[absence.predictor.title]}" Style="{StaticResource SectionTitleTextStyle}" />
+                    <TextBlock Text="{Binding L10n[absence.predictor.subtitle]}" Style="{StaticResource SecondaryTextStyle}" FontSize="12.5" />
+                </StackPanel>
+                <StackPanel DockPanel.Dock="Right" HorizontalAlignment="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Content="{Binding L10n[common.clear]}" Style="{StaticResource SubtleButtonStyle}" Command="{Binding Absence.ClearPredictionCommand}" Margin="0,0,8,0"
+                            Visibility="{Binding Absence.HasActivePrediction, Converter={StaticResource BoolToVis}}" />
+                    <Button Content="{Binding L10n[absence.predictor.pickDate]}" Style="{StaticResource SubtleButtonStyle}" Command="{Binding Absence.TogglePredictorCommand}" />
+                </StackPanel>
+            </DockPanel>
+
+            <!-- Active Prediction Summary -->
+            <Border Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1" CornerRadius="14" Padding="14" Margin="0,6,0,8"
+                    Visibility="{Binding Absence.HasActivePrediction, Converter={StaticResource BoolToVis}}">
+                <StackPanel>
+                    <TextBlock Text="{Binding Absence.PredictionHeadline}" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource BrandPrimaryBrush}" Margin="0,0,0,8" />
+                    <ItemsControl ItemsSource="{Binding Absence.PredictionSubjectRows}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,3">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="{Binding SubjectName}" FontWeight="SemiBold" FontSize="13.5" />
+                                    <TextBlock Grid.Column="1" FontSize="13" Typography.NumeralAlignment="Tabular" Margin="10,0">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Foreground" Value="{DynamicResource SecondaryLabelBrush}" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding ProjectedExceedsThreshold}" Value="True">
+                                                        <Setter Property="Foreground" Value="{DynamicResource BandPoorBrush}" />
+                                                        <Setter Property="FontWeight" Value="Bold" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                        <Run Text="{Binding CurrentPercentage, StringFormat={}{0:F1}%, Mode=OneWay}" />
+                                        <Run Text=" → " />
+                                        <Run Text="{Binding ProjectedPercentage, StringFormat={}{0:F1}%, Mode=OneWay}" />
+                                    </TextBlock>
+                                    <Border Grid.Column="2" Background="{DynamicResource BrandPrimarySoftBrush}" CornerRadius="8" Padding="7,2">
+                                        <TextBlock Text="{Binding AddedHours, StringFormat=+{0} h}" FontSize="11.5" FontWeight="Bold" Foreground="{DynamicResource BrandPrimaryBrush}" />
+                                    </Border>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
+            <!-- Expandable Lesson Picker for Predictor -->
+            <Border Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1" CornerRadius="14" Padding="14" Margin="0,6,0,8"
+                    Visibility="{Binding Absence.IsPredictorExpanded, Converter={StaticResource BoolToVis}}">
+                <StackPanel>
+                    <DockPanel Margin="0,0,0,10">
+                        <DatePicker DockPanel.Dock="Left" SelectedDate="{Binding Absence.PredictorDate}" Width="180" />
+                        <Button DockPanel.Dock="Right" HorizontalAlignment="Right" Content="{Binding L10n[common.done]}" Style="{StaticResource SubtleButtonStyle}" Command="{Binding Absence.TogglePredictorCommand}" />
+                    </DockPanel>
+                    <ItemsControl ItemsSource="{Binding Absence.PredictorDayLessons}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <CheckBox IsChecked="{Binding IsSelected}" Margin="0,4" Cursor="Hand">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="{Binding PeriodCaption, StringFormat={}{0}.}" FontWeight="Bold" Width="26" Typography.NumeralAlignment="Tabular" />
+                                        <TextBlock Text="{Binding SubjectName}" FontWeight="SemiBold" Margin="4,0,10,0" />
+                                        <TextBlock Text="{Binding TimeRange}" Style="{StaticResource SecondaryTextStyle}" FontSize="12" />
+                                    </StackPanel>
+                                </CheckBox>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource HairlineSeparatorStyle}" />
+
+            <!-- SEGMENTED VIEW SWITCHER: Subjects | Days | Months -->
+            <Border Background="{DynamicResource TertiaryFillBrush}" CornerRadius="10" Padding="4" Margin="0,0,0,18">
+                <UniformGrid Columns="3">
+                    <RadioButton Content="{Binding L10n[absence.tab.subjects]}" GroupName="AbsTabs" IsChecked="{Binding Absence.IsSubjectsTab}" Style="{StaticResource SegmentRadioButtonStyle}" />
+                    <RadioButton Content="{Binding L10n[absence.tab.days]}" GroupName="AbsTabs" IsChecked="{Binding Absence.IsDaysTab}" Style="{StaticResource SegmentRadioButtonStyle}" />
+                    <RadioButton Content="{Binding L10n[absence.tab.months]}" GroupName="AbsTabs" IsChecked="{Binding Absence.IsMonthsTab}" Style="{StaticResource SegmentRadioButtonStyle}" />
+                </UniformGrid>
+            </Border>
+
+            <!-- TAB 0: SUBJECTS -->
+            <ItemsControl ItemsSource="{Binding Absence.Subjects}"
+                          Visibility="{Binding Absence.IsSubjectsTab, Converter={StaticResource BoolToVis}}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="0,0,0,1" Padding="0,12">
+                            <StackPanel>
+                                <DockPanel Margin="0,0,0,7">
+                                    <TextBlock DockPanel.Dock="Left" Text="{Binding Summary.SubjectName}" FontSize="15" FontWeight="SemiBold" />
+                                    <TextBlock DockPanel.Dock="Right" HorizontalAlignment="Right"
+                                               Text="{Binding PercentageText}"
+                                               FontSize="15" FontWeight="Bold" Typography.NumeralAlignment="Tabular"
+                                               Foreground="{Binding Summary.RiskLevel, Converter={StaticResource AbsenceRiskBrush}}" />
+                                </DockPanel>
+
+                                <!-- 6px Risk Capsule Bar -->
+                                <ProgressBar Value="{Binding ProgressRatio}" Minimum="0" Maximum="1" Height="6"
+                                             Foreground="{Binding Summary.RiskLevel, Converter={StaticResource AbsenceRiskBrush}}"
+                                             Background="{DynamicResource TertiaryFillBrush}" BorderThickness="0" />
+
+                                <TextBlock Text="{Binding StatusLine}" Style="{StaticResource SecondaryTextStyle}" FontSize="12.5" Margin="0,6,0,0" />
+                                <TextBlock Text="{Binding SemesterLine}" FontSize="12" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource BrandPrimaryBrush}"
+                                           Margin="0,2,0,0"
+                                           Visibility="{Binding SemesterLine, Converter={StaticResource NullToVis}}" />
+                            </StackPanel>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <!-- TAB 1: DAYS (with Local Hide/Restore) -->
+            <StackPanel Visibility="{Binding Absence.IsDaysTab, Converter={StaticResource BoolToVis}}">
+                <TextBlock Text="{Binding L10n[absence.override.disclaimer]}" Style="{StaticResource SecondaryTextStyle}" FontSize="12" Margin="0,0,0,10" TextWrapping="Wrap" />
+                <ItemsControl ItemsSource="{Binding Absence.Days}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="0,0,0,1" Padding="0,11">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding DateLabel}" FontSize="14.5" FontWeight="SemiBold">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding HasLocalOverride}" Value="True">
+                                                            <Setter Property="TextDecorations" Value="Strikethrough" />
+                                                            <Setter Property="Opacity" Value="0.55" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                        <TextBlock Text="{Binding BreakdownText}" Style="{StaticResource SecondaryTextStyle}" FontSize="12.5" Margin="0,2,0,0" />
+                                    </StackPanel>
+
+                                    <TextBlock Grid.Column="1" Text="{Binding TotalHours, StringFormat={}{0} h}" FontSize="15" FontWeight="Bold" Typography.NumeralAlignment="Tabular" VerticalAlignment="Center" Margin="12,0" />
+
+                                    <Button Grid.Column="2"
+                                            Command="{Binding DataContext.Absence.HideDayLocallyCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                            CommandParameter="{Binding}"
+                                            Style="{StaticResource SubtleButtonStyle}"
+                                            VerticalAlignment="Center">
+                                        <TextBlock FontSize="12" FontWeight="SemiBold">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Text" Value="{Binding DataContext.L10n[absence.override.hideDay], RelativeSource={RelativeSource AncestorType=UserControl}}" />
+                                                    <Setter Property="Foreground" Value="{DynamicResource BandPoorBrush}" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding HasLocalOverride}" Value="True">
+                                                            <Setter Property="Text" Value="{Binding DataContext.L10n[absence.override.restoreDay], RelativeSource={RelativeSource AncestorType=UserControl}}" />
+                                                            <Setter Property="Foreground" Value="{DynamicResource BrandPrimaryBrush}" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </Button>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+
+            <!-- TAB 2: MONTHS (Stacked Bar Chart + Monthly Totals) -->
+            <StackPanel Visibility="{Binding Absence.IsMonthsTab, Converter={StaticResource BoolToVis}}">
+                <controls:AbsenceMonthsChart Height="180" Items="{Binding Absence.Months}" Margin="0,0,0,16" />
+
+                <ItemsControl ItemsSource="{Binding Absence.Months}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="0,0,0,1" Padding="0,10">
+                                <DockPanel>
+                                    <TextBlock DockPanel.Dock="Left" Text="{Binding MonthLabel}" FontSize="14.5" FontWeight="SemiBold" />
+                                    <TextBlock DockPanel.Dock="Right" HorizontalAlignment="Right" Text="{Binding Total, StringFormat={}{0} h}" FontSize="14.5" FontWeight="Bold" Typography.NumeralAlignment="Tabular" />
+                                </DockPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

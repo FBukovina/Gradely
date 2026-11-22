@@ -1,0 +1,74 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- Brand & Accent Colors (Gradey Light) -->
+    <Color x:Key="BrandPrimaryColor">#17A185</Color>
+    <Color x:Key="BrandSecondaryColor">#1DA565</Color>
+    <Color x:Key="BrandOnAccentColor">#041814</Color>
+
+    <!-- Surfaces -->
+    <Color x:Key="CanvasBackgroundColor">#F4F7F6</Color>
+    <Color x:Key="SidebarBackgroundColor">#EBF2F0</Color>
+    <Color x:Key="CardBackgroundColor">#FFFFFF</Color>
+    <Color x:Key="SettingsBackgroundColor">#EFF5F4</Color>
+    <Color x:Key="TertiaryFillColor">#14000000</Color>
+    <Color x:Key="HoverFillColor">#1417A185</Color>
+    <Color x:Key="SelectedFillColor">#1F17A185</Color>
+    <Color x:Key="HairlineColor">#1C000000</Color>
+    <Color x:Key="CardBorderColor">#1217A185</Color>
+
+    <!-- Text -->
+    <Color x:Key="LabelColor">#000000</Color>
+    <Color x:Key="SecondaryLabelColor">#556364</Color>
+    <Color x:Key="TertiaryLabelColor">#808E90</Color>
+
+    <!-- Grade Bands & Semantic -->
+    <Color x:Key="BandExcellentColor">#1E9F69</Color>
+    <Color x:Key="BandGoodColor">#108A94</Color>
+    <Color x:Key="BandAverageColor">#D98F10</Color>
+    <Color x:Key="BandPoorColor">#D83E4F</Color>
+    <Color x:Key="BandNeutralColor">#6C7A7C</Color>
+    <Color x:Key="WarningOrangeColor">#E58300</Color>
+    <Color x:Key="AddedPurpleColor">#9B42CC</Color>
+
+    <!-- Brushes -->
+    <SolidColorBrush x:Key="BrandPrimaryBrush" Color="{StaticResource BrandPrimaryColor}" />
+    <SolidColorBrush x:Key="BrandSecondaryBrush" Color="{StaticResource BrandSecondaryColor}" />
+    <SolidColorBrush x:Key="BrandOnAccentBrush" Color="{StaticResource BrandOnAccentColor}" />
+    <LinearGradientBrush x:Key="BrandGradientBrush" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="{StaticResource BrandPrimaryColor}" Offset="0" />
+        <GradientStop Color="{StaticResource BrandSecondaryColor}" Offset="1" />
+    </LinearGradientBrush>
+
+    <SolidColorBrush x:Key="CanvasBackgroundBrush" Color="{StaticResource CanvasBackgroundColor}" />
+    <SolidColorBrush x:Key="SidebarBackgroundBrush" Color="{StaticResource SidebarBackgroundColor}" />
+    <SolidColorBrush x:Key="CardBackgroundBrush" Color="{StaticResource CardBackgroundColor}" />
+    <SolidColorBrush x:Key="SettingsBackgroundBrush" Color="{StaticResource SettingsBackgroundColor}" />
+    <SolidColorBrush x:Key="TertiaryFillBrush" Color="{StaticResource TertiaryFillColor}" />
+    <SolidColorBrush x:Key="HoverFillBrush" Color="{StaticResource HoverFillColor}" />
+    <SolidColorBrush x:Key="SelectedFillBrush" Color="{StaticResource SelectedFillColor}" />
+    <SolidColorBrush x:Key="HairlineBrush" Color="{StaticResource HairlineColor}" />
+    <SolidColorBrush x:Key="CardBorderBrush" Color="{StaticResource CardBorderColor}" />
+
+    <SolidColorBrush x:Key="LabelBrush" Color="{StaticResource LabelColor}" />
+    <SolidColorBrush x:Key="SecondaryLabelBrush" Color="{StaticResource SecondaryLabelColor}" />
+    <SolidColorBrush x:Key="TertiaryLabelBrush" Color="{StaticResource TertiaryLabelColor}" />
+
+    <SolidColorBrush x:Key="BandExcellentBrush" Color="{StaticResource BandExcellentColor}" />
+    <SolidColorBrush x:Key="BandGoodBrush" Color="{StaticResource BandGoodColor}" />
+    <SolidColorBrush x:Key="BandAverageBrush" Color="{StaticResource BandAverageColor}" />
+    <SolidColorBrush x:Key="BandPoorBrush" Color="{StaticResource BandPoorColor}" />
+    <SolidColorBrush x:Key="BandNeutralBrush" Color="{StaticResource BandNeutralColor}" />
+    <SolidColorBrush x:Key="WarningOrangeBrush" Color="{StaticResource WarningOrangeColor}" />
+    <SolidColorBrush x:Key="AddedPurpleBrush" Color="{StaticResource AddedPurpleColor}" />
+
+    <SolidColorBrush x:Key="BandExcellentSoftBrush" Color="#241E9F69" />
+    <SolidColorBrush x:Key="BandGoodSoftBrush" Color="#24108A94" />
+    <SolidColorBrush x:Key="BandAverageSoftBrush" Color="#24D98F10" />
+    <SolidColorBrush x:Key="BandPoorSoftBrush" Color="#24D83E4F" />
+    <SolidColorBrush x:Key="BandNeutralSoftBrush" Color="#266C7A7C" />
+    <SolidColorBrush x:Key="BrandPrimarySoftBrush" Color="#1F17A185" />
+    <SolidColorBrush x:Key="BrandSecondarySoftBrush" Color="#1F1DA565" />
+    <SolidColorBrush x:Key="WarningOrangeSoftBrush" Color="#24E58300" />
+    <SolidColorBrush x:Key="AddedPurpleSoftBrush" Color="#249B42CC" />
+</ResourceDictionary>

@@ -1,0 +1,173 @@
+<Window x:Class="Gradely.Windows.Views.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:Gradely.Windows.Controls"
+        xmlns:views="clr-namespace:Gradely.Windows.Views"
+        Title="Gradey"
+        Width="1060" Height="730"
+        MinWidth="880" MinHeight="600"
+        WindowStartupLocation="CenterScreen"
+        Icon="pack://application:,,,/Assets/Gradey.ico"
+        Background="{DynamicResource CanvasBackgroundBrush}">
+    <Grid>
+        <!-- SIGNED OUT: Login Wizard -->
+        <views:LoginView DataContext="{Binding Login}"
+                         Visibility="{Binding DataContext.IsSignedIn, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource InvertBoolToVis}}" />
+
+        <!-- SIGNED IN: Native Desktop Shell (Sidebar + Aurora Content Canvas) -->
+        <Grid Visibility="{Binding IsSignedIn, Converter={StaticResource BoolToVis}}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="220" />
+                <ColumnDefinition Width="1" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <!-- LEFT NAVIGATION SIDEBAR -->
+            <Grid Grid.Column="0" Background="{DynamicResource SidebarBackgroundBrush}">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <!-- App Brand Header -->
+                <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="18,18,16,18">
+                    <Image Source="pack://application:,,,/Assets/GradeyLogo.png" Width="28" Height="28" Margin="0,0,10,0" />
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="Gradey" FontSize="17" FontWeight="Bold" />
+                        <TextBlock Text="{Binding SchoolDisplayName}" Style="{StaticResource SecondaryTextStyle}" FontSize="11" TextTrimming="CharacterEllipsis" MaxWidth="148"
+                                   Visibility="{Binding SchoolDisplayName, Converter={StaticResource NullToVis}}" />
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- Primary Navigation Tabs -->
+                <StackPanel Grid.Row="1">
+                    <RadioButton GroupName="MainNav" IsChecked="{Binding IsTodayTab}" Style="{StaticResource SidebarNavButtonStyle}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE80F;" FontFamily="{StaticResource IconFont}" FontSize="15" VerticalAlignment="Center" Margin="0,0,11,0" />
+                            <TextBlock Text="{Binding L10n[nav.today]}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </RadioButton>
+
+                    <RadioButton GroupName="MainNav" IsChecked="{Binding IsMarksTab}" Style="{StaticResource SidebarNavButtonStyle}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE734;" FontFamily="{StaticResource IconFont}" FontSize="15" VerticalAlignment="Center" Margin="0,0,11,0" />
+                            <TextBlock Text="{Binding L10n[nav.marks]}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </RadioButton>
+
+                    <RadioButton GroupName="MainNav" IsChecked="{Binding IsAbsenceTab}" Style="{StaticResource SidebarNavButtonStyle}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE823;" FontFamily="{StaticResource IconFont}" FontSize="15" VerticalAlignment="Center" Margin="0,0,11,0" />
+                            <TextBlock Text="{Binding L10n[nav.absence]}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </RadioButton>
+
+                    <RadioButton GroupName="MainNav" IsChecked="{Binding IsTimetableTab}" Style="{StaticResource SidebarNavButtonStyle}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE787;" FontFamily="{StaticResource IconFont}" FontSize="15" VerticalAlignment="Center" Margin="0,0,11,0" />
+                            <TextBlock Text="{Binding L10n[nav.timetable]}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </RadioButton>
+
+                    <RadioButton GroupName="MainNav" IsChecked="{Binding IsMealsTab}" Style="{StaticResource SidebarNavButtonStyle}"
+                                 Visibility="{Binding ShowMealsTab, Converter={StaticResource BoolToVis}}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xED56;" FontFamily="{StaticResource IconFont}" FontSize="15" VerticalAlignment="Center" Margin="0,0,11,0" />
+                            <TextBlock Text="{Binding L10n[nav.meals]}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </RadioButton>
+
+                    <Border Style="{StaticResource HairlineSeparatorStyle}" Margin="16,14" />
+
+                    <!-- Quick Secondary Modals -->
+                    <Button Command="{Binding OpenKomensCommand}"
+                            Visibility="{Binding SupportsKomens, Converter={StaticResource BoolToVis}}"
+                            Style="{StaticResource SubtleButtonStyle}" Background="Transparent"
+                            HorizontalContentAlignment="Stretch" Margin="8,2" Padding="12,8">
+                        <Grid>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE715;" FontFamily="{StaticResource IconFont}" FontSize="15" VerticalAlignment="Center" Margin="0,0,11,0" />
+                                <TextBlock Text="{Binding L10n[nav.messages]}" FontSize="13.5" VerticalAlignment="Center" />
+                            </StackPanel>
+                            <Border HorizontalAlignment="Right" VerticalAlignment="Center"
+                                    Background="{DynamicResource BrandPrimaryBrush}" CornerRadius="9" MinWidth="20" Height="18" Padding="5,0"
+                                    Visibility="{Binding UnreadKomensCount, Converter={StaticResource CountToVis}}">
+                                <TextBlock Text="{Binding UnreadKomensCount}" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource BrandOnAccentBrush}"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center" Typography.NumeralAlignment="Tabular" />
+                            </Border>
+                        </Grid>
+                    </Button>
+
+                    <Button Command="{Binding OpenPlannerCommand}"
+                            Style="{StaticResource SubtleButtonStyle}" Background="Transparent"
+                            HorizontalContentAlignment="Left" Margin="8,2" Padding="12,8">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE762;" FontFamily="{StaticResource IconFont}" FontSize="15" VerticalAlignment="Center" Margin="0,0,11,0" />
+                            <TextBlock Text="{Binding L10n[nav.planner]}" FontSize="13.5" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+
+                    <Button Command="{Binding OpenReportCardCommand}"
+                            Visibility="{Binding SupportsReportCard, Converter={StaticResource BoolToVis}}"
+                            Style="{StaticResource SubtleButtonStyle}" Background="Transparent"
+                            HorizontalContentAlignment="Left" Margin="8,2" Padding="12,8">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE8A5;" FontFamily="{StaticResource IconFont}" FontSize="15" VerticalAlignment="Center" Margin="0,0,11,0" />
+                            <TextBlock Text="{Binding L10n[nav.reportCard]}" FontSize="13.5" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+
+                <!-- Bottom Sidebar Footer: Account + Refresh + Settings -->
+                <Border Grid.Row="2" BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="0,1,0,0" Padding="12,10">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="{Binding AccountDisplayName}" FontSize="13" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" Margin="4,0,6,0" />
+                        <Button Grid.Column="1" Content="&#xE72C;" Style="{StaticResource IconButtonStyle}" Command="{Binding RefreshCommand}" ToolTip="{Binding L10n[common.refresh], StringFormat={}{0} (Ctrl+R)}" />
+                        <Button Grid.Column="2" Content="&#xE713;" Style="{StaticResource IconButtonStyle}" Command="{Binding OpenSettingsCommand}" ToolTip="{Binding L10n[nav.settings], StringFormat='{}{0} (Ctrl+,)'}" />
+                    </Grid>
+                </Border>
+            </Grid>
+
+            <!-- Vertical Divider -->
+            <Border Grid.Column="1" Background="{DynamicResource HairlineBrush}" />
+
+            <!-- MAIN CONTENT CANVAS WITH AURORA BACKDROP -->
+            <Grid Grid.Column="2">
+                <controls:AuroraBackgroundControl />
+
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <!-- Subtle Sync Progress Bar -->
+                    <ProgressBar Grid.Row="0" IsIndeterminate="True" Height="2.5" BorderThickness="0"
+                                 Background="Transparent" Foreground="{DynamicResource BrandPrimaryBrush}"
+                                 Visibility="{Binding IsRefreshing, Converter={StaticResource BoolToVis}}" />
+
+                    <!-- Global Error Banner (if network/auth error) -->
+                    <Border Grid.Row="0" Background="{DynamicResource BandPoorSoftBrush}" Padding="16,8"
+                            Visibility="{Binding GlobalError, Converter={StaticResource NullToVis}}">
+                        <TextBlock Text="{Binding GlobalError}" Foreground="{DynamicResource BandPoorBrush}" FontSize="12.5" FontWeight="SemiBold" TextWrapping="Wrap" />
+                    </Border>
+
+                    <!-- Active View Content -->
+                    <Grid Grid.Row="1">
+                        <views:TodayView Visibility="{Binding IsTodayTab, Converter={StaticResource BoolToVis}}" />
+                        <views:SubjectsView Visibility="{Binding IsMarksTab, Converter={StaticResource BoolToVis}}" />
+                        <views:AbsenceView Visibility="{Binding IsAbsenceTab, Converter={StaticResource BoolToVis}}" />
+                        <views:TimetableView Visibility="{Binding IsTimetableTab, Converter={StaticResource BoolToVis}}" />
+                        <views:StravaCZView Visibility="{Binding IsMealsTab, Converter={StaticResource BoolToVis}}" />
+                    </Grid>
+                </Grid>
+            </Grid>
+        </Grid>
+    </Grid>
+</Window>

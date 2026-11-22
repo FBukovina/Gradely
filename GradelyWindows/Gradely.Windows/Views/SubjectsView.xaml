@@ -1,0 +1,319 @@
+<UserControl x:Class="Gradely.Windows.Views.SubjectsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:Gradely.Windows.Controls">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="360" />
+            <ColumnDefinition Width="1" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <!-- LEFT MASTER PANE: Hero + Report Card + Subjects List -->
+        <Grid Grid.Column="0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <StackPanel Grid.Row="0" Margin="24,22,20,12">
+                <TextBlock Text="{Binding L10n[marks.overallAverage]}" Style="{StaticResource SecondaryTextStyle}" FontWeight="SemiBold" />
+                <TextBlock Text="{Binding Subjects.OverallAverageText}"
+                           Style="{StaticResource HeroNumberTextStyle}"
+                           Foreground="{Binding Subjects.OverallAverageBand, Converter={StaticResource GradeBandBrush}}"
+                           Margin="0,2,0,2" />
+                <TextBlock Text="{Binding Subjects.SummaryLine}" Style="{StaticResource SecondaryTextStyle}" FontSize="13" />
+
+                <!-- Report Card Entry Row -->
+                <Button Command="{Binding OpenReportCardCommand}"
+                        Visibility="{Binding Subjects.ShowReportCardBanner, Converter={StaticResource BoolToVis}}"
+                        Background="Transparent" BorderThickness="0" HorizontalContentAlignment="Stretch" Margin="0,14,0,0" Cursor="Hand">
+                    <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="Root" Background="{DynamicResource BrandPrimarySoftBrush}" CornerRadius="12" Padding="12,10">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding L10n[nav.reportCard]}" FontWeight="Bold" FontSize="13.5" Foreground="{DynamicResource BrandPrimaryBrush}" />
+                                        <TextBlock Text="{Binding Subjects.ReportCardSubtitle}" Style="{StaticResource SecondaryTextStyle}" FontSize="12" />
+                                    </StackPanel>
+                                    <TextBlock Grid.Column="1" Text="&#xE76C;" FontFamily="{StaticResource IconFont}" FontSize="12" Foreground="{DynamicResource BrandPrimaryBrush}" VerticalAlignment="Center" />
+                                </Grid>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Root" Property="Opacity" Value="0.88" />
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Button.Template>
+                </Button>
+
+                <Border Style="{StaticResource HairlineSeparatorStyle}" Margin="0,14,0,10" />
+
+                <!-- Sort Switcher -->
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Left" Text="{Binding L10n[marks.subjects]}" FontSize="16" FontWeight="Bold" VerticalAlignment="Center" />
+                    <Border DockPanel.Dock="Right" HorizontalAlignment="Right" Background="{DynamicResource TertiaryFillBrush}" CornerRadius="8" Padding="3">
+                        <StackPanel Orientation="Horizontal">
+                            <RadioButton Content="{Binding L10n[marks.sort.focus]}"
+                                         GroupName="MarksSort"
+                                         IsChecked="{Binding Subjects.IsSortFocus}"
+                                         Style="{StaticResource SegmentRadioButtonStyle}"
+                                         Padding="10,4" FontSize="12" />
+                            <RadioButton Content="{Binding L10n[marks.sort.average]}"
+                                         GroupName="MarksSort"
+                                         IsChecked="{Binding Subjects.IsSortAverage}"
+                                         Style="{StaticResource SegmentRadioButtonStyle}"
+                                         Padding="10,4" FontSize="12" />
+                        </StackPanel>
+                    </Border>
+                </DockPanel>
+            </StackPanel>
+
+            <!-- Subject List -->
+            <ListBox Grid.Row="1"
+                     ItemsSource="{Binding Subjects.Subjects}"
+                     SelectedItem="{Binding Subjects.SelectedSubject}"
+                     Background="Transparent"
+                     BorderThickness="0"
+                     Padding="12,0,12,20"
+                     HorizontalContentAlignment="Stretch"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                <ListBox.ItemContainerStyle>
+                    <Style TargetType="ListBoxItem">
+                        <Setter Property="Padding" Value="0" />
+                        <Setter Property="Margin" Value="0,2" />
+                        <Setter Property="Cursor" Value="Hand" />
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="ListBoxItem">
+                                    <Border x:Name="RowBg" Background="Transparent" CornerRadius="10" Padding="10,9">
+                                        <ContentPresenter />
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsSelected" Value="True">
+                                            <Setter TargetName="RowBg" Property="Background" Value="{DynamicResource SelectedFillBrush}" />
+                                        </Trigger>
+                                        <MultiTrigger>
+                                            <MultiTrigger.Conditions>
+                                                <Condition Property="IsMouseOver" Value="True" />
+                                                <Condition Property="IsSelected" Value="False" />
+                                            </MultiTrigger.Conditions>
+                                            <Setter TargetName="RowBg" Property="Background" Value="{DynamicResource HoverFillBrush}" />
+                                        </MultiTrigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </ListBox.ItemContainerStyle>
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <Border Width="44" Height="38" CornerRadius="10" Margin="0,0,12,0"
+                                    Background="{Binding Band, Converter={StaticResource GradeBandSoftBrush}}">
+                                <TextBlock Text="{Binding Abbrev}"
+                                           FontSize="13" FontWeight="Bold"
+                                           Foreground="{Binding Band, Converter={StaticResource GradeBandBrush}}"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Border>
+
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                    <TextBlock Text="{Binding MarksCountLabel}" Style="{StaticResource SecondaryTextStyle}" FontSize="12" VerticalAlignment="Center" />
+                                    <Border CornerRadius="6" Padding="6,1" Margin="8,0,0,0"
+                                            Background="{Binding LatestMarkBand, Converter={StaticResource GradeBandSoftBrush}}"
+                                            Visibility="{Binding LatestMarkText, Converter={StaticResource NullToVis}}">
+                                        <TextBlock Text="{Binding LatestMarkText}"
+                                                   FontSize="11" FontWeight="Bold"
+                                                   Typography.NumeralAlignment="Tabular"
+                                                   Foreground="{Binding LatestMarkBand, Converter={StaticResource GradeBandBrush}}" />
+                                    </Border>
+                                </StackPanel>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="8,0,0,0">
+                                <TextBlock Text="{Binding AverageText}"
+                                           FontSize="17" FontWeight="Bold"
+                                           Typography.NumeralAlignment="Tabular"
+                                           HorizontalAlignment="Right"
+                                           Foreground="{Binding Band, Converter={StaticResource GradeBandBrush}}" />
+                                <TextBlock Text="{Binding AbsencePercentageLabel}"
+                                           Style="{StaticResource SecondaryTextStyle}"
+                                           FontSize="11"
+                                           HorizontalAlignment="Right"
+                                           Visibility="{Binding AbsencePercentageLabel, Converter={StaticResource NullToVis}}" />
+                            </StackPanel>
+                        </Grid>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </Grid>
+
+        <!-- Vertical Hairline -->
+        <Border Grid.Column="1" Background="{DynamicResource HairlineBrush}" />
+
+        <!-- RIGHT DETAIL PANE -->
+        <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                      Visibility="{Binding Subjects.SelectedSubject, Converter={StaticResource NullToVis}}">
+            <StackPanel MaxWidth="660" Margin="32,24,32,40">
+
+                <!-- Subject Title & Hero Average -->
+                <TextBlock Text="{Binding Subjects.SelectedSubject.Name}" Style="{StaticResource DisplayTitleTextStyle}" Margin="0,0,0,8" />
+                <TextBlock Text="{Binding Subjects.DetailAverageCaption}" Style="{StaticResource SecondaryTextStyle}" FontWeight="SemiBold" />
+                <TextBlock Text="{Binding Subjects.DetailAverageText}"
+                           Style="{StaticResource HeroNumberTextStyle}"
+                           Foreground="{Binding Subjects.DetailAverageBand, Converter={StaticResource GradeBandBrush}}"
+                           Margin="0,2,0,2" />
+                <TextBlock Text="{Binding Subjects.DetailSubtitle}" Style="{StaticResource SecondaryTextStyle}" FontSize="13.5" />
+
+                <Border Style="{StaticResource HairlineSeparatorStyle}" />
+
+                <!-- WHAT-IF CALCULATOR -->
+                <TextBlock Text="{Binding L10n[marks.whatIf.title]}" Style="{StaticResource SectionTitleTextStyle}" Margin="0,0,0,10" />
+
+                <TextBlock Text="{Binding L10n[marks.whatIf.pointsOnly]}"
+                           Style="{StaticResource SecondaryTextStyle}"
+                           Visibility="{Binding Subjects.DetailIsPointsOnly, Converter={StaticResource BoolToVis}}" />
+
+                <StackPanel Visibility="{Binding Subjects.DetailIsPointsOnly, Converter={StaticResource InvertBoolToVis}}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <Grid Margin="0,0,12,0">
+                            <TextBox Text="{Binding Subjects.WhatIfMarkText, UpdateSourceTrigger=PropertyChanged}"
+                                     Style="{StaticResource BrandTextBoxStyle}" />
+                            <TextBlock Text="{Binding L10n[marks.whatIf.placeholder]}"
+                                       Foreground="{DynamicResource TertiaryLabelBrush}"
+                                       FontSize="13" IsHitTestVisible="False" VerticalAlignment="Center" Margin="14,0,0,0"
+                                       Visibility="{Binding Subjects.WhatIfMarkText, Converter={StaticResource InvertNullToVis}}" />
+                        </Grid>
+
+                        <!-- Weight Stepper -->
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="{Binding L10n[marks.whatIf.weight]}" Style="{StaticResource SecondaryTextStyle}" VerticalAlignment="Center" Margin="0,0,8,0" />
+                            <Button Content="−" Style="{StaticResource SubtleButtonStyle}" Width="32" Padding="0" Command="{Binding Subjects.DecrementWeightCommand}" />
+                            <TextBlock Text="{Binding Subjects.WhatIfWeight}"
+                                       FontSize="15" FontWeight="Bold" Typography.NumeralAlignment="Tabular"
+                                       Width="30" TextAlignment="Center" VerticalAlignment="Center" />
+                            <Button Content="+" Style="{StaticResource SubtleButtonStyle}" Width="32" Padding="0" Command="{Binding Subjects.IncrementWeightCommand}" />
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- Live What-If Result -->
+                    <StackPanel Orientation="Horizontal" Margin="0,10,0,0"
+                                Visibility="{Binding Subjects.WhatIfResultAverage, Converter={StaticResource NullToVis}}">
+                        <TextBlock Text="{Binding Subjects.WhatIfResultAverage}" FontSize="20" FontWeight="Bold" Typography.NumeralAlignment="Tabular" VerticalAlignment="Center" />
+                        <Border CornerRadius="8" Padding="8,3" Margin="10,0,0,0" VerticalAlignment="Center"
+                                Visibility="{Binding Subjects.WhatIfDeltaText, Converter={StaticResource NullToVis}}">
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Setter Property="Background" Value="{DynamicResource TertiaryFillBrush}" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Subjects.WhatIfDeltaIsBetter}" Value="True">
+                                            <Setter Property="Background" Value="{DynamicResource BandExcellentSoftBrush}" />
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding Subjects.WhatIfDeltaIsWorse}" Value="True">
+                                            <Setter Property="Background" Value="{DynamicResource BandPoorSoftBrush}" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                            <TextBlock Text="{Binding Subjects.WhatIfDeltaText}" FontSize="12.5" FontWeight="Bold">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Foreground" Value="{DynamicResource SecondaryLabelBrush}" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Subjects.WhatIfDeltaIsBetter}" Value="True">
+                                                <Setter Property="Foreground" Value="{DynamicResource BandExcellentBrush}" />
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding Subjects.WhatIfDeltaIsWorse}" Value="True">
+                                                <Setter Property="Foreground" Value="{DynamicResource BandPoorBrush}" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </Border>
+                        <TextBlock Text="{Binding Subjects.WhatIfSourceNote}" Style="{StaticResource SecondaryTextStyle}" FontSize="12" Margin="12,0,0,0" VerticalAlignment="Center" />
+                    </StackPanel>
+                </StackPanel>
+
+                <Border Style="{StaticResource HairlineSeparatorStyle}" />
+
+                <!-- AVERAGE HISTORY CHART -->
+                <DockPanel Margin="0,0,0,8">
+                    <TextBlock DockPanel.Dock="Left" Text="{Binding L10n[marks.history.title]}" Style="{StaticResource SectionTitleTextStyle}" />
+                    <TextBlock DockPanel.Dock="Right" Text="{Binding L10n[marks.history.calculated]}" Style="{StaticResource SecondaryTextStyle}" FontSize="12" VerticalAlignment="Center" HorizontalAlignment="Right" />
+                </DockPanel>
+
+                <controls:AverageHistoryChart Height="210"
+                                              Entries="{Binding Subjects.TimelineEntries}"
+                                              LineBand="{Binding Subjects.DetailAverageBand}"
+                                              Margin="0,0,0,4" />
+
+                <Border Style="{StaticResource HairlineSeparatorStyle}" />
+
+                <!-- MARKS LIST -->
+                <TextBlock Text="{Binding L10n[nav.marks]}" Style="{StaticResource SectionTitleTextStyle}" Margin="0,0,0,10" />
+
+                <ItemsControl ItemsSource="{Binding Subjects.DetailMarks}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="0,0,0,1" Padding="0,11">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+
+                                    <StackPanel Grid.Column="0" Margin="0,0,14,0">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="{Binding Caption}" FontSize="14.5" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                            <Ellipse Width="7" Height="7" Fill="{DynamicResource BrandPrimaryBrush}" Margin="7,0,0,0" VerticalAlignment="Center"
+                                                     Visibility="{Binding IsNew, Converter={StaticResource BoolToVis}}" />
+                                        </StackPanel>
+                                        <TextBlock Text="{Binding Theme}" Style="{StaticResource SecondaryTextStyle}" FontSize="13" TextWrapping="Wrap" Margin="0,2,0,0"
+                                                   Visibility="{Binding Theme, Converter={StaticResource NullToVis}}" />
+                                        <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
+                                            <TextBlock Text="{Binding MetadataLine}" Style="{StaticResource SecondaryTextStyle}" FontSize="12" VerticalAlignment="Center" />
+                                            <Border CornerRadius="8" Padding="8,2" Margin="8,0,0,0"
+                                                    Background="{DynamicResource BrandSecondarySoftBrush}"
+                                                    Visibility="{Binding WeightBadge, Converter={StaticResource NullToVis}}">
+                                                <TextBlock Text="{Binding WeightBadge}" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource BrandSecondaryBrush}" />
+                                            </Border>
+                                        </StackPanel>
+                                    </StackPanel>
+
+                                    <Border Grid.Column="1" MinWidth="54" Height="42" CornerRadius="12" VerticalAlignment="Center"
+                                            Background="{Binding Band, Converter={StaticResource GradeBandSoftBrush}}">
+                                        <TextBlock Text="{Binding MarkDisplay}"
+                                                   FontSize="19" FontWeight="Bold"
+                                                   Typography.NumeralAlignment="Tabular"
+                                                   Foreground="{Binding Band, Converter={StaticResource GradeBandBrush}}"
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                   Margin="10,0" />
+                                    </Border>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

@@ -37,3 +37,10 @@ Firebase*.plist
 
 # Local editor/tooling
 .commandcode/
+
+# Windows (.NET / WPF) build artifacts
+GradelyWindows/**/bin/
+GradelyWindows/**/obj/
+GradelyWindows/.vs/
+*.user
+*.suo

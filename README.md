@@ -17,9 +17,9 @@ Gradely will be available on the App Store. Source code lives at [FBukovina/Grad
 
 ## Requirements
 
-- macOS with Xcode installed.
-- The project is currently configured with an iOS 26.5 deployment target.
-- A Bakaláři- or EduPage-compatible school account for live use.
+- **Apple platforms (iOS / macOS / watchOS)**: macOS with Xcode installed (currently configured with an iOS 26.5 deployment target).
+- **Windows (Native Desktop)**: Windows 10/11 with the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0) installed. See [GradelyWindows/README.md](GradelyWindows/README.md) for Windows build, test, and publish instructions.
+- A Bakaláři- or EduPage-compatible school account for live use (or use the built-in Demo mode).
 
 ## Getting Started
 

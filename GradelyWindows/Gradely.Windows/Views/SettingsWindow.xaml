@@ -118,7 +118,7 @@
                 <!-- ABOUT -->
                 <StackPanel Visibility="{Binding IsAboutSection, Converter={StaticResource BoolToVis}}">
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,14">
-                        <Image Source="pack://application:,,,/Assets/GradeyLogo.png" Width="44" Height="44" Margin="0,0,14,0" />
+                        <Image Source="pack://application:,,,/Assets/AppIcon.png" Width="44" Height="44" Margin="0,0,14,0" />
                         <StackPanel VerticalAlignment="Center">
                             <TextBlock Text="Gradey for Windows" FontSize="22" FontWeight="Bold" />
                             <TextBlock Text="Native .NET 10 WPF Desktop Client · v2.8.2" Style="{StaticResource SecondaryTextStyle}" FontSize="13" />

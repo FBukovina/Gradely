@@ -20,7 +20,7 @@
                                 Command="{Binding BackToStep1Command}"
                                 Visibility="{Binding IsStep2, Converter={StaticResource BoolToVis}}"
                                 Margin="0,0,8,0" />
-                        <Image Source="pack://application:,,,/Assets/GradeyLogo.png" Width="28" Height="28" Margin="0,0,10,0" />
+                        <Image Source="pack://application:,,,/Assets/AppIcon.png" Width="28" Height="28" Margin="0,0,10,0" />
                         <TextBlock Text="Gradey" FontSize="17" FontWeight="Bold" VerticalAlignment="Center" />
                     </StackPanel>
 

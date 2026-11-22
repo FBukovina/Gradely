@@ -32,7 +32,7 @@
 
                 <!-- App Brand Header -->
                 <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="18,18,16,18">
-                    <Image Source="pack://application:,,,/Assets/GradeyLogo.png" Width="28" Height="28" Margin="0,0,10,0" />
+                    <Image Source="pack://application:,,,/Assets/AppIcon.png" Width="28" Height="28" Margin="0,0,10,0" />
                     <StackPanel VerticalAlignment="Center">
                         <TextBlock Text="Gradey" FontSize="17" FontWeight="Bold" />
                         <TextBlock Text="{Binding SchoolDisplayName}" Style="{StaticResource SecondaryTextStyle}" FontSize="11" TextTrimming="CharacterEllipsis" MaxWidth="148"

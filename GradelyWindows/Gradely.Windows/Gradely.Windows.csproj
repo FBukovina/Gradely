@@ -24,5 +24,6 @@
     <Resource Include="..\..\GradelyShared\Fonts\SpaceGrotesk-Medium.ttf" Link="Fonts\SpaceGrotesk-Medium.ttf" />
     <Resource Include="..\..\GradelyShared\Fonts\SpaceGrotesk-Bold.ttf" Link="Fonts\SpaceGrotesk-Bold.ttf" />
     <Resource Include="..\..\Gradely\Assets.xcassets\GradeyLogo.imageset\GradeyLogo.png" Link="Assets\GradeyLogo.png" />
+    <Resource Include="..\..\Gradely\Assets.xcassets\AppIcon.appiconset\mac-128.png" Link="Assets\AppIcon.png" />
   </ItemGroup>
 </Project>

@@ -8,6 +8,7 @@ const tokenFields = [
   "tokenType",
   "expiresAt",
   "pollingSessionEstablishedAt",
+  "webSessionEstablishedAt",
 ];
 
 /** Only supported session fields may cross the encrypted-storage boundary. */
@@ -65,6 +66,15 @@ export function hasDedicatedBakalariPollingSession(payload: Secret): boolean {
     payload.refreshToken.length > 0 &&
     typeof payload.pollingSessionEstablishedAt === "string" &&
     Number.isFinite(Date.parse(payload.pollingSessionEstablishedAt));
+}
+
+export function hasDedicatedBakalariWebSession(payload: Secret): boolean {
+  return typeof payload.accessToken === "string" &&
+    payload.accessToken.length > 0 &&
+    typeof payload.refreshToken === "string" &&
+    payload.refreshToken.length > 0 &&
+    typeof payload.webSessionEstablishedAt === "string" &&
+    Number.isFinite(Date.parse(payload.webSessionEstablishedAt));
 }
 
 /** The rotating Bakaláři refresh token is exclusively owned by the cloud poller. */

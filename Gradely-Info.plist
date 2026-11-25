@@ -58,7 +58,7 @@
 	<key>NSCalendarsFullAccessUsageDescription</key>
 	<string>Gradey needs calendar access to create, update, and remove the planner events you choose to sync. Your planner stays the source of truth.</string>
 	<key>NSCameraUsageDescription</key>
-	<string>Gradey uses the camera so you can send a photo in support chat.</string>
+	<string>Gradey uses the camera to scan QR codes when linking Gradey for Web and to send photos in support chat.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Gradey uses the microphone so you can send a video in support chat.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
@@ -71,6 +71,8 @@
 	<string>$(SUPABASE_ANON_KEY)</string>
 	<key>SupabaseURL</key>
 	<string>$(SUPABASE_URL)</string>
+	<key>GradeyWebURL</key>
+	<string>$(GRADEY_WEB_URL)</string>
 	<key>UIAppFonts</key>
 	<array>
 		<string>SpaceGrotesk-Regular.ttf</string>

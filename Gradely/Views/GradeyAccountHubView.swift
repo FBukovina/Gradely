@@ -2,6 +2,7 @@ import SwiftUI
 
 enum SettingsDestination: String, CaseIterable, Hashable, Identifiable {
     case account
+    case linkedDevices
     case connectedServices
     case notifications
     case privacyData
@@ -13,6 +14,7 @@ enum SettingsDestination: String, CaseIterable, Hashable, Identifiable {
     var title: LocalizedStringKey {
         switch self {
         case .account: "settings.destination.account.title"
+        case .linkedDevices: "settings.destination.linkedDevices.title"
         case .connectedServices: "settings.destination.connected.title"
         case .notifications: "settings.destination.notifications.title"
         case .privacyData: "settings.destination.privacy.title"
@@ -24,6 +26,7 @@ enum SettingsDestination: String, CaseIterable, Hashable, Identifiable {
     var localizedTitle: String {
         switch self {
         case .account: AppL10n.string("settings.destination.account.title")
+        case .linkedDevices: AppL10n.string("settings.destination.linkedDevices.title")
         case .connectedServices: AppL10n.string("settings.destination.connected.title")
         case .notifications: AppL10n.string("settings.destination.notifications.title")
         case .privacyData: AppL10n.string("settings.destination.privacy.title")
@@ -35,6 +38,7 @@ enum SettingsDestination: String, CaseIterable, Hashable, Identifiable {
     var hugeiconName: String {
         switch self {
         case .account: "user"
+        case .linkedDevices: "laptop-phone-sync"
         case .connectedServices: "link-04"
         case .notifications: "notification-01"
         case .privacyData: "security-lock"
@@ -96,6 +100,8 @@ struct GradeyAccountHubView: View {
     let onDebugResetAsNewUser: () -> Void
     /// Lets the debug panel open any recap, out yet or not.
     let recapStore: RecapStore?
+    private let initialPairingPayload: QRPairingPayload?
+    private let onConsumedPairingPayload: () -> Void
 
     @AppStorage(PlannerNotificationScheduler.enabledKey) private var plannerRemindersEnabled = false
     @Environment(\.dismiss) private var dismiss
@@ -108,6 +114,7 @@ struct GradeyAccountHubView: View {
     @AppStorage(GradeyDebugModeStore.storageKey) private var isDebugModeEnabled = false
 
     @State private var viewModel: GradeyAccountHubViewModel
+    @State private var linkedDevicesViewModel: LinkedDevicesViewModel
     @State private var detailPath: [SettingsConnectionRoute] = []
     @State private var selectedDestination: SettingsDestination?
     /// Whether you opened `selectedDestination` yourself; the wide layout
@@ -143,6 +150,7 @@ struct GradeyAccountHubView: View {
         friends: FriendsViewModel? = nil,
         schoolDirectoryProvider: any SchoolDirectoryProviding,
         linkedAccountRepository: LinkedAccountRepository,
+        linkedWebDeviceRepository: LinkedWebDeviceRepository? = nil,
         notificationClient: any DevicePushTokenClient,
         authClient: any GradeyAuthClient,
         preferencesStore: MarkNotificationSettingsStore,
@@ -156,7 +164,9 @@ struct GradeyAccountHubView: View {
         onDebugSignOut: @escaping () -> Void = {},
         onDebugClearCache: @escaping () -> Void = {},
         onDebugResetAsNewUser: @escaping () -> Void = {},
-        recapStore: RecapStore? = nil
+        recapStore: RecapStore? = nil,
+        initialPairingPayload: QRPairingPayload? = nil,
+        onConsumedPairingPayload: @escaping () -> Void = {}
     ) {
         self.account = account
         self.isGuestMode = isGuestMode
@@ -176,7 +186,18 @@ struct GradeyAccountHubView: View {
         self.onDebugClearCache = onDebugClearCache
         self.onDebugResetAsNewUser = onDebugResetAsNewUser
         self.recapStore = recapStore
-        _selectedDestination = State(initialValue: .account)
+        self.initialPairingPayload = initialPairingPayload
+        self.onConsumedPairingPayload = onConsumedPairingPayload
+        _selectedDestination = State(initialValue: initialPairingPayload == nil ? .account : .linkedDevices)
+        _isShowingDestination = State(initialValue: initialPairingPayload != nil)
+        let resolvedWebDeviceRepo = linkedWebDeviceRepository ?? LinkedWebDeviceRepository(
+            client: MockLinkedWebDeviceClient(),
+            authClient: authClient
+        )
+        _linkedDevicesViewModel = State(initialValue: LinkedDevicesViewModel(
+            repository: resolvedWebDeviceRepo,
+            schoolRepository: repository
+        ))
         _viewModel = State(initialValue: GradeyAccountHubViewModel(
             account: account,
             linkedAccountRepository: linkedAccountRepository,
@@ -313,6 +334,13 @@ struct GradeyAccountHubView: View {
                 if let refreshedAccount = await viewModel.refresh() {
                     onAccountUpdated(refreshedAccount)
                 }
+                if !isGuestMode {
+                    await linkedDevicesViewModel.refresh()
+                    if let payload = initialPairingPayload {
+                        onConsumedPairingPayload()
+                        await linkedDevicesViewModel.inspect(payload)
+                    }
+                }
                 await refreshNotificationAuthorization()
             }
             .onChange(of: scenePhase) { _, newPhase in
@@ -422,6 +450,7 @@ struct GradeyAccountHubView: View {
                         .tag(SettingsDestination.account)
                 }
                 Section {
+                    macSidebarRow(.linkedDevices)
                     macSidebarRow(.connectedServices)
                     macSidebarRow(.notifications)
                     macSidebarRow(.privacyData)
@@ -567,6 +596,12 @@ struct GradeyAccountHubView: View {
                     }
 
                     SettingsOverviewGroup {
+                        overviewRow(
+                            .linkedDevices,
+                            selectedDestination: selectedDestination,
+                            onSelect: onSelect
+                        )
+                        SettingsRowDivider()
                         overviewRow(
                             .connectedServices,
                             selectedDestination: selectedDestination,
@@ -716,6 +751,14 @@ struct GradeyAccountHubView: View {
         switch destination {
         case .account, .privacyData, .supportAbout:
             return nil
+        case .linkedDevices:
+            guard !isGuestMode else { return nil }
+            let count = linkedDevicesViewModel.devices.count
+            guard count > 0 else { return nil }
+            return String.localizedStringWithFormat(
+                AppL10n.string("settings.overview.linkedDevices.count"),
+                count
+            )
         case .connectedServices:
             // A service that's waiting for the user is named in the status
             // line instead, so it isn't said twice.
@@ -819,6 +862,17 @@ private extension GradeyAccountHubView {
         switch destination {
         case .account:
             accountDetail
+        case .linkedDevices:
+            LinkedDevicesSettingsDetail(
+                viewModel: linkedDevicesViewModel,
+                isGuestMode: isGuestMode,
+                hasSchoolSession: hasLocalSchoolSession,
+                schoolSummary: activeSchoolSummaryForWebPairing,
+                onLeaveGuestMode: {
+                    dismiss()
+                    onLeaveGuestMode()
+                }
+            )
         case .connectedServices:
             connectedServicesDetail
         case .notifications:
@@ -1717,6 +1771,23 @@ private extension GradeyAccountHubView {
 
     var hasLocalSchoolSession: Bool {
         ((try? repository.bootstrapSession()) ?? nil) != nil
+    }
+
+    var activeSchoolSummaryForWebPairing: String? {
+        if let activeID = viewModel.activeSchoolAccountID,
+           let active = schoolAccounts.first(where: { $0.id == activeID }) {
+            return [active.displayName, active.schoolName].compactMap { $0 }.joined(separator: " · ")
+        }
+        if let first = schoolAccounts.first {
+            return [first.displayName, first.schoolName].compactMap { $0 }.joined(separator: " · ")
+        }
+        if let session = try? repository.currentStoredSession() {
+            let parts = [session.linkedAccountDisplayName, session.linkedAccountSchoolName ?? session.baseURL.host]
+                .compactMap { $0 }
+                .filter { !$0.isEmpty }
+            if !parts.isEmpty { return parts.joined(separator: " · ") }
+        }
+        return nil
     }
 
     var hasLocalCanteenSession: Bool {

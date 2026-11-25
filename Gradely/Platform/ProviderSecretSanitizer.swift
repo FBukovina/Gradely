@@ -11,6 +11,8 @@ enum ProviderSecretSanitizer {
         let eduPage: EduPagePayload?
         /// Set only for a separate token family created on-device for polling.
         var pollingSessionEstablishedAt: Date? = nil
+        /// Set only for a separate token family created on-device for a linked web session.
+        var webSessionEstablishedAt: Date? = nil
     }
 
     struct EduPagePayload: Codable, Equatable {

@@ -31,6 +31,7 @@ struct ContentView: View {
     private let gradeyAIContextBuilder: any GradeyAIContextBuilding
     private let gradeyAuthClient: any GradeyAuthClient
     private let linkedAccountRepository: LinkedAccountRepository
+    private let linkedWebDeviceRepository: LinkedWebDeviceRepository
     private let historyRepository: GradeyHistoryRepository
     private let devicePushTokenClient: any DevicePushTokenClient
     private let notificationSettingsStore: MarkNotificationSettingsStore
@@ -50,6 +51,7 @@ struct ContentView: View {
     @State private var isVavruskaPresented = false
     @State private var recapPeriod: RecapPeriod?
     @State private var isAccountHubPresented = false
+    @State private var pendingWebPairingPayload: QRPairingPayload?
     @State private var siriSubjectID: String?
     @State private var siriSubjectRequestID: UUID?
     @State private var schoolRouteRequestID = UUID()
@@ -115,6 +117,7 @@ struct ContentView: View {
         gradeyAIContextBuilder = environment.gradeyAIContextBuilder
         gradeyAuthClient = environment.gradeyAuthClient
         linkedAccountRepository = environment.linkedAccountRepository
+        linkedWebDeviceRepository = environment.linkedWebDeviceRepository
         historyRepository = environment.historyRepository
         devicePushTokenClient = environment.devicePushTokenClient
         notificationSettingsStore = environment.notificationSettingsStore
@@ -394,6 +397,11 @@ struct ContentView: View {
             }
         }
         .onOpenURL { url in
+            if let pairing = QRPairingPayload(url: url) {
+                pendingWebPairingPayload = pairing
+                isAccountHubPresented = true
+                return
+            }
             Task { await handleOpenURL(url) }
         }
         .onContinueUserActivity(CSSearchableItemActionType) { activity in
@@ -522,6 +530,7 @@ struct ContentView: View {
             friends: friends,
             schoolDirectoryProvider: schoolDirectoryProvider,
             linkedAccountRepository: linkedAccountRepository,
+            linkedWebDeviceRepository: linkedWebDeviceRepository,
             notificationClient: devicePushTokenClient,
             authClient: gradeyAuthClient,
             preferencesStore: notificationSettingsStore,
@@ -570,7 +579,11 @@ struct ContentView: View {
                     restartOnboarding(.newUser)
                 }
             },
-            recapStore: schoolSnapshotStore.recapStore
+            recapStore: schoolSnapshotStore.recapStore,
+            initialPairingPayload: pendingWebPairingPayload,
+            onConsumedPairingPayload: {
+                pendingWebPairingPayload = nil
+            }
         )
     }
 

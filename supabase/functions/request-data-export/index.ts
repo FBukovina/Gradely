@@ -20,6 +20,7 @@ Deno.serve(async (req) => {
       profile,
       preferences,
       linkedAccounts,
+      webSessions,
       markFingerprints,
       newMarkEvents,
       gradeHistory,
@@ -42,6 +43,12 @@ Deno.serve(async (req) => {
         "linked_accounts",
         user.id,
         "id,user_id,provider,provider_user_id,base_url,display_name,school_name,canteen_name,status,notifications_enabled,last_polled_at,last_synced_at,next_poll_at,failure_count,action_required_reason,created_at,updated_at",
+      ),
+      fetchAllOwnedRows(
+        supabase,
+        "web_sessions",
+        user.id,
+        "id,user_id,linked_account_id,provider,provider_user_id,base_url,student_name,class_name,school_name,browser_name,os_name,device_label,created_at,last_active_at,rotated_at,expires_at,revoked_at,revoke_reason",
       ),
       fetchAllOwnedRows(
         supabase,
@@ -77,6 +84,7 @@ Deno.serve(async (req) => {
       exportedAt: new Date().toISOString(),
       profile: profile.data,
       linkedAccounts,
+      webSessions,
       notificationPreferences: preferences.data,
       markFingerprints,
       newMarkEvents,

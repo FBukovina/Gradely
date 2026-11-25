@@ -50,6 +50,9 @@ verify_jwt = true
 [functions.delete-account]
 verify_jwt = true
 
+[functions.web-linked-devices]
+verify_jwt = true
+
 [functions.poll-new-marks]
 verify_jwt = false
 

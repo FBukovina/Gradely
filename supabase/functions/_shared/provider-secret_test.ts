@@ -1,6 +1,7 @@
 import {
   containsProviderPassword,
   hasDedicatedBakalariPollingSession,
+  hasDedicatedBakalariWebSession,
   providerSecretForActivation,
   sanitizeProviderSecret,
 } from "./provider-secret.ts";
@@ -140,6 +141,32 @@ Deno.test("only marked token families can be linked for background polling", () 
       pollingSessionEstablishedAt: "2026-09-07T12:00:00Z",
     }),
     true,
+  );
+});
+
+Deno.test("dedicated Bakalari web sessions preserve webSessionEstablishedAt without passwords", () => {
+  const sanitized = sanitizeProviderSecret({
+    provider: "bakalari",
+    baseURL: "https://school.example/",
+    accessToken: "web-access",
+    refreshToken: "web-refresh",
+    webSessionEstablishedAt: "2026-11-25T10:00:00Z",
+    password: "forbidden",
+  });
+  assertEquals(sanitized, {
+    provider: "bakalari",
+    baseURL: "https://school.example/",
+    accessToken: "web-access",
+    refreshToken: "web-refresh",
+    webSessionEstablishedAt: "2026-11-25T10:00:00Z",
+  });
+  assertEquals(hasDedicatedBakalariWebSession(sanitized), true);
+  assertEquals(
+    hasDedicatedBakalariWebSession({
+      accessToken: "web-access",
+      refreshToken: "web-refresh",
+    }),
+    false,
   );
 });
 

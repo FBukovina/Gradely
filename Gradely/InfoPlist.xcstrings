@@ -60,25 +60,25 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Gradey používá fotoaparát, abys mohl v chatu podpory poslat fotku."
+            "value" : "Gradey používá fotoaparát ke skenování QR kódu při propojení Gradey pro web a k posílání fotek v chatu podpory."
           }
         },
         "cs-US" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Gradey používá fotoaparát, abys mohl v chatu podpory poslat fotku."
+            "value" : "Gradey používá fotoaparát ke skenování QR kódu při propojení Gradey pro web a k posílání fotek v chatu podpory."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Gradey uses the camera so you can send a photo in support chat."
+            "value" : "Gradey uses the camera to scan QR codes when linking Gradey for Web and to send photos in support chat."
           }
         },
         "en-CO" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Gradey uses the camera so you can send a photo in support chat."
+            "value" : "Gradey uses the camera to scan QR codes when linking Gradey for Web and to send photos in support chat."
           }
         }
       }

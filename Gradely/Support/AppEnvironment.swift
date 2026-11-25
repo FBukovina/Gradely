@@ -11,6 +11,7 @@ import Foundation
     let watchSyncService: (any WatchSyncing)?
     let gradeyAuthClient: any GradeyAuthClient
     let linkedAccountRepository: LinkedAccountRepository
+    let linkedWebDeviceRepository: LinkedWebDeviceRepository
     let historyRepository: GradeyHistoryRepository
     let gradeyAIClient: any GradeyAIClient
     let gradeyAIContextBuilder: any GradeyAIContextBuilding
@@ -30,6 +31,7 @@ import Foundation
         watchSyncService: (any WatchSyncing)? = nil,
         gradeyAuthClient: any GradeyAuthClient = MockGradeyAuthClient(),
         linkedAccountRepository: LinkedAccountRepository? = nil,
+        linkedWebDeviceRepository: LinkedWebDeviceRepository? = nil,
         historyRepository: GradeyHistoryRepository? = nil,
         gradeyAIClient: (any GradeyAIClient)? = nil,
         gradeyAIContextBuilder: (any GradeyAIContextBuilding)? = nil,
@@ -66,11 +68,16 @@ import Foundation
             client: MockLinkedAccountClient(),
             authClient: gradeyAuthClient
         )
+        let resolvedLinkedWebDeviceRepository = linkedWebDeviceRepository ?? LinkedWebDeviceRepository(
+            client: MockLinkedWebDeviceClient(),
+            authClient: gradeyAuthClient
+        )
         let resolvedHistoryRepository = historyRepository ?? GradeyHistoryRepository(
             client: MockGradeyHistoryClient(),
             authClient: gradeyAuthClient
         )
         self.linkedAccountRepository = resolvedLinkedAccountRepository
+        self.linkedWebDeviceRepository = resolvedLinkedWebDeviceRepository
         self.historyRepository = resolvedHistoryRepository
         let snapshot = SchoolSnapshotStore(repository: repository, historyRepository: resolvedHistoryRepository,
                                            plannerStore: planner,
@@ -110,6 +117,12 @@ import Foundation
         let notificationSettingsStore = MarkNotificationSettingsStore()
         let linkedAccountRepository = LinkedAccountRepository(
             client: SupabaseLinkedAccountClient(),
+            authClient: gradeyAuthClient
+        )
+        let linkedWebDeviceRepository = LinkedWebDeviceRepository(
+            client: GradeyLinkedWebDeviceClient(
+                bakalariClient: DemoAwareBakalariClient(liveClient: URLSessionBakalariClient())
+            ),
             authClient: gradeyAuthClient
         )
         let historyRepository = GradeyHistoryRepository(
@@ -157,6 +170,7 @@ import Foundation
             watchSyncService: watchSyncService,
             gradeyAuthClient: gradeyAuthClient,
             linkedAccountRepository: linkedAccountRepository,
+            linkedWebDeviceRepository: linkedWebDeviceRepository,
             historyRepository: historyRepository,
             gradeyAIClient: FirebaseGradeyAIClient(
                 accountIDProvider: { [gradeyAuthClient] in

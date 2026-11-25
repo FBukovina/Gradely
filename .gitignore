@@ -37,3 +37,11 @@ Firebase*.plist
 
 # Local editor/tooling
 .commandcode/
+
+# Gradey for Web
+web/node_modules/
+web/dist/
+web/.gradey-data/
+web/.env
+web/.env.*
+!web/.env.example

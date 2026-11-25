@@ -57,10 +57,13 @@ struct GradeyDebugPanel: View {
     @State private var pendingAction: GradeyDebugPendingAction?
     @State private var recapPeriod: RecapPeriod?
     @State private var copiedField: String?
+    @AppStorage(ChristmasSeason.overrideKey) private var christmasOverride = ChristmasSeason.Override.auto.rawValue
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.xl) {
             DetailSectionHeader(title: "debug.title")
+
+            christmasSection
 
             if let recapStore {
                 recapSection(recapStore)
@@ -226,6 +229,31 @@ struct GradeyDebugPanel: View {
             Text(actionMessage)
         }
         .accessibilityIdentifier("debugPanel")
+    }
+
+    /// Forces the Christmas look (red brand, red icon, snow) on or off
+    /// outside 29 Nov – 24 Dec.
+    private var christmasSection: some View {
+        SettingsSurface(padding: 0) {
+            HStack(spacing: Spacing.md) {
+                Text(verbatim: "Christmas theme")
+                    .font(.gradely(.subheadline).weight(.semibold))
+                    .foregroundStyle(.primary)
+                Spacer(minLength: Spacing.sm)
+                Picker(selection: $christmasOverride) {
+                    Text(verbatim: "Auto (29 Nov – 24 Dec)").tag(ChristmasSeason.Override.auto.rawValue)
+                    Text(verbatim: "On").tag(ChristmasSeason.Override.on.rawValue)
+                    Text(verbatim: "Off").tag(ChristmasSeason.Override.off.rawValue)
+                } label: {
+                    Text(verbatim: "Christmas theme")
+                }
+                .labelsHidden()
+                .pickerStyle(.menu)
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, Spacing.sm)
+        }
+        .accessibilityIdentifier("debugChristmasSection")
     }
 
     /// Every recap of this and last school year, whether it's out yet or not.

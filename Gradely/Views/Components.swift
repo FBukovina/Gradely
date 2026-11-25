@@ -31,14 +31,17 @@ struct Card<Content: View>: View {
 
 // MARK: - Settings-local presentation
 
-/// Quiet teal-tinted background shared by Settings and the modal surfaces
-/// launched from it. This stays separate from the app-wide card treatment.
+/// Quiet brand-tinted background shared by Settings and the modal surfaces
+/// launched from it (teal, or red over Christmas). This stays separate from
+/// the app-wide card treatment.
 struct SettingsBackground: View {
     @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         (colorScheme == .dark
-            ? Color(.sRGB, red: 0.008, green: 0.045, blue: 0.046, opacity: 1)
+            ? (ChristmasSeason.isActive
+                ? Color(.sRGB, red: 0.045, green: 0.010, blue: 0.014, opacity: 1)
+                : Color(.sRGB, red: 0.008, green: 0.045, blue: 0.046, opacity: 1))
             : Color.gradelyGroupedBackground)
             .overlay {
                 if colorScheme == .light {

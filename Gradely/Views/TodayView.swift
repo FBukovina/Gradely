@@ -157,7 +157,18 @@ struct TodayView: View {
             .frame(maxWidth: 760)
             .frame(maxWidth: .infinity)
         }
-        .gradelyScreenBackground()
+        .background {
+            AuroraBackground()
+                .overlay(alignment: .top) {
+                    if ChristmasSeason.isActive {
+                        GeometryReader { proxy in
+                            SnowfallView()
+                                .frame(height: proxy.size.height * 0.45)
+                        }
+                        .ignoresSafeArea()
+                    }
+                }
+        }
         .refreshable {
             await viewModel.refresh(forceRefresh: true)
         }
@@ -651,12 +662,22 @@ private struct TodayHero: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.lg) {
-            Text(verbatim: greeting)
-                .font(.gradelyDisplay(size: 30, relativeTo: .title))
-                .foregroundStyle(.primary)
-                .lineLimit(3)
-                .minimumScaleFactor(0.7)
-                .fixedSize(horizontal: false, vertical: true)
+            VStack(alignment: .leading, spacing: Spacing.xs) {
+                Text(verbatim: greeting)
+                    .font(.gradelyDisplay(size: 30, relativeTo: .title))
+                    .foregroundStyle(.primary)
+                    .lineLimit(3)
+                    .minimumScaleFactor(0.7)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                if ChristmasSeason.isActive {
+                    Text(verbatim: christmasLine)
+                        .font(.gradely(.subheadline).weight(.semibold))
+                        .foregroundStyle(Brand.primary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .accessibilityIdentifier("todayChristmasLine")
+                }
+            }
 
             statTiles
         }
@@ -729,6 +750,14 @@ private struct TodayHero: View {
         }
         guard let name = snapshot.greetingName, !name.isEmpty else { return AppL10n.string(key) }
         return AppL10n.string(key) + ", " + name
+    }
+
+    /// "Do Štědrého dne zbývá 12 dní", and "Veselé Vánoce!" on the 24th.
+    private var christmasLine: String {
+        let days = ChristmasSeason.daysUntilChristmasEve(from: ChristmasSeason.now())
+        guard days > 0 else { return AppL10n.string("christmas.greeting") }
+        let format = Bundle.main.localizedString(forKey: "christmas.countdown", value: nil, table: nil)
+        return String(format: format, locale: AppLanguageOverride.locale, days)
     }
 }
 

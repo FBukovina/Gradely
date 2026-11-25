@@ -169,10 +169,6 @@ final class RecapStore {
 
     /// `-uiTestingRecapNow 2026-11-12` moves demo builds to that day, keeping the time of day.
     static func launchNow(arguments: [String] = ProcessInfo.processInfo.arguments) -> () -> Date {
-        guard arguments.contains("-uiTestingMockAPI"),
-              let index = arguments.firstIndex(of: "-uiTestingRecapNow"), arguments.indices.contains(index + 1),
-              let day = Homework.schoolDate(arguments[index + 1]) else { return Date.init }
-        let offset = day.timeIntervalSince(RecapCalendar.calendar.startOfDay(for: Date()))
-        return { Date().addingTimeInterval(offset) }
+        DemoClock.launchNow(flag: "-uiTestingRecapNow", arguments: arguments)
     }
 }

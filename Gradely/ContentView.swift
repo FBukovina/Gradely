@@ -57,6 +57,10 @@ struct ContentView: View {
     @State private var siriRouteError: String?
     @State private var notificationRouter = SchoolNotificationRouter.shared
     @AppStorage(PlannerNotificationScheduler.enabledKey) private var plannerRemindersEnabled = false
+    @AppStorage(ChristmasSeason.overrideKey) private var christmasOverride = ChristmasSeason.Override.auto.rawValue
+    /// Mirrors `ChristmasSeason.isActive`, so the tabs repaint when the
+    /// season starts or ends while the app is open.
+    @State private var isChristmas = ChristmasSeason.isActive
     private let plannerNotificationScheduler = PlannerNotificationScheduler()
     @State private var isGradeyAIPresented = false
     @State private var waitingForAIDismissal = false
@@ -277,6 +281,7 @@ struct ContentView: View {
                     #endif
                     .environment(\.gradeyOpenRecap, OpenRecapAction { recapPeriod = $0 })
                     .id(schoolAccountRevision)
+                    .id(isChristmas)
                     .tint(Brand.primary)
                     .gradelySidebarAdaptable()
                     #if os(macOS)
@@ -326,8 +331,11 @@ struct ContentView: View {
             await PushRegistrationService.shared.refreshRegistrationIfAuthorized()
             await preloadGradeyAIIfNeeded()
         }
+        .task { await SeasonalAppIcon.apply() }
+        .onChange(of: christmasOverride) { refreshChristmasSeason() }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
+                refreshChristmasSeason()
                 Task {
                     schoolSnapshotStore.activateCurrentScope()
                     await plannerStore.activate()
@@ -681,6 +689,14 @@ struct ContentView: View {
             }
         }
         appViewModel.markSignedIn()
+    }
+
+    /// Checks the Christmas season again (it starts on 29 Nov and ends after
+    /// 24 Dec, and the debug panel can force it) and swaps the app icon.
+    private func refreshChristmasSeason() {
+        ChristmasSeason.refresh()
+        isChristmas = ChristmasSeason.isActive
+        Task { await SeasonalAppIcon.apply() }
     }
 
     private func resumeOnboardingIfSessionIsIncomplete() {

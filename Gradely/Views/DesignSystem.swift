@@ -303,28 +303,59 @@ enum ControlMetrics {
 
 // MARK: - Brand palette
 
+/// Gradey's brand colours. While `ChristmasSeason` is on (29 Nov – 24 Dec)
+/// the teal and emerald turn Christmas red, and so does everything built
+/// from them: the tint, the gradient and the aurora behind every screen.
 enum Brand {
-    /// Teal brand primary (deep #17A185 light, bright #1AFFBE dark) — defined in the asset catalog.
-    static let primary = Color("BrandPrimary")
-    /// Emerald brand secondary (#1DA565 light, #1FF98C dark) — defined in the asset catalog.
-    static let secondary = Color("BrandSecondary")
+    /// Teal brand primary (deep #17A185 light, bright #1AFFBE dark), or
+    /// Christmas red (#D4213D light, #FF5A6E dark) — both in the asset catalog.
+    static var primary: Color {
+        ChristmasSeason.isActive ? christmasPrimary : standardPrimary
+    }
 
-    /// Dark teal ink for text/icons placed on the bright teal gradient (à la Quipee).
-    static let onAccent = Color(.sRGB, red: 0.016, green: 0.094, blue: 0.078)
+    /// Emerald brand secondary (#1DA565 light, #1FF98C dark), or deep
+    /// crimson (#9E1030 light, #E8344E dark) — both in the asset catalog.
+    static var secondary: Color {
+        ChristmasSeason.isActive ? christmasSecondary : standardSecondary
+    }
 
-    /// Diagonal teal→emerald gradient used for hero surfaces and the primary CTA.
-    static let gradient = LinearGradient(
-        colors: [primary, secondary],
-        startPoint: .topLeading,
-        endPoint: .bottomTrailing
+    /// Ink for text and icons on the brand gradient: dark teal on the bright
+    /// teal. Christmas red is too dark for dark ink in light mode, so there
+    /// it's white, and a dark red ink in dark mode.
+    static var onAccent: Color {
+        ChristmasSeason.isActive ? christmasOnAccent : standardOnAccent
+    }
+
+    /// The dark teal ink whatever the season, for surfaces that keep their
+    /// own colours (Recap slides).
+    static let standardOnAccent = Color(.sRGB, red: 0.016, green: 0.094, blue: 0.078)
+
+    /// Diagonal primary→secondary gradient used for hero surfaces and the primary CTA.
+    static var gradient: LinearGradient {
+        LinearGradient(
+            colors: [primary, secondary],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+    }
+
+    /// Layered "aurora" glow used behind auth/hero content.
+    static var auroraGlows: [Color] {
+        [
+            primary.opacity(0.30),
+            secondary.opacity(0.22),
+            primary.opacity(0.16),
+        ]
+    }
+
+    private static let standardPrimary = Color("BrandPrimary")
+    private static let standardSecondary = Color("BrandSecondary")
+    private static let christmasPrimary = Color("ChristmasPrimary")
+    private static let christmasSecondary = Color("ChristmasSecondary")
+    private static let christmasOnAccent = Color.gradelyAdaptive(
+        light: .white,
+        dark: Color(.sRGB, red: 0.094, green: 0.016, blue: 0.027)
     )
-
-    /// Layered teal "aurora" glow used behind auth/hero content.
-    static let auroraGlows: [Color] = [
-        primary.opacity(0.30),
-        secondary.opacity(0.22),
-        primary.opacity(0.16),
-    ]
 }
 
 // MARK: - Spacing & radius tokens

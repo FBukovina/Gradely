@@ -6,7 +6,7 @@ import SwiftUI
 /// Gradey Recap's solid slide colours. Light and saturated, so the dark ink
 /// text keeps at least 4.5 : 1 on every one, in light and dark mode alike.
 enum RecapPalette {
-    static let ink = Brand.onAccent
+    static let ink = Brand.standardOnAccent
     static let emerald = Color(.sRGB, red: 0.239, green: 0.863, blue: 0.592)
     static let teal = Color(.sRGB, red: 0.235, green: 0.812, blue: 0.812)
     static let sky = Color(.sRGB, red: 0.486, green: 0.784, blue: 1.0)

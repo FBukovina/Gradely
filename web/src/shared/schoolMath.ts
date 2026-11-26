@@ -818,3 +818,177 @@ export function isChristmasSeason(now: Date = new Date()): boolean {
   const d = now.getDate();
   return (m === 11 && d >= 29) || (m === 12 && d <= 24);
 }
+
+// MARK: - Bakaláři & EduPage Student Name Formatting
+
+const CZECH_ACADEMIC_TITLES = new Set([
+  "bc.",
+  "bca.",
+  "mgr.",
+  "ing.",
+  "ing.arch.",
+  "rndr.",
+  "phdr.",
+  "mudr.",
+  "judr.",
+  "paeddr.",
+  "pharmdr.",
+  "thdr.",
+  "dis.",
+  "prof.",
+  "doc.",
+  "ph.d.",
+  "csc.",
+  "drsc.",
+  "mba",
+  "msc.",
+  "ll.m.",
+]);
+
+/**
+ * Strips academic titles from a Bakaláři teacher name so lesson cards show a clean,
+ * human-readable teacher name (falling back to teacherAbbrev when unavailable).
+ */
+export function formatTeacherCardName(
+  teacherName: string | null | undefined,
+  teacherAbbrev?: string | null,
+): string {
+  const raw = (teacherName ?? "").trim();
+  if (raw) {
+    const cleaned = raw
+      .replace(/,/g, " ")
+      .split(/\s+/)
+      .filter((tok) => tok.length > 0 && !CZECH_ACADEMIC_TITLES.has(tok.toLowerCase()))
+      .join(" ")
+      .trim();
+    if (cleaned) return cleaned;
+  }
+  return (teacherAbbrev ?? "").trim();
+}
+
+/**
+ * Trims unused leading `0.` hour and trailing empty hours after the last scheduled
+ * lesson of the week (e.g. ending on `8.` instead of rendering empty `9.`–`12.` columns).
+ */
+export function visibleTimetableHours(week: TimetableWeek | null | undefined): TimetableHour[] {
+  if (!week || week.hours.length === 0) return [];
+
+  const usedHourIds = new Set<number>();
+  const extraHours: TimetableHour[] = [];
+  const knownIds = new Set(week.hours.map((h) => h.id));
+
+  for (const day of week.days) {
+    for (const lesson of day.lessons) {
+      usedHourIds.add(lesson.hour.id);
+      if (!knownIds.has(lesson.hour.id)) {
+        knownIds.add(lesson.hour.id);
+        extraHours.push(lesson.hour);
+      }
+    }
+  }
+
+  const allHours = [...week.hours, ...extraHours];
+
+  if (usedHourIds.size === 0) {
+    const nonZero = allHours.filter((h) => h.caption.replace(/\./g, "").trim() !== "0");
+    return (nonZero.length > 0 ? nonZero : allHours).slice(0, 8);
+  }
+
+  const firstUsedIdx = allHours.findIndex((h) => usedHourIds.has(h.id));
+  let lastUsedIdx = -1;
+  for (let i = allHours.length - 1; i >= 0; i--) {
+    if (usedHourIds.has(allHours[i]!.id)) {
+      lastUsedIdx = i;
+      break;
+    }
+  }
+
+  const hour1Idx = allHours.findIndex((h) => h.caption.replace(/\./g, "").trim() === "1");
+  const startIdx = hour1Idx >= 0 ? Math.min(firstUsedIdx, hour1Idx) : firstUsedIdx;
+
+  return allHours.slice(Math.max(0, startIdx), lastUsedIdx + 1);
+}
+
+/**
+ * Strips Bakaláři's trailing class suffix (e.g. "Bukovina Filip, T2.C" -> "Bukovina Filip").
+ * Mirrors TodaySnapshot.nameWithoutClass in Gradely/ViewModels/TodayViewModel.swift.
+ */
+export function stripClassFromStudentName(
+  rawFullName: string | null | undefined,
+  classAbbrev?: string | null,
+): string {
+  const trimmed = (rawFullName ?? "").trim();
+  if (!trimmed) return "";
+
+  const cleanClass = (classAbbrev ?? "").trim();
+  if (cleanClass) {
+    const suffix = `,${cleanClass}`;
+    const compact = trimmed.replace(/,\s+/g, ",");
+    if (compact.endsWith(suffix) && compact.length > suffix.length) {
+      const lastComma = trimmed.lastIndexOf(",");
+      if (lastComma > 0) {
+        return trimmed.slice(0, lastComma).trim();
+      }
+    }
+  }
+
+  const lastComma = trimmed.lastIndexOf(",");
+  if (lastComma > 0) {
+    const candidate = trimmed.slice(lastComma + 1).trim();
+    const looksLikeClass =
+      candidate.length > 0 &&
+      candidate.length <= 6 &&
+      /\d/.test(candidate) &&
+      !/\s/.test(candidate);
+    if (looksLikeClass) {
+      const stripped = trimmed.slice(0, lastComma).trim();
+      if (stripped) return stripped;
+    }
+  }
+
+  return trimmed;
+}
+
+/**
+ * Formats student names into natural Given + Surname order.
+ * Bakaláři's `/api/3/user` returns `FullName` in Czech register order:
+ * `"<Surname> <GivenName>, <Class>"` (e.g. `"Bukovina Filip, T2.C"`).
+ */
+export function parseStudentDisplayName(
+  rawFullName: string | null | undefined,
+  classAbbrev?: string | null,
+  provider: "bakalari" | "eduPage" = "bakalari",
+): { firstName: string; fullName: string; initials: string } {
+  const withoutClass = stripClassFromStudentName(rawFullName, classAbbrev);
+  const tokens = withoutClass
+    .split(/\s+/)
+    .filter((tok) => tok.length > 0 && !CZECH_ACADEMIC_TITLES.has(tok.toLowerCase()));
+
+  if (tokens.length === 0) {
+    return { firstName: "", fullName: withoutClass || "Student", initials: "G" };
+  }
+
+  if (tokens.length === 1) {
+    const single = tokens[0]!;
+    return {
+      firstName: single,
+      fullName: single,
+      initials: (single[0] ?? "G").toUpperCase(),
+    };
+  }
+
+  if (provider === "bakalari") {
+    const surname = tokens[0]!;
+    const givenNames = tokens.slice(1);
+    const firstName = givenNames[0]!;
+    const fullName = [...givenNames, surname].join(" ");
+    const initials = `${firstName[0] ?? ""}${surname[0] ?? ""}`.toUpperCase() || "G";
+    return { firstName, fullName, initials };
+  }
+
+  const firstName = tokens[0]!;
+  const surname = tokens[tokens.length - 1]!;
+  const fullName = tokens.join(" ");
+  const initials = `${firstName[0] ?? ""}${surname[0] ?? ""}`.toUpperCase() || "G";
+  return { firstName, fullName, initials };
+}

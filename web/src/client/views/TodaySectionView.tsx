@@ -4,6 +4,7 @@ import {
   gradeBandForAverage,
   gradeBandForMark,
   overallStudyAverage,
+  parseStudentDisplayName,
   resolveTodayLessonState,
 } from "../../shared/schoolMath.ts";
 import { translate, type WebLocale } from "../../shared/i18n.ts";
@@ -12,6 +13,7 @@ import type {
   MarkItem,
   ScheduledLesson,
   SchoolOverviewResponse,
+  WebSessionSummary,
 } from "../../shared/types.ts";
 import {
   formatShortDate,
@@ -23,6 +25,7 @@ import {
 
 interface TodaySectionViewProps {
   overview: SchoolOverviewResponse;
+  session: WebSessionSummary;
   locale: WebLocale;
   onNavigateMarks: (subjectId?: string) => void;
   onNavigateTimetable: () => void;
@@ -31,6 +34,7 @@ interface TodaySectionViewProps {
 
 export function TodaySectionView({
   overview,
+  session,
   locale,
   onNavigateMarks,
   onNavigateTimetable,
@@ -74,12 +78,16 @@ export function TodaySectionView({
 
   const greeting = useMemo(() => {
     const hour = now.getHours();
-    if (hour < 12) return t("today.greeting.morning");
-    if (hour < 18) return t("today.greeting.afternoon");
+    if (hour >= 5 && hour < 12) return t("today.greeting.morning");
+    if (hour >= 12 && hour < 18) return t("today.greeting.afternoon");
     return t("today.greeting.evening");
   }, [locale]);
 
-  const firstName = overview.user?.fullName?.trim().split(/\s+/)[0] ?? "";
+  const firstName = parseStudentDisplayName(
+    overview.user?.fullName ?? session.studentName,
+    overview.user?.userClass?.abbrev ?? session.className,
+    session.provider,
+  ).firstName;
 
   return (
     <div className="page-scroll">

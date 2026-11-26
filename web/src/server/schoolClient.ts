@@ -84,7 +84,17 @@ export class SchoolProviderProxy {
       return fallback;
     };
 
-    // If every single core section failed with auth error, propagate reauth.
+    // If every core section failed, surface the error rather than rendering empty lists.
+    if (
+      marksRes.status === "rejected" &&
+      timetableRes.status === "rejected" &&
+      userRes.status === "rejected"
+    ) {
+      throw marksRes.reason instanceof Error
+        ? marksRes.reason
+        : new Error("Could not reach school server");
+    }
+
     if (
       marksRes.status === "rejected" &&
       marksRes.reason instanceof ProviderReauthRequiredError
@@ -155,7 +165,9 @@ export class SchoolProviderProxy {
   async fetchMarks(session: StoredWebSession, now: Date = new Date()): Promise<MarksSnapshot> {
     if (session.provider === "eduPage") {
       const secret = await this.ensureValidSecret(session, false, now);
-      const baseURL = requireSafeProviderURL(secret.baseURL ?? session.baseURL, "School URL");
+      const baseURL = canonicalSchoolDirectoryURL(
+        requireSafeProviderURL(secret.baseURL ?? session.baseURL, "School URL"),
+      );
       const raw = await this.fetchEduPageMarksRaw(secret, baseURL);
       return normalizeMarksResponse(raw);
     }
@@ -219,7 +231,9 @@ export class SchoolProviderProxy {
     now: Date,
   ): Promise<Record<string, any>> {
     let secret = await this.ensureValidSecret(session, false, now);
-    const baseURL = requireSafeProviderURL(secret.baseURL ?? session.baseURL, "School URL");
+    const baseURL = canonicalSchoolDirectoryURL(
+      requireSafeProviderURL(secret.baseURL ?? session.baseURL, "School URL"),
+    );
 
     let response = await this.sendBakalariGet(baseURL, path, query, secret);
     if (response.status === 401) {
@@ -243,7 +257,8 @@ export class SchoolProviderProxy {
     query: Record<string, string>,
     secret: Record<string, unknown>,
   ): Promise<Response> {
-    const url = new URL(path, baseURL);
+    const cleanRelPath = path.replace(/^\/+/, "");
+    const url = new URL(cleanRelPath, canonicalSchoolDirectoryURL(baseURL));
     for (const [k, v] of Object.entries(query)) {
       url.searchParams.set(k, v);
     }
@@ -302,7 +317,9 @@ export class SchoolProviderProxy {
     if (!current) {
       throw new ProviderReauthRequiredError();
     }
-    const baseURL = requireSafeProviderURL(current.baseURL ?? session.baseURL, "School URL");
+    const baseURL = canonicalSchoolDirectoryURL(
+      requireSafeProviderURL(current.baseURL ?? session.baseURL, "School URL"),
+    );
     const refreshToken = String(current.refreshToken ?? "").trim();
     if (!refreshToken) {
       await this.store.revokeSessionByBrowser(session.id, "missing_refresh_token", now);
@@ -384,6 +401,13 @@ export class SchoolProviderProxy {
     }
     return { Subjects: [] };
   }
+}
+
+function canonicalSchoolDirectoryURL(rawBaseURL: string): string {
+  const url = new URL(rawBaseURL.trim());
+  const normalizedPath = url.pathname.replace(/\/{2,}/g, "/");
+  url.pathname = normalizedPath.endsWith("/") ? normalizedPath : `${normalizedPath}/`;
+  return url.toString();
 }
 
 function parseBakalariTokens(raw: unknown): BakalariTokens {

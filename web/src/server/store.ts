@@ -176,6 +176,7 @@ export class PairingEventBus {
 
 export interface WebDeviceStore {
   readonly events: PairingEventBus;
+  readonly isDistributed?: boolean;
   createChallenge(params: {
     qrSecretHash: string;
     browserBindingHash: string;
@@ -1098,6 +1099,7 @@ export class SqliteWebDeviceStore implements WebDeviceStore {
 
 export class SupabaseWebDeviceStore implements WebDeviceStore {
   public readonly events = new PairingEventBus();
+  public readonly isDistributed = true;
   public readonly supabase: SupabaseClient;
 
   constructor(
@@ -1701,5 +1703,173 @@ export class SupabaseWebDeviceStore implements WebDeviceStore {
       this.events.emitSession({ sessionId: dev.id, type: "revoked", reason });
     }
     return Number(data ?? 0);
+  }
+}
+
+// MARK: - Supabase Edge Gateway Store (Keeps PROVIDER_SECRET_KEY & Service Role Inside Supabase)
+
+export class SupabaseEdgeWebDeviceStore implements WebDeviceStore {
+  public readonly events = new PairingEventBus();
+  public readonly isDistributed = true;
+  private readonly gatewayUrl: string;
+
+  constructor(
+    supabaseUrl: string,
+    private readonly supabaseAnonKey: string,
+    private readonly gatewaySecret: string,
+    private readonly fetchImpl: typeof fetch = fetch,
+  ) {
+    if (!gatewaySecret || gatewaySecret.length < 32) {
+      throw new Error("WEB_BFF_GATEWAY_SECRET must be at least 32 characters");
+    }
+    this.gatewayUrl = `${supabaseUrl.replace(/\/+$/, "")}/functions/v1/web-bff-gateway`;
+  }
+
+  private async invoke<T>(action: string, payload: Record<string, unknown> = {}): Promise<T> {
+    const response = await this.fetchImpl(this.gatewayUrl, {
+      method: "POST",
+      headers: {
+        apikey: this.supabaseAnonKey,
+        "x-gradey-bff-secret": this.gatewaySecret,
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({ action, ...payload }),
+      signal: AbortSignal.timeout(15_000),
+    });
+
+    const data = (await response.json().catch(() => ({}))) as Record<string, any>;
+    if (!response.ok) {
+      throw new PairingStoreError(
+        typeof data?.error === "string" ? data.error : "Gateway request failed",
+        response.status,
+        typeof data?.code === "string" ? data.code : "gateway_error",
+      );
+    }
+    return data as T;
+  }
+
+  async createChallenge(params: {
+    qrSecretHash: string;
+    browserBindingHash: string;
+    userAgentFamily: string;
+    browserName: string;
+    osName: string;
+    deviceLabel: string;
+    ipHash: string | null;
+  }): Promise<PairingChallengeRecord> {
+    const res = await this.invoke<{ challenge: PairingChallengeRecord }>("create-challenge", params);
+    return res.challenge;
+  }
+
+  async getChallengeForBrowser(
+    challengeId: string,
+    browserSecret: string | undefined,
+  ): Promise<PairingChallengeRecord> {
+    const res = await this.invoke<{ challenge: PairingChallengeRecord }>("get-challenge", {
+      challengeId,
+      browserSecret: browserSecret ?? "",
+    });
+    return res.challenge;
+  }
+
+  async inspectChallengeFromMobile(): Promise<MobileChallengePreview> {
+    throw new PairingStoreError(
+      "Use the Supabase web-linked-devices function from the mobile client.",
+      400,
+      "use_supabase_mobile_endpoint",
+    );
+  }
+
+  async rejectChallengeFromMobile(): Promise<void> {
+    throw new PairingStoreError(
+      "Use the Supabase web-linked-devices function from the mobile client.",
+      400,
+      "use_supabase_mobile_endpoint",
+    );
+  }
+
+  async approveChallengeFromMobile(): Promise<LinkedWebDevice> {
+    throw new PairingStoreError(
+      "Use the Supabase web-linked-devices function from the mobile client.",
+      400,
+      "use_supabase_mobile_endpoint",
+    );
+  }
+
+  async claimChallengeForBrowser(params: {
+    challengeId: string;
+    browserSecret: string | undefined;
+    userAgentFamily: string;
+  }): Promise<ClaimedWebSessionResult> {
+    const res = await this.invoke<{ claimed: ClaimedWebSessionResult }>("claim-challenge", {
+      challengeId: params.challengeId,
+      browserSecret: params.browserSecret ?? "",
+      userAgentFamily: params.userAgentFamily,
+    });
+    return res.claimed;
+  }
+
+  async authenticateWebSession(params: {
+    sessionToken: string | undefined;
+    userAgentFamily: string;
+    allowRotation?: boolean;
+  }): Promise<AuthenticatedWebSessionResult | null> {
+    if (!params.sessionToken) return null;
+    const res = await this.invoke<{ result: AuthenticatedWebSessionResult | null }>(
+      "authenticate-session",
+      {
+        sessionToken: params.sessionToken,
+        userAgentFamily: params.userAgentFamily,
+        allowRotation: params.allowRotation === true,
+      },
+    );
+    return res.result;
+  }
+
+  async readSessionProviderSecret(sessionId: string): Promise<Record<string, unknown> | null> {
+    const res = await this.invoke<{ secret: Record<string, unknown> | null }>("read-secret", {
+      sessionId,
+    });
+    return res.secret;
+  }
+
+  async updateSessionProviderSecret(
+    sessionId: string,
+    userId: string,
+    payload: Record<string, unknown>,
+  ): Promise<void> {
+    await this.invoke("update-secret", {
+      sessionId,
+      userId,
+      payload: sanitizeProviderSecret(payload),
+    });
+  }
+
+  async touchSessionActivity(sessionId: string): Promise<void> {
+    await this.invoke("touch-session", { sessionId });
+  }
+
+  async listDevicesForUser(): Promise<LinkedWebDevice[]> {
+    return [];
+  }
+
+  async revokeSessionByBrowser(sessionId: string, reason = "browser_logout"): Promise<void> {
+    await this.invoke("revoke-session", { sessionId, reason });
+    this.events.emitSession({ sessionId, type: "revoked", reason });
+  }
+
+  async revokeSessionForUser(
+    _userId: string,
+    sessionId: string,
+    reason = "mobile_revoked",
+  ): Promise<boolean> {
+    await this.invoke("revoke-session", { sessionId, reason });
+    this.events.emitSession({ sessionId, type: "revoked", reason });
+    return true;
+  }
+
+  async revokeAllSessionsForUser(): Promise<number> {
+    return 0;
   }
 }

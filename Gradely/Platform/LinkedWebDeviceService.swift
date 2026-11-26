@@ -331,7 +331,7 @@ final class GradeyLinkedWebDeviceClient: LinkedWebDeviceClient {
         }
         guard (200..<300).contains(httpResponse.statusCode) else {
             if let decodedError = try? decoder.decode(ServerErrorEnvelope.self, from: data),
-               let message = decodedError.error?.trimmingCharacters(in: .whitespacesAndNewlines),
+               let message = decodedError.displayMessage,
                !message.isEmpty {
                 throw LinkedWebDeviceError.server(message)
             }
@@ -726,4 +726,15 @@ private struct ApproveWebPairingRequest: Encodable {
 
 private struct ServerErrorEnvelope: Decodable {
     let error: String?
+    let message: String?
+    let msg: String?
+
+    var displayMessage: String? {
+        for candidate in [error, message, msg] {
+            if let trimmed = candidate?.trimmingCharacters(in: .whitespacesAndNewlines), !trimmed.isEmpty {
+                return trimmed
+            }
+        }
+        return nil
+    }
 }

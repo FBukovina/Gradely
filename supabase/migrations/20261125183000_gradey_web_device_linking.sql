@@ -131,12 +131,15 @@ alter table public.web_sessions enable row level security;
 alter table public.web_pairing_challenges enable row level security;
 
 drop policy if exists "web session owner read" on public.web_sessions;
-create policy "web session owner read"
-  on public.web_sessions
-  for select
-  using (auth.uid() = user_id);
 
--- Pairing challenges and session secrets are accessed exclusively via service_role.
+-- Pairing challenges and web sessions (which hold token hashes) are accessed exclusively via service_role.
+revoke all on table public.web_sessions, public.web_pairing_challenges
+  from public, anon, authenticated, service_role;
+
+grant select, insert, update, delete on table
+  public.web_sessions,
+  public.web_pairing_challenges
+to service_role;
 
 create or replace function public.revoke_web_session(
   p_user_id uuid,
@@ -296,3 +299,8 @@ drop trigger if exists on_web_session_deleted on public.web_sessions;
 create trigger on_web_session_deleted
 after delete on public.web_sessions
 for each row execute function public.cleanup_deleted_web_session_secret();
+
+revoke execute on function public.cleanup_deleted_web_session_secret()
+  from public, anon, authenticated, service_role;
+
+notify pgrst, 'reload schema';

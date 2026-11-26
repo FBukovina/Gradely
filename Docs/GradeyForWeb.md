@@ -82,11 +82,12 @@ sequenceDiagram
 
 | Variable | Required | Description |
 | --- | --- | --- |
-| `PROVIDER_SECRET_KEY` | **Yes** | Random secret (`>= 32` chars) encrypting provider session tokens at rest. Match the Supabase `PROVIDER_SECRET_KEY` secret when using Supabase storage. |
-| `GRADEY_WEB_CSRF_SECRET` | Optional | Separate random secret (`>= 32` chars) for HMAC CSRF derivation; defaults to `PROVIDER_SECRET_KEY`. |
-| `SUPABASE_URL` | **Yes** (prod) | Hosted Gradey Supabase URL (`https://<project-ref>.supabase.co`) used to verify mobile Gradey ID Bearer tokens. |
-| `SUPABASE_ANON_KEY` | **Yes** (prod) | Client-safe Supabase publishable/anon key for `/auth/v1/user` verification. |
-| `SUPABASE_SERVICE_ROLE_KEY` | Recommended | Enables `SupabaseWebDeviceStore` backed by PostgreSQL (`web_sessions`, `web_pairing_challenges`, `encrypted_provider_secrets`). If omitted, `SqliteWebDeviceStore` persists encrypted sessions locally at `GRADEY_WEB_SQLITE_PATH`. |
+| `WEB_BFF_GATEWAY_SECRET` | **Recommended** | Shared random secret (`>= 32` chars) authenticating the web BFF to the `web-bff-gateway` Supabase Edge Function so `PROVIDER_SECRET_KEY` and `SUPABASE_SERVICE_ROLE_KEY` never leave Supabase. |
+| `GRADEY_WEB_CSRF_SECRET` | Optional | Separate random secret (`>= 32` chars) for HMAC CSRF derivation; defaults to `WEB_BFF_GATEWAY_SECRET` or `PROVIDER_SECRET_KEY`. |
+| `SUPABASE_URL` | **Yes** (prod) | Hosted Gradey Supabase URL (`https://<project-ref>.supabase.co`). |
+| `SUPABASE_ANON_KEY` | **Yes** (prod) | Client-safe Supabase publishable/anon key. |
+| `PROVIDER_SECRET_KEY` | Optional | Only required for direct `SupabaseWebDeviceStore` or standalone `SqliteWebDeviceStore` modes when `WEB_BFF_GATEWAY_SECRET` is not used. |
+| `SUPABASE_SERVICE_ROLE_KEY` | Optional | Enables direct `SupabaseWebDeviceStore` when `WEB_BFF_GATEWAY_SECRET` is omitted. |
 | `GRADEY_WEB_ALLOWED_ORIGINS` | Recommended | Comma-separated allowed browser origins (for example, `https://web.gradey.app`). |
 | `PORT` | Optional | HTTP listening port (defaults to `8787`). |
 
@@ -128,10 +129,12 @@ deno check supabase/functions/web-linked-devices/index.ts
 
 ### Production Deployment
 
-1. **Apply database migration & deploy Edge Function**:
+1. **Apply database migration & deploy Edge Functions**:
    ```sh
    supabase db push
+   supabase secrets set WEB_BFF_GATEWAY_SECRET="$(openssl rand -base64 36)"
    supabase functions deploy web-linked-devices
+   supabase functions deploy web-bff-gateway --no-verify-jwt
    supabase functions deploy request-data-export
    ```
 2. **Build and run Gradey for Web** (Node 22+ on Fly.io, Cloud Run, Railway, or Docker behind TLS):

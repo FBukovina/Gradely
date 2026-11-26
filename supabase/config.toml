@@ -53,6 +53,9 @@ verify_jwt = true
 [functions.web-linked-devices]
 verify_jwt = true
 
+[functions.web-bff-gateway]
+verify_jwt = false
+
 [functions.poll-new-marks]
 verify_jwt = false
 

@@ -11,6 +11,7 @@ import {
   providerURLsMatch,
   requireSafeProviderURL,
 } from "../_shared/provider-url.ts";
+import { canonicalSchoolBaseURL } from "../_shared/school-account-identity.ts";
 
 const MAX_FAILED_ATTEMPTS = 5;
 const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
@@ -195,11 +196,15 @@ Deno.serve(async (req) => {
         if (provider !== "bakalari" && provider !== "eduPage") {
           return json({ error: "Unsupported school provider." }, 422);
         }
-        const safeBaseURL = requireSafeProviderURL(body?.base_url, "School URL");
+        const safeBaseURL = canonicalSchoolBaseURL(
+          requireSafeProviderURL(body?.base_url, "School URL"),
+        );
         const rawPayload = body?.token_payload ?? {};
-        const payloadSafeURL = requireSafeProviderURL(
-          rawPayload?.baseURL ?? safeBaseURL,
-          "Token school URL",
+        const payloadSafeURL = canonicalSchoolBaseURL(
+          requireSafeProviderURL(
+            rawPayload?.baseURL ?? safeBaseURL,
+            "Token school URL",
+          ),
         );
         if (!providerURLsMatch(safeBaseURL, payloadSafeURL)) {
           return json({ error: "School URL mismatch." }, 422);

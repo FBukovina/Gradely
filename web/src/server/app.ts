@@ -341,9 +341,10 @@ export function createGradeyWebApp(options: GradeyWebAppOptions): Hono {
         const isTerminal = (st: string) =>
           st === "approved" || st === "expired" || st === "rejected" || st === "claimed";
 
-        // Subscribe BEFORE writing the initial frame so zero events can be missed or deadlocked.
-        const unsubscribe = store.events.subscribeChallenge(challengeId, (ev) => {
+        let lastEmittedStatus = initial.status;
+        const emitStatus = (ev: { challengeId: string; status: string; expiresAt: string }) => {
           if (closed) return;
+          lastEmittedStatus = ev.status as typeof initial.status;
           void stream
             .writeSSE({
               event: "status",
@@ -356,7 +357,34 @@ export function createGradeyWebApp(options: GradeyWebAppOptions): Hono {
                 resolveDone();
               }
             });
-        });
+        };
+
+        // Subscribe BEFORE writing the initial frame so zero events can be missed or deadlocked.
+        const unsubscribe = store.events.subscribeChallenge(challengeId, emitStatus);
+
+        // When backed by Supabase (distributed store where mobile updates land in Edge Functions),
+        // also poll the challenge status every 1.2s so the open SSE stream pushes real-time transitions.
+        const remotePollTimer = store.isDistributed
+          ? setInterval(async () => {
+              if (closed) return;
+              try {
+                const latest = await store.getChallengeForBrowser(
+                  challengeId,
+                  browserSecret,
+                  nowFn(),
+                );
+                if (!closed && latest.status !== lastEmittedStatus) {
+                  emitStatus({
+                    challengeId: latest.id,
+                    status: latest.status,
+                    expiresAt: latest.expiresAt,
+                  });
+                }
+              } catch {
+                // Handled by expiry timer / client reconnect
+              }
+            }, 1200)
+          : null;
 
         const expiryTimer = setTimeout(() => {
           if (!closed) {
@@ -383,6 +411,7 @@ export function createGradeyWebApp(options: GradeyWebAppOptions): Hono {
         const cleanup = () => {
           closed = true;
           clearTimeout(expiryTimer);
+          if (remotePollTimer) clearInterval(remotePollTimer);
           unsubscribe();
         };
 
@@ -500,8 +529,10 @@ export function createGradeyWebApp(options: GradeyWebAppOptions): Hono {
           resolveDone = resolve;
         });
 
-        // Subscribe synchronously before the initial writeSSE so revocation events cannot race.
-        const unsubscribe = store.events.subscribeSession(sessionId, (ev) => {
+        let closed = false;
+        const emitRevoked = (ev: { sessionId: string; type: "revoked"; reason: string }) => {
+          if (closed) return;
+          closed = true;
           void stream
             .writeSSE({
               event: "revoked",
@@ -512,7 +543,29 @@ export function createGradeyWebApp(options: GradeyWebAppOptions): Hono {
               cleanup();
               resolveDone();
             });
-        });
+        };
+
+        // Subscribe synchronously before the initial writeSSE so revocation events cannot race.
+        const unsubscribe = store.events.subscribeSession(sessionId, emitRevoked);
+
+        // Detect mobile-initiated revocations made against Supabase Edge Functions in real time.
+        const remoteSessionCheck = store.isDistributed
+          ? setInterval(async () => {
+              if (closed) return;
+              try {
+                const stillValid = await resolveBrowserSession(c, false);
+                if (!closed && !stillValid) {
+                  emitRevoked({
+                    sessionId,
+                    type: "revoked",
+                    reason: "mobile_revoked",
+                  });
+                }
+              } catch {
+                // Transient network error; retry on next tick
+              }
+            }, 4_000)
+          : null;
 
         const heartbeat = setInterval(() => {
           void stream.writeSSE({ event: "ping", data: "{}" }).catch(() => {
@@ -522,7 +575,9 @@ export function createGradeyWebApp(options: GradeyWebAppOptions): Hono {
         }, 25_000);
 
         const cleanup = () => {
+          closed = true;
           clearInterval(heartbeat);
+          if (remoteSessionCheck) clearInterval(remoteSessionCheck);
           unsubscribe();
         };
 

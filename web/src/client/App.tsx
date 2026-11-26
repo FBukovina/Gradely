@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { ApiError, webApi } from "./api.ts";
 import { detectDefaultLocale, translate, type WebLocale } from "../shared/i18n.ts";
-import { isChristmasSeason } from "../shared/schoolMath.ts";
-import type { SchoolOverviewResponse, WebSessionSummary } from "../shared/types.ts";
+import { isChristmasSeason, parseStudentDisplayName } from "../shared/schoolMath.ts";
+import type { SchoolOverviewResponse, TimetableKind, WebSessionSummary } from "../shared/types.ts";
 import { EmptyState, GradeyWordmark, Icon } from "./components/Primitives.tsx";
 import { QRLoginScreen, type ThemeMode } from "./views/QRLoginScreen.tsx";
 import { TodaySectionView } from "./views/TodaySectionView.tsx";
@@ -34,6 +34,7 @@ export function App() {
   const [reauthNotice, setReauthNotice] = useState<string | null>(null);
 
   const [activeNav, setActiveNav] = useState<NavSection>("today");
+  const [timetableKind, setTimetableKind] = useState<TimetableKind>("weekly");
   const [focusedSubjectId, setFocusedSubjectId] = useState<string | null>(null);
   const [focusedHomeworkId, setFocusedHomeworkId] = useState<string | null>(null);
 
@@ -215,13 +216,13 @@ export function App() {
     );
   }
 
-  const studentDisplayName = overview?.user?.fullName ?? session.studentName;
-  const initials = studentDisplayName
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((p) => p[0] ?? "")
-    .join("")
-    .toUpperCase();
+  const parsedStudent = parseStudentDisplayName(
+    overview?.user?.fullName || session?.studentName,
+    overview?.user?.userClass?.abbrev ?? session?.className,
+    session.provider,
+  );
+  const studentDisplayName = parsedStudent.fullName;
+  const initials = parsedStudent.initials;
 
   const navItems: Array<{ id: NavSection; icon: string; label: string }> = [
     { id: "today", icon: "dashboard-square-01", label: t("nav.today") },
@@ -259,7 +260,12 @@ export function App() {
           </nav>
         </div>
 
-        <div className="sidebar-profile">
+        <button
+          type="button"
+          className="sidebar-profile"
+          data-active={activeNav === "settings"}
+          onClick={() => setActiveNav("settings")}
+        >
           <div className="avatar-circle">{initials || "G"}</div>
           <div style={{ minWidth: 0, flex: 1 }}>
             <div
@@ -288,7 +294,7 @@ export function App() {
                 ""}
             </div>
           </div>
-        </div>
+        </button>
       </aside>
 
       {/* Main Content */}
@@ -303,22 +309,56 @@ export function App() {
         <header className="app-header">
           <h1 className="app-header-title">{currentNavTitle}</h1>
 
-          <button
-            type="button"
-            className="icon-btn"
-            disabled={isLoadingData || isRefreshing}
-            onClick={() => void loadOverview(true)}
-          >
-            <Icon
-              name="refresh-04"
-              size={15}
-              className={isLoadingData || isRefreshing ? "spin" : ""}
-            />
-            <span>{isRefreshing ? t("status.refreshing") : t("action.refresh")}</span>
-          </button>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            {activeNav === "timetable" && (
+              <div className="segmented-control">
+                <button
+                  type="button"
+                  className="segmented-btn"
+                  data-active={timetableKind === "weekly"}
+                  onClick={() => setTimetableKind("weekly")}
+                >
+                  {t("timetable.weekly")}
+                </button>
+                <button
+                  type="button"
+                  className="segmented-btn"
+                  data-active={timetableKind === "permanent"}
+                  onClick={() => setTimetableKind("permanent")}
+                >
+                  {t("timetable.permanent")}
+                </button>
+              </div>
+            )}
+
+            <button
+              type="button"
+              className="icon-btn"
+              disabled={isLoadingData || isRefreshing}
+              onClick={() => void loadOverview(true)}
+            >
+              <Icon
+                name="refresh-04"
+                size={15}
+                className={isLoadingData || isRefreshing ? "spin" : ""}
+              />
+              <span>{isRefreshing ? t("status.refreshing") : t("action.refresh")}</span>
+            </button>
+          </div>
         </header>
 
-        {isLoadingData && !overview ? (
+        {activeNav === "settings" ? (
+          <SettingsSectionView
+            user={overview?.user ?? null}
+            session={session}
+            locale={locale}
+            onChangeLocale={setLocale}
+            theme={theme}
+            onChangeTheme={setTheme}
+            onLogout={() => void handleLogout()}
+            isLoggingOut={isLoggingOut}
+          />
+        ) : isLoadingData && !overview ? (
           <div className="page-scroll">
             <EmptyState icon="refresh-04" title={t("status.loading")} />
           </div>
@@ -336,6 +376,7 @@ export function App() {
             {activeNav === "today" && (
               <TodaySectionView
                 overview={overview}
+                session={session}
                 locale={locale}
                 onNavigateMarks={(subjectId) => {
                   if (subjectId) setFocusedSubjectId(subjectId);
@@ -361,6 +402,8 @@ export function App() {
               <TimetableSectionView
                 initialWeek={overview.timetable}
                 locale={locale}
+                kind={timetableKind}
+                onChangeKind={setTimetableKind}
               />
             )}
 
@@ -373,19 +416,6 @@ export function App() {
                 homeworks={overview.homeworks}
                 locale={locale}
                 initialHomeworkId={focusedHomeworkId}
-              />
-            )}
-
-            {activeNav === "settings" && (
-              <SettingsSectionView
-                user={overview.user}
-                session={session}
-                locale={locale}
-                onChangeLocale={setLocale}
-                theme={theme}
-                onChangeTheme={setTheme}
-                onLogout={() => void handleLogout()}
-                isLoggingOut={isLoggingOut}
               />
             )}
           </>

@@ -7,9 +7,12 @@ import { SqliteWebDeviceStore } from "../src/server/store.ts";
 import { SchoolProviderProxy } from "../src/server/schoolClient.ts";
 import {
   buildSubjectAbsenceRisks,
+  formatTeacherCardName,
   overallStudyAverage,
+  parseStudentDisplayName,
   prepareSubjectCalculation,
   simulateSubjectGrade,
+  visibleTimetableHours,
 } from "../src/shared/schoolMath.ts";
 
 const SECRET_KEY = "e2e-test-encryption-key-with-at-least-32-characters!!";
@@ -503,6 +506,160 @@ describe("Gradey for Web — End-to-End QR Pairing, Independent School Proxy & S
         },
       });
       expect(firefoxAfterRevokeAll.status).toBe(401);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("preserves subdirectory Bakaláři base URLs without trailing slashes (e.g. https://is.sssvt.cz/IS)", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "gradey-web-subdir-"));
+    const store = new SqliteWebDeviceStore(join(dir, "subdir.sqlite"), SECRET_KEY);
+    const requestedPaths: string[] = [];
+
+    const subdirFetch: typeof fetch = async (input) => {
+      const url = new URL(typeof input === "string" ? input : input.toString());
+      requestedPaths.push(url.pathname);
+      if (url.pathname === "/IS/api/login") {
+        return Response.json({
+          access_token: "sub-acc-2",
+          refresh_token: "sub-ref-2",
+          token_type: "Bearer",
+          expires_in: 3600,
+        });
+      }
+      if (url.pathname === "/IS/api/3/marks") {
+        return Response.json({ Subjects: [] });
+      }
+      return new Response("Not Found", { status: 404 });
+    };
+
+    try {
+      const ch = await store.createChallenge({
+        qrSecretHash: "a".repeat(64),
+        browserBindingHash: "b".repeat(64),
+        userAgentFamily: "chrome:macos",
+        browserName: "Chrome",
+        osName: "macOS",
+        deviceLabel: "Chrome · macOS",
+        ipHash: null,
+      });
+      // Simulate a session whose baseURL has no trailing slash on /IS
+      const proxy = new SchoolProviderProxy(store, subdirFetch);
+      const fakeChallengeApp = createGradeyWebApp({
+        store,
+        csrfSecret: SECRET_KEY,
+        schoolProxy: proxy,
+        forceSecureCookies: false,
+        allowedOrigins: ["http://127.0.0.1:8787"],
+        verifyMobileToken: async () => ({ userId: "11111111-1111-4111-8111-111111111111" }),
+      });
+
+      const createRes = await fakeChallengeApp.request("http://127.0.0.1:8787/api/auth/qr/challenges", {
+        method: "POST",
+        headers: { Origin: "http://127.0.0.1:8787", "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 15_0) Chrome/131.0.0.0" },
+      });
+      const qrCookie = extractCookieValue(createRes.headers.get("Set-Cookie"), "gradey_qr")!;
+      const created = await createRes.json();
+      const secret = new URL(created.qrPayload).searchParams.get("t")!;
+
+      await fakeChallengeApp.request("http://127.0.0.1:8787/api/mobile/qr/inspect", {
+        method: "POST",
+        headers: { Authorization: "Bearer mob", "Content-Type": "application/json" },
+        body: JSON.stringify({ challengeId: created.challengeId, qrSecret: secret }),
+      });
+      await fakeChallengeApp.request("http://127.0.0.1:8787/api/mobile/qr/approve", {
+        method: "POST",
+        headers: {
+          Authorization: "Bearer mob",
+          "x-gradey-provider-session": "tokens-only-v1",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          challengeId: created.challengeId,
+          qrSecret: secret,
+          provider: "bakalari",
+          base_url: "https://is.sssvt.cz/IS",
+          student_name: "Filip",
+          token_payload: {
+            provider: "bakalari",
+            baseURL: "https://is.sssvt.cz/IS",
+            accessToken: "sub-acc-1",
+            refreshToken: "sub-ref-1",
+            expiresAt: "2020-01-01T00:00:00.000Z",
+            webSessionEstablishedAt: "2026-11-25T20:00:00.000Z",
+          },
+        }),
+      });
+      const claimRes = await fakeChallengeApp.request(
+        `http://127.0.0.1:8787/api/auth/qr/challenges/${created.challengeId}/claim`,
+        {
+          method: "POST",
+          headers: {
+            Origin: "http://127.0.0.1:8787",
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 15_0) Chrome/131.0.0.0",
+            Cookie: `gradey_qr=${encodeURIComponent(qrCookie)}`,
+          },
+        },
+      );
+      const sessCookie = extractCookieValue(
+        claimRes.headers.getSetCookie().join(", "),
+        "gradey_session",
+      )!;
+      const marksRes = await fakeChallengeApp.request("http://127.0.0.1:8787/api/school/marks", {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 15_0) Chrome/131.0.0.0",
+          Cookie: `gradey_session=${encodeURIComponent(sessCookie)}`,
+        },
+      });
+      expect(marksRes.status).toBe(200);
+      expect(requestedPaths).toEqual(["/IS/api/login", "/IS/api/3/marks"]);
+      expect(ch.id).toBeTruthy();
+      expect(parseStudentDisplayName("Bukovina Filip, T2.C", "T2.C", "bakalari")).toEqual({
+        firstName: "Filip",
+        fullName: "Filip Bukovina",
+        initials: "FB",
+      });
+      expect(formatTeacherCardName("Ing. Jan Novák, Ph.D.", "Nov")).toBe("Jan Novák");
+
+      const trimmedHours = visibleTimetableHours({
+        weekStart: "2026-11-23",
+        kind: "weekly",
+        hours: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map((n) => ({
+          id: n,
+          caption: String(n),
+          beginTime: "08:00",
+          endTime: "08:45",
+        })),
+        days: [
+          {
+            id: "2026-11-23",
+            date: "2026-11-23",
+            dayOfWeek: 1,
+            dayType: "workDay",
+            dayDescription: "",
+            isToday: false,
+            lessons: [2, 8].map((h) => ({
+              id: `l-${h}`,
+              hour: { id: h, caption: String(h), beginTime: "08:00", endTime: "08:45" },
+              subjectID: "M",
+              subjectName: "Matematika",
+              subjectAbbrev: "M",
+              teacherName: "Mgr. Jan Novák",
+              teacherAbbrev: "Nov",
+              roomName: "204",
+              roomAbbrev: "204",
+              groups: [],
+              cycles: [],
+              theme: null,
+              hasHomework: false,
+              homeworkIDs: [],
+              change: null,
+              changeKind: "none",
+            })),
+          },
+        ],
+      });
+      expect(trimmedHours.map((h) => h.id)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
